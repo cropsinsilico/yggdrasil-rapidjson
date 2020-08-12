@@ -2,6 +2,24 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## Yggdrasil Specific
+
+### TODO
+* Obj wavefront
+* Debug Ply valgrind errors
+* Schema type
+* Coverage
+* Continuous integration
+
+### COMPLETE
+* Add schema to document class
+* Scalars w/ variable precision
+* ND arrays (1+)
+* Python import
+* Python class
+* Python function
+* Python instance
+
 ## [Unreleased]
 
 ## 1.1.0 - 2016-08-25

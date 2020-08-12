@@ -236,6 +236,16 @@ public:
     virtual void NoneOf(ISchemaValidator** subvalidators, SizeType count) = 0;
     virtual void NotOneOf(ISchemaValidator** subvalidators, SizeType count, bool matched) = 0;
     virtual void Disallowed() = 0;
+  
+#ifdef RAPIDJSON_YGGDRASIL
+  virtual void MissingRequiredSchemaProperty(const typename SchemaType::ValueType& name) = 0;
+  virtual void IncorrectSubType(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
+  virtual void IncorrectPrecision(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
+  virtual void IncorrectUnits(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
+  virtual void IncorrectShape(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
+  virtual void InvalidPythonImport(const Ch* str, SizeType len) = 0;
+#endif // RAPIDJSON_YGGDRASIL
+  
 };
 
 
@@ -247,6 +257,7 @@ template<typename Encoding, typename Allocator>
 class Hasher {
 public:
     typedef typename Encoding::Ch Ch;
+    typedef GenericValue<Encoding, Allocator> ValueType;
 
     Hasher(Allocator* allocator = 0, size_t stackCapacity = kDefaultSize) : stack_(allocator, stackCapacity) {}
 
@@ -273,6 +284,13 @@ public:
         WriteBuffer(kStringType, str, len * sizeof(Ch));
         return true;
     }
+
+#ifdef RAPIDJSON_YGGDRASIL
+  bool Yggdrasil(const Ch* str, SizeType len, bool copy, ValueType&) {
+    return String(str, len, copy); }
+  bool Yggdrasil(const GenericObject<false, ValueType>& o, ValueType&) {
+    return o.Accept(*this, true); }
+#endif // RAPIDJSON_YGGDRASIL
 
     bool StartObject() { return true; }
     bool Key(const Ch* str, SizeType len, bool copy) { return String(str, len, copy); }
@@ -473,6 +491,15 @@ public:
         exclusiveMinimum_(false),
         exclusiveMaximum_(false),
         defaultValueLength_(0)
+#ifdef RAPIDJSON_YGGDRASIL
+	,
+	yggtype_((1 << kYggTotalSchemaType) - 1),
+	subtype_(kYggNullSubType),
+	precision_(),
+	shape_(),
+	args_(),
+	kwargs_()
+#endif // RAPIDJSON_YGGDRASIL
     {
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
         typedef typename ValueType::ConstMemberIterator ConstMemberIterator;
@@ -501,6 +528,9 @@ public:
 
         if (const ValueType* v = GetMember(value, GetTypeString())) {
             type_ = 0;
+#ifdef RAPIDJSON_YGGDRASIL
+	    yggtype_ = 0;
+#endif // RAPIDJSON_YGGDRASIL
             if (v->IsString())
                 AddType(*v);
             else if (v->IsArray())
@@ -691,6 +721,43 @@ public:
         if (const ValueType* v = GetMember(value, GetDefaultValueString()))
             if (v->IsString())
                 defaultValueLength_ = v->GetStringLength();
+
+#ifdef RAPIDJSON_YGGDRASIL
+	// Yggdrasil properties
+	if (const ValueType* v = GetMember(value, GetSubTypeString())) {
+	  subtype_ = kYggNullSubType;
+	  if (v->IsString())
+	    AddSubType(*v);
+	}
+	if (const ValueType* v = GetMember(value, GetPrecisionString())) {
+	    precision_ = 0;
+	    if (v->IsNumber() && v->GetInt() >= 0)
+	        precision_.CopyFrom(*v, *allocator_);
+	}
+	if (const ValueType* v = GetMember(value, GetUnitsString())) {
+	    if (v->IsString())
+	        units_.CopyFrom(*v, *allocator_);
+	}
+	if (const ValueType* v = GetMember(value, GetLengthString())) {
+	    ValueType shp(kArrayType);
+	    if (v->IsNumber() && v->GetInt() > 0) {
+		shape_.CopyFrom(shp, *allocator_);
+		shape_.PushBack(static_cast<SizeType>(v->GetUint()), *allocator_);
+	    }
+	}
+	if (const ValueType* v = GetMember(value, GetShapeString())) {
+	    if (v->IsArray())
+	        shape_.CopyFrom(*v, *allocator_);
+	}
+	if (const ValueType* v = GetMember(value, GetArgsString())) {
+	    if (v->IsArray())
+	        args_.CopyFrom(*v, *allocator_);
+	}
+	if (const ValueType* v = GetMember(value, GetKwargsString())) {
+	    if (v->IsObject())
+	        kwargs_.CopyFrom(*v, *allocator_);
+	}
+#endif // RAPIDJSON_YGGDRASIL
 
     }
 
@@ -931,6 +998,61 @@ public:
         return CreateParallelValidator(context);
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+  bool Yggdrasil(Context& context, const Ch* str, SizeType length, bool, ValueType& schema) const {
+    if (!CheckRequiredSchemaProperty(context, schema, GetTypeString()))
+      return false;
+    const ValueType* v = GetMember(schema, GetTypeString());
+    if ((v == GetScalarString()) &&
+	(yggtype_ & (1 << kYggScalarSchemaType))) {
+      if (!CheckSubType(context, schema))
+	return false;
+      if (!CheckPrecision(context, schema))
+	return false;
+      if (!CheckUnits(context, schema))
+	return false;
+      return true;
+    } else if ((v == Get1DArrayString()) &&
+	       (yggtype_ & (1 << kYggNDArraySchemaType))) {
+      if (!CheckSubType(context, schema))
+	return false;
+      if (!CheckPrecision(context, schema))
+	return false;
+      if (!CheckUnits(context, schema))
+	return false;
+      if (!CheckLength(context, schema))
+	return false;
+      return true;
+    } else if ((v == GetNDArrayString()) &&
+	       (yggtype_ & (1 << kYggNDArraySchemaType))) {
+      if (!CheckSubType(context, schema))
+	return false;
+      if (!CheckPrecision(context, schema))
+	return false;
+      if (!CheckUnits(context, schema))
+	return false;
+      if (!CheckShape(context, schema))
+	return false;
+      return true;
+    } else if (((v == GetPythonClassString()) ||
+		(v == GetPythonFunctionString())) &&
+	       (yggtype_ & (1 << kYggPythonImportSchemaType))) {
+      if (!CheckPythonImport(context, str, length))
+	return false;
+      return true;
+    } else if ((v == GetPythonInstanceString()) &&
+	       (yggtype_ & (1 << kYggPythonInstanceSchemaType))) {
+      if (!CheckPythonImport(context, str, length))
+	return false;
+      // TODO: Check args/kwargs?
+      return true;
+    }
+    DisallowedType(context, v);
+    RAPIDJSON_INVALID_KEYWORD_RETURN(GetTypeString());
+    return false;
+  }
+#endif // RAPIDJSON_YGGDRASIL
+
     bool StartObject(Context& context) const {
         if (!(type_ & (1 << kObjectSchemaType))) {
             DisallowedType(context, GetObjectString());
@@ -1168,9 +1290,37 @@ public:
     RAPIDJSON_STRING_(Slash, '/')
     RAPIDJSON_STRING_(Dot, '.')
 
+#ifdef RAPIDJSON_YGGDRASIL
+    // yggdrasil types and properties
+    RAPIDJSON_STRING_(Scalar, 's', 'c', 'a', 'l', 'a', 'r')
+    RAPIDJSON_STRING_(1DArray, '1', 'd', 'a', 'r', 'r', 'a', 'y')
+    RAPIDJSON_STRING_(NDArray, 'n', 'd', 'a', 'r', 'r', 'a', 'y')
+    RAPIDJSON_STRING_(PythonClass, 'c', 'l', 'a', 's', 's')
+    RAPIDJSON_STRING_(PythonFunction, 'f', 'u', 'n', 'c', 't', 'i', 'o', 'n')
+    RAPIDJSON_STRING_(PythonInstance, 'i', 'n', 's', 't', 'a', 'n', 'c', 'e')
+    RAPIDJSON_STRING_(Obj, 'o', 'b', 'j')
+    RAPIDJSON_STRING_(Ply, 'p', 'l', 'y')
+    RAPIDJSON_STRING_(Any, 'a', 'n', 'y')
+    // props
+    RAPIDJSON_STRING_(SubType, 's', 'u', 'b', 't', 'y', 'p', 'e')
+    RAPIDJSON_STRING_(Precision, 'p', 'r', 'e', 'c', 'i', 's', 'i', 'o', 'n')
+    RAPIDJSON_STRING_(Units, 'u', 'n', 'i', 't', 's')
+    RAPIDJSON_STRING_(Length, 'l', 'e', 'n', 'g', 't', 'h')
+    RAPIDJSON_STRING_(Shape, 's', 'h', 'a', 'p', 'e')
+    RAPIDJSON_STRING_(Args, 'a', 'r', 'g', 's')
+    RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
+    // Subtypes
+    
+    RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'h')
+    RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
+    RAPIDJSON_STRING_(UintSubType, 'u', 'i', 'n', 't')
+    RAPIDJSON_STRING_(FloatSubType, 'f', 'l', 'o', 'a', 't')
+    RAPIDJSON_STRING_(ComplexSubType, 'c', 'o', 'm', 'p', 'l', 'e', 'x')
+#endif // RAPIDJSON_YGGDRASIL
+
 #undef RAPIDJSON_STRING_
 
-private:
+protected:
     enum SchemaValueType {
         kNullSchemaType,
         kBooleanSchemaType,
@@ -1181,6 +1331,28 @@ private:
         kIntegerSchemaType,
         kTotalSchemaType
     };
+
+#ifdef RAPIDJSON_YGGDRASIL
+    enum YggSchemaValueType {
+    	kYggScalarSchemaType,
+    	kYggNDArraySchemaType,
+    	kYggPythonImportSchemaType,
+    	kYggPythonInstanceSchemaType,
+    	kYggObjSchemaType,
+    	kYggPlySchemaType,
+    	kYggAnySchemaType,
+    	kYggTotalSchemaType
+    };
+    enum YggSchemaValueSubType {
+    	kYggNullSubType,
+        kYggIntSchemaSubType,
+    	kYggUintSchemaSubType,
+    	kYggFloatSchemaSubType,
+    	kYggComplexSchemaSubType,
+    	kYggStringSchemaSubType,
+    	kYggTotalSchemaSubType
+    };
+#endif // RAPIDJSON_YGGDRASIL
 
 #if RAPIDJSON_SCHEMA_USE_INTERNALREGEX
         typedef internal::GenericRegex<EncodingType, AllocatorType> RegexType;
@@ -1292,7 +1464,31 @@ private:
         else if (type == GetStringString() ) type_ |= 1 << kStringSchemaType;
         else if (type == GetIntegerString()) type_ |= 1 << kIntegerSchemaType;
         else if (type == GetNumberString() ) type_ |= (1 << kNumberSchemaType) | (1 << kIntegerSchemaType);
+#ifdef RAPIDJSON_YGGDRASIL
+	// yggdrasil types
+	else if (type == GetScalarString() ) yggtype_ |= 1 << kYggScalarSchemaType;
+	else if (type == Get1DArrayString() ) yggtype_ |= 1 << kYggNDArraySchemaType;
+	else if (type == GetNDArrayString() ) yggtype_ |= 1 << kYggNDArraySchemaType;
+	else if (type == GetPythonClassString() ) yggtype_ |= 1 << kYggPythonImportSchemaType;
+	else if (type == GetPythonFunctionString() ) yggtype_ |= 1 << kYggPythonImportSchemaType;
+	else if (type == GetPythonInstanceString() ) yggtype_ |= 1 << kYggPythonInstanceSchemaType;
+	else if (type == GetObjString() ) yggtype_ |= 1 << kYggObjSchemaType;
+	else if (type == GetPlyString() ) yggtype_ |= 1 << kYggPlySchemaType;
+	else if (type == GetAnyString() ) yggtype_ |= ((1 << kYggTotalSchemaType) - 1);
+#endif // RAPIDJSON_YGGDRASIL
     }
+
+#ifdef RAPIDJSON_YGGDRASIL
+  YggSchemaValueSubType GetSubType(const ValueType& subtype) {
+    if      (subtype == GetIntSubTypeString()    ) return kYggIntSchemaSubType;
+    else if (subtype == GetUintSubTypeString()   ) return kYggUintSchemaSubType;
+    else if (subtype == GetFloatSubTypeString()  ) return kYggFloatSchemaSubType;
+    else if (subtype == GetComplexSubTypeString()) return kYggComplexSchemaSubType;
+    else if (subtype == GetStringSubTypeString() ) return kYggStringSchemaSubType;
+    return kYggNullSubType;
+  }
+  void AddSubType(const ValueType& subtype) { subtype_ = GetSubType(subtype); }
+#endif // RAPIDJSON_YGGDRASIL
 
     bool CreateParallelValidator(Context& context) const {
         if (enum_ || context.arrayUniqueness)
@@ -1480,9 +1676,100 @@ private:
 
         if (type_ & (1 << kNumberSchemaType)) eh.AddExpectedType(GetNumberString());
         else if (type_ & (1 << kIntegerSchemaType)) eh.AddExpectedType(GetIntegerString());
-
+#ifdef RAPIDJSON_YGGDRASIL
+	if (yggtype_ & (1 << kYggScalarSchemaType)) eh.AddExpectedType(GetScalarString());
+	if (yggtype_ & (1 << kYggNDArraySchemaType)) eh.AddExpectedType(GetNDArrayString());
+	if (yggtype_ & (1 << kYggPythonImportSchemaType)) eh.AddExpectedType(GetPythonClassString());
+	if (yggtype_ & (1 << kYggPythonInstanceSchemaType)) eh.AddExpectedType(GetPythonInstanceString());
+	if (yggtype_ & (1 << kYggObjSchemaType)) eh.AddExpectedType(GetObjString());
+	if (yggtype_ & (1 << kYggPlySchemaType)) eh.AddExpectedType(GetPlyString());
+	if (yggtype_ == ((1 << kYggTotalSchemaType) - 1))
+	  eh.AddExpectedType(GetAnyString());
+#endif // RAPIDJSON_YGGDRASIL
         eh.EndDisallowedType(actualType);
     }
+
+#ifdef RAPIDJSON_YGGDRASIL
+  bool CheckRequiredSchemaProperty(Context& context, const ValueType& schema, const ValueType& name) const {
+    ErrorHandler& eh = context.error_handler;
+    if (!schema.HasMember(name)) {
+      context.error_handler.MissingRequiredSchemaProperty(name);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(name);
+    }
+    return true;
+  }
+  bool CheckSubType(Context& context, const ValueType& schema) const {
+    if (!CheckRequiredSchemaProperty(context, schema, GetSubTypeString()))
+      return false;
+    if (subtype_ == kYggNullSubType)
+      return true;
+    if (subtype_ != GetSubType(GetMember(schema, GetSubTypeString()))) {
+      context.error_handler.IncorrectSubType(GetMember(schema, GetSubTypeString()),
+					     SubType2String(subtype_));
+      RAPIDJSON_INVALID_KEYWORD_RETURN(GetSubTypeString());
+    }
+    return true;
+  }
+  bool CheckPrecision(Context& context, const ValueType& schema) const {
+    if (!CheckRequiredSchemaProperty(context, schema, GetPrecisionString()))
+      return false;
+    if (!precision_)
+      return true;
+    if (precision_ != GetMember(schema, GetPrecisionString())) {
+      context.error_handler.IncorrectPrecision(GetMember(schema, GetPrecisionString()),
+					       precision_);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(GetPrecisionString());
+    }
+    return true;
+  }
+  bool CheckUnits(Context& context, const ValueType& schema) const {
+    if (!CheckRequiredSchemaProperty(context, schema, GetUnitsString()))
+      return false;
+    if (!units_)
+      return true;
+    // TODO: Check dimensions rather than equivalence
+    if (units_ != GetMember(schema, GetUnitsString())) {
+      context.error_handler.IncorrectUnits(GetMember(schema, GetUnitsString()),
+					   units_);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(GetUnitsString());
+    }
+    return true;
+  }
+  bool CheckLength(Context& context, const ValueType& schema) const {
+    if (!CheckRequiredSchemaProperty(context, schema, GetLengthString()))
+      return false;
+    if (!shape_)
+      return true;
+    ValueType schema_shape(kArrayType);
+    schema_shape.PushBack(static_cast<SizeType>(GetMember(schema, GetLengthString())->GetUint()), *allocator_);
+    if (shape_ != schema_shape) {
+      context.error_handler.IncorrectShape(schema_shape, shape_);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(GetLengthString());
+    }
+    return true;
+  }
+  bool CheckShape(Context& context, const ValueType& schema) const {
+    if (!CheckRequiredSchemaProperty(context, schema, GetShapeString()))
+      return false;
+    if (!shape_)
+      return true;
+    if (shape_ != GetMember(schema, GetShapeString())) {
+      context.error_handler.IncorrectShape(GetMember(schema, GetShapeString()),
+					   shape_);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(GetShapeString());
+    }
+    return true;
+  }
+  bool CheckPythonImport(Context& context, const Ch* str, SizeType length) const {
+    // TODO: Try to import Python and check for error
+    if (false) {
+      context.error_handler.InvalidPythonImport(str, length);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(GetTypeString());
+    }
+    return true;
+  }
+
+#endif // RAPIDJSON_YGGDRASIL
 
     struct Property {
         Property() : schema(), dependenciesSchema(), dependenciesValidatorIndex(), dependencies(), required(false) {}
@@ -1554,6 +1841,17 @@ private:
     bool exclusiveMaximum_;
 
     SizeType defaultValueLength_;
+
+#ifdef RAPIDJSON_YGGDRASIL
+    // Yggdrasil properties
+    unsigned yggtype_; // bitmask of kSchemaYggType
+    YggSchemaValueSubType subtype_;
+    SValue precision_;
+    SValue units_;
+    SValue shape_;
+    SValue args_;
+    SValue kwargs_;
+#endif // RAPIDJSON_YGGDRASIL
 };
 
 template<typename Stack, typename Ch>
@@ -2314,6 +2612,58 @@ public:
         AddCurrentError(kValidateErrorNot);
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+  void MissingRequiredSchemaProperty(const typename SchemaType::ValueType& name) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetMissingString(),
+			    ValueType(name, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    // const StringRefType v(name.GetString(), name.GetStringLength());
+    const typename SchemaType::ValueType v(name.GetString(), name.GetStringLength());
+    AddCurrentError(v, true);
+  }
+  void IncorrectSubType(const typename SchemaType::ValueType& actual, const SValue& expected) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetExpectedString(),
+			    ValueType(expected, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    currentError_.AddMember(GetActualString(),
+			    ValueType(actual, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    AddCurrentError(SchemaType::GetSubTypeString(), true);
+  }
+  void IncorrectPrecision(const typename SchemaType::ValueType& actual, const SValue& expected) {
+    AddNumberError(SchemaType::GetPrecisionString(),
+		   ValueType(actual, GetStateAllocator()).Move(), expected);
+  }
+  void IncorrectUnits(const typename SchemaType::ValueType& actual, const SValue& expected) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetExpectedString(),
+			    ValueType(expected, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    currentError_.AddMember(GetActualString(),
+			    ValueType(actual, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    AddCurrentError(SchemaType::GetUnitsString(), true);
+  }
+  void IncorrectShape(const typename SchemaType::ValueType& actual, const SValue& expected) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetExpectedString(),
+			    ValueType(expected, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    currentError_.AddMember(GetActualString(),
+			    ValueType(actual, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    AddCurrentError(SchemaType::GetShapeString());
+  }
+  void InvalidPythonImport(const Ch* str, SizeType len) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetDisallowedString(), ValueType(str, len, GetStateAllocator()).Move(), GetStateAllocator());
+    AddCurrentError(SchemaType::GetTypeString(), true);
+  }
+#endif // RAPIDJSON_YGGDRASIL
+  
+
 #define RAPIDJSON_STRING_(name, ...) \
     static const StringRefType& Get##name##String() {\
         static const Ch s[] = { __VA_ARGS__, '\0' };\
@@ -2385,6 +2735,28 @@ RAPIDJSON_MULTILINEMACRO_END
     bool String(const Ch* str, SizeType length, bool copy)
                                     { RAPIDJSON_SCHEMA_HANDLE_VALUE_(String, (CurrentContext(), str, length, copy), (str, length, copy)); }
 
+#ifdef RAPIDJSON_YGGDRASIL
+  bool Yggdrasil(const Ch* str, SizeType length, bool copy, ValueType& schema)
+  {
+    RAPIDJSON_SCHEMA_HANDLE_BEGIN_(Yggdrasil, (CurrentContext(), str, length, copy, schema));
+    RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(Yggdrasil, (str, length, copy, schema));
+    if (internal::HasYggdrasilMethod<OutputHandler>::value) {
+      RAPIDJSON_SCHEMA_HANDLE_END_(Yggdrasil, (str, length, copy, schema));
+    } else {
+      RAPIDJSON_SCHEMA_HANDLE_END_(String, (str, length, copy));
+    }
+  }
+  bool Yggdrasil(const GenericObject<false, ValueType>& o, ValueType& schema) {
+    RAPIDJSON_SCHEMA_HANDLE_BEGIN_(Yggdrasil, (CurrentContext(), o, schema));
+    RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(Yggdrasil, (o, schema));
+    if (internal::HasYggdrasilMethod<OutputHandler>::value) {
+      RAPIDJSON_SCHEMA_HANDLE_END_(Yggdrasil, (o, schema));
+    } else {
+      return o.Accept(*this, true);
+    }
+  }
+#endif // RAPIDJSON_YGGDRASIL
+
     bool StartObject() {
         RAPIDJSON_SCHEMA_HANDLE_BEGIN_(StartObject, (CurrentContext()));
         RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(StartObject, ());
@@ -2418,7 +2790,7 @@ RAPIDJSON_MULTILINEMACRO_END
         if (!CurrentSchema().EndArray(CurrentContext(), elementCount) && !GetContinueOnErrors()) return valid_ = false;
         RAPIDJSON_SCHEMA_HANDLE_END_(EndArray, (elementCount));
     }
-
+  
 #undef RAPIDJSON_SCHEMA_HANDLE_BEGIN_VERBOSE_
 #undef RAPIDJSON_SCHEMA_HANDLE_BEGIN_
 #undef RAPIDJSON_SCHEMA_HANDLE_PARALLEL_

@@ -1,35 +1,35 @@
 include(CheckCXXCompilerFlag)
 
 set(UNITTEST_SOURCES
-	allocatorstest.cpp
-    bigintegertest.cpp
-    clzlltest.cpp
-	cursorstreamwrappertest.cpp
+    # 	allocatorstest.cpp
+    # bigintegertest.cpp
+    # clzlltest.cpp
+    # 	cursorstreamwrappertest.cpp
     documenttest.cpp
-    dtoatest.cpp
-    encodedstreamtest.cpp
-    encodingstest.cpp
-    fwdtest.cpp
-    filestreamtest.cpp
-    itoatest.cpp
-    istreamwrappertest.cpp
-    jsoncheckertest.cpp
-    namespacetest.cpp
-    pointertest.cpp
-    platformtest.cpp
-    prettywritertest.cpp
-    ostreamwrappertest.cpp
-    readertest.cpp
-    regextest.cpp
-	schematest.cpp
-	simdtest.cpp
-    strfunctest.cpp
-    stringbuffertest.cpp
-    strtodtest.cpp
+    # dtoatest.cpp
+    # encodedstreamtest.cpp
+    # encodingstest.cpp
+    # fwdtest.cpp
+    # filestreamtest.cpp
+    # itoatest.cpp
+    # istreamwrappertest.cpp
+    # jsoncheckertest.cpp
+    # namespacetest.cpp
+    # pointertest.cpp
+    # platformtest.cpp
+    # prettywritertest.cpp
+    # ostreamwrappertest.cpp
+    # readertest.cpp
+    # regextest.cpp
+    # 	schematest.cpp
+    # 	simdtest.cpp
+    # strfunctest.cpp
+    # stringbuffertest.cpp
+    # strtodtest.cpp
     unittest.cpp
-    uritest.cpp
-    valuetest.cpp
-    writertest.cpp)
+    # uritest.cpp
+    valuetest.cpp)
+    # writertest.cpp)
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
@@ -76,15 +76,27 @@ target_link_libraries(unittest ${TEST_LIBRARIES} namespacetest)
 
 add_dependencies(tests unittest)
 
+add_custom_command(TARGET unittest POST_BUILD
+    COMMAND dsymutil unittest
+    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+    COMMENT "Creating debug symbols...")
+
 add_test(NAME unittest
     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+set_tests_properties(unittest PROPERTIES
+                     ENVIRONMENT
+		     "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
 
 if(NOT MSVC)
     # Not running SIMD.* unit test cases for Valgrind
     add_test(NAME valgrind_unittest
-        COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --leak-check=full --error-exitcode=1 ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=-SIMD.*
+        COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind-python.supp --leak-check=full --error-exitcode=1 --track-origins=yes --dsymutil=no --keep-debuginfo=yes --read-var-info=yes ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=-SIMD.*
+        # COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind-python.supp --leak-check=full --error-exitcode=1 --track-origins=yes --dsymutil=no ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=-SIMD.*
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+    set_tests_properties(valgrind_unittest PROPERTIES
+                         ENVIRONMENT
+                         "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
 
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         add_test(NAME symbol_check

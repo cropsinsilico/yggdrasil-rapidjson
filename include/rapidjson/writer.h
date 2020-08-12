@@ -258,7 +258,37 @@ public:
     //! Simpler but slower overload.
     bool String(const Ch* const& str) { return String(str, internal::StrLen(str)); }
     bool Key(const Ch* const& str) { return Key(str, internal::StrLen(str)); }
-    
+
+#ifdef RAPIDJSON_YGGDRASIL
+  template <typename ValueType>
+  bool WriteYggdrasil(const Ch* str, SizeType length, ValueType& schema) {
+    const Ch* ygg = "-YGG-";
+    size_t len_ygg = 5;
+    Base64StreamWrapper<OutputStream> s64(*os_);
+    Writer w64(s64);
+    // Reserve
+    PutReserve(*os_, 1);
+    PutUnsafe(*os_, '\"');
+    if (!WriteRawValue(ygg, len_ygg)) return false;
+    // Schema
+    if (!schema.Accept(w64)) return false;
+    if (!WriteRawValue(ygg, len_ygg)) return false;
+    // Body
+    if (!(w64.WriteRawValue(str, length))) return false;
+    if (!WriteRawValue(ygg, len_ygg)) return false;
+    PutReserve(*os_, 1);
+    PutUnsafe(*os_, '\"');
+    return true;
+  }
+  template <typename ValueType>
+  bool Yggdrasil(const Ch* str, SizeType length, bool copy, ValueType& schema) {
+    RAPIDJSON_ASSERT(str != 0);
+    (void)copy;
+    Prefix(kStringType);
+    return EndValue(WriteYggdrasil(str, length, schema));
+  }
+#endif // RAPIDJSON_YGGDRASIL
+
     //@}
 
     //! Write a raw JSON value.

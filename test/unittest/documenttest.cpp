@@ -73,6 +73,49 @@ void ParseCheck(DocumentType& doc) {
     EXPECT_EQ(4u, a.Size());
     for (SizeType j = 0; j < 4; j++)
         EXPECT_EQ(j + 1, a[j].GetUint());
+
+#ifdef RAPIDJSON_YGGDRASIL
+    EXPECT_TRUE(doc.HasMember("s_int"));
+    const ValueType& s_int = doc["s_int"];
+    EXPECT_TRUE(s_int.IsYggdrasil());
+    EXPECT_TRUE(s_int.IsScalar());
+    EXPECT_TRUE(s_int.template IsScalar<int32_t>());
+    EXPECT_EQ((int32_t)1, s_int.template GetScalar<int32_t>());
+    int32_t s_int_val;
+    s_int.GetScalar(s_int_val);
+    EXPECT_EQ((int32_t)1, s_int_val);
+
+    // // Ply structure
+    // float vertices[8][3] = 
+    //   {{0.0, 0.0, 0.0},
+    //    {0.0, 0.0, 1.0},
+    //    {0.0, 1.0, 1.0},
+    //    {0.0, 1.0, 0.0},
+    //    {1.0, 0.0, 0.0},
+    //    {1.0, 0.0, 1.0},
+    //    {1.0, 1.0, 1.0},
+    //    {1.0, 1.0, 0.0}};
+    // int faces[2][3] = 
+    //   {{3, 0, 1},
+    //    {3, 0, 2}};
+    // int edges[5][2] = 
+    //   {{0, 1},
+    //    {1, 2},
+    //    {2, 3},
+    //    {3, 0},
+    //    {2, 0}};
+    // rapidjson::Ply ply0(vertices, faces, edges);
+    // EXPECT_TRUE(doc.HasMember("ply"));
+    // const ValueType& ply = doc["ply"];
+    // EXPECT_TRUE(ply.IsYggdrasil());
+    // EXPECT_TRUE(ply.IsPly());
+    // EXPECT_EQ(ply0, ply.GetPly());
+    // rapidjson::Ply cpy;
+    // ply.GetPly(cpy);
+    // EXPECT_EQ(ply0, cpy);
+    
+#endif // RAPIDJSON_YGGDRASIL
+    
 }
 
 template <typename Allocator, typename StackAllocator>
@@ -80,7 +123,11 @@ void ParseTest() {
     typedef GenericDocument<UTF8<>, Allocator, StackAllocator> DocumentType;
     DocumentType doc;
 
+#ifdef RAPIDJSON_YGGDRASIL
+    const char* json = " { \"hello\" : \"world\", \"t\" : true , \"f\" : false, \"n\": null, \"i\":123, \"pi\": 3.1416, \"a\":[1, 2, 3, 4], \"s_int\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwgInN1YnR5cGUiOiJpbnQiLCAicHJlY2lzaW9uIjo0fQ==-YGG-AQAAAA==-YGG-\", \"ply\": \"-YGG-eyJ0eXBlIjoicGx5In0=-YGG-cGx5CmZvcm1hdCBhc2NpaSAxLjAKZWxlbWVudCB2ZXJ0ZXggOApwcm9wZXJ0eSBmbG9hdCB4CnByb3BlcnR5IGZsb2F0IHkKcHJvcGVydHkgZmxvYXQgegplbGVtZW50IGZhY2UgMgpwcm9wZXJ0eSBsaXN0IHVjaGFyIGludCB2ZXJ0ZXhfaW5kZXgKZWxlbWVudCBlZGdlIDUKcHJvcGVydHkgaW50IHZlcnRleDEKcHJvcGVydHkgaW50IHZlcnRleDIKZW5kX2hlYWRlcgowIDAgMAowIDAgMQowIDEgMQowIDEgMAoxIDAgMAoxIDAgMQoxIDEgMQoxIDEgMAozIDMgMCAxCjMgMyAwIDIKMCAxCjEgMgoyIDMKMyAwCjIgMAo=-YGG-\" } ";
+#else
     const char* json = " { \"hello\" : \"world\", \"t\" : true , \"f\" : false, \"n\": null, \"i\":123, \"pi\": 3.1416, \"a\":[1, 2, 3, 4] } ";
+#endif // RAPIDJSON_YGGDRASIL
 
     doc.Parse(json);
     ParseCheck(doc);

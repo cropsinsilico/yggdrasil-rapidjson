@@ -51,6 +51,13 @@ TEST(Writer, Compact) {
         EXPECT_TRUE(writer.IsComplete()); \
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+#define TEST_YGG_ROUNDTRIP(json) \
+  { \
+  
+  }
+#endif // RAPIDJSON_YGGDRASIL
+
 TEST(Writer, Root) {
     TEST_ROUNDTRIP("null");
     TEST_ROUNDTRIP("true");
@@ -138,6 +145,13 @@ TEST(Writer, Double) {
     TEST_ROUNDTRIP("1.7976931348623157e308"); // Max double
 
 }
+
+#ifdef RAPIDJSON_YGGDRASIL
+TEST(Writer, ScalarUInt) {
+  TEST_YGG_ROUNDTRIP();
+}
+
+#endif // RAPIDJSON_YGGDRASIL
 
 // UTF8 -> TargetEncoding -> UTF8
 template <typename TargetEncoding>

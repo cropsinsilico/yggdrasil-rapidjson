@@ -1644,6 +1644,30 @@ TEST(SchemaValidator, Null) {
         "}}");
 }
 
+#ifdef RAPIDJSON_YGGDRASIL
+TEST(SchemaValidator, SubType) {
+    // Document sd;
+    // sd.Parse(
+    //     "{"
+    //     "  \"type\": \"scalar\","
+    // 	"  \"subtype\": \"float\","
+    // 	"  \"precision\": \"4\","
+    // 	"  \"units\": \"\","
+    //     "}");
+    // SchemaDocument s(sd);
+    // VALIDATE(s, "", true);
+    // INVALIDATE(s, "", "/subtype", "subtype",
+    //     "");
+}
+TEST(SchemaValidator, Precision) {
+}
+TEST(SchemaValidator, Units) {
+}
+TEST(SchemaValidator, Shape) {
+  // shape & length
+}
+#endif // RAPIDJSON_YGGDRASIL
+
 // Additional tests
 
 TEST(SchemaValidator, ObjectInArray) {

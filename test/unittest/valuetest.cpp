@@ -25,6 +25,15 @@ using namespace rapidjson;
 
 TEST(Value, Size) {
     if (sizeof(SizeType) == 4) {
+#ifdef RAPIDJSON_YGGDRASIL
+#if RAPIDJSON_48BITPOINTER_OPTIMIZATION
+        EXPECT_EQ(24u, sizeof(Value));
+#elif RAPIDJSON_64BIT
+        EXPECT_EQ(32u, sizeof(Value));
+#else
+        EXPECT_EQ(24u, sizeof(Value));
+#endif
+#else // RAPIDJSON_YGGDRASIL
 #if RAPIDJSON_48BITPOINTER_OPTIMIZATION
         EXPECT_EQ(16u, sizeof(Value));
 #elif RAPIDJSON_64BIT
@@ -32,6 +41,7 @@ TEST(Value, Size) {
 #else
         EXPECT_EQ(16u, sizeof(Value));
 #endif
+#endif // RAPIDJSON_YGGDRASIL
     }
 }
 
@@ -187,6 +197,24 @@ TEST(Value, EqualtoOperator) {
         .AddMember("i", 123, allocator)
         .AddMember("pi", 3.14, allocator)
         .AddMember("a", Value(kArrayType).Move().PushBack(1, allocator).PushBack(2, allocator).PushBack(3, allocator), allocator);
+#ifdef RAPIDJSON_YGGDRASIL
+    x.AddMember("s_uint8", (uint8_t)1, allocator)
+      .AddMember("s_uint16", (uint16_t)1, allocator)
+      .AddMember("s_uint32", (uint32_t)1, allocator)
+      .AddMember("s_uint64", (uint64_t)1, allocator)
+      .AddMember("s_int8", (int8_t)1, allocator)
+      .AddMember("s_int16", (int16_t)1, allocator)
+      .AddMember("s_int32", (int32_t)1, allocator)
+      .AddMember("s_int64", (int64_t)1, allocator)
+      .AddMember("s_float", (float)1, allocator)
+      .AddMember("s_double", (double)1, allocator)
+      .AddMember("s_fcomplex", std::complex<float>(1, 2), allocator)
+      .AddMember("s_dcomplex", std::complex<double>(1, 2), allocator);
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+    x.AddMember("s_ldouble", (long double)1, allocator)
+      .AddMember("s_lcomplex", std::complex<long double>(1, 2), allocator);
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#endif // RAPIDJSON_YGGDRASIL
 
     // Test templated operator==() and operator!=()
     TestEqual(x["hello"], "world");
@@ -200,6 +228,25 @@ TEST(Value, EqualtoOperator) {
     TestEqual(x["f"], false);
     TestEqual(x["i"], 123);
     TestEqual(x["pi"], 3.14);
+
+#ifdef RAPIDJSON_YGGDRASIL
+    TestEqual(x["s_uint8"], (uint8_t)1);
+    TestEqual(x["s_uint16"], (uint16_t)1);
+    TestEqual(x["s_uint32"], (uint32_t)1);
+    TestEqual(x["s_uint64"], (uint64_t)1);
+    TestEqual(x["s_int8"], (int8_t)1);
+    TestEqual(x["s_int16"], (int16_t)1);
+    TestEqual(x["s_int32"], (int32_t)1);
+    TestEqual(x["s_int64"], (int64_t)1);
+    TestEqual(x["s_float"], (float)1);
+    TestEqual(x["s_double"], (double)1);
+    TestEqual(x["s_fcomplex"], std::complex<float>(1, 2));
+    TestEqual(x["s_dcomplex"], std::complex<double>(1, 2));
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+    TestEqual(x["s_ldouble"], (long double)1);
+    TestEqual(x["s_lcomplex"], std::complex<long double>(1, 2));
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#endif // RAPIDJSON_YGGDRASIL
 
     // Test operator==() (including different allocators)
     CrtAllocator crtAllocator;
@@ -1076,6 +1123,323 @@ static void TestArray(T& x, Allocator& allocator) {
         }
     }
 }
+
+#ifdef RAPIDJSON_YGGDRASIL
+// TODO: Test compatible units
+TEST(Value, ScalarUInt) {
+  Value x(uint8_t(12));
+  Value y(uint8_t(12), "umol");
+  Value z(uint8_t(12), "g");
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(kYggUintSubType, x.GetSubTypeCode());
+  EXPECT_EQ(uint8_t(12), x.template GetScalar<uint8_t>());
+  EXPECT_EQ(x, y);
+  EXPECT_EQ(x, z);
+  EXPECT_NE(y, z);
+  EXPECT_EQ(12, x.GetInt());
+  EXPECT_EQ(12u, x.GetUint());
+  EXPECT_EQ(12, x.GetInt64());
+  EXPECT_EQ(12u, x.GetUint64());
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.IsScalar());
+  EXPECT_TRUE(x.IsString());
+
+  EXPECT_FALSE(x.IsNumber());
+  EXPECT_FALSE(x.IsInt());
+  EXPECT_FALSE(x.IsUint());
+  EXPECT_FALSE(x.IsInt64());
+  EXPECT_FALSE(x.IsUint64());
+  EXPECT_FALSE(x.IsDouble());
+  EXPECT_FALSE(x.IsFloat());
+  EXPECT_FALSE(x.IsNull());
+  EXPECT_FALSE(x.IsBool());
+  EXPECT_FALSE(x.IsFalse());
+  EXPECT_FALSE(x.IsTrue());
+  EXPECT_FALSE(x.IsObject());
+  EXPECT_FALSE(x.IsArray());
+}
+TEST(Value, ScalarInt) {
+  Value x(int8_t(12));
+  Value y(int8_t(12), "umol");
+  Value z(int8_t(12), "g");
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(kYggIntSubType, x.GetSubTypeCode());
+  EXPECT_EQ(int8_t(12), x.template GetScalar<int8_t>());
+  EXPECT_EQ(x, y);
+  EXPECT_EQ(x, z);
+  EXPECT_NE(y, z);
+  EXPECT_EQ(12, x.GetInt());
+  EXPECT_EQ(12u, x.GetUint());
+  EXPECT_EQ(12, x.GetInt64());
+  EXPECT_EQ(12u, x.GetUint64());
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.IsScalar());
+  EXPECT_TRUE(x.IsString());
+
+  EXPECT_FALSE(x.IsNumber());
+  EXPECT_FALSE(x.IsInt());
+  EXPECT_FALSE(x.IsUint());
+  EXPECT_FALSE(x.IsInt64());
+  EXPECT_FALSE(x.IsUint64());
+  EXPECT_FALSE(x.IsDouble());
+  EXPECT_FALSE(x.IsFloat());
+  EXPECT_FALSE(x.IsNull());
+  EXPECT_FALSE(x.IsBool());
+  EXPECT_FALSE(x.IsFalse());
+  EXPECT_FALSE(x.IsTrue());
+  EXPECT_FALSE(x.IsObject());
+  EXPECT_FALSE(x.IsArray());
+}
+TEST(Value, ScalarComplex) {
+  Value x(std::complex<double>(12));
+  Value y(std::complex<double>(12), "cm");
+  Value z(std::complex<double>(12), "g");
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(kYggComplexSubType, x.GetSubTypeCode());
+  EXPECT_EQ(std::complex<double>(12), x.template GetScalar<std::complex<double>>());
+  EXPECT_EQ(x, y);
+  EXPECT_EQ(x, z);
+  EXPECT_NE(y, z);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.IsScalar());
+  EXPECT_TRUE(x.IsString());
+
+  EXPECT_FALSE(x.IsNumber());
+  EXPECT_FALSE(x.IsInt());
+  EXPECT_FALSE(x.IsUint());
+  EXPECT_FALSE(x.IsInt64());
+  EXPECT_FALSE(x.IsUint64());
+  EXPECT_FALSE(x.IsDouble());
+  EXPECT_FALSE(x.IsFloat());
+  EXPECT_FALSE(x.IsNull());
+  EXPECT_FALSE(x.IsBool());
+  EXPECT_FALSE(x.IsFalse());
+  EXPECT_FALSE(x.IsTrue());
+  EXPECT_FALSE(x.IsObject());
+  EXPECT_FALSE(x.IsArray());
+}
+// 1D arrays
+TEST(Value, OneDArrayUInt) {
+  Value::AllocatorType allocator;
+  uint8_t arr[] = {0, 1, 2};
+  Value u(&(arr[0]), 3);
+  Value v(&(arr[0]), 3, "umol");
+  Value w(&(arr[0]), 3, "g");
+  Value x(arr);
+  Value y(arr, "umol");
+  Value z(arr, "g");
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(kYggUintSubType, x.GetSubTypeCode());
+  uint8_t* cpy = NULL;
+  SizeType len_cpy = 0;
+  x.Get1DArray(cpy, len_cpy, allocator);
+  EXPECT_EQ(3, len_cpy);
+  for (SizeType i = 0; i < len_cpy; i++)
+    EXPECT_EQ(arr[i], cpy[i]);
+  EXPECT_EQ(u, x);
+  EXPECT_EQ(v, x);
+  EXPECT_EQ(w, x);
+  EXPECT_EQ(x, y);
+  EXPECT_EQ(x, z);
+  EXPECT_NE(y, z);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.Is1DArray());
+  EXPECT_TRUE(x.IsString());
+
+  EXPECT_FALSE(x.IsNumber());
+  EXPECT_FALSE(x.IsInt());
+  EXPECT_FALSE(x.IsUint());
+  EXPECT_FALSE(x.IsInt64());
+  EXPECT_FALSE(x.IsUint64());
+  EXPECT_FALSE(x.IsDouble());
+  EXPECT_FALSE(x.IsFloat());
+  EXPECT_FALSE(x.IsNull());
+  EXPECT_FALSE(x.IsBool());
+  EXPECT_FALSE(x.IsFalse());
+  EXPECT_FALSE(x.IsTrue());
+  EXPECT_FALSE(x.IsObject());
+  EXPECT_FALSE(x.IsArray());
+}
+// ND arrays
+TEST(Value, NDArrayUInt) {
+  Value::AllocatorType allocator;
+  uint8_t arr[2][3] = {{0, 1, 2},
+		       {3, 4, 5}};
+  SizeType shape[] = {2, 3};
+  Value u(&(arr[0][0]), &(shape[0]), 2);
+  Value v(&(arr[0][0]), &(shape[0]), 2, "umol");
+  Value w(&(arr[0][0]), &(shape[0]), 2, "g");
+  Value x(arr);
+  Value y(arr, "umol");
+  Value z(arr, "g");
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(kYggUintSubType, x.GetSubTypeCode());
+  uint8_t* cpy = NULL;
+  SizeType* shape_cpy = NULL;
+  SizeType ndim_cpy = 0;
+  x.GetNDArray(cpy, shape_cpy, ndim_cpy, allocator);
+  EXPECT_EQ(2, ndim_cpy);
+  for (SizeType i = 0; i < ndim_cpy; i++)
+    EXPECT_EQ(shape[i], shape_cpy[i]);
+  for (SizeType i = 0; i < shape[0]; i++) {
+    for (SizeType j = 0; j < shape[1]; j++)
+      EXPECT_EQ(arr[i][j], cpy[i*shape[1] + j]);
+  }
+  EXPECT_EQ(u, x);
+  EXPECT_EQ(v, x);
+  EXPECT_EQ(w, x);
+  EXPECT_EQ(x, y);
+  EXPECT_EQ(x, z);
+  EXPECT_NE(y, z);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.IsNDArray());
+  EXPECT_TRUE(x.IsString());
+
+  EXPECT_FALSE(x.IsScalar());
+  EXPECT_FALSE(x.Is1DArray());
+  EXPECT_FALSE(x.IsNumber());
+  EXPECT_FALSE(x.IsInt());
+  EXPECT_FALSE(x.IsUint());
+  EXPECT_FALSE(x.IsInt64());
+  EXPECT_FALSE(x.IsUint64());
+  EXPECT_FALSE(x.IsDouble());
+  EXPECT_FALSE(x.IsFloat());
+  EXPECT_FALSE(x.IsNull());
+  EXPECT_FALSE(x.IsBool());
+  EXPECT_FALSE(x.IsFalse());
+  EXPECT_FALSE(x.IsTrue());
+  EXPECT_FALSE(x.IsObject());
+  EXPECT_FALSE(x.IsArray());
+}
+// TEST(Value, ObjWavefront) {
+//   double vertices[8][3] = 
+//     {{0.0, 0.0, 0.0},
+//      {0.0, 0.0, 1.0},
+//      {0.0, 1.0, 1.0},
+//      {0.0, 1.0, 0.0},
+//      {1.0, 0.0, 0.0},
+//      {1.0, 0.0, 1.0},
+//      {1.0, 1.0, 1.0},
+//      {1.0, 1.0, 0.0}};
+//   int faces[2][3] = 
+//     {{3, 0, 1},
+//      {3, 0, 2}};
+//   int edges[5][2] = 
+//     {{0, 1},
+//      {1, 2},
+//      {2, 3},
+//      {3, 0},
+//      {2, 0}};
+//   rapidjson::ObjWavefront obj(vertices, faces, edges);
+//   rapidjson::Document doc;
+//   rapidjson::Value x(obj);
+//   EXPECT_TRUE(x.IsYggdrasil());
+//   EXPECT_TRUE(x.IsObjWavefront());
+//   EXPECT_EQ(kStringType, x.GetType());
+//   EXPECT_EQ(x.GetObjString(), x.GetYggType());
+//   rapidjson::ObjWavefront cpy;
+//   x.GetObjWavefront(cpy);
+//   EXPECT_EQ(obj, cpy);
+//   rapidjson::Ply ply(vertices, faces, edges);
+//   rapidjson::Ply cpy_ply;
+//   x.GetPly(cpy_ply);
+//   EXPECT_EQ(ply, cpy_ply);
+// }
+// TEST(Value, Ply) {
+//   const double vertices[8][3] = 
+//     {{0.0, 0.0, 0.0},
+//      {0.0, 0.0, 1.0},
+//      {0.0, 1.0, 1.0},
+//      {0.0, 1.0, 0.0},
+//      {1.0, 0.0, 0.0},
+//      {1.0, 0.0, 1.0},
+//      {1.0, 1.0, 1.0},
+//      {1.0, 1.0, 0.0}};
+//   int faces[2][3] = 
+//     {{3, 0, 1},
+//      {3, 0, 2}};
+//   int edges[5][2] = 
+//     {{0, 1},
+//      {1, 2},
+//      {2, 3},
+//      {3, 0},
+//      {2, 0}};
+//   rapidjson::Ply ply(vertices, faces, edges);
+//   rapidjson::Document doc;
+//   rapidjson::Value x(ply);
+//   EXPECT_TRUE(x.IsYggdrasil());
+//   EXPECT_EQ(kStringType, x.GetType());
+//   EXPECT_EQ(x.GetPlyString(), x.GetYggType());
+//   rapidjson::Ply cpy = rapidjson::Ply();
+//   x.GetPly(cpy);
+//   EXPECT_EQ(ply, cpy);
+//   rapidjson::ObjWavefront obj(vertices, faces, edges);
+//   rapidjson::ObjWavefront cpy_obj;
+//   x.GetObjWavefront(cpy_obj);
+//   EXPECT_EQ(obj, cpy_obj);
+// }
+
+// Python objects
+TEST(Value, PythonClass) {
+  initialize_python("test");
+  PyObject* path = PySys_GetObject("path");
+  RAPIDJSON_ASSERT(path);
+  const char* datadir = std::getenv("DATADIR");
+  RAPIDJSON_ASSERT(datadir);
+  PyObject* example_dir = PyUnicode_FromString(datadir);
+  RAPIDJSON_ASSERT(example_dir);
+  PyList_Append(path, example_dir);
+  Py_DECREF(example_dir);
+  PyObject* pyclass = import_python_class("example_python", "ExampleClass");
+  RAPIDJSON_ASSERT(pyclass);
+  PyObject* pyfunc = import_python_class("example_python", "example_function");
+  RAPIDJSON_ASSERT(pyfunc);
+  PyObject* pyargs = PyList_New(0);
+  RAPIDJSON_ASSERT(pyargs);
+  RAPIDJSON_ASSERT(PyList_Append(pyargs, PyUnicode_FromString("hello")) == 0);
+  RAPIDJSON_ASSERT(PyList_Append(pyargs, PyFloat_FromDouble(0.5)) == 0);
+  PyObject* pykwargs = PyDict_New();
+  RAPIDJSON_ASSERT(pykwargs);
+  RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, PyUnicode_FromString("a"), PyUnicode_FromString("world")) == 0);
+  RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, PyUnicode_FromString("b"), PyLong_FromLong(1)) == 0);
+  PyObject* pyinst = PyObject_Call(pyclass, PyList_AsTuple(pyargs), pykwargs);
+  RAPIDJSON_ASSERT(pyinst);
+  Value x(pyclass);
+  Value y(pyfunc);
+  Value z(pyinst);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.HasSchema());
+  EXPECT_TRUE(x.IsPythonClass());
+  EXPECT_TRUE(y.IsPythonFunction());
+  EXPECT_TRUE(z.IsPythonInstance());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(kStringType, y.GetType());
+  EXPECT_EQ(kObjectType, z.GetType());
+  PyObject* pyclass_cpy = x.GetPythonClass();
+  PyObject* pyfunc_cpy = y.GetPythonFunction();
+  PyObject* pyinst_cpy = z.GetPythonInstance();
+  EXPECT_EQ(PyObject_RichCompareBool(pyclass, pyclass_cpy, Py_EQ), 1);
+  EXPECT_EQ(PyObject_RichCompareBool(pyfunc, pyfunc_cpy, Py_EQ), 1);
+  EXPECT_EQ(PyObject_RichCompareBool(pyinst, pyinst_cpy, Py_EQ), 1);
+  Py_DECREF(pyclass);
+  Py_DECREF(pyclass_cpy);
+  Py_DECREF(pyfunc);
+  Py_DECREF(pyfunc_cpy);
+  Py_DECREF(pyargs);
+  Py_DECREF(pykwargs);
+  Py_DECREF(pyinst);
+  Py_DECREF(pyinst_cpy);
+}
+
+// TODO: schema
+TEST(Value, Schema) {
+}
+#endif // RAPIDJSON_YGGDRASIL
 
 TEST(Value, Array) {
     Value::AllocatorType allocator;

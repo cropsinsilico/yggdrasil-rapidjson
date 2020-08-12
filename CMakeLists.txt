@@ -7,6 +7,15 @@ if(POLICY CMP0054)
   cmake_policy(SET CMP0054 NEW)
 endif()
 
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+   SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk)
+   # SET(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk)
+endif()
+
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g")
+# -Wno-error=sign-conversion -Wno-error=conversion -Wno-error=switch-default")
+
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 
 set(LIB_MAJOR_VERSION "1")
@@ -19,6 +28,25 @@ if (CMAKE_VERSION VERSION_LESS 3.0)
 else()
     cmake_policy(SET CMP0048 NEW)
     PROJECT(RapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES CXX)
+endif()
+
+find_package(PythonInterp 3.6 REQUIRED)
+find_package(PythonLibs 3.6 REQUIRED)
+# exec_program(${PYTHON_EXECUTABLE}
+#              ARGS "-c \"import distutils.sysconfig as sysconfig; import os; print(os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')))\""
+#              OUTPUT_VARIABLE PYTHON_LIBRARIES
+#              RETURN_VALUE PYTHON_LIBRARIES_NOT_FOUND
+#              )
+exec_program(${PYTHON_EXECUTABLE}
+             ARGS "-c \"import numpy; print(numpy.get_include())\""
+             OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
+             RETURN_VALUE NUMPY_NOT_FOUND
+	     )
+if(NUMPY_NOT_FOUND)
+    message(FATAL_ERROR "NumPy headers not found")
+endif()
+if(PYTHON_LIBRARIES_NOT_FOUND)
+    message(FATAL_ERROR "Python libraries not found")
 endif()
 
 # compile in release with debug info mode by default
