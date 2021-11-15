@@ -108,7 +108,14 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
         case kValidateErrorAllOf:                       return RAPIDJSON_ERROR_STRING("Property did not match all of the sub-schemas specified by 'allOf', refer to following errors.");
         case kValidateErrorAnyOf:                       return RAPIDJSON_ERROR_STRING("Property did not match any of the sub-schemas specified by 'anyOf', refer to following errors.");
         case kValidateErrorNot:                         return RAPIDJSON_ERROR_STRING("Property matched the sub-schema specified by 'not'.");
-
+#ifdef RAPIDJSON_YGGDRASIL
+        case kValidateErrorRequiredSchema:              return RAPIDJSON_ERROR_STRING("Schema is missing a required property.");
+        case kValidateErrorSubType:                     return RAPIDJSON_ERROR_STRING("Property has a subtype that is not allowed by the schema.");
+        case kValidateErrorPrecision:                   return RAPIDJSON_ERROR_STRING("Property has a precision of %actual that is incompatible with the schema precision %expected.");
+        case kValdiateErrorUnits:                       return RAPIDJSON_ERROR_STRING("Property has units that are not compatible with the scheam.");
+        case kValidateErrorShape:                       return RAPIDJSON_ERROR_STRING("Property has a shape that does not match the schema.");
+        case kValidateErrorPythonImport:                return RAPIDJSON_ERROR_STRING("Property is not an importable Python object.");
+#endif // RAPIDJSON_YGGDRASIL
         default:                                        return RAPIDJSON_ERROR_STRING("Unknown error.");
     }
 }

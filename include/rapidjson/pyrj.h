@@ -107,18 +107,22 @@ void initialize_python(const std::string error_prefix="") {
 
 /*!
   @brief Try to import a Python module, throw an error if it fails.
-  @param[in] module_name const std::strign Name of the module to import (absolute path).
+  @param[in] module_name const char* Name of the module to import (absolute path).
   @param[in] error_prefix std::string Prefix that should be added to error messages.
+  @param[in] ignore_error bool If True and there is an error, a null pointer
+  will be returned.
   @returns PyObject* Pointer to the Python module object.
  */
 inline
-PyObject* import_python_module(const std::string module_name,
-			       const std::string error_prefix="") {
+PyObject* import_python_module(const char* module_name,
+			       const std::string error_prefix="",
+			       const bool ignore_error=false) {
   initialize_python(error_prefix);
-  PyObject* out = PyImport_ImportModule(module_name.c_str());
+  PyObject* out = PyImport_ImportModule(module_name);
   if (out == NULL) {
     PyErr_Print();
-    throw std::runtime_error(error_prefix + "import_python_module: Failed to import Python model '" + module_name + "'");
+    if (!(ignore_error))
+      throw std::runtime_error(error_prefix + "import_python_module: Failed to import Python model '" + module_name + "'");
   }
   return out;
 };
@@ -126,26 +130,46 @@ PyObject* import_python_module(const std::string module_name,
 
 /*!
   @brief Try to import a Python class, throw an error if it fails.
-  @param[in] module_name const std::string Name of the module to import (absolute path).
-  @param[in] class_name const std::string Name of the class to import from the specified module.
+  @param[in] module_name const char* Name of the module to import (absolute path).
+  @param[in] class_name const char* Name of the class to import from the specified module.
   @param[in] error_prefix std::string Prefix that should be added to error messages.
+  @param[in] ignore_error bool If True and there is an error, a null pointer
+  will be returned.
   @returns PyObject* Pointer to the Python class object.
  */
 inline
-PyObject* import_python_class(const std::string module_name,
-			      const std::string class_name,
-			      const std::string error_prefix="") {
+PyObject* import_python_class(const char* module_name,
+			      const char* class_name,
+			      const std::string error_prefix="",
+			      const bool ignore_error=false) {
   PyObject *py_module = import_python_module(module_name,
-					     error_prefix);
-  PyObject *out = PyObject_GetAttrString(py_module, class_name.c_str());
+					     error_prefix,
+					     ignore_error);
+  if (py_module == NULL)
+    return py_module;
+  PyObject *out = PyObject_GetAttrString(py_module, class_name);
   Py_DECREF(py_module);
   if (out == NULL) {
     PyErr_Print();
-    throw std::runtime_error(error_prefix + "import_python_class: Failed to import Python class/function/object '" + class_name + "'");
+    if (!(ignore_error))
+      throw std::runtime_error(error_prefix + "import_python_class: Failed to import Python class/function/object '" + class_name + "'");
   }
   return out;
 };
 
+inline
+PyObject* import_python_object(const char* mod_class,
+			       const std::string error_prefix="",
+			       const bool ignore_error=false) {
+  char module_name[100] = "";
+  char class_name[100] = "";
+  if (sscanf(mod_class, "%[^:]:%s", module_name, class_name) != 2) {
+    if (!(ignore_error))
+      throw std::runtime_error(error_prefix + "import_python_object: Failed to import Python object '" + class_name + "'");
+    return NULL;
+  }
+  return import_python_class(module_name, class_name, error_prefix, ignore_error);
+};
 
 
 RAPIDJSON_NAMESPACE_END

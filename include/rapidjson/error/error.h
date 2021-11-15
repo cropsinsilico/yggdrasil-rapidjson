@@ -192,7 +192,15 @@ enum ValidateErrorCode {
     kValidateErrorOneOfMatch,                  //!< Property matched more than one of the sub-schemas specified by 'oneOf'.
     kValidateErrorAllOf,                       //!< Property did not match all of the sub-schemas specified by 'allOf'.
     kValidateErrorAnyOf,                       //!< Property did not match any of the sub-schemas specified by 'anyOf'.
-    kValidateErrorNot                          //!< Property matched the sub-schema specified by 'not'.
+    kValidateErrorNot,                         //!< Property matched the sub-schema specified by 'not'.
+#ifdef RAPIDJSON_YGGDRASIL
+    kValidateErrorRequiredSchema,              //!< Schema is missing a required property.
+    kValidateErrorSubType,                     //!< Property has a subtype that is not allowed by the schema.
+    kValidateErrorPrecision,                   //!< Property has a precision that is not allowed by the schema.
+    kValdiateErrorUnits,                       //!< Property has units that are compatible with the schema.
+    kValidateErrorShape,                       //!< Property has a shape that does not match the schema.
+    kValidateErrorPythonImport,                //!< Property is not an importable Python object.
+#endif // RAPIDJSON_YGGDRASIL
 };
 
 //! Function pointer type of GetValidateError().

@@ -1761,8 +1761,8 @@ protected:
     return true;
   }
   bool CheckPythonImport(Context& context, const Ch* str, SizeType length) const {
-    // TODO: Try to import Python and check for error
-    if (false) {
+    if (!(import_python_object(reinterpret_cast<const char*>(str),
+			       "CheckPythonImport", true))) {
       context.error_handler.InvalidPythonImport(str, length);
       RAPIDJSON_INVALID_KEYWORD_RETURN(GetTypeString());
     }
@@ -2618,9 +2618,7 @@ public:
     currentError_.AddMember(GetMissingString(),
 			    ValueType(name, GetStateAllocator()).Move(),
 			    GetStateAllocator());
-    // const StringRefType v(name.GetString(), name.GetStringLength());
-    const typename SchemaType::ValueType v(name.GetString(), name.GetStringLength());
-    AddCurrentError(v, true);
+    AddCurrentError(kValidateErrorPythonImport, true);
   }
   void IncorrectSubType(const typename SchemaType::ValueType& actual, const SValue& expected) {
     currentError_.SetObject();
@@ -2630,10 +2628,10 @@ public:
     currentError_.AddMember(GetActualString(),
 			    ValueType(actual, GetStateAllocator()).Move(),
 			    GetStateAllocator());
-    AddCurrentError(SchemaType::GetSubTypeString(), true);
+    AddCurrentError(kValidateErrorSubType, true);
   }
   void IncorrectPrecision(const typename SchemaType::ValueType& actual, const SValue& expected) {
-    AddNumberError(SchemaType::GetPrecisionString(),
+    AddNumberError(kValidateErrorPrecision,
 		   ValueType(actual, GetStateAllocator()).Move(), expected);
   }
   void IncorrectUnits(const typename SchemaType::ValueType& actual, const SValue& expected) {
@@ -2644,7 +2642,7 @@ public:
     currentError_.AddMember(GetActualString(),
 			    ValueType(actual, GetStateAllocator()).Move(),
 			    GetStateAllocator());
-    AddCurrentError(SchemaType::GetUnitsString(), true);
+    AddCurrentError(kValdiateErrorUnits, true);
   }
   void IncorrectShape(const typename SchemaType::ValueType& actual, const SValue& expected) {
     currentError_.SetObject();
@@ -2654,12 +2652,12 @@ public:
     currentError_.AddMember(GetActualString(),
 			    ValueType(actual, GetStateAllocator()).Move(),
 			    GetStateAllocator());
-    AddCurrentError(SchemaType::GetShapeString());
+    AddCurrentError(kValidateErrorShape, true);
   }
   void InvalidPythonImport(const Ch* str, SizeType len) {
     currentError_.SetObject();
     currentError_.AddMember(GetDisallowedString(), ValueType(str, len, GetStateAllocator()).Move(), GetStateAllocator());
-    AddCurrentError(SchemaType::GetTypeString(), true);
+    AddCurrentError(kValidateErrorPythonImport, true);
   }
 #endif // RAPIDJSON_YGGDRASIL
   

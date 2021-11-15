@@ -1436,8 +1436,9 @@ TEST(Value, PythonClass) {
   Py_DECREF(pyinst_cpy);
 }
 
-// TODO: schema
+// schema
 TEST(Value, Schema) {
+  // TODO
 }
 #endif // RAPIDJSON_YGGDRASIL
 

@@ -4017,8 +4017,6 @@ public:
 
   PyObject* GetPythonClass() const {
     initialize_python("GetPythonClass");
-    char module_name[100] = "";
-    char class_name[100] = "";
     const char *mod_class;
     if (IsPythonInstance()) {
       ConstMemberIterator m = FindMember(GetPythonClassString());
@@ -4027,16 +4025,7 @@ public:
     } else {
       mod_class = reinterpret_cast<const char*>(GetString());
     }
-    RAPIDJSON_ASSERT(sscanf(mod_class,
-			    "%[^:]:%s", module_name, class_name) == 2);
-    PyObject* py_module = PyImport_ImportModule(module_name);
-    if (py_module == NULL)
-      PyErr_Print();
-    RAPIDJSON_ASSERT(py_module);
-    PyObject* py_class = PyObject_GetAttrString(py_module, class_name);
-    Py_DECREF(py_module);
-    if (py_class == NULL)
-      PyErr_Print();
+    PyObject* py_class = import_python_object(mod_class, "GetPythonClass");
     RAPIDJSON_ASSERT(py_class);
     return py_class;
   }

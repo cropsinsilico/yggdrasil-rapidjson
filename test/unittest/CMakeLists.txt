@@ -21,7 +21,7 @@ set(UNITTEST_SOURCES
     # ostreamwrappertest.cpp
     # readertest.cpp
     # regextest.cpp
-    # 	schematest.cpp
+    schematest.cpp
     # 	simdtest.cpp
     # strfunctest.cpp
     # stringbuffertest.cpp
