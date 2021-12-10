@@ -1645,27 +1645,194 @@ TEST(SchemaValidator, Null) {
 }
 
 #ifdef RAPIDJSON_YGGDRASIL
+// TODO: Remove this once writer tests are complete
+#include "rapidjson/writer.h"
+#define DISPLAY_STRING(name, value)			\
+  {							\
+    StringBuffer buffer;				\
+    Writer<StringBuffer> writer(buffer);		\
+    Value container;							\
+    Value::AllocatorType allocator;					\
+    Value v2(value, allocator);						\
+    container.SetArray();						\
+    container.PushBack(v2, allocator);					\
+    RAPIDJSON_ASSERT(container.Accept(writer));				\
+    std::cerr << name << ": " << buffer.GetString() << std::endl;	\
+  }
+#define INIT_PYTHON()							\
+  {									\
+    initialize_python("test");						\
+    PyObject* path = PySys_GetObject("path");				\
+    RAPIDJSON_ASSERT(path);						\
+    const char* datadir = std::getenv("DATADIR");			\
+    RAPIDJSON_ASSERT(datadir);						\
+    PyObject* example_dir = PyUnicode_FromString(datadir);		\
+    RAPIDJSON_ASSERT(example_dir);					\
+    PyList_Append(path, example_dir);					\
+    Py_DECREF(example_dir);						\
+  }
+  
+
 TEST(SchemaValidator, SubType) {
-    // Document sd;
-    // sd.Parse(
-    //     "{"
-    //     "  \"type\": \"scalar\","
-    // 	"  \"subtype\": \"float\","
-    // 	"  \"precision\": \"4\","
-    // 	"  \"units\": \"\","
-    //     "}");
-    // SchemaDocument s(sd);
-    // VALIDATE(s, "", true);
-    // INVALIDATE(s, "", "/subtype", "subtype",
-    //     "");
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": \"uint\","
+	"  \"precision\": 1,"
+	"  \"units\": \"g\""
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6MSwidW5pdHMiOiJnIn0=-YGG-DA==-YGG-\"",
+	       "", "subtype", "",
+	       "{ \"subtype\" : {"
+	       "    \"errorCode\": 27,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": \"uint\", \"actual\": \"int\""
+	       "}}");
 }
-TEST(SchemaValidator, Precision) {
+TEST(SchemaValidator, Precision) { // 28
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": \"uint\","
+	"  \"precision\": 2,"
+	"  \"units\": \"g\""
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\"", true);
+    INVALIDATE(s, "12",
+	       "", "precision", "",
+	       "{ \"precision\" : {"
+	       "    \"errorCode\": 28,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": 2, \"actual\": 8"
+	       "}}");
 }
-TEST(SchemaValidator, Units) {
+TEST(SchemaValidator, Units) { // 29
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": \"uint\","
+	"  \"precision\": 2,"
+	"  \"units\": \"g\""
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjIsInVuaXRzIjoiZyJ9-YGG-DAA=-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjIsInVuaXRzIjoiY20ifQ==-YGG-DAA=-YGG-\"",
+	       "", "units", "",
+	       "{ \"units\" : {"
+	       "    \"errorCode\": 29,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": \"g\", \"actual\": \"cm\""
+	       "}}");
+    // TODO: Test with units that have the same dimensions
+    // Value z(uint8_t(12), "kg");
+    // DISPLAY_STRING("UNIT DIM TEST", z);
+    // VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoia2cifQ==-YGG-DA==-YGG-\"", true);
 }
-TEST(SchemaValidator, Shape) {
-  // shape & length
+TEST(SchemaValidator, Length) { // 30
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"1darray\","
+	"  \"subtype\": \"uint\","
+	"  \"precision\": 2,"
+	"  \"units\": \"g\","
+	"  \"length\": 3"
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzNdfQ==-YGG-AAEC-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzRdfQ==-YGG-AAECAw==-YGG-\"",
+	       "", "shape", "",
+	       "{ \"shape\" : {"
+	       "    \"errorCode\": 30,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": [3], \"actual\": [4]"
+	       "}}");
 }
+TEST(SchemaValidator, Shape) { // 30
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"ndarray\","
+	"  \"subtype\": \"uint\","
+	"  \"precision\": 2,"
+	"  \"units\": \"g\","
+	"  \"shape\": [2, 3]"
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAECAwQF-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsNF19-YGG-AAECAgMEBQY=-YGG-\"",
+	       "", "shape", "",
+	       "{ \"shape\" : {"
+	       "    \"errorCode\": 30,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": [2, 3], \"actual\": [2, 4]"
+	       "}}");
+}
+
+TEST(SchemaValidator, PythonClass) { // 31
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"class\""
+        "}");
+    SchemaDocument s(sd);
+    INIT_PYTHON();
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
+	       "", "class", "",
+	       "{ \"class\" : {"
+	       "    \"errorCode\": 31,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"disallowed\": \"invalid\""
+	       "}}");
+}
+
+TEST(SchemaValidator, PythonFunction) { // 31
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"function\""
+        "}");
+    SchemaDocument s(sd);
+    INIT_PYTHON();
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
+	       "", "class", "",
+	       "{ \"class\" : {"
+	       "    \"errorCode\": 31,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"disallowed\": \"invalid\""
+	       "}}");
+}
+
+TEST(SchemaValidator, PythonInstance) { // 31
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"instance\""
+        "}");
+    SchemaDocument s(sd);
+    INIT_PYTHON();
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImludmFsaWQiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
+	       "", "class", "",
+	       "{ \"class\" : {"
+	       "    \"errorCode\": 31,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"disallowed\": \"invalid\""
+	       "}}");
+    // No kwargs
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6e319-YGG-\"", true);
+    // No args
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOltdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"", true);
+}
+
 #endif // RAPIDJSON_YGGDRASIL
 
 // Additional tests

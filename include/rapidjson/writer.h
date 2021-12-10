@@ -260,33 +260,97 @@ public:
     bool Key(const Ch* const& str) { return Key(str, internal::StrLen(str)); }
 
 #ifdef RAPIDJSON_YGGDRASIL
+  bool WriteBase64Value(const Ch* json, size_t length) {
+    // Cannot use encoding as the encoding classes are called via static
+    // methods and base64 requires knowledge of more than one character
+    Base64OutputStreamWrapper<OutputStream> s64(*os_);
+    PutReserve(*os_, length);
+    // s64.template Reserve<Ch>(length);
+    GenericStringStream<SourceEncoding> is(json);
+    while (RAPIDJSON_LIKELY(is.Tell() < length)) {
+      Ch c = is.Take();
+      s64.Put(c);
+    }
+    s64.WriteNext();
+    return true;
+  }
+  template <typename ObjectType>
+  bool WriteBase64Value(const ObjectType& o) {
+    Base64OutputStreamWrapper<OutputStream> s64(*os_);
+    Writer<Base64OutputStreamWrapper<OutputStream>,SourceEncoding,TargetEncoding> w64(s64);
+    if (RAPIDJSON_UNLIKELY(!(w64.StartObject())))
+      return false;
+    for (auto m = o.MemberBegin(); m != o.MemberEnd(); ++m) {
+      RAPIDJSON_ASSERT(m->name.IsString()); // User may change the type of name by MemberIterator.
+      if (RAPIDJSON_UNLIKELY(!(w64.Key(m->name.GetString(), m->name.GetStringLength(), true))))
+	return false;
+      if (RAPIDJSON_UNLIKELY(!m->value.Accept(w64, true)))
+	return false;
+    }
+    if (!(w64.EndObject(o.MemberCount()))) return false;
+    s64.WriteNext();
+    return true;
+  }
+  
   template <typename ValueType>
-  bool WriteYggdrasil(const Ch* str, SizeType length, ValueType& schema) {
-    const Ch* ygg = "-YGG-";
+  bool WriteYggdrasilPrefix(ValueType& schema) {
+    const Ch ygg[5] = {'-', 'Y', 'G', 'G', '-'};
     size_t len_ygg = 5;
-    Base64StreamWrapper<OutputStream> s64(*os_);
-    Writer w64(s64);
     // Reserve
+    Prefix(kStringType);
     PutReserve(*os_, 1);
     PutUnsafe(*os_, '\"');
     if (!WriteRawValue(ygg, len_ygg)) return false;
     // Schema
-    if (!schema.Accept(w64)) return false;
+    RAPIDJSON_ASSERT(!(schema.IsYggdrasil()));
+    if (!WriteBase64Value(schema)) return false;
     if (!WriteRawValue(ygg, len_ygg)) return false;
-    // Body
-    if (!(w64.WriteRawValue(str, length))) return false;
+    return true;
+  }
+  bool WriteYggdrasilSuffix() {
+    const Ch ygg[5] = {'-', 'Y', 'G', 'G', '-'};
+    size_t len_ygg = 5;
     if (!WriteRawValue(ygg, len_ygg)) return false;
     PutReserve(*os_, 1);
     PutUnsafe(*os_, '\"');
+    return EndValue(true);
+  }
+  template <typename SchemaValueType>
+  bool Yggdrasil(const Ch* str, SizeType length, bool, SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>))) {
+    RAPIDJSON_ASSERT(str != 0);
+    if (!WriteYggdrasilPrefix(schema)) return false;
+    // Body
+    if (!WriteBase64Value(str, length)) return false;
+    if (!WriteYggdrasilSuffix()) return false;
     return true;
   }
-  template <typename ValueType>
-  bool Yggdrasil(const Ch* str, SizeType length, bool copy, ValueType& schema) {
-    RAPIDJSON_ASSERT(str != 0);
-    (void)copy;
-    Prefix(kStringType);
-    return EndValue(WriteYggdrasil(str, length, schema));
+  template <typename ObjectType, typename SchemaValueType>
+  bool Yggdrasil(const ObjectType& o, SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>))) {
+    if (!WriteYggdrasilPrefix(schema)) return false;
+    // Body
+    if (!WriteBase64Value(o)) return false;
+    if (!WriteYggdrasilSuffix()) return false;
+    return true;
   }
+  // // Versions to allow direct encoding
+  // template <typename SchemaValueType>
+  // bool Yggdrasil(const Ch* str, SizeType length, bool, SchemaValueType& schema, RAPIDJSON_ENABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>))) {
+  //   RAPIDJSON_ASSERT(str != 0);
+  //   Prefix(kStringType);
+  //   if (!WriteYggdrasilPrefix(schema)) return false;
+  //   // Body
+  //   if (!WriteBase64Value(str, length)) return false;
+  //   if (!WriteYggdrasilSuffix()) return false;
+  //   return EndValue(true);
+  // }
+  // template <typename ObjectType, typename SchemaValueType>
+  // bool Yggdrasil(const ObjectType& o, SchemaValueType& schema, RAPIDJSON_ENABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>))) {
+  //   if (!WriteYggdrasilPrefix(schema)) return false;
+  //   // Body
+  //   if (!WriteBase64Value(o)) return false;
+  //   if (!WriteYggdrasilSuffix()) return false;
+  //   return true;
+  // }
 #endif // RAPIDJSON_YGGDRASIL
 
     //@}

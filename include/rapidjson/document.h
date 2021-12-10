@@ -655,27 +655,23 @@ struct TypeHelper<ValueType, typename ValueType::ConstObject> {
 
 #ifdef RAPIDJSON_YGGDRASIL
 
-template<typename T>
-class HasYggdrasilMethod
 // https://stackoverflow.com/questions/257288/templated-check-for-the-existence-of-a-class-member-function
+template<typename Type, typename ValueType>  //, typename SchemaType>
+class HasYggdrasilMethodImpl
 {
-  typedef char one;
-  struct two { char x[2]; };
-  template <typename C> static one test( char[sizeof(&C::Yggdrasil)] );
-  template <typename C> static two test(...);
+  typedef char Yes;
+  typedef long No;
+  template <typename T, typename VT>
+  static Yes HasYggdrasil(decltype(&T::template Yggdrasil<VT>));
+  template <typename T, typename VT>
+  static Yes HasYggdrasil(decltype(&T::Yggdrasil));
+  template <typename T, typename VT>
+  static No  HasYggdrasil(...);
 public:
-  enum { value = sizeof(test<T>(0)) == sizeof(char) };
+  static const bool Value = (sizeof(HasYggdrasil<Type,ValueType>(0)) == sizeof(Yes));
 };
-// template<typename T>
-// class HasYggdrasilStringMethod
-// {
-//   typedef char one;
-//   struct two { char x[2]; };
-//   template <typename C> static one test( char[sizeof(&C::YggdrasilString)] );
-//   template <typename C> static two test(...);
-// public:
-//   enum { value = sizeof(test<T>(0)) == sizeof(char) };
-// };
+template <typename T, typename VT> struct HasYggdrasilMethod
+  : BoolExpr<HasYggdrasilMethodImpl<T, VT> >::Type {};
   
 // Yggdrasil TypeHelper structs
 // uint
@@ -2200,6 +2196,8 @@ public:
     template <typename Handler>
 #ifdef RAPIDJSON_YGGDRASIL
     bool Accept(Handler& handler, bool skip_yggdrasil=false) const {
+        if (IsYggdrasil() && (!skip_yggdrasil))
+	  return AcceptYggdrasil(handler);
 #else // RAPIDJSON_YGGDRASIL
     bool Accept(Handler& handler) const {
 #endif // RAPIDJSON_YGGDRASIL
@@ -2209,10 +2207,6 @@ public:
         case kTrueType:     return handler.Bool(true);
 
         case kObjectType:
-#ifdef RAPIDJSON_YGGDRASIL
-	    if (IsYggdrasil() && (!skip_yggdrasil))
-	        return AcceptYggdrasil(handler);
-#endif // RAPIDJSON_YGGDRASIL
             if (RAPIDJSON_UNLIKELY(!handler.StartObject()))
                 return false;
             for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
@@ -2233,10 +2227,6 @@ public:
             return handler.EndArray(data_.a.size);
     
         case kStringType:
-#ifdef RAPIDJSON_YGGDRASIL
-	    if (IsYggdrasil() && (!skip_yggdrasil))
-	        return AcceptYggdrasil(handler);
-#endif // RAPIDJSON_YGGDRASIL
 	    return handler.String(GetString(), GetStringLength(), (data_.f.flags & kCopyFlag) != 0);
         default:
             RAPIDJSON_ASSERT(GetType() == kNumberType);
@@ -2777,7 +2767,7 @@ public:
   RAPIDJSON_STRING_(Items, 'i', 't', 'e', 'm', 's')
   RAPIDJSON_STRING_(Scalar, 's', 'c', 'a', 'l', 'a', 'r')
   RAPIDJSON_STRING_(1DArray, '1', 'd', 'a', 'r', 'r', 'a', 'y')
-  RAPIDJSON_STRING_(NDArray, 'N', 'd', 'a', 'r', 'r', 'a', 'y')
+  RAPIDJSON_STRING_(NDArray, 'n', 'd', 'a', 'r', 'r', 'a', 'y')
   RAPIDJSON_STRING_(PythonClass, 'c', 'l', 'a', 's', 's')
   RAPIDJSON_STRING_(PythonFunction, 'f', 'u', 'n', 'c', 't', 'i', 'o', 'n')
   RAPIDJSON_STRING_(PythonInstance, 'i', 'n', 's', 't', 'a', 'n', 'c', 'e')
@@ -2806,15 +2796,19 @@ public:
 
   // Specialization checking if handler has Yggdrasil method
   template <typename Handler>
-  bool AcceptYggdrasil(Handler& handler, RAPIDJSON_ENABLEIF((typename internal::HasYggdrasilMethod<Handler>::value))) const {
-    if (IsString())
-      return handler.Yggdrasil(GetString(), GetStringLength(), (data_.f.flags & kCopyFlag) != 0, schema_);
-    else
-      return handler.Yggdrasil(GetObject(), schema_);
+  bool AcceptYggdrasil(Handler& handler, RAPIDJSON_ENABLEIF((internal::HasYggdrasilMethod<Handler,SchemaValueType>))) const {
+    switch(GetType()) {
+    case kObjectType:
+      return handler.Yggdrasil(GetObject(), *schema_);
+    case kStringType:
+      return handler.Yggdrasil(GetString(), GetStringLength(), (data_.f.flags & kCopyFlag) != 0, *schema_);
+    default:
+      return false;
+    }
   }
   // Fallback
   template <typename Handler>
-  bool AcceptYggdrasil(Handler& handler) const {
+  bool AcceptYggdrasil(Handler& handler, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<Handler,SchemaValueType>))) const {
     return Accept(handler, true); }
 
   template <typename T>
@@ -4513,67 +4507,82 @@ public:
             new (stack_.template Push<ValueType>()) ValueType(str, length);
         return true;
     }
+#ifdef RAPIDJSON_YGGDRASIL
+  bool YggdrasilString(const Ch* str, SizeType length, bool) {
+    const Ch ygg[5] = {'-', 'Y', 'G', 'G', '-'};
+    SizeType len_ygg = 5;
+    if ((memcmp(ygg, str, sizeof(ygg)) != 0)
+	|| (memcmp(ygg, str + (length - len_ygg), sizeof(ygg)) != 0)) {
+      return false;
+    }
+    // Locate -ygg- markers
+    SizeType i = len_ygg, beg_schema = len_ygg, end_schema, len_schema, elen_schema, beg_body, end_body, len_body, elen_body;
+    beg_schema = len_ygg;
+    while ((i < length) && (memcmp(ygg, str + i, sizeof(ygg)) != 0)) i++;
+    end_schema = i;
+    len_schema = end_schema - beg_schema;
+    elen_schema = len_schema * 3 / 4;
+    beg_body = end_schema + len_ygg;
+    end_body = length - len_ygg;
+    len_body = end_body - beg_body;
+    elen_body = len_body * 3 / 4;
+    RAPIDJSON_ASSERT((end_body + len_ygg) == length);
+    // Add stream
+    GenericStringStream<Encoding> is(str);
+    is.src_ += len_ygg;
+    Base64InputStreamWrapper<GenericStringStream<Encoding>> is64(is);
+    GenericStringBuffer<Encoding, Allocator> os_body(&GetAllocator());
+    GenericStringBuffer<Encoding, Allocator> os_schema(&GetAllocator());
+    // Extract the schema
+    // std::cerr << "Reading schema (encoded_len = " << len_schema
+    // 	  << ", decoded_len = " << elen_schema
+    // 	  << ")" << std::endl;
+    SizeType nempty_schema = 0;
+    for (SizeType j = 0; j < elen_schema; j++) {
+      // std::cerr << "    char " << j << " " << is64.Peek() << std::endl;
+      if (is64.Peek() != '\0') {
+	os_schema.Put(is64.Take());
+      } else { 
+	is64.Take();
+	nempty_schema++;
+      }
+    }
+    is.src_ += len_ygg;
+    // Extract the body
+    // std::cerr << "Reading body (encoded_len = " << len_body
+    // 	  <<", decoded_len = " << elen_body
+    // 	  << ")" << std::endl;
+    SizeType nempty_body = 0;
+    for (SizeType j = 0; j < elen_body; j++) {
+      // std::cerr << "    char " << j << " " << is64.Peek() << std::endl;
+      if (!(is64.PeekEmpty())) {
+	os_body.Put(is64.Take());
+      } else {
+	is64.Take();
+	nempty_body++;
+      }
+    }
+    elen_body = elen_body - nempty_body;
+    is.src_ += len_ygg;
+    RAPIDJSON_ASSERT(is.Tell() == (size_t)length);
+    // std::cerr << "schema: \"" << os_schema.GetString() << "\"" << std::endl;
+    // std::cerr << "body: \"" << os_body.GetString() << "\"" << std::endl;
+    ValueType* x = new (stack_.template Push<ValueType>()) ValueType(
+	os_body.GetString(), (SizeType)(os_body.GetLength()),
+	GetAllocator(),
+	os_schema.GetString(), (SizeType)(os_schema.GetLength()));
+    if (x->IsPythonInstance()) {
+      GenericDocument x_obj(&GetAllocator());
+      x_obj.Parse(os_body.GetString());
+      x->SetObjectRaw(x_obj.GetMembersPointer(), x_obj.MemberCount(), GetAllocator());
+    }
+    return true;
+  }
+#endif // RAPIDJSON_YGGDRASIL
 
     bool String(const Ch* str, SizeType length, bool copy) {
 #ifdef RAPIDJSON_YGGDRASIL
-      const Ch ygg[6] = {'-', 'Y', 'G', 'G', '-', '\0'}; //L"-YGG-";
-      SizeType len_ygg = 5;
-      if ((strncmp(reinterpret_cast<const char*>(str),
-		   reinterpret_cast<const char*>(ygg),
-		   len_ygg * sizeof(Ch)) == 0)
-	  && (strncmp(reinterpret_cast<const char*>(str + (length - len_ygg)),
-		      reinterpret_cast<const char*>(ygg),
-		      len_ygg * sizeof(Ch)) == 0)) {
-	size_t i = len_ygg;
-	while ((i < (size_t)(length - len_ygg))
-	       && (strncmp(reinterpret_cast<const char*>(str + i),
-			   reinterpret_cast<const char*>(ygg),
-			   len_ygg * sizeof(Ch)) != 0)) i++;
-	size_t schema_len = i - len_ygg;
-	size_t body_len = (size_t)(length - (i + (2 * len_ygg)));
-	size_t schema_len_encoded = schema_len * 3 / 4;
-	size_t body_len_encoded = body_len * 3 / 4;
-	GenericStringStream<Encoding> is(str);
-	is.src_ += len_ygg;
-	Base64StreamWrapper<GenericStringStream<Encoding>> is64(is);
-	GenericStringBuffer<Encoding, Allocator> os_body(&GetAllocator());
-	GenericStringBuffer<Encoding, Allocator> os_schema(&GetAllocator());
-	// std::cerr << "Reading schema (encoded_len = " << schema_len
-	// 	  << ", decoded_len = " << schema_len_encoded
-	// 	  << ")" << std::endl;
-	for (size_t j = 0; j < schema_len_encoded; j++) {
-	  // std::cerr << "    char " << j << " " << is64.Peek() << std::endl;
-	  if (is64.Peek() != '\0')
-	    os_schema.Put(is64.Take());
-	  else
-	    is64.Take();
-	}
-	is.src_ += len_ygg;
-	// std::cerr << "Reading body (encoded_len = " << body_len
-	// 	  <<", decoded_len = " << body_len_encoded
-	// 	  << ")" << std::endl;
-	size_t nempty = 0;
-	for (size_t j = 0; j < body_len_encoded; j++) {
-	  // std::cerr << "    char " << j << " " << is64.Peek() << std::endl;
-	  if (!(is64.PeekEmpty())) {
-	    os_body.Put(is64.Take());
-	  } else {
-	    is64.Take();
-	    nempty++;
-	  }
-	}
-	body_len_encoded = body_len_encoded - nempty;
-	is.src_ += len_ygg;
-	RAPIDJSON_ASSERT(is.Tell() == (size_t)length);
-	// std::cerr << "schema: \"" << os_schema.GetString() << "\"" << std::endl;
-	// std::cerr << "body: \"" << os_body.GetString() << "\"" << std::endl;
-	new (stack_.template Push<ValueType>()) ValueType(
-	     os_body.GetString(), (SizeType)(os_body.GetLength()),
-	     GetAllocator(),
-	     os_schema.GetString(), (SizeType)(os_schema.GetLength()));
-	return true;
-      }
-	  
+      if (YggdrasilString(str, length, copy)) return true;
 #endif // RAPIDJSON_YGGDRASIL
         if (copy) 
             new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator());
@@ -4789,6 +4798,13 @@ public:
     MemberIterator begin() const { return value_.MemberBegin(); }
     MemberIterator end() const { return value_.MemberEnd(); }
 #endif
+
+#ifdef RAPIDJSON_YGGDRASIL
+  template <typename Handler>
+  bool Accept(Handler& handler, bool skip_yggdrasil=false) const {
+    return value_.Accept(handler, skip_yggdrasil);
+  }
+#endif // RAPIDJSON_YGGDRASIL
 
 private:
     GenericObject();

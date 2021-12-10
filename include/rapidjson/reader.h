@@ -216,6 +216,14 @@ struct BaseReaderHandler {
     bool EndObject(SizeType) { return static_cast<Override&>(*this).Default(); }
     bool StartArray() { return static_cast<Override&>(*this).Default(); }
     bool EndArray(SizeType) { return static_cast<Override&>(*this).Default(); }
+#ifdef RAPIDJSON_YGGDRASIL
+  template <typename YggSchemaValueType>
+  bool Yggdrasil(const Ch*, SizeType, bool, YggSchemaValueType&) {
+    return static_cast<Override&>(*this).Default(); }
+  template <typename ObjectType, typename YggSchemaValueType>
+  bool Yggdrasil(const ObjectType&, YggSchemaValueType&) {
+    return static_cast<Override&>(*this).Default(); }
+#endif // RAPIDJSON_YGGDRASIL
 };
 
 ///////////////////////////////////////////////////////////////////////////////

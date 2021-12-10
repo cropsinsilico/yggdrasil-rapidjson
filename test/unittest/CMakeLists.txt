@@ -28,8 +28,8 @@ set(UNITTEST_SOURCES
     # strtodtest.cpp
     unittest.cpp
     # uritest.cpp
-    valuetest.cpp)
-    # writertest.cpp)
+    valuetest.cpp
+    writertest.cpp)
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
@@ -88,20 +88,19 @@ set_tests_properties(unittest PROPERTIES
                      ENVIRONMENT
 		     "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
 
-if(NOT MSVC)
-    # Not running SIMD.* unit test cases for Valgrind
-    add_test(NAME valgrind_unittest
-        COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind-python.supp --leak-check=full --error-exitcode=1 --track-origins=yes --dsymutil=no --keep-debuginfo=yes --read-var-info=yes ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=-SIMD.*
-        # COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind-python.supp --leak-check=full --error-exitcode=1 --track-origins=yes --dsymutil=no ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=-SIMD.*
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-    set_tests_properties(valgrind_unittest PROPERTIES
-                         ENVIRONMENT
-                         "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
+# if(NOT MSVC)
+#     # Not running SIMD.* unit test cases for Valgrind
+#     add_test(NAME valgrind_unittest
+#         COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind-python.supp --leak-check=full --error-exitcode=1 --track-origins=yes --dsymutil=no --keep-debuginfo=yes --read-var-info=yes ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=-SIMD.*
+#         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+#     set_tests_properties(valgrind_unittest PROPERTIES
+#                          ENVIRONMENT
+#                          "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
 
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        add_test(NAME symbol_check
-        COMMAND sh -c "objdump -t -C libnamespacetest.a | grep rapidjson ; test $? -ne 0"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+#     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+#         add_test(NAME symbol_check
+#         COMMAND sh -c "objdump -t -C libnamespacetest.a | grep rapidjson ; test $? -ne 0"
+#         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+#     endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
-endif(NOT MSVC)
+# endif(NOT MSVC)

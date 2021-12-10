@@ -1125,6 +1125,7 @@ static void TestArray(T& x, Allocator& allocator) {
 }
 
 #ifdef RAPIDJSON_YGGDRASIL
+
 // TODO: Test compatible units
 TEST(Value, ScalarUInt) {
   Value x(uint8_t(12));

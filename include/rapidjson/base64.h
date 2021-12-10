@@ -162,11 +162,40 @@ static inline unsigned char * base64_decode(const unsigned char *src, size_t len
 }
 #endif
 
+// template <typename StreamType>
+// class Base64StreamWrapper  {
+// public:
+//   typedef typename StreamType::Ch Ch;
+//   Base64StreamWrapper(StreamType &stream) :
+//     stream_(stream), buffer_(),
+//     dtable_(), // buffer_empty_(),
+//     pos_(0), buffer_pos_(0) {
+//     buffer_[0] = '\0';
+//     buffer_[1] = '\0';
+//     buffer_[2] = '\0';
+//     buffer_empty_[0] = true;
+//     buffer_empty_[1] = true;
+//     buffer_empty_[2] = true;
+//     memset(dtable_, 0x80, 256);
+//     for (size_t i = 0; i < sizeof(base64_table) - 1; i++)
+//       dtable_[base64_table[i]] = (unsigned char) i;
+//     dtable_[base64_table_last] = 0;
+//   }
+// private:
+//   StreamType &stream_;
+//   unsigned char buffer_[3];
+//   unsigned char dtable_[256];
+//   bool buffer_empty_[3];
+//   size_t pos_;
+//   size_t buffer_pos_;
+// };
+
+
 template <typename StreamType>
-class Base64StreamWrapper  {
+class Base64InputStreamWrapper {
 public:
   typedef typename StreamType::Ch Ch;
-  Base64StreamWrapper(StreamType &stream) :
+  Base64InputStreamWrapper(StreamType &stream) :
     stream_(stream), buffer_(),
     dtable_(), // buffer_empty_(),
     pos_(0), buffer_pos_(0) {
@@ -182,8 +211,6 @@ public:
     dtable_[base64_table_last] = 0;
     ReadNext();
   }
-  
-  // Input
   unsigned char PeekByte(size_t n = 0) {
     if ((buffer_pos_ + n) < 3)
       return buffer_[buffer_pos_ + n];
@@ -221,31 +248,6 @@ public:
     return out;
   }
   size_t Tell() { return pos_; } // When is this used?
-  
-  // Output
-  void Reserve(size_t count) {
-    stream_.Reserve(count * sizeof(Ch) * 4 / 3);
-  }
-  Ch* PutBegin() { return stream_.PutBegin(); }
-  void PutByte(unsigned char ch) {
-    RAPIDJSON_ASSERT(buffer_pos_ < 3);
-    buffer_empty_[buffer_pos_] = false;
-    buffer_[buffer_pos_++] = ch;
-    if (buffer_pos_ == 3)
-      WriteNext();
-  }
-  void Put(Ch ch) {
-    unsigned char* bytes = reinterpret_cast<unsigned char*>(&ch);
-    for (size_t i = 0; i < sizeof(Ch); i++) {
-      PutByte(bytes[i]);
-    }
-  }
-  void Flush() { stream_.Flush(); }
-  size_t PutEnd(Ch* ch) {
-    if (buffer_pos_ > 0)
-      WriteNext();
-    return stream_.PutEnd(ch);
-  }
   
   // unsigned char* PeekNext() {
   //   // std::cerr << "PeekNext" << std::endl;
@@ -319,8 +321,64 @@ public:
     //   std::cerr << buffer_[i];
     // std::cerr << std::endl;
   }
+private:
+  StreamType &stream_;
+  unsigned char buffer_[3];
+  unsigned char dtable_[256];
+  bool buffer_empty_[3];
+  size_t pos_;
+  size_t buffer_pos_;
+  
+};
 
+template <typename StreamType>
+class Base64OutputStreamWrapper {
+public:
+  typedef typename StreamType::Ch Ch;
+  Base64OutputStreamWrapper(StreamType &stream) :
+    stream_(stream), buffer_(),
+    dtable_(), // buffer_empty_(),
+    pos_(0), buffer_pos_(0) {
+    buffer_[0] = '\0';
+    buffer_[1] = '\0';
+    buffer_[2] = '\0';
+    buffer_empty_[0] = true;
+    buffer_empty_[1] = true;
+    buffer_empty_[2] = true;
+    memset(dtable_, 0x80, 256);
+    for (size_t i = 0; i < sizeof(base64_table) - 1; i++)
+      dtable_[base64_table[i]] = (unsigned char) i;
+    dtable_[base64_table_last] = 0;
+  }
+  template<typename Ch2>
+  void Reserve(size_t count) {
+    stream_.Reserve(count * sizeof(Ch2) * 4 / 3);
+  }
+  Ch* PutBegin() { return stream_.PutBegin(); }
+  void PutByte(unsigned char ch) {
+    RAPIDJSON_ASSERT(buffer_pos_ < 3);
+    buffer_empty_[buffer_pos_] = false;
+    buffer_[buffer_pos_++] = ch;
+    if (buffer_pos_ == 3)
+      WriteNext();
+  }
+  template<typename Ch2>
+  void Put(Ch2 ch) {
+    unsigned char* bytes = reinterpret_cast<unsigned char*>(&ch);
+    for (size_t i = 0; i < sizeof(Ch2); i++) {
+      PutByte(bytes[i]);
+    }
+  }
+  void Flush() { stream_.Flush(); }
+  template<typename Ch2>
+  size_t PutEnd(Ch2* ch) {
+    if (buffer_pos_ > 0)
+      WriteNext();
+    return stream_.PutEnd(ch);
+  }
+  
   void WriteNext() {
+    if (buffer_pos_ == 0) return;
     // Encode
     unsigned char encoded[4] = {'\0', '\0', '\0', '\0'};
     unsigned char *in = &(buffer_[0]);
@@ -357,6 +415,8 @@ public:
     buffer_empty_[1] = true;
     buffer_empty_[2] = true;
   }
+  template <typename SchemaValueType>
+  bool Yggdrasil() {}
   
 private:
   StreamType &stream_;
@@ -365,6 +425,7 @@ private:
   bool buffer_empty_[3];
   size_t pos_;
   size_t buffer_pos_;
+  
 };
 
 #endif // BASE64_H_

@@ -5,14 +5,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Yggdrasil Specific
 
 ### TODO
-* Obj wavefront
-* Debug Ply valgrind errors
+* Verify Ply & Obj valgrind errors disappear on Linux
 * Schema type
 * Coverage
 * Continuous integration
+* Unit-full type
 
 ### COMPLETE
-* Add schema to document class
+* Added schema to document class
 * Scalars w/ variable precision
 * ND arrays (1+)
 * Python import

@@ -51,13 +51,6 @@ TEST(Writer, Compact) {
         EXPECT_TRUE(writer.IsComplete()); \
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
-#define TEST_YGG_ROUNDTRIP(json) \
-  { \
-  
-  }
-#endif // RAPIDJSON_YGGDRASIL
-
 TEST(Writer, Root) {
     TEST_ROUNDTRIP("null");
     TEST_ROUNDTRIP("true");
@@ -147,8 +140,38 @@ TEST(Writer, Double) {
 }
 
 #ifdef RAPIDJSON_YGGDRASIL
+// json -> parse -> document -> writer -> json
+#define TEST_YGG_ROUNDTRIP(json) \
+    { \
+      { TEST_ROUNDTRIP(json); }	\
+        StringStream s(json); \
+        StringBuffer buffer; \
+        Writer<StringBuffer> writer(buffer); \
+	Document d; \
+	d.ParseStream(s); \
+	d.Accept(writer); \
+        EXPECT_STREQ(json, buffer.GetString()); \
+        EXPECT_TRUE(writer.IsComplete()); \
+    }
 TEST(Writer, ScalarUInt) {
-  TEST_YGG_ROUNDTRIP();
+  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\"");
+}
+TEST(Writer, ScalarInt) {
+  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6MSwidW5pdHMiOiJnIn0=-YGG-DA==-YGG-\"");
+}
+TEST(Writer, ScalarComplex) {
+  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImNvbXBsZXgiLCJwcmVjaXNpb24iOjE2LCJ1bml0cyI6ImcifQ==-YGG-AAAAAAAAKEAAAAAAAAAAAA==-YGG-\"");
+}
+TEST(Writer, OneDArrayUInt) {
+  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiTmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzNdfQ==-YGG-AAEC-YGG-\"");
+}
+TEST(Writer, NDArrayUInt) {
+  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiTmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAECAwQF-YGG-\"");
+}
+TEST(Writer, PythonClass) {
+  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"");
+  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9mdW5jdGlvbg==-YGG-\"");
+  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"");
 }
 
 #endif // RAPIDJSON_YGGDRASIL
