@@ -655,24 +655,6 @@ struct TypeHelper<ValueType, typename ValueType::ConstObject> {
 
 #ifdef RAPIDJSON_YGGDRASIL
 
-// https://stackoverflow.com/questions/257288/templated-check-for-the-existence-of-a-class-member-function
-template<typename Type, typename ValueType>  //, typename SchemaType>
-class HasYggdrasilMethodImpl
-{
-  typedef char Yes;
-  typedef long No;
-  template <typename T, typename VT>
-  static Yes HasYggdrasil(decltype(&T::template Yggdrasil<VT>));
-  template <typename T, typename VT>
-  static Yes HasYggdrasil(decltype(&T::Yggdrasil));
-  template <typename T, typename VT>
-  static No  HasYggdrasil(...);
-public:
-  static const bool Value = (sizeof(HasYggdrasil<Type,ValueType>(0)) == sizeof(Yes));
-};
-template <typename T, typename VT> struct HasYggdrasilMethod
-  : BoolExpr<HasYggdrasilMethodImpl<T, VT> >::Type {};
-  
 // Yggdrasil TypeHelper structs
 // uint
 template<typename ValueType>

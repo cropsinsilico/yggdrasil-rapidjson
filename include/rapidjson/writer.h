@@ -24,6 +24,9 @@
 #include "internal/itoa.h"
 #include "stringbuffer.h"
 #include <new>      // placement new
+#ifdef RAPIDJSON_YGGDRASIL
+#include "base64.h"
+#endif // RAPIDJSON_YGGDRASIL
 
 #if defined(RAPIDJSON_SIMD) && defined(_MSC_VER)
 #include <intrin.h>

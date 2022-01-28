@@ -21,6 +21,9 @@
 #include "error/en.h"
 #include "uri.h"
 #include <cmath> // abs, floor
+#ifdef RAPIDJSON_YGGDRASIL
+#include "units.h"
+#endif // RAPIDJSON_YGGDRASIL
 
 #if !defined(RAPIDJSON_SCHEMA_USE_INTERNALREGEX)
 #define RAPIDJSON_SCHEMA_USE_INTERNALREGEX 1
@@ -1794,8 +1797,9 @@ protected:
   bool CheckUnits(Context& context, const ValueType* actual, const bool&) const {
     if (units_.IsNull())
       return true;
-    // TODO: Check dimensions rather than equivalence
-    if (units_ != *actual) {
+    units::Units<char> expected_units = units::Units<char>::parse_units<EncodingType>(units_.GetString(), units_.GetStringLength());
+    units::Units<char> actual_units = units::Units<char>::parse_units<EncodingType>(actual->GetString(), actual->GetStringLength());
+    if (!(actual_units.is_compatible(expected_units))) {
       context.error_handler.IncorrectUnits(*actual, units_);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValdiateErrorUnits);
     }

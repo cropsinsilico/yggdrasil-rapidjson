@@ -1732,7 +1732,7 @@ TEST(SchemaValidator, Units) { // 29
     // TODO: Test with units that have the same dimensions
     // Value z(uint8_t(12), "kg");
     // DISPLAY_STRING("UNIT DIM TEST", z);
-    // VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoia2cifQ==-YGG-DA==-YGG-\"", true);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoia2cifQ==-YGG-DA==-YGG-\"", true);
 }
 TEST(SchemaValidator, Length) { // 30
     Document sd;

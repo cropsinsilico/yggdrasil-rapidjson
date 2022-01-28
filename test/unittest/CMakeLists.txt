@@ -29,7 +29,8 @@ set(UNITTEST_SOURCES
     unittest.cpp
     # uritest.cpp
     valuetest.cpp
-    writertest.cpp)
+    writertest.cpp
+    unitstest.cpp)
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
