@@ -1,10 +1,19 @@
+# include(CTest)
+enable_testing()
 find_package(GTestSrc)
+# find_package(GTest)
 
 add_definitions(-DRAPIDJSON_YGGDRASIL)
 add_definitions(-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION)
 
-IF(GTESTSRC_FOUND)
-    enable_testing()
+include_directories(SYSTEM ${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
+
+# if(GTEST_FOUND)
+
+#     include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
+#     set(TEST_LIBRARIES ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY} ${PYTHON_LIBRARIES})
+    
+if(GTESTSRC_FOUND)
 
     if (WIN32 AND (NOT CYGWIN) AND (NOT MINGW))
         set(gtest_disable_pthreads ON)
@@ -14,14 +23,27 @@ IF(GTESTSRC_FOUND)
     IF(GTEST_SOURCE_DIR)
         add_subdirectory(${GTEST_SOURCE_DIR} ${CMAKE_BINARY_DIR}/googletest)
     endif()
-    message("GTEST_INCLUDE_DIR = ${GTEST_INCLUDE_DIR}, GTEST_INCLUDE_DIRS = ${GTEST_INCLUDE_DIRS}, GTEST_LIBRARIES = ${GTEST_LIBRARIES}")
     include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
-    include_directories(SYSTEM ${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
 
     set(TEST_LIBRARIES gtest gtest_main ${PYTHON_LIBRARIES})
 
-    add_custom_target(tests ALL)
-    # add_subdirectory(perftest)
-    add_subdirectory(unittest)
+endif()
 
-ENDIF(GTESTSRC_FOUND)
+if(TEST_LIBRARIES)
+    option(RAPIDJSON_ENABLE_COVERAGE "Enable coverage reporting" OFF)
+    if(RAPIDJSON_ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang|ARMClang")
+        set(CMAKE_CXX_FLAGS "-g -O0 --coverage -fprofile-arcs -ftest-coverage -fprofile-filter-files=\"${CMAKE_SOURCE_DIR}/include/*\" -fprofile-exclude-files=\"${CMAKE_SOURCE_DIR}/include/rapidjson/fwd.h\"")
+        set(CMAKE_C_FLAGS "-g -O0 --coverage -fprofile-arcs -ftest-coverage -fprofile-filter-files=\"${CMAKE_SOURCE_DIR}/include/*\" -fprofile-exclude-files=\"${CMAKE_SOURCE_DIR}/include/rapidjson/fwd.h\"")
+	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|ARMClang")
+            set(CTEST_COVERAGE_COMMAND "llvm-cov")
+            set(CTEST_COVERAGE_EXTRA_FLAGS "gcov")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+        endif()
+    endif(RAPIDJSON_ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang|ARMClang")
+
+    add_custom_target(tests ALL)
+    add_subdirectory(perftest)
+    add_subdirectory(unittest)
+    
+endif()

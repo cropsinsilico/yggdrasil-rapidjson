@@ -779,6 +779,10 @@ public:
 #define YGG_SCHEMA_INIT , schema_(0)  // NULL)
 #define YGG_SCHEMA_INIT_ONLY : schema_(0) // NULL)
 #define YGG_SCHEMA_INIT_CONSTRUCT schema_ = 0 // NULL
+#else
+#define YGG_SCHEMA_INIT
+#define YGG_SCHEMA_INIT_ONLY
+#define YGG_SCHEMA_INIT_CONSTRUCT
 #endif // RAPIDJSON_YGGDRASIL
   
     //!@name Constructors and destructor.
@@ -3337,10 +3341,12 @@ public:
       out = PyDict_New();
       RAPIDJSON_ASSERT(out);
       ConstMemberIterator item;
+      int result = 0;
       for (item = MemberBegin(); item != MemberEnd(); item++) {
 	const char* ikey = item->name.GetString();
 	PyObject* ival = item->value.GetPythonObjectRaw();
-	RAPIDJSON_ASSERT(PyDict_SetItemString(out, ikey, ival) == 0);
+	result = PyDict_SetItemString(out, ikey, ival);
+	RAPIDJSON_ASSERT(result == 0);
       }
       return out;
     }
@@ -3349,9 +3355,11 @@ public:
       out = PyList_New(len);
       RAPIDJSON_ASSERT(out);
       ConstValueIterator item;
+      int result = 0;
       for (item = Begin(); item != End(); item++) {
 	PyObject* ival = item->GetPythonObjectRaw();
-	RAPIDJSON_ASSERT(PyList_Append(out, ival) == 0);
+	result = PyList_Append(out, ival);
+	RAPIDJSON_ASSERT(result == 0);
       }
       return out;
     }
@@ -3847,8 +3855,7 @@ public:
   template <typename T>
   void GetScalarBase(T& data) const {
     RAPIDJSON_ASSERT(YggSubTypeString<T>() == GetSubType());
-    SizeType length = (GetStringLength() * sizeof(Ch));
-    RAPIDJSON_ASSERT(length == GetPrecision());
+    RAPIDJSON_ASSERT((GetStringLength() * sizeof(Ch)) == GetPrecision());
     ChangePrecision(reinterpret_cast<const unsigned char*>(GetString()),
 		    &data, 1);
     // if (sizeof(T) != GetPrecision()) {

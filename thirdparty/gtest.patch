@@ -1,0 +1,13 @@
+diff --git a/googletest/include/gtest/internal/gtest-param-util-generated.h b/googletest/include/gtest/internal/gtest-param-util-generated.h
+index dcf90c27..2a8fe4a2 100644
+--- a/googletest/include/gtest/internal/gtest-param-util-generated.h
++++ b/googletest/include/gtest/internal/gtest-param-util-generated.h
+@@ -99,7 +99,7 @@ class ValueArray2 {
+ 
+  private:
+   // No implementation - assignment is unsupported.
+-  void operator=(const ValueArray2& other);
++  // void operator=(const ValueArray2& other);
+ 
+   const T1 v1_;
+   const T2 v2_;

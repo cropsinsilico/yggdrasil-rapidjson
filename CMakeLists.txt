@@ -13,9 +13,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    # SET(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk)
 endif()
 
-SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g")
-# -Wno-error=sign-conversion -Wno-error=conversion -Wno-error=switch-default")
-
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 
 set(LIB_MAJOR_VERSION "1")

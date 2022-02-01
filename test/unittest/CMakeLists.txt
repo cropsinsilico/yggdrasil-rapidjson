@@ -1,33 +1,33 @@
 include(CheckCXXCompilerFlag)
 
 set(UNITTEST_SOURCES
-    # 	allocatorstest.cpp
-    # bigintegertest.cpp
-    # clzlltest.cpp
-    # 	cursorstreamwrappertest.cpp
+    allocatorstest.cpp
+    bigintegertest.cpp
+    clzlltest.cpp
+    cursorstreamwrappertest.cpp
     documenttest.cpp
-    # dtoatest.cpp
-    # encodedstreamtest.cpp
-    # encodingstest.cpp
-    # fwdtest.cpp
-    # filestreamtest.cpp
-    # itoatest.cpp
-    # istreamwrappertest.cpp
-    # jsoncheckertest.cpp
-    # namespacetest.cpp
-    # pointertest.cpp
-    # platformtest.cpp
-    # prettywritertest.cpp
-    # ostreamwrappertest.cpp
-    # readertest.cpp
-    # regextest.cpp
+    dtoatest.cpp
+    encodedstreamtest.cpp
+    encodingstest.cpp
+    fwdtest.cpp
+    filestreamtest.cpp
+    itoatest.cpp
+    istreamwrappertest.cpp
+    jsoncheckertest.cpp
+    namespacetest.cpp
+    pointertest.cpp
+    platformtest.cpp
+    prettywritertest.cpp
+    ostreamwrappertest.cpp
+    readertest.cpp
+    regextest.cpp
     schematest.cpp
-    # 	simdtest.cpp
-    # strfunctest.cpp
-    # stringbuffertest.cpp
-    # strtodtest.cpp
+    simdtest.cpp
+    strfunctest.cpp
+    stringbuffertest.cpp
+    strtodtest.cpp
     unittest.cpp
-    # uritest.cpp
+    uritest.cpp
     valuetest.cpp
     writertest.cpp
     unitstest.cpp)
@@ -77,10 +77,12 @@ target_link_libraries(unittest ${TEST_LIBRARIES} namespacetest)
 
 add_dependencies(tests unittest)
 
-add_custom_command(TARGET unittest POST_BUILD
-    COMMAND dsymutil unittest
-    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-    COMMENT "Creating debug symbols...")
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|ARMClang")
+    add_custom_command(TARGET unittest POST_BUILD
+        COMMAND dsymutil unittest
+        WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMENT "Creating debug symbols...")
+endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|ARMClang")
 
 add_test(NAME unittest
     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest
@@ -89,19 +91,24 @@ set_tests_properties(unittest PROPERTIES
                      ENVIRONMENT
 		     "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
 
-# if(NOT MSVC)
-#     # Not running SIMD.* unit test cases for Valgrind
-#     add_test(NAME valgrind_unittest
-#         COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind-python.supp --leak-check=full --error-exitcode=1 --track-origins=yes --dsymutil=no --keep-debuginfo=yes --read-var-info=yes ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=-SIMD.*
-#         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-#     set_tests_properties(valgrind_unittest PROPERTIES
-#                          ENVIRONMENT
-#                          "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
 
-#     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-#         add_test(NAME symbol_check
-#         COMMAND sh -c "objdump -t -C libnamespacetest.a | grep rapidjson ; test $? -ne 0"
-#         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-#     endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+option(RAPIDJSON_SKIP_VALGRIND_TESTS "Disable valgrind tests" OFF)
+if(NOT MSVC)
+    find_program(VALGRIND_FOUND valgrind)
+    if((NOT RAPIDJSON_SKIP_VALGRIND_TESTS) AND VALGRIND_FOUND)
+        # Not running SIMD.* unit test cases for Valgrind
+        add_test(NAME valgrind_unittest
+        	 COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind-python.supp --leak-check=full --error-exitcode=1 --track-origins=yes --dsymutil=no --keep-debuginfo=yes --read-var-info=yes ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=-SIMD.*
+	         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+    	set_tests_properties(valgrind_unittest PROPERTIES
+                             ENVIRONMENT
+                             "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
+    endif((NOT RAPIDJSON_SKIP_VALGRIND_TESTS) AND VALGRIND_FOUND)
 
-# endif(NOT MSVC)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        add_test(NAME symbol_check
+        COMMAND sh -c "objdump -t -C libnamespacetest.a | grep rapidjson ; test $? -ne 0"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+
+endif(NOT MSVC)

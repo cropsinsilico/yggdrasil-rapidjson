@@ -1517,7 +1517,9 @@ protected:
     case (kYggComplexSchemaSubType): return GetComplexSubTypeString();
     case (kYggStringSchemaSubType): return GetStringSubTypeString();
     default:
-      RAPIDJSON_ASSERT(false);
+      const ValueType& out = GetNullString();
+      RAPIDJSON_ASSERT(out != GetNullString());
+      return out;
     }
   }
   void AddSubType(const ValueType& subtype) { subtype_ = GetSubType(subtype); }
