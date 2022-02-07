@@ -416,7 +416,7 @@ public:
     buffer_empty_[2] = true;
   }
   template <typename SchemaValueType>
-  bool Yggdrasil() {}
+  bool Yggdrasil() { return false; }
   
 private:
   StreamType &stream_;
