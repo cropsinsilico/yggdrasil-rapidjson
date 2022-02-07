@@ -28,7 +28,6 @@ jobs:
           cd ../..
       - name: Set up miniconda test environment
         uses: conda-incubator/setup-miniconda@v2
-        if: matrix.install-method == 'conda'
         with:
           activate-environment: rapidjson
           environment-file: environment.yml
