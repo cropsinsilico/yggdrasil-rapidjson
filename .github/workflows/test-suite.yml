@@ -26,6 +26,15 @@ jobs:
           cd thirdparty/gtest
           git apply ../gtest.patch
           cd ../..
+      - name: Set up miniconda test environment
+        uses: conda-incubator/setup-miniconda@v2
+        if: matrix.install-method == 'conda'
+        with:
+          activate-environment: rapidjson
+          environment-file: environment.yml
+          auto-update-conda: true
+          channels: conda-forge
+          channel-priority: strict
       - name: Configure
         run: |
           cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON

@@ -1,0 +1,5 @@
+name: rapidjson
+channels:
+  - conda-forge
+dependencies:
+  - numpy
