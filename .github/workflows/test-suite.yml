@@ -1,12 +1,12 @@
 name: Test of package installation & execution
-  'on':
-    push:
-      branches-ignore:
-       - gh-pages
-      tags:
-       - '*'
-    schedule:
-    - cron: 0 10 * * 1
+'on':
+  push:
+    branches-ignore:
+     - gh-pages
+    tags:
+     - '*'
+  schedule:
+  - cron: 0 10 * * 1
 jobs:
   build:
     runs-on: ${{ matrix.os }}
