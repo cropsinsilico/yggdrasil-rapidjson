@@ -1317,73 +1317,73 @@ TEST(Value, NDArrayUInt) {
   EXPECT_FALSE(x.IsObject());
   EXPECT_FALSE(x.IsArray());
 }
-// TEST(Value, ObjWavefront) {
-//   double vertices[8][3] = 
-//     {{0.0, 0.0, 0.0},
-//      {0.0, 0.0, 1.0},
-//      {0.0, 1.0, 1.0},
-//      {0.0, 1.0, 0.0},
-//      {1.0, 0.0, 0.0},
-//      {1.0, 0.0, 1.0},
-//      {1.0, 1.0, 1.0},
-//      {1.0, 1.0, 0.0}};
-//   int faces[2][3] = 
-//     {{3, 0, 1},
-//      {3, 0, 2}};
-//   int edges[5][2] = 
-//     {{0, 1},
-//      {1, 2},
-//      {2, 3},
-//      {3, 0},
-//      {2, 0}};
-//   rapidjson::ObjWavefront obj(vertices, faces, edges);
-//   rapidjson::Document doc;
-//   rapidjson::Value x(obj);
-//   EXPECT_TRUE(x.IsYggdrasil());
-//   EXPECT_TRUE(x.IsObjWavefront());
-//   EXPECT_EQ(kStringType, x.GetType());
-//   EXPECT_EQ(x.GetObjString(), x.GetYggType());
-//   rapidjson::ObjWavefront cpy;
-//   x.GetObjWavefront(cpy);
-//   EXPECT_EQ(obj, cpy);
-//   rapidjson::Ply ply(vertices, faces, edges);
-//   rapidjson::Ply cpy_ply;
-//   x.GetPly(cpy_ply);
-//   EXPECT_EQ(ply, cpy_ply);
-// }
-// TEST(Value, Ply) {
-//   const double vertices[8][3] = 
-//     {{0.0, 0.0, 0.0},
-//      {0.0, 0.0, 1.0},
-//      {0.0, 1.0, 1.0},
-//      {0.0, 1.0, 0.0},
-//      {1.0, 0.0, 0.0},
-//      {1.0, 0.0, 1.0},
-//      {1.0, 1.0, 1.0},
-//      {1.0, 1.0, 0.0}};
-//   int faces[2][3] = 
-//     {{3, 0, 1},
-//      {3, 0, 2}};
-//   int edges[5][2] = 
-//     {{0, 1},
-//      {1, 2},
-//      {2, 3},
-//      {3, 0},
-//      {2, 0}};
-//   rapidjson::Ply ply(vertices, faces, edges);
-//   rapidjson::Document doc;
-//   rapidjson::Value x(ply);
-//   EXPECT_TRUE(x.IsYggdrasil());
-//   EXPECT_EQ(kStringType, x.GetType());
-//   EXPECT_EQ(x.GetPlyString(), x.GetYggType());
-//   rapidjson::Ply cpy = rapidjson::Ply();
-//   x.GetPly(cpy);
-//   EXPECT_EQ(ply, cpy);
-//   rapidjson::ObjWavefront obj(vertices, faces, edges);
-//   rapidjson::ObjWavefront cpy_obj;
-//   x.GetObjWavefront(cpy_obj);
-//   EXPECT_EQ(obj, cpy_obj);
-// }
+TEST(Value, ObjWavefront) {
+  double vertices[8][3] = 
+    {{0.0, 0.0, 0.0},
+     {0.0, 0.0, 1.0},
+     {0.0, 1.0, 1.0},
+     {0.0, 1.0, 0.0},
+     {1.0, 0.0, 0.0},
+     {1.0, 0.0, 1.0},
+     {1.0, 1.0, 1.0},
+     {1.0, 1.0, 0.0}};
+  int faces[2][3] = 
+    {{3, 0, 1},
+     {3, 0, 2}};
+  int edges[5][2] = 
+    {{0, 1},
+     {1, 2},
+     {2, 3},
+     {3, 0},
+     {2, 0}};
+  rapidjson::ObjWavefront obj(vertices, faces, edges);
+  rapidjson::Document doc;
+  rapidjson::Value x(obj);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.IsObjWavefront());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(x.GetObjString(), x.GetYggType());
+  rapidjson::ObjWavefront cpy;
+  x.GetObjWavefront(cpy);
+  EXPECT_EQ(obj, cpy);
+  rapidjson::Ply ply(vertices, faces, edges);
+  rapidjson::Ply cpy_ply;
+  x.GetPly(cpy_ply);
+  EXPECT_EQ(ply, cpy_ply);
+}
+TEST(Value, Ply) {
+  const double vertices[8][3] = 
+    {{0.0, 0.0, 0.0},
+     {0.0, 0.0, 1.0},
+     {0.0, 1.0, 1.0},
+     {0.0, 1.0, 0.0},
+     {1.0, 0.0, 0.0},
+     {1.0, 0.0, 1.0},
+     {1.0, 1.0, 1.0},
+     {1.0, 1.0, 0.0}};
+  int faces[2][3] = 
+    {{3, 0, 1},
+     {3, 0, 2}};
+  int edges[5][2] = 
+    {{0, 1},
+     {1, 2},
+     {2, 3},
+     {3, 0},
+     {2, 0}};
+  rapidjson::Ply ply(vertices, faces, edges);
+  rapidjson::Document doc;
+  rapidjson::Value x(ply);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(x.GetPlyString(), x.GetYggType());
+  rapidjson::Ply cpy = rapidjson::Ply();
+  x.GetPly(cpy);
+  EXPECT_EQ(ply, cpy);
+  rapidjson::ObjWavefront obj(vertices, faces, edges);
+  rapidjson::ObjWavefront cpy_obj;
+  x.GetObjWavefront(cpy_obj);
+  EXPECT_EQ(obj, cpy_obj);
+}
 
 // Python objects
 TEST(Value, PythonClass) {
