@@ -496,7 +496,7 @@ public:
 		const T (&arr)[M][N],
 		const std::vector<const std::string> &property_names) :
     PlyElementSet(name0, property_names, arr[0][0],
-		  bool(N != property_names.size())) {
+		  bool(N != (property_names.size()))) {
     RAPIDJSON_ASSERT((N == property_names.size())
 		     || (property_names.size() == 1));
     count = M;

@@ -27,14 +27,18 @@ jobs:
           cd thirdparty/gtest
           git apply ../gtest.patch
           cd ../..
-      - name: Set up miniconda test environment
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: rapidjson
-          environment-file: environment.yml
-          auto-update-conda: true
-          channels: conda-forge
-          channel-priority: strict
+      # - name: Set up miniconda test environment
+      #   uses: conda-incubator/setup-miniconda@v2
+      #   with:
+      #     activate-environment: rapidjson
+      #     environment-file: environment.yml
+      #     auto-update-conda: true
+      #     channels: conda-forge
+      #     channel-priority: strict
+      - name: Setup Python
+        uses: actions/setup-python@v2
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
       - name: Configure
         run: |
           cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
@@ -47,9 +51,11 @@ jobs:
           ctest -C Debug --output-on-failure --verbose
       - name: Collect coverage
         run: |
+          cd build
           ctest -T Coverage
       - name: Upload coverage report
         uses: codecov/codecov-action@v1
         with:
           name: ${{ matrix.os }}
           token: ${{ secrets.CODECOV_TOKEN }}
+          directory: build/Testing/CoverageInfo
