@@ -383,9 +383,9 @@ public:
   ObjElement(const ObjElement& rhs) : code(rhs.code) {}
   //! \brief Initialize an element by reading from an input stream.
   //! \param in Input stream to read from.
-  ObjElement(std::istream &) {
-    std::cerr << "Child class must overrride stream initializer" << std::endl;
-  }
+  // ObjElement(std::istream &) {
+  //   std::cerr << "Child class must overrride stream initializer" << std::endl;
+  // }
   //! \brief Initialize an element from a C array of values.
   //! \tparam T Array element type.
   //! \tparam N Array size.
@@ -1077,17 +1077,19 @@ public:
     if (!IS_EQUAL_DBL(lhs->u1, rhs->u1)) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_double_array
   std::vector<double> get_double_array() const override {
     std::vector<double> out({u0, u1});
     for (auto it = values.begin(); it != values.end(); it++)
       out.push_back((double)(*it));
     return out;
   }
-  std::vector<ObjRef> values;
-  double u0;
-  double u1;
+  std::vector<ObjRef> values; //! Vector for curve values.
+  double u0; //! Curve value in first parameter direction.
+  double u1; //! Curve value in second parameter direction.
 };
 
+//! 2D curve element.
 class ObjCurve2D : public ObjElement {
 public:
   ObjCurve2D(const ObjCurve2D& rhs) :
@@ -1109,12 +1111,17 @@ public:
     ObjElement("curv2"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjCurve2D type is ObjRef"));
   }
+  //! \copydoc ObjElement::values()
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() >= 2);
   }
+  //! \copydoc ObjElement::copy
   ObjCurve2D* copy() const override { return new ObjCurve2D(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjCurve2D* lhs = this;
@@ -1122,6 +1129,7 @@ public:
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_int_array
   std::vector<int> get_int_array() const override {
     std::vector<int> out;
     for (auto it = values.begin(); it != values.end(); it++)
@@ -1152,7 +1160,9 @@ public:
     ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {
     RAPIDJSON_ASSERT(!sizeof("ObjSurface type is ObjRefVertex"));
   }
+  //! \copydoc ObjElement::copy
   ObjSurface* copy() const override { return new ObjSurface(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     in >> s0;
     in >> s1;
@@ -1160,10 +1170,12 @@ public:
     in >> t1;
     ObjElement::read_values(in, values);
   }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << s0 << " " << s1 << " " << t0 << " " << t1 << " ";
     ObjElement::write_values(out, values);
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjSurface* lhs = this;
@@ -1175,6 +1187,7 @@ public:
     if (!IS_EQUAL_DBL(lhs->t1, rhs->t1)) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_double_array
   std::vector<double> get_double_array() const override {
     std::vector<double> out({s0, s1, t0, t1});
     for (auto it = values.begin(); it != values.end(); it++)
@@ -1218,15 +1231,19 @@ public:
       delete *it;
     elements.resize(0);
   }
+  //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1)
 		     || (values.size() == 2));
   }
+  //! \copydoc ObjElement::copy
   ObjFreeFormType* copy() const override { return new ObjFreeFormType(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     ObjElement::read_values(in, values);
     read_obj_elements(in, elements);
   }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     ObjElement::write_values(out, values);
     out << std::endl;
@@ -1234,6 +1251,7 @@ public:
       (*it)->write(out);
     out << "end";
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjFreeFormType* lhs = this;
@@ -1247,6 +1265,7 @@ public:
     }
     return true;
   }
+  //! \copydoc ObjElement::get_string_array
   std::vector<std::string> get_string_array() const override {
     std::vector<std::string> out;
     for (auto it = values.begin(); it != values.end(); it++)
@@ -1280,12 +1299,17 @@ public:
     ObjElement("deg"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjDegree type is uint16_t"));
   }
+  //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1) || (values.size() == 2));
   }
+  //! \copydoc ObjElement::copy
   ObjDegree* copy() const override { return new ObjDegree(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjDegree* lhs = this;
@@ -1293,6 +1317,7 @@ public:
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_int_array
   std::vector<int> get_int_array() const override {
     std::vector<int> out;
     for (auto it = values.begin(); it != values.end(); it++)
@@ -1323,16 +1348,20 @@ public:
     ObjElement("bmat"), values(), direction("") {
     RAPIDJSON_ASSERT(!sizeof("ObjBasisMatrix type is double"));
   }
+  //! \copydoc ObjElement::copy
   ObjBasisMatrix* copy() const override { return new ObjBasisMatrix(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     in >> direction;
     RAPIDJSON_ASSERT((direction == "u") || (direction == "v"));
     ObjElement::read_values(in, values);
   }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << direction << " ";
     ObjElement::write_values(out, values);
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjBasisMatrix* lhs = this;
@@ -1366,12 +1395,17 @@ public:
     ObjElement("step"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjStep type is double"));
   }
+  //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1) || (values.size() == 2));
   }
+  //! \copydoc ObjElement::copy
   ObjStep* copy() const override { return new ObjStep(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjStep* lhs = this;
@@ -1379,6 +1413,7 @@ public:
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_double_array
   std::vector<double> get_double_array() const override {
     std::vector<double> out;
     for (auto it = values.begin(); it != values.end(); it++)
@@ -1409,16 +1444,20 @@ public:
     ObjElement("parm"), values(), direction("") {
     RAPIDJSON_ASSERT(sizeof("ObjParameter type is double"));
   }
+  //! \copydoc ObjElement::copy
   ObjParameter* copy() const override { return new ObjParameter(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     in >> direction;
     RAPIDJSON_ASSERT((direction == "u") || (direction == "v"));
     ObjElement::read_values(in, values);
   }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << direction << " ";
     ObjElement::write_values(out, values);
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjParameter* lhs = this;
@@ -1452,9 +1491,13 @@ public:
     ObjElement("trim"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjTrim type is ObjRefCurve"));
   }
+  //! \copydoc ObjElement::copy
   ObjTrim* copy() const override { return new ObjTrim(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjTrim* lhs = this;
@@ -1486,9 +1529,13 @@ public:
     ObjElement("hole"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjHole type is ObjRefCurve"));
   }
+  //! \copydoc ObjElement::copy
   ObjHole* copy() const override { return new ObjHole(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjHole* lhs = this;
@@ -1520,9 +1567,13 @@ public:
     ObjElement("scrv"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjScrv type is ObjRefCurve"));
   }
+  //! \copydoc ObjElement::copy
   ObjScrv* copy() const override { return new ObjScrv(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjScrv* lhs = this;
@@ -1554,9 +1605,13 @@ public:
     ObjElement("sp"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjSpecialPoints type is ObjRef"));
   }
+  //! \copydoc ObjElement::copy
   ObjSpecialPoints* copy() const override { return new ObjSpecialPoints(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjSpecialPoints* lhs = this;
@@ -1588,9 +1643,13 @@ public:
     ObjElement("con"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjConnect type is ObjRefSurface"));
   }
+  //! \copydoc ObjElement::copy
   ObjConnect* copy() const override { return new ObjConnect(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjConnect* lhs = this;
@@ -1631,17 +1690,21 @@ public:
       delete *it;
     elements.resize(0);
   }
+  //! \copydoc ObjElement::copy
   ObjGroup* copy() const override { return new ObjGroup(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     ObjElement::read_values(in, values);
     read_obj_elements(in, elements, 'g');
   }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     ObjElement::write_values(out, values);
     out << std::endl;
     for (auto it = elements.begin(); it != elements.end(); it++)
       (*it)->write(out);
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjGroup* lhs = this;
@@ -1674,7 +1737,9 @@ public:
     ObjElement("s"), group_number(-1) {
     RAPIDJSON_ASSERT(!sizeof("ObjSmoothingGroup cannot be initialized from an array"));
   }
+  //! \copydoc ObjElement::copy
   ObjSmoothingGroup* copy() const override { return new ObjSmoothingGroup(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     std::string word;
     in >> word;
@@ -1683,12 +1748,14 @@ public:
     else
       group_number = stoi(word);
   }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     if (group_number < 0)
       out << "off";
     else
       out << group_number;
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjSmoothingGroup* lhs = this;
@@ -1714,7 +1781,9 @@ public:
     ObjElement("mg"), group_number(-1), resolution(0) {
     RAPIDJSON_ASSERT(!sizeof("ObjMergingGroup type cannot be initialized from an array"));
   }
+  //! \copydoc ObjElement::copy
   ObjMergingGroup* copy() const override { return new ObjMergingGroup(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     std::string word;
     in >> word;
@@ -1726,6 +1795,7 @@ public:
       in >> resolution;
     }
   }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     if (group_number < 0)
       out << "off";
@@ -1733,6 +1803,7 @@ public:
       out << group_number << " " << resolution;
     }
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjMergingGroup* lhs = this;

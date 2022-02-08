@@ -921,7 +921,7 @@ class GroupToken; // Forward declaration
 template<typename Ch>
 class TokenBase {
 public:
-  TokenBase(const TokenBase& rhs) : TokenBase(rhs.t, rhs.parent), units(rhs.units), finalized(rhs.finalized) {}
+  TokenBase(const TokenBase& rhs) : t(rhs.t), parent(rhs.parent), units(rhs.units), finalized(rhs.finalized) {}
   TokenBase(const TokenType t0, TokenBase *parent0=nullptr) : t(t0), units(), finalized(false), parent(parent0) {}
   virtual ~TokenBase() {}
   virtual TokenBase<Ch>* current_token() { return this; }
