@@ -59,3 +59,4 @@ jobs:
           name: ${{ matrix.os }}
           token: ${{ secrets.CODECOV_TOKEN }}
           directory: build/Testing/CoverageInfo
+          functionalities: gcov
