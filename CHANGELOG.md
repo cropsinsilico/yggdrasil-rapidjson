@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### TODO
 * Verify Ply & Obj valgrind errors disappear on Linux
 * Add docstrings to new methods
+* Schema type
 
 ### IN PROGRESS
 * Continuous integration
@@ -19,7 +20,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Python class
 * Python function
 * Python instance
-* Schema type
 * Coverage (via gcov/llvm-cov and ctest)
 * Unit-full type
 
