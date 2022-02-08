@@ -467,20 +467,17 @@ public:
   //! \brief Read element members from an input stream.
   //! \param in Input stream.
   virtual void read_values(std::istream&) {
-    in;
     std::cerr << "Child class must overrride read_values" << std::endl;
   }
   //! \brief Write element member to an output stream.
   //! \param out Output stream.
   virtual void write_values(std::ostream&) const {
-    out;
     std::cerr << "Child class must overrride write_values" << std::endl;
   }
   //! \brief Check if another element is equivalent.
   //! \param rhs0 Element to compare.
   //! \return true if rhs is equivalent.
   virtual bool is_equal(const ObjElement*) const {
-    rhs0;
     std::cerr << "Child class must overrride is_equal" << std::endl;
     return false;
   }
