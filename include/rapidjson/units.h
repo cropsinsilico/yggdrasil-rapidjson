@@ -332,44 +332,44 @@ namespace dimensions {
   static Dimension inductance = magnetic_flux / current;
 } // namespace dimensions
 
-// Each dimension needs
-// - base dimension
 
-// Each unit needs
-// - abbrviations
-// - names
-// - dimensions
-
-typedef struct unit_prefix_t {
-  char abbr[3];
-  double factor;
-  char name[7];
-} unit_prefix_t;
+//! Unit prefix.
+class UnitPrefix {
+public:
+  UnitPrefix(const char* abbr0, const double& factor0, const char* name0) :
+    abbr(), factor(factor0), name() {
+    strcpy(abbr, abbr0);
+    strcpy(name, name0);
+  }
+  char abbr[3]; //! Abbreviation associated with the prefix.
+  double factor; //! Factor that the prefix implies.
+  char name[7]; //! Full name associated with the prefix.
+};
 
 // This dictionary formatting from magnitude package (secondarily via unyt), credit to Juan Reyero.
-static std::vector<unit_prefix_t> unit_prefixes {
-  {"Y", 1e24, "yotta"},
-  {"Z", 1e21, "zetta"},
-  {"E", 1e18, "exa"},
-  {"P", 1e15, "peta"},
-  {"T", 1e12, "tera"},
-  {"G", 1e9, "giga"},
-  {"M", 1e6, "mega"},
-  {"k", 1e3, "kilo"},
-  {"h", 1e2, "hecto"},
-  {"da", 1e1, "deca"},
-  {"d", 1e-1, "deci"},
-  {"c", 1e-2, "centi"},
-  {"m", 1e-3, "mili"},
-  {"µ", 1e-6, "micro"},  // ('MICRO SIGN' U+00B5)
-  {"u", 1e-6, "micro"},
-  {"μ", 1e-6, "micro"},  // ('GREEK SMALL LETTER MU' U+03BC)
-  {"n", 1e-9, "nano"},
-  {"p", 1e-12, "pico"},
-  {"f", 1e-15, "femto"},
-  {"a", 1e-18, "atto"},
-  {"z", 1e-21, "zepto"},
-  {"y", 1e-24, "yocto"}
+static std::vector<UnitPrefix> unit_prefixes {
+  UnitPrefix("Y", 1e24, "yotta"),
+  UnitPrefix("Z", 1e21, "zetta"),
+  UnitPrefix("E", 1e18, "exa"),
+  UnitPrefix("P", 1e15, "peta"),
+  UnitPrefix("T", 1e12, "tera"),
+  UnitPrefix("G", 1e9, "giga"),
+  UnitPrefix("M", 1e6, "mega"),
+  UnitPrefix("k", 1e3, "kilo"),
+  UnitPrefix("h", 1e2, "hecto"),
+  UnitPrefix("da", 1e1, "deca"),
+  UnitPrefix("d", 1e-1, "deci"),
+  UnitPrefix("c", 1e-2, "centi"),
+  UnitPrefix("m", 1e-3, "mili"),
+  UnitPrefix("µ", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
+  UnitPrefix("u", 1e-6, "micro"),
+  UnitPrefix("μ", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
+  UnitPrefix("n", 1e-9, "nano"),
+  UnitPrefix("p", 1e-12, "pico"),
+  UnitPrefix("f", 1e-15, "femto"),
+  UnitPrefix("a", 1e-18, "atto"),
+  UnitPrefix("z", 1e-21, "zepto"),
+  UnitPrefix("y", 1e-24, "yocto")
 };
 
 
@@ -381,6 +381,7 @@ class Units;
 template<typename T, typename Ch=char>
 class Quantity;
 
+//! Unit.
 template<typename Ch>
 class Unit {
 public:
@@ -410,11 +411,18 @@ public:
     power_ = power; // Base units do not have powers
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
   }
+  //! \brief Write the unit to an output stream with class information.
+  //! \param os Output stream.
   void display(std::ostream& os) const {
     os << "Unit(\"" << names_[0] << "\", " << dim_ << ", " << factor_
        << ", " << offset_ << ")**" << power_;
   }
+  //! \brief Get the dimensions of the unit, including the power.
+  //! \return The dimensions of the unit.
   Dimension dimension() const { return dim_.pow(power_); }
+  //! \brief Check if this unit is equal to another.
+  //! \param x Unit to check against.
+  //! \return true if this unit is equal to x.
   bool operator==(const Unit& x) const {
     if (names_ != x.names_) return false;
     if (abbrs_ != x.abbrs_) return false;
@@ -424,6 +432,9 @@ public:
     if (std::abs(power_ - x.power_) > DBL_EPSILON) return false;
     return true;
   }
+  //! \brief Check if this unit is not equal to another.
+  //! \param x Unit to check against.
+  //! \return true if this unit is not equal to x.
   bool operator!=(const Unit& x) const { return (!(*this == x)); }
   void inplace_pow(const double x) {
     RAPIDJSON_ASSERT(!(has_offset() && (std::abs(x - 1.0) > DBL_EPSILON)));
@@ -450,7 +461,7 @@ public:
     }
     return false;
   }
-  bool matches(const std::basic_string<Ch> str, const unit_prefix_t& prefix) const {
+  bool matches(const std::basic_string<Ch> str, const UnitPrefix& prefix) const {
     for (auto n = names_.begin(); n != names_.end(); n++) {
       if (str.compare(prefix.name + (*n)) == 0)
 	return true;
