@@ -4079,15 +4079,16 @@ public:
     } else if (IsObjWavefront()) {
       ObjWavefront o = GetObjWavefront();
       for (auto it = o.elements.begin(); it != o.elements.end(); it++) {
-	if ((*it)->code == "v")
-	  p.add_element("vertex", (*it)->get_double_array(),
-			std::vector<const std::string>({"x", "y", "z"}));
-	else if ((*it)->code == "f")
-	  p.add_element("face", (*it)->get_int_array(),
-			std::vector<const std::string>({"vertex_index"}));
-	else if ((*it)->code == "l")
-	  p.add_element("edge", (*it)->get_int_array(),
-			std::vector<const std::string>({"vertex1", "vertex2"}));
+	if ((*it)->code == "v") {
+	  std::vector<std::string> property_names {"x", "y", "z"};
+	  p.add_element("vertex", (*it)->get_double_array(), property_names);
+	} else if ((*it)->code == "f") {
+	  std::vector<std::string> property_names {"vertex_index"};
+	  p.add_element("face", (*it)->get_int_array(), property_names);
+	} else if ((*it)->code == "l") {
+	  std::vector<std::string> property_names {"vertex1", "vertex2"};
+	  p.add_element("edge", (*it)->get_int_array(), property_names);
+	}
 	else
 	  RAPIDJSON_ASSERT(((*it)->code == "v") ||
 			   ((*it)->code == "f") ||

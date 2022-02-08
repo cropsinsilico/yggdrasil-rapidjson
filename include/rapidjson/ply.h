@@ -484,7 +484,7 @@ public:
     name(name0), count(count0), elements(), property_order(), property_flags(), property_size_flags() {}
   template <typename T>
   PlyElementSet(const std::string& name0,
-		const std::vector<const std::string> &property_names,
+		const std::vector<std::string> &property_names,
 		const T&,
 		const bool is_array = false) :
     name(name0), count(0), elements(), property_order(),
@@ -494,7 +494,7 @@ public:
   template <typename T, size_t M, size_t N>
   PlyElementSet(const std::string& name0,
 		const T (&arr)[M][N],
-		const std::vector<const std::string> &property_names) :
+		const std::vector<std::string> &property_names) :
     PlyElementSet(name0, property_names, arr[0][0],
 		  bool(N != (property_names.size()))) {
     RAPIDJSON_ASSERT((N == property_names.size())
@@ -511,7 +511,7 @@ public:
   std::map<std::string, uint16_t> property_size_flags;
 
   template<typename T>
-  void set_flags(const std::vector<const std::string> &property_names, const bool is_array) {
+  void set_flags(const std::vector<std::string> &property_names, const bool is_array) {
     uint16_t flags = type2flag<T>();
     uint16_t size_flags = 0;
     if (is_array) {
@@ -606,7 +606,7 @@ public:
 	   typename Tf, SizeType Mf, SizeType Nf>
   Ply(const Tv (&vertices)[Mv][Nv], const Tf (&faces)[Mf][Nf]) :
     Ply(vertices) {
-    add_element_set("face", faces, std::vector<const std::string>({"vertex_index"}));
+    add_element_set("face", faces, std::vector<std::string>({"vertex_index"}));
   }
   template<typename Tv, SizeType Mv, SizeType Nv,
 	   typename Tf, SizeType Mf, SizeType Nf,
@@ -622,21 +622,22 @@ public:
     RAPIDJSON_ASSERT((Nv == 3) || (Nv == 6));
     if (Nv == 3)
       add_element_set("vertex", vertices,
-		      std::vector<const std::string>({"x", "y", "z"}));
+		      std::vector<std::string>({"x", "y", "z"}));
     else if (Nv == 6)
       add_element_set("vertex", vertices,
-		      std::vector<const std::string>({"x", "y", "z", "red", "blue", "green"}));
+		      std::vector<std::string>({"x", "y", "z", "red", "blue", "green"}));
   }
 
   template<typename Te, SizeType Me, SizeType Ne>
   void add_element_set_edge(const Te (&edges)[Me][Ne]) {
     RAPIDJSON_ASSERT((Ne == 2) || (Ne == 5));
-    if (Ne == 2)
-      add_element_set("edge", edges,
-		      std::vector<const std::string>({"vertex1", "vertex2"}));
-    else if (Ne == 5)
-      add_element_set("edge", edges,
-		      std::vector<const std::string>({"vertex1", "vertex2", "red", "blue", "green"}));
+    if (Ne == 2) {
+      std::vector<std::string> property_names {"vertex1", "vertex2"};
+      add_element_set("edge", edges, property_names);
+    } else if (Ne == 5) {
+      std::vector<std::string> property_names {"vertex1", "vertex2", "red", "blue", "green"};
+      add_element_set("edge", edges, property_names);
+    }
   }
 
   std::vector<std::string> comments;
@@ -647,7 +648,7 @@ public:
   template <typename T>
   void add_element(const std::string& name,
 		   const std::vector<T> &arr,
-		   const std::vector<const std::string> &property_names) {
+		   const std::vector<std::string> &property_names) {
     bool is_array = bool(arr.size() != property_names.size());
     RAPIDJSON_ASSERT((!is_array) || (property_names.size() == 1));
     if (elements.find(name) == elements.end()) {
@@ -663,7 +664,7 @@ public:
   template <typename T, SizeType M, SizeType N>
   void add_element_set(const std::string& name,
 		       const T (&arr)[M][N],
-		       const std::vector<const std::string> &property_names) {
+		       const std::vector<std::string> &property_names) {
     RAPIDJSON_ASSERT(elements.find(name) == elements.end());
     element_order.push_back(name);
     elements.emplace(std::piecewise_construct,
