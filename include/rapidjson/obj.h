@@ -81,9 +81,13 @@ public:
   //! \param blue Color index in blue.
   ObjColor(uint8_t red, uint8_t green, uint8_t blue) :
     r(red), g(green), b(blue), is_set(true) {}
+  //! Red color index.
   uint8_t r;
+  //! Blue color index.
   uint8_t g;
+  //! Green color index.
   uint8_t b;
+  //! true if the color was set.
   bool is_set;
   //! \brief Check if another ObjColor object is equivalent.
   //! \param rhs Object for comparison.
@@ -106,6 +110,7 @@ inline
 bool operator == (const ObjColor& lhs, const ObjColor& rhs)
 { return lhs.is_equal(rhs); };
 
+//! Object reference index.
 typedef int64_t ObjRef;
 
 //! ObjWavefront vertex reference
@@ -203,10 +208,14 @@ public:
     Nparam = 3;
     return in;
   }
-  ObjRef v; //! Index of vertex coordinates.
-  ObjRef vt; //! Index of vertex texcoords.
-  ObjRef vn; //! Index of vertex normals.
-  int8_t Nparam; //! Number of parameters used in the vertex definition.
+  //! Index of vertex coordinates.
+  ObjRef v;
+  //! Index of vertex texcoords.
+  ObjRef vt;
+  //! Index of vertex normals.
+  ObjRef vn;
+  //! Number of parameters used in the vertex definition.
+  int8_t Nparam;
   //! \brief Check if another vertex is equivalent.
   //! \param rhs Vertex to compare.
   //! \return true if rhs is equivalent.
@@ -231,10 +240,18 @@ inline
 bool operator == (const ObjRefVertex& lhs, const ObjRefVertex& rhs)
 { return lhs.is_equal(rhs); };
 
+//! Write an ObjRefVertex element to an output stream.
+//! \param out Output stream.
+//! \param p Element to write.
+//! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjRefVertex &p)
 { return p.write(out); };
 
+//! Read an ObjRefVertex element from an input stream.
+//! \param in Input stream.
+//! \param p Element to read into.
+//! \return Input stream.
 inline
 std::istream & operator >> (std::istream &in, ObjRefVertex &p)
 { return p.read(in); };
@@ -253,7 +270,7 @@ public:
   //! \brief Constructor.
   //! \param u00 Curve parameter starting value.
   //! \param u10 Curve parameter ending value.
-  //! \param curve2d0 Index of a 2D curve.
+  //! \param curv2d0 Index of a 2D curve.
   ObjRefCurve(double u00, double u10=0.0, ObjRef curv2d0=-1) :
     u0(u00), u1(u10), curv2d(curv2d0) {}
   //! \brief Write the curve to an output stream.
@@ -272,9 +289,12 @@ public:
     in >> curv2d;
     return in;
   }
-  double u0; //! Curve parameter starting value.
-  double u1; //! Curve parameter ending value.
-  ObjRef curv2d; //! Index of a 2D curve definition.
+  //! Curve parameter starting value.
+  double u0;
+  //! Curve parameter ending value.
+  double u1;
+  //! Index of a 2D curve definition.
+  ObjRef curv2d;
   //! \brief Check if another curve is equivalent.
   //! \param rhs Curve to compare.
   //! \return true if rhs is equivalent.
@@ -290,14 +310,26 @@ public:
   friend std::istream & operator >> (std::istream &in, ObjRefCurve &p);
 };
 
+//! Check if two ObjRefCurve instances are equivalent.
+//! \param lhs First element for comparison.
+//! \param rhs Second element for comparison.
+//! \return true if the two elements are equivalent.
 inline
 bool operator == (const ObjRefCurve& lhs, const ObjRefCurve& rhs)
 { return lhs.is_equal(rhs); };
 
+//! Write an ObjRefCurve element to an output stream.
+//! \param out Output stream.
+//! \param p Element.
+//! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjRefCurve &p)
 { return p.write(out); };
 
+//! Read an ObjRefCurve element from an input stream.
+//! \param in Input stream.
+//! \param p Element to read into.
+//! \return Input stream.
 inline
 std::istream & operator >> (std::istream &in, ObjRefCurve &p)
 { return p.read(in); };
@@ -337,10 +369,14 @@ public:
     in >> curv2d;
     return in;
   }
-  ObjRef surf; //! Index of surface definition.
-  double q0; //! Starting parameter value.
-  double q1; //! Ending parameter value.
-  ObjRef curv2d; //! Index of surface definition.
+  //! Index of surface definition.
+  ObjRef surf;
+  //! Starting parameter value.
+  double q0;
+  //! Ending parameter value.
+  double q1;
+  //! Index of surface definition.
+  ObjRef curv2d;
   //! \brief Check if another surface is equivalent.
   //! \param rhs Surface to compare.
   //! \return true if rhs is equivalent.
@@ -357,14 +393,26 @@ public:
   friend std::istream & operator >> (std::istream &in, ObjRefSurface &p);
 };
 
+//! Check if two ObjRefSurface instances are equivalent.
+//! \param lhs First element for comparison.
+//! \param rhs Second element for comparison.
+//! \return true if the two elements are equivalent.
 inline
 bool operator == (const ObjRefSurface& lhs, const ObjRefSurface& rhs)
 { return lhs.is_equal(rhs); };
 
+//! Write an ObjRefSurface element to an output stream.
+//! \param out Output stream.
+//! \param p Element to write.
+//! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjRefSurface &p)
 { return p.write(out); };
 
+//! Read an ObjRefSurface element from an input stream.
+//! \param in Input stream.
+//! \param p Element to read into.
+//! \return Input stream.
 inline
 std::istream & operator >> (std::istream &in, ObjRefSurface &p)
 { return p.read(in); };
@@ -381,24 +429,6 @@ public:
   //! \brief Copy constructor.
   //! \param rhs Element to copy.
   ObjElement(const ObjElement& rhs) : code(rhs.code) {}
-  //! \brief Initialize an element by reading from an input stream.
-  //! \param in Input stream to read from.
-  // ObjElement(std::istream &) {
-  //   std::cerr << "Child class must overrride stream initializer" << std::endl;
-  // }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  // template <typename T, size_t N>
-  // ObjElement(const T (&src)[N]) : ObjElement(std::vector<T>(src, src+N)) {}
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer or floating point.
-  //! \param values0 Vector of values.
-  // template <typename T>
-  // ObjElement(const std::vector<T>&) {
-  //   std::cerr << "Child class must overrride vector initializer" << std::endl;
-  // }
   //! \brief Destructor.
   virtual ~ObjElement() {}
   //! \brief Create a copy of the element.
@@ -407,7 +437,7 @@ public:
   //! \brief Assign values to a vector from a pointer to an array.
   //! \tparam T1 Type of elements in the destination vector.
   //! \tparam T2 Type of elements in the source array.
-  //! \param[in, out] Vector to assign values to.
+  //! \param[in, out] dst Vector to assign values to.
   //! \param src Pointer to the source array.
   //! \param N Number of elements in the source array.
   template <typename T1, typename T2>
@@ -416,7 +446,7 @@ public:
   //! \brief Assign values to a vector from stack array.
   //! \tparam T1 Type of elements in the destination vector.
   //! \tparam T2 Type of elements in the source array.
-  //! \param[in, out] Vector to assign values to.
+  //! \param[in, out] dst Vector to assign values to.
   //! \param src Source array.
   template <typename T1, typename T2, size_t N>
   void assign_values(std::vector<T1>& dst, const T2 (&src)[N])
@@ -424,32 +454,33 @@ public:
   //! \brief Assign values to a vector from a vector.
   //! \tparam T1 Type of elements in the destination vector.
   //! \tparam T2 Type of elements in the source vector.
-  //! \param[in, out] Vector to assign values to.
+  //! \param[in, out] dst Vector to assign values to.
   //! \param src Source vector.
   template <typename T1, typename T2>
   void assign_values(std::vector<T1>& dst, const std::vector<T2> &src) {
     for (auto it = src.begin(); it != src.end(); it++)
       dst.emplace_back(*it);
   }
-  template <typename T, size_t N>
-  void assign_values(const T (&)[N]) {}
   //! \brief Assign element members from an array of values stored in another
   //!   class member during a previous call to assign_values.
   virtual void from_values() {}
   //! \brief Read element members from an input stream.
   //! \param in Input stream.
   virtual void read_values(std::istream&) {
+    in;
     std::cerr << "Child class must overrride read_values" << std::endl;
   }
   //! \brief Write element member to an output stream.
   //! \param out Output stream.
   virtual void write_values(std::ostream&) const {
+    out;
     std::cerr << "Child class must overrride write_values" << std::endl;
   }
   //! \brief Check if another element is equivalent.
   //! \param rhs0 Element to compare.
   //! \return true if rhs is equivalent.
   virtual bool is_equal(const ObjElement*) const {
+    rhs0;
     std::cerr << "Child class must overrride is_equal" << std::endl;
     return false;
   }
@@ -511,10 +542,15 @@ public:
     write(ss);
     return out;
   }
-  std::string code; //! Code indicating the type of element.
+  //! Code indicating the type of element.
+  std::string code;
   friend std::ostream & operator << (std::ostream &out, const ObjElement &p);
 };
 
+//! Write an element to an output stream.
+//! \param out Output stream.
+//! \param p Element.
+//! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjElement &p)
 { return p.write(out); };
@@ -525,18 +561,23 @@ public:
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjVertex(const ObjVertex& rhs) :
     ObjElement(rhs), values(rhs.values), x(rhs.x), y(rhs.y), z(rhs.z), w(rhs.w), color(rhs.color) {}
-  //! \copydoc ObjElement::ObjElement(std::istream &)
+  //! \brief Initialize an element by reading from an input stream.
+  //! \param in Input stream to read from.
   ObjVertex(std::istream &in) :
     ObjElement("v"), values(), x(0), y(0), z(0), w(-1), color() {
     ObjElement::read_values(in, values);
     // read_values(in);
     from_values();
   }
-  //! \copydoc ObjElement::ObjElement(const T &)
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjVertex(const T (&src)[N]) : ObjVertex(std::vector<T>(src, src+N)) {}
-  //! \copydoc ObjElement::ObjElement(const std::vector<T>&)
-  //! The value type must be an integer or floating point.
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
+  //! \param values0 Vector of values.
   template <typename T>
   ObjVertex(const std::vector<T> &values0,
 	    RAPIDJSON_ENABLEIF((
@@ -554,6 +595,8 @@ public:
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjVertex(const std::vector<T> &,
 	    RAPIDJSON_DISABLEIF((
@@ -617,12 +660,18 @@ public:
     std::vector<double> out({x, y, z});
     return out;
   }
+  //! Vertex values vector.
   std::vector<double> values;
-  double x; //! Vertex coordinate in the x direction
-  double y; //! Vertex coordinate in the y direction
-  double z; //! Vertex coordinate in the z direction
-  double w; //! Vertex weight, negative values indicate a default weight of 1
-  ObjColor color; //! Vertex color
+  //! Vertex coordinate in the x direction.
+  double x;
+  //! Vertex coordinate in the y direction.
+  double y;
+  //! Vertex coordinate in the z direction.
+  double z;
+  //! Vertex weight, negative values indicate a default weight of 1.
+  double w;
+  //! Vertex color.
+  ObjColor color;
 };
 
 //! Object vertex parameter
@@ -631,22 +680,28 @@ public:
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjVParameter(const ObjVParameter& rhs) :
     ObjElement(rhs), values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
-  //! \copydoc ObjElement::ObjElement(std::istream&)
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjVParameter(std::istream &in) :
     ObjElement("vp"), values(), u(0), v(0), w(-1) {
     read_values(in);
     from_values();
   }
-  //! \copydoc ObjElement::ObjElement(const T&)
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjVParameter(const T (&src)[N]) : ObjVParameter(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   //! \param values0 Vector of values.
   ObjVParameter(const std::vector<double> &values0) :
     ObjElement("vp"), values(), u(0), v(0), w(-1) {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjVParameter(const std::vector<T> &) :
     ObjElement("vp"), values(), u(0), v(0), w(-1) {
@@ -665,9 +720,9 @@ public:
   }
   //! \copydoc ObjElement::copy()
   ObjVParameter* copy() const override { return new ObjVParameter(*this); }
-  //! \copydoc ObjElement::read_values(std::istream&)
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values(std::ostream&)
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << u << " " << v;
     if (w >= 0)
@@ -688,10 +743,14 @@ public:
     std::vector<double> out({u, v, w});
     return out;
   }
-  std::vector<double> values; //! Array of values.
-  double u; //! Parameter value in first dimension.
-  double v; //! Parameter value in second dimension.
-  double w; //! Parameter weight, negative values indicate a default weight of 1.
+  //! Array of values.
+  std::vector<double> values;
+  //! Parameter value in first dimension.
+  double u;
+  //! Parameter value in second dimension.
+  double v;
+  //! Parameter weight, negative values indicate a default weight of 1.
+  double w;
 };
 
 //! Vertex normal element.
@@ -700,22 +759,28 @@ public:
   //! \copydoc ObjElement::ObjElement(const ObjElement& rhs)
   ObjVNormal(const ObjVNormal& rhs) :
     ObjElement(rhs), values(), i(rhs.i), j(rhs.j), k(rhs.k) {}
-  //! \copydoc ObjElement::ObjElement(std::istream&)
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjVNormal(std::istream &in) :
     ObjElement("vn"), values(), i(0), j(0), k(0) {
     read_values(in);
     from_values();
   }
-  //! \copydoc ObjElement::ObjElement(const T&)
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjVNormal(const T (&src)[N]) : ObjVNormal(std::vector<T>(src, src+N)) {}
-  //! \copydoc ObjElement::ObjElement(const std::vector<T>)
-  //! Only double values are valid for ObjVNormal elements.
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjVNormal(const std::vector<double> &values0) :
     ObjElement("vn"), values(), i(0), j(0), k(0) {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
+  //!   Only double values are valid for ObjVNormal elements.
   template <typename T>
   ObjVNormal(const std::vector<T> &) :
     ObjElement("vn"), values(), i(0), j(0), k(0) {
@@ -751,10 +816,14 @@ public:
     std::vector<double> out({i, j, k});
     return out;
   }
-  std::vector<double> values; //! Vector of normal values.
-  double i; //! Normal vector in the x direction.
-  double j; //! Normal vector in the y direction.
-  double k; //! Normal vector in the z direction.
+  //! Vector of normal values.
+  std::vector<double> values;
+  //! Normal vector in the x direction.
+  double i;
+  //! Normal vector in the y direction.
+  double j;
+  //! Normal vector in the z direction.
+  double k;
 };
 
 //! Texture vertex element.
@@ -763,22 +832,29 @@ public:
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjVTexture(const ObjVTexture& rhs) :
     ObjElement(rhs), values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
-  //! \copydoc ObjElement::ObjElement(std::istream)
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjVTexture(std::istream &in) :
     ObjElement("vt"), values(), u(0), v(0), w(0) {
     read_values(in);
     from_values();
   }
-  //! \copydoc ObjElement::ObjElement(const T&)
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjVTexture(const T (&src)[N]) : ObjVTexture(std::vector<T>(src, src+N)) {}
-  //! \copydoc ObjElement::ObjElement(const std::vector<T>)
-  //! Only double values are valid for ObjVTexture objects.
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
+  //!   Only double values are valid for ObjVTexture objects.
+  //! \param values0 Vector of values.
   ObjVTexture(const std::vector<double> &values0) :
     ObjElement("vt"), values(), u(0), v(0), w(0) {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjVTexture(const std::vector<T> &) :
     ObjElement("vt"), values(), u(0), v(0), w(0) {
@@ -799,7 +875,7 @@ public:
   }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_vlaues
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << u;
     if (v >= 0)
@@ -822,10 +898,14 @@ public:
     std::vector<double> out({u, v, w});
     return out;
   }
-  std::vector<double> values; //! Vector of texture values.
-  double u; //! Texture coordinate in the horizontal direction.
-  double v; //! Texture coordinate in the vertical direction; a negative value indicates a default of 0.
-  double w; //! Texture coordinate in the depth direction; a negative value indicates a default of 0.
+  //! Vector of texture values.
+  std::vector<double> values;
+  //! Texture coordinate in the horizontal direction.
+  double u;
+  //! Texture coordinate in the vertical direction; a negative value indicates a default of 0.
+  double v;
+  //! Texture coordinate in the depth direction; a negative value indicates a default of 0.
+  double w;
 };
 
 // Elements
@@ -833,20 +913,25 @@ public:
 //! Point element.
 class ObjPoint : public ObjElement {
 public:
-  //! \copydoc ObjElement::ObjELement(const ObjElement&)
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjPoint(const ObjPoint& rhs) :
     ObjElement(rhs), values(rhs.values) {}
-  //! \copydoc ObjElement::ObjElement(std::istream&)
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjPoint(std::istream &in) :
     ObjElement("p"), values() {
     read_values(in);
     from_values();
   }
-  //! \copydoc ObjElement::ObjElement(const T&)
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjPoint(const T (&src)[N]) : ObjPoint(std::vector<T>(src, src+N)) {}
-  //! \copydoc ObjElement::ObjElement(const std::vector<T>&)
-  //! Only integer values are allowed for ObjPoint elements.
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
+  //!   Only integer values are allowed for ObjPoint elements.
+  //! \param values0 Vector of values.
   template <typename T>
   ObjPoint(const std::vector<T> &values0,
 	      RAPIDJSON_ENABLEIF((
@@ -864,6 +949,8 @@ public:
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjPoint(const std::vector<T> &,
 	      RAPIDJSON_DISABLEIF((
@@ -880,9 +967,13 @@ public:
     ObjElement("p"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjPoint type is ObjRef"));
   }
+  //! \copydoc ObjElement::copy
   ObjPoint* copy() const override { return new ObjPoint(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjPoint* lhs = this;
@@ -890,19 +981,24 @@ public:
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_int_array
   std::vector<int> get_int_array() const override {
     std::vector<int> out;
     for (auto it = values.begin(); it != values.end(); it++)
       out.push_back((int)(*it));
     return out;
   }
+  //! Vector of reference values.
   std::vector<ObjRef> values;
 };
 
+//! Line element.
 class ObjLine : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjLine(const ObjLine& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjLine(std::istream &in) :
     ObjElement("l"), values() {
     read_values(in);
@@ -911,6 +1007,9 @@ public:
   }
   // template <typename T, size_t N>
   // ObjLine(const T (&src)[N]) : ObjLine(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
+  //! \param values0 Vector of values.
   template <typename T>
   ObjLine(const std::vector<T> &values0,
 	  RAPIDJSON_ENABLEIF((
@@ -928,6 +1027,8 @@ public:
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjLine(const std::vector<T> &,
 	  RAPIDJSON_DISABLEIF((
@@ -944,30 +1045,40 @@ public:
     ObjElement("l"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjLine type is ObjRefVertex"));
   }
+  //! \copydoc ObjElement::from_values()
   void from_values() override
   { RAPIDJSON_ASSERT(values.size() >= 2); }
+  //! \copydoc ObjElement::copy
   ObjLine* copy() const override { return new ObjLine(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjLine* rhs = static_cast<const ObjLine*>(rhs0);
     if (!(is_equal_vectors(this->values, rhs->values))) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_int_array
   std::vector<int> get_int_array() const override {
     std::vector<int> out;
     for (auto it = values.begin(); it != values.end(); it++)
       out.push_back((int)(it->v));
     return out;
   }
+  //! Vector of vertex refence values.
   std::vector<ObjRefVertex> values;
 };
 
+//! Face element.
 class ObjFace : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjFace(const ObjFace& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjFace(std::istream &in) :
     ObjElement("f"), values() {
     ObjElement::read_values(in, values);
@@ -976,6 +1087,9 @@ public:
   }
   // template <typename T, size_t N>
   // ObjFace(const T (&src)[N]) : ObjFace(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
+  //! \param values0 Vector of values.
   template <typename T>
   ObjFace(const std::vector<T> &values0,
 	  RAPIDJSON_ENABLEIF((
@@ -993,6 +1107,8 @@ public:
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjFace(const std::vector<T> &,
 	  RAPIDJSON_DISABLEIF((
@@ -1009,12 +1125,17 @@ public:
     ObjElement("f"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjFace type is ObjRefVertex"));
   }
+  //! \copydoc ObjElement::from_values
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() >= 3);
   }
+  //! \copydoc ObjElement::copy
   ObjFace* copy() const override { return new ObjFace(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjFace* lhs = this;
@@ -1022,52 +1143,67 @@ public:
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_int_array
   std::vector<int> get_int_array() const override {
     std::vector<int> out;
     for (auto it = values.begin(); it != values.end(); it++)
       out.push_back((int)(it->v));
     return out;
   }
+  //! Vector of vertex reference values.
   std::vector<ObjRefVertex> values;
 };
 
+//! Curve element.
 class ObjCurve : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjCurve(const ObjCurve& rhs) :
     ObjElement(rhs), values(rhs.values), u0(rhs.u0), u1(rhs.u1) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjCurve(std::istream &in) :
     ObjElement("curv"), values(), u0(0), u1(0) {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjCurve(const T (&src)[N]) : ObjCurve(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjCurve(const std::vector<ObjRef> &values0) :
     ObjElement("curv"), values(), u0(0), u1(0) {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjCurve(const std::vector<T> &) :
     ObjElement("curv"), values(), u0(0), u1(0) {
     RAPIDJSON_ASSERT(!sizeof("ObjCurve type is ObjRef"));
   }
+  //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() >= 2);
   }
+  //! \copydoc ObjElement::copy()
   ObjCurve* copy() const override { return new ObjCurve(*this); }
-  //! \copydoc ObjELement::read_values(std::istream&)
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     in >> u0;
     in >> u1;
     ObjElement::read_values(in, values);
   }
-  //! \copydoc ObjELement::write_values(std::ostream&)
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << u0 << " " << u1 << " ";
     ObjElement::write_values(out, values);
   }
-  //! \copydoc ObjELement::is_equal(const ObjElement*)
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjCurve* lhs = this;
@@ -1084,34 +1220,47 @@ public:
       out.push_back((double)(*it));
     return out;
   }
-  std::vector<ObjRef> values; //! Vector for curve values.
-  double u0; //! Curve value in first parameter direction.
-  double u1; //! Curve value in second parameter direction.
+  //! Vector for curve values.
+  std::vector<ObjRef> values;
+  //! Curve value in first parameter direction.
+  double u0;
+  //! Curve value in second parameter direction.
+  double u1;
 };
 
 //! 2D curve element.
 class ObjCurve2D : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjCurve2D(const ObjCurve2D& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjCurve2D(std::istream &in) :
     ObjElement("curv2"), values() {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjCurve2D(const T (&src)[N]) : ObjCurve2D(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjCurve2D(const std::vector<ObjRef> &values0) :
     ObjElement("curv2"), values() {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjCurve2D(const std::vector<T> &) :
     ObjElement("curv2"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjCurve2D type is ObjRef"));
   }
-  //! \copydoc ObjElement::values()
+  //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() >= 2);
   }
@@ -1136,25 +1285,37 @@ public:
       out.push_back((int)(*it));
     return out;
   }
+  //! Vector of object reference values.
   std::vector<ObjRef> values;
 };
 
+//! Surface element.
 class ObjSurface : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjSurface(const ObjSurface& rhs) :
     ObjElement(rhs), values(rhs.values), s0(rhs.s0), s1(rhs.s1), t0(rhs.t0), t1(rhs.t1) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjSurface(std::istream &in) :
     ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjSurface(const T (&src)[N]) : ObjSurface(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjSurface(const std::vector<ObjRefVertex> &values0) :
     ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjSurface(const std::vector<T> &) :
     ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {
@@ -1194,33 +1355,48 @@ public:
       out.push_back((double)(it->v));
     return out;
   }
+  //! Vector of surface values.
   std::vector<ObjRefVertex> values;
+  //! Surface starting parameter in first dimension.
   double s0;
+  //! Surface ending parameter in first dimension.
   double s1;
+  //! Surface starting parameter in second dimension.
   double t0;
+  //! Surface ending parameter in second dimension.
   double t1;
 };
 
-// Free-form elements
+//! Free-form elements.
 class ObjFreeFormType : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjFreeFormType(const ObjFreeFormType& rhs) :
     ObjElement(rhs), values(rhs.values), elements() {
     for (auto it = rhs.elements.begin(); it != rhs.elements.end(); it++)
       elements.push_back((*it)->copy());
   }
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjFreeFormType(std::istream &in) :
     ObjElement("cstype"), values(), elements() {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjFreeFormType(const T (&src)[N]) : ObjFreeFormType(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjFreeFormType(const std::vector<std::string> &values0) :
     ObjElement("cstype"), values(), elements() {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjFreeFormType(const std::vector<T> &) :
     ObjElement("cstype"), values(), elements() {
@@ -1274,26 +1450,39 @@ public:
       out.push_back((*it)->as_string());
     return out;
   }
+  //! Vector of free form type values.
   std::vector<std::string> values;
+  //! Vector of elements in free form type.
   std::vector<ObjElement*> elements;
 };
 
+//! Degree element.
 class ObjDegree : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjDegree(const ObjDegree& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjDegree(std::istream &in) :
     ObjElement("deg"), values() {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjDegree(const T (&src)[N]) : ObjDegree(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjDegree(const std::vector<uint16_t> &values0) :
     ObjElement("deg"), values() {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjDegree(const std::vector<T> &) :
     ObjElement("deg"), values() {
@@ -1324,25 +1513,38 @@ public:
       out.push_back(*it);
     return out;
   }
+  //! Vector of degree elements.
   std::vector<uint16_t> values;
 };
 
+
+//! Basis matrix element.
 class ObjBasisMatrix : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjBasisMatrix(const ObjBasisMatrix& rhs) :
     ObjElement(rhs), values(rhs.values), direction(rhs.direction) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjBasisMatrix(std::istream &in) :
     ObjElement("bmat"), values(), direction("") {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjBasisMatrix(const T (&src)[N]) : ObjBasisMatrix(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjBasisMatrix(const std::vector<double> &values0) :
     ObjElement("bmat"), values(), direction("") {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjBasisMatrix(const std::vector<T> &) :
     ObjElement("bmat"), values(), direction("") {
@@ -1370,26 +1572,39 @@ public:
     if (lhs->direction != rhs->direction) return false;
     return true;
   }
+  //! Vector of matrix values.
   std::vector<double> values;
+  //! Basis matrix direction.
   std::string direction;
 };
 
+//! Step element.
 class ObjStep : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjStep(const ObjStep& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjStep(std::istream &in) :
     ObjElement("step"), values() {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjStep(const T (&src)[N]) : ObjStep(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjStep(const std::vector<double> &values0) :
     ObjElement("step"), values() {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjStep(const std::vector<T> &) :
     ObjElement("step"), values() {
@@ -1420,25 +1635,37 @@ public:
       out.push_back(*it);
     return out;
   }
+  //! Vector of step values.
   std::vector<double> values;
 };
 
+//! Parameter element.
 class ObjParameter : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjParameter(const ObjParameter& rhs) :
     ObjElement(rhs), values(rhs.values), direction(rhs.direction) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjParameter(std::istream &in) :
     ObjElement("parm"), values(), direction("") {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjParameter(const T (&src)[N]) : ObjParameter(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjParameter(const std::vector<double> &values0) :
     ObjElement("parm"), values(), direction("") {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjParameter(const std::vector<T> &) :
     ObjElement("parm"), values(), direction("") {
@@ -1466,26 +1693,39 @@ public:
     if (lhs->direction != rhs->direction) return false;
     return true;
   }
+  //! Vector of parameter values.
   std::vector<double> values;
+  //! Parameter direction.
   std::string direction;
 };
 
+//! Trim element.
 class ObjTrim : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjTrim(const ObjTrim& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjTrim(std::istream &in) :
     ObjElement("trim"), values() {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjTrim(const T (&src)[N]) : ObjTrim(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjTrim(const std::vector<ObjRefCurve> &values0) :
     ObjElement("trim"), values() {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjTrim(const std::vector<T> &) :
     ObjElement("trim"), values() {
@@ -1505,25 +1745,37 @@ public:
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
     return true;
   }
+  //! Vector of curve reference values.
   std::vector<ObjRefCurve> values;
 };
 
+//! Hole element.
 class ObjHole : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjHole(const ObjHole& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjHole(std::istream &in) :
     ObjElement("hole"), values() {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjHole(const T (&src)[N]) : ObjHole(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjHole(const std::vector<ObjRefCurve> &values0) :
     ObjElement("hole"), values() {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjHole(const std::vector<T> &) :
     ObjElement("hole"), values() {
@@ -1543,25 +1795,37 @@ public:
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
     return true;
   }
+  //! Vector of curve reference values.
   std::vector<ObjRefCurve> values;
 };
 
+//! Special curve element.
 class ObjScrv : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjScrv(const ObjScrv& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjScrv(std::istream &in) :
     ObjElement("scrv"), values() {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjScrv(const T (&src)[N]) : ObjScrv(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjScrv(const std::vector<ObjRefCurve> &values0) :
     ObjElement("scrv"), values() {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjScrv(const std::vector<T> &) :
     ObjElement("scrv"), values() {
@@ -1581,25 +1845,37 @@ public:
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
     return true;
   }
+  //! Vector of ObjRefCurve values.
   std::vector<ObjRefCurve> values;
 };
 
+//! Special points element.
 class ObjSpecialPoints : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjSpecialPoints(const ObjSpecialPoints& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjSpecialPoints(std::istream &in) :
     ObjElement("sp"), values() {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjSpecialPoints(const T (&src)[N]) : ObjSpecialPoints(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjSpecialPoints(const std::vector<ObjRef> &values0) :
     ObjElement("sp"), values() {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjSpecialPoints(const std::vector<T> &) :
     ObjElement("sp"), values() {
@@ -1619,25 +1895,37 @@ public:
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
     return true;
   }
+  //! Vector of ObjRef values.
   std::vector<ObjRef> values;
 };
 
+//! Connection element.
 class ObjConnect : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjConnect(const ObjConnect& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjConnect(std::istream &in) :
     ObjElement("con"), values() {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjConnect(const T (&src)[N]) : ObjConnect(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjConnect(const std::vector<ObjRefSurface> &values0) :
     ObjElement("con"), values() {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjConnect(const std::vector<T> &) :
     ObjElement("con"), values() {
@@ -1657,29 +1945,42 @@ public:
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
     return true;
   }
+  //! Vector of surface reference values.
   std::vector<ObjRefSurface> values;
 };
 
 // Grouping
+
+//! Group of elements.
 class ObjGroup : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjGroup(const ObjGroup& rhs) :
     ObjElement(rhs), values(rhs.values), elements() {
     for (auto it = rhs.elements.begin(); it != rhs.elements.end(); it++)
       elements.push_back((*it)->copy());
   }
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjGroup(std::istream &in) :
     ObjElement("g"), values(), elements() {
     read_values(in);
     from_values();
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjGroup(const T (&src)[N]) : ObjGroup(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjGroup(const std::vector<std::string> &values0) :
     ObjElement("g"), values(), elements() {
     assign_values(values, values0);
     from_values();
   }
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjGroup(const std::vector<T> &) :
     ObjElement("g"), values(), elements() {
@@ -1718,20 +2019,31 @@ public:
     }
     return true;
   }
+  //! Vector of element values in the group.
   std::vector<std::string> values;
+  //! Vector of elements in the group.
   std::vector<ObjElement*> elements;
 };
 
+//! Smoothing group element.
 class ObjSmoothingGroup : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjSmoothingGroup(const ObjSmoothingGroup& rhs) :
     ObjElement(rhs), group_number(rhs.group_number) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjSmoothingGroup(std::istream &in) :
     ObjElement("s"), group_number(-1) {
     read_values(in);
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjSmoothingGroup(const T (&src)[N]) : ObjSmoothingGroup(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjSmoothingGroup(const std::vector<T> &) :
     ObjElement("s"), group_number(-1) {
@@ -1763,19 +2075,29 @@ public:
     if (lhs->group_number != rhs->group_number) return false;
     return true;
   }
+  //! Group number.
   ObjRef group_number;
 };
 
+//! Merging group.
 class ObjMergingGroup : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjMergingGroup(const ObjMergingGroup& rhs) :
     ObjElement(rhs), group_number(rhs.group_number), resolution(rhs.resolution) {}
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjMergingGroup(std::istream &in) :
     ObjElement("mg"), group_number(-1), resolution(0) {
     read_values(in);
   }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjMergingGroup(const T (&src)[N]) : ObjMergingGroup(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjMergingGroup(const std::vector<T> &) :
     ObjElement("mg"), group_number(-1), resolution(0) {
@@ -1812,7 +2134,9 @@ public:
     if (!(IS_EQUAL_DBL(lhs->resolution, rhs->resolution))) return false;
     return true;
   }
+  //! Group number.
   ObjRef group_number;
+  //! Group resolution.
   double resolution;
 };
 
@@ -1822,15 +2146,19 @@ public:
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjObjectName(const ObjObjectName& rhs) :
     ObjElement(rhs), name(rhs.name) {}
-  //! \copydoc ObjElement::ObjElement(std::istream&)
+  //! \copydoc ObjVertex::ObjVertex(std::istream&)
   ObjObjectName(std::istream &in) :
     ObjElement("o"), name("") {
     read_values(in);
   }
-  //! \copydoc ObjElement::ObjElement(const T&)
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
   template <typename T, size_t N>
   ObjObjectName(const T (&src)[N]) : ObjObjectName(std::vector<T>(src, src+N)) {}
-  //! \copydoc ObjElement::ObjElement(const std::vector<T>&)
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjObjectName(const std::vector<T> &) :
     ObjElement("o"), name("") {
@@ -1849,7 +2177,8 @@ public:
     if (this->name != rhs->name) return false;
     return true;
   }
-  std::string name; //! Object name.
+  //! Object name.
+  std::string name;
 };
 
 //! \brief Read an element from an input stream.
@@ -1883,7 +2212,7 @@ inline void read_obj_elements(std::istream &in, std::vector<ObjElement*> &elemen
   }
 };
 
-// Actual Obj wavefront class
+//! Obj wavefront container class.
 class ObjWavefront {
 public:
   ObjWavefront() : elements() {}
@@ -1946,7 +2275,8 @@ public:
       delete *it;
     // elements.resize(0);
   }
-  std::vector<ObjElement*> elements; //! All sets of elements in the 3D mesh.
+  //! All sets of elements in the 3D mesh.
+  std::vector<ObjElement*> elements;
 
   //! \brief Add a set of elements to the geometry from a C array of value
   //!   arrays.
