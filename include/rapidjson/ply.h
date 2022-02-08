@@ -572,25 +572,36 @@ inline
 bool operator == (const PlyElement& lhs, const PlyElement& rhs)
 { return lhs.is_equal(rhs); };
 
+//! \brief Get the flag indicating a type.
+//! \tparam T Type to get flag for.
 template<typename T>
 inline uint16_t type2flag() { return PlyElement::kNullFlag; }
+//! \brief Get the flag indicating the int8_t type.
 template<>
 inline uint16_t type2flag<int8_t>() { return PlyElement::kInt8Flag; }
+//! \brief Get the flag indicating the uint8_t type.
 template<>
 inline uint16_t type2flag<uint8_t>() { return PlyElement::kUint8Flag; }
+//! \brief Get the flag indicating the int16_t type.
 template<>
 inline uint16_t type2flag<int16_t>() { return PlyElement::kInt16Flag; }
+//! \brief Get the flag indicating the uint16_t type.
 template<>
 inline uint16_t type2flag<uint16_t>() { return PlyElement::kUint16Flag; }
+//! \brief Get the flag indicating the int32_t type.
 template<>
 inline uint16_t type2flag<int32_t>() { return PlyElement::kInt32Flag; }
+//! \brief Get the flag indicating the uint32_t type.
 template<>
 inline uint16_t type2flag<uint32_t>() { return PlyElement::kUint32Flag; }
+//! \brief Get the flag indicating the float type.
 template<>
 inline uint16_t type2flag<float>() { return PlyElement::kFloatFlag; }
+//! \brief Get the flag indicating the double type.
 template<>
 inline uint16_t type2flag<double>() { return PlyElement::kDoubleFlag; }
 
+//! Container for a set of ply elements.
 class PlyElementSet {
 public:
   //! \brief Create an empty element set.

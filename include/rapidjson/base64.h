@@ -191,10 +191,14 @@ static inline unsigned char * base64_decode(const unsigned char *src, size_t len
 // };
 
 
+//! Input stream wrapper for decoding base64.
 template <typename StreamType>
 class Base64InputStreamWrapper {
 public:
+  //! Character type read from the stream.
   typedef typename StreamType::Ch Ch;
+  //! \brief Wrap a stream in a base64 decoder.
+  //! \param stream Stream.
   Base64InputStreamWrapper(StreamType &stream) :
     stream_(stream), buffer_(),
     dtable_(), // buffer_empty_(),
@@ -211,6 +215,9 @@ public:
     dtable_[base64_table_last] = 0;
     ReadNext();
   }
+  //! \brief Peek at the nth byte.
+  //! \param n Offset to check for byte at.
+  //! \return Byte.
   unsigned char PeekByte(size_t n = 0) {
     if ((buffer_pos_ + n) < 3)
       return buffer_[buffer_pos_ + n];
@@ -219,6 +226,8 @@ public:
     ReadNext();
     return buffer_[buffer_pos_ + n];
   }
+  //! \brief Peek at the next character.
+  //! \return Character.
   Ch Peek() {
     Ch out = '\0';
     unsigned char *bytes = reinterpret_cast<unsigned char*>(&out);
@@ -226,6 +235,9 @@ public:
       bytes[i] = PeekByte(i);
     return out;
   }
+  //! \brief Peek at the next set of bytes and check if there are enough to
+  //!   read a character from.
+  //! \return true if there are enough bytes for a character.
   bool PeekEmpty() {
     for (size_t i = 0; i < sizeof(Ch); i++) {
       PeekByte(i);
@@ -233,12 +245,16 @@ public:
     }
     return true;
   }
+  //! \brief Take one byte from the stream.
+  //! \return Byte.
   unsigned char TakeByte() {
     if (buffer_pos_ >= 3)
       ReadNext();
     buffer_empty_[buffer_pos_] = true;
     return buffer_[buffer_pos_++];
   }
+  //! \brief Take a character from the stream.
+  //! \return Character.
   Ch Take() {
     Ch out = '\0';
     unsigned char *bytes = reinterpret_cast<unsigned char*>(&out);
@@ -247,6 +263,8 @@ public:
     pos_++;
     return out;
   }
+  //! \brief Report the position in the buffer.
+  //! \return Buffer position.
   size_t Tell() { return pos_; } // When is this used?
   
   // unsigned char* PeekNext() {
@@ -276,6 +294,7 @@ public:
   //   return out;
   // }
 
+  //! \brief Read the next set of bytes from the stream.
   void ReadNext() {
     // Decode
     unsigned char *pos = &(buffer_[0]);
@@ -331,10 +350,13 @@ private:
   
 };
 
+//! Output stream wrapper that will encode character bytes as base64.
 template <typename StreamType>
 class Base64OutputStreamWrapper {
 public:
+  //! Character type writen to the stream.
   typedef typename StreamType::Ch Ch;
+  //! Wrap a stream in base64 encoding.
   Base64OutputStreamWrapper(StreamType &stream) :
     stream_(stream), buffer_(),
     dtable_(), // buffer_empty_(),
@@ -350,11 +372,18 @@ public:
       dtable_[base64_table[i]] = (unsigned char) i;
     dtable_[base64_table_last] = 0;
   }
+  //! \brief Reserve enough space in the stream for a certain number of characters.
+  //! \tparam Ch2 Type of character to reserve space for.
+  //! \param count Number of characters to reserve space for.
   template<typename Ch2>
   void Reserve(size_t count) {
     stream_.Reserve(count * sizeof(Ch2) * 4 / 3);
   }
+  //! \brief Begin a stream.
+  //! \returns Character inserted.
   Ch* PutBegin() { return stream_.PutBegin(); }
+  //! \brief Insert a byte.
+  //! \param ch Byte.
   void PutByte(unsigned char ch) {
     RAPIDJSON_ASSERT(buffer_pos_ < 3);
     buffer_empty_[buffer_pos_] = false;
@@ -362,6 +391,9 @@ public:
     if (buffer_pos_ == 3)
       WriteNext();
   }
+  //! \brief Insert a character.
+  //! \tparam Ch2 Character type.
+  //! \param ch Character.
   template<typename Ch2>
   void Put(Ch2 ch) {
     unsigned char* bytes = reinterpret_cast<unsigned char*>(&ch);
@@ -369,14 +401,20 @@ public:
       PutByte(bytes[i]);
     }
   }
+  //! \brief Flush the stream.
   void Flush() { stream_.Flush(); }
+  //! \brief Finalize an partial byte sets and insert a character.
+  //! \tparam Ch2 Character type.
+  //! \param ch Character to insert at the end.
+  //! \return Stream size.
   template<typename Ch2>
   size_t PutEnd(Ch2* ch) {
     if (buffer_pos_ > 0)
       WriteNext();
     return stream_.PutEnd(ch);
   }
-  
+
+  //! \brief Write the bytes in the buffer to the stream as base64 encoded characters.
   void WriteNext() {
     if (buffer_pos_ == 0) return;
     // Encode
@@ -415,6 +453,7 @@ public:
     buffer_empty_[1] = true;
     buffer_empty_[2] = true;
   }
+  //! \brief Dummy yggdrasil method.
   template <typename SchemaValueType>
   bool Yggdrasil() { return false; }
   
