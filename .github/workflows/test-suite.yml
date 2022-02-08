@@ -51,6 +51,7 @@ jobs:
           ctest -C Debug --output-on-failure --verbose
       - name: Collect coverage
         run: |
+          cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
           cd build
           ctest -T Coverage
       - name: Upload coverage report

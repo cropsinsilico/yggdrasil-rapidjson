@@ -3329,7 +3329,7 @@ public:
     return true;
   }
   PyObject* GetPythonObjectRaw() const {
-    PyObject* out;
+    PyObject* out = NULL;
     switch (GetType()) {
     case kNullType:
       return Py_None;
@@ -3376,6 +3376,8 @@ public:
       }
       return out;
     }
+    default:
+      RAPIDJSON_ASSERT(!GetType());
     }
     return out;
   }
@@ -3418,7 +3420,7 @@ public:
       SetPythonObjectRaw(PyUnicode_AsUTF8String(x), allocator);
     } else if (PyLong_Check(x)) {
       int overflow = 0;
-      Set(PyLong_AsLongLongAndOverflow(x, &overflow));
+      Set(static_cast<int64_t>(PyLong_AsLongLongAndOverflow(x, &overflow)));
       RAPIDJSON_ASSERT(overflow == 0);
       RAPIDJSON_ASSERT(PyErr_Occurred() == NULL);
     } else if (PyFloat_Check(x)) {

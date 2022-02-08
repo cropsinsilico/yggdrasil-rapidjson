@@ -36,19 +36,23 @@ RAPIDJSON_NAMESPACE_BEGIN
     else RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported element signifier: ") + word)); \
   }
 
+//! Checks if two values are equal using == operator.
 template <typename T>
 inline bool is_equal(const T &a, const T &b) {
   return (a == b);
 };
+//! Checks if two float values are equal using comparison.
 template <>
 inline bool is_equal(const float &a, const float &b) {
   return IS_EQUAL_FLT(a, b);
 };
+//! Checks if two double values are equal using comparison.
 template <>
 inline bool is_equal(const double &a, const double &b) {
   return IS_EQUAL_DBL(a, b);
 };
 
+//! Test if two vectors are equal element-by-element using is_equal
 template <typename T>
 inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
   if (a.size() != b.size()) return false;
@@ -62,18 +66,27 @@ class ObjElement;
 inline void read_obj_elements(std::istream &in, std::vector<ObjElement*> &elements,
 			      const char break_at = 0);
 
+//! ObjWavefront color.
 class ObjColor {
 public:
+  //! Empty initializer with (r,g,b) = (0,0,0)
   ObjColor() :
     r(0), g(0), b(0), is_set(false) {}
+  //! Copy constructor
   ObjColor(const ObjColor& rhs) :
     r(rhs.r), g(rhs.g), b(rhs.b), is_set(rhs.is_set) {}
+  //! \brief Create a RGB color element.
+  //! \param red Color index in red.
+  //! \param green Color index in green.
+  //! \param blue Color index in blue.
   ObjColor(uint8_t red, uint8_t green, uint8_t blue) :
     r(red), g(green), b(blue), is_set(true) {}
   uint8_t r;
   uint8_t g;
   uint8_t b;
   bool is_set;
+  //! \brief Check if another ObjColor object is equivalent.
+  //! \param rhs Object for comparison.
   bool is_equal(const ObjColor& rhs) const {
     const ObjColor& lhs = *this;
     if (lhs.is_set != rhs.is_set) return false;
@@ -85,18 +98,31 @@ public:
   friend bool operator == (const ObjColor& lhs, const ObjColor& rhs);
 };
 
+//! \brief Check if two ObjColor instances are equivalent.
+//! \param lhs First instance for comparison.
+//! \param rhs Second instance for comparison.
+//! \return true if the two instances are equivalent.
 inline
 bool operator == (const ObjColor& lhs, const ObjColor& rhs)
 { return lhs.is_equal(rhs); };
 
 typedef int64_t ObjRef;
 
+//! ObjWavefront vertex reference
 class ObjRefVertex {
 public:
   ObjRefVertex() :
     v(-1), vt(-1), vn(-1), Nparam(-1) {}
+  //! Copy constructor
   ObjRefVertex(const ObjRefVertex& rhs) :
     v(rhs.v), vt(rhs.vt), vn(rhs.vn), Nparam(rhs.Nparam) {}
+  //! \brief Constructor
+  //! \param v0 Index of the vertex's coordinates
+  //! \param vt0 Index of the vertex's texcoord
+  //! \param vn0 Index of the vertex's normal
+  //! \param Nparam0 The number of parameters specified by the vertex. If
+  //!    not provided, it will be determined by chcking the values of v0, vt0,
+  //!    and vn0. (1: (v), 2: (v, vt), 3: (v, vt, vn)).
   ObjRefVertex(ObjRef v0, ObjRef vt0=-1, ObjRef vn0=-1,
 	       int8_t Nparam0=-1) :
     v(v0), vt(vt0), vn(vn0), Nparam(Nparam0) {
@@ -109,6 +135,9 @@ public:
 	Nparam = 1;
     }
   }
+  //! \brief Constructor
+  //! \tparam T Vertex index type
+  //! \param v0 Index of the vertex's coordinates
   template <typename T>
   ObjRefVertex(const T& v0,
 	       RAPIDJSON_ENABLEIF((
@@ -123,6 +152,9 @@ public:
       internal::OrExpr<internal::IsSame<T,ObjRef>,
       internal::IsSame<T,uint64_t>>>>>>>>>>))) :
     ObjRefVertex(v0, -1, -1) {}
+  //! \brief Write the vertex to an output stream.
+  //! \param out Output stream.
+  //! \return Output stream.
   std::ostream & write(std::ostream &out) const {
     out << v;
     if (Nparam > 1) {
@@ -137,6 +169,9 @@ public:
     }
     return out;
   }
+  //! \brief Read the vertex from an input stream.
+  //! \param in Input stream.
+  //! \return Input stream.
   std::istream & read(std::istream &in) {
     std::string word;
     in >> word;
@@ -168,10 +203,13 @@ public:
     Nparam = 3;
     return in;
   }
-  ObjRef v;
-  ObjRef vt;
-  ObjRef vn;
-  int8_t Nparam;
+  ObjRef v; //! Index of vertex coordinates.
+  ObjRef vt; //! Index of vertex texcoords.
+  ObjRef vn; //! Index of vertex normals.
+  int8_t Nparam; //! Number of parameters used in the vertex definition.
+  //! \brief Check if another vertex is equivalent.
+  //! \param rhs Vertex to compare.
+  //! \return true if rhs is equivalent.
   bool is_equal(const ObjRefVertex& rhs) const {
     const ObjRefVertex& lhs = *this;
     if (lhs.Nparam != rhs.Nparam) return false;
@@ -185,6 +223,10 @@ public:
   friend std::istream & operator >> (std::istream &in, ObjRefVertex &p);
 };
 
+//! \brief Check if two ObjRefVertex instances are equivalent.
+//! \param lhs First instance for comparison.
+//! \param rhs Second instance for comparison.
+//! \return true if the two instances are equivalent.
 inline
 bool operator == (const ObjRefVertex& lhs, const ObjRefVertex& rhs)
 { return lhs.is_equal(rhs); };
@@ -198,27 +240,44 @@ std::istream & operator >> (std::istream &in, ObjRefVertex &p)
 { return p.read(in); };
 
 
+//! ObjWavefront curve reference.
 class ObjRefCurve {
 public:
+  //! \brief Empty constructor.
   ObjRefCurve() :
     u0(0.0), u1(0.0), curv2d(-1) {}
+  //! \brief Copy constructor.
+  //! \param rhs Curve to copy.
   ObjRefCurve(const ObjRefCurve& rhs) :
     u0(rhs.u0), u1(rhs.u1), curv2d(rhs.curv2d) {}
+  //! \brief Constructor.
+  //! \param u00 Curve parameter starting value.
+  //! \param u10 Curve parameter ending value.
+  //! \param curve2d0 Index of a 2D curve.
   ObjRefCurve(double u00, double u10=0.0, ObjRef curv2d0=-1) :
     u0(u00), u1(u10), curv2d(curv2d0) {}
+  //! \brief Write the curve to an output stream.
+  //! \param out Output stream.
+  //! \return Output stream.
   std::ostream & write(std::ostream &out) const {
     out << u0 << " " << u1 << " " << curv2d;
     return out;
   }
+  //! \brief Read the curve from an input stream.
+  //! \param in Input stream.
+  //! \return Input stream.
   std::istream & read(std::istream &in) {
     in >> u0;
     in >> u1;
     in >> curv2d;
     return in;
   }
-  double u0;
-  double u1;
-  ObjRef curv2d;
+  double u0; //! Curve parameter starting value.
+  double u1; //! Curve parameter ending value.
+  ObjRef curv2d; //! Index of a 2D curve definition.
+  //! \brief Check if another curve is equivalent.
+  //! \param rhs Curve to compare.
+  //! \return true if rhs is equivalent.
   bool is_equal(const ObjRefCurve& rhs) const {
     const ObjRefCurve& lhs = *this;
     if (!IS_EQUAL_DBL(lhs.u0, rhs.u0)) return false;
@@ -244,18 +303,33 @@ std::istream & operator >> (std::istream &in, ObjRefCurve &p)
 { return p.read(in); };
 
 
+//! ObjWavefront surface reference.
 class ObjRefSurface {
 public:
+  //! \brief Empty constructor.
   ObjRefSurface() :
     surf(-1), q0(0), q1(0), curv2d(-1) {}
+  //! \brief Copy constructor.
+  //! \param rhs Surface to copy.
   ObjRefSurface(const ObjRefSurface& rhs) :
     surf(rhs.surf), q0(rhs.q0), q1(rhs.q1), curv2d(rhs.curv2d) {}
+  //! \brief Constructor.
+  //! \brief surf0 Index of surface definition.
+  //! \brief q00 Starting parameter value.
+  //! \brief q10 Ending parameter value.
+  //! \brief curv2d0 Index of curve definition.
   ObjRefSurface(ObjRef surf0, double q00=0.0, double q10=0.0, ObjRef curv2d0=-1) :
     surf(surf0), q0(q00), q1(q10), curv2d(curv2d0) {}
+  //! \brief Write the surface to an output stream.
+  //! \param out Output stream.
+  //! \return Output stream.
   std::ostream & write(std::ostream &out) const {
     out << surf << " " << q0 << " " << q1 << " " << curv2d;
     return out;
   }
+  //! \brief Read the surface from an input stream.
+  //! \param in Input stream.
+  //! \return Input stream.
   std::istream & read(std::istream &in) {
     in >> surf;
     in >> q0;
@@ -263,10 +337,13 @@ public:
     in >> curv2d;
     return in;
   }
-  ObjRef surf;
-  double q0;
-  double q1;
-  ObjRef curv2d;
+  ObjRef surf; //! Index of surface definition.
+  double q0; //! Starting parameter value.
+  double q1; //! Ending parameter value.
+  ObjRef curv2d; //! Index of surface definition.
+  //! \brief Check if another surface is equivalent.
+  //! \param rhs Surface to compare.
+  //! \return true if rhs is equivalent.
   bool is_equal(const ObjRefSurface& rhs) const {
     const ObjRefSurface& lhs = *this;
     if (lhs.surf != rhs.surf) return false;
@@ -293,19 +370,62 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
 { return p.read(in); };
 
 
+//! ObjWavefront element base class.
 class ObjElement {
 public:
+  //! \brief Empty constructor.
   ObjElement() : code("") {}
+  //! \brief Initialize an element from an element code.
+  //! \param code0 Element code.
   ObjElement(const std::string& code0) : code(code0) {}
+  //! \brief Copy constructor.
+  //! \param rhs Element to copy.
   ObjElement(const ObjElement& rhs) : code(rhs.code) {}
+  //! \brief Initialize an element by reading from an input stream.
+  //! \param in Input stream to read from.
+  ObjElement(std::istream &) {
+    std::cerr << "Child class must overrride stream initializer" << std::endl;
+  }
+  //! \brief Initialize an element from a C array of values.
+  //! \tparam T Array element type.
+  //! \tparam N Array size.
+  //! \param src Array of values.
+  // template <typename T, size_t N>
+  // ObjElement(const T (&src)[N]) : ObjElement(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
+  //! \param values0 Vector of values.
+  // template <typename T>
+  // ObjElement(const std::vector<T>&) {
+  //   std::cerr << "Child class must overrride vector initializer" << std::endl;
+  // }
+  //! \brief Destructor.
   virtual ~ObjElement() {}
+  //! \brief Create a copy of the element.
+  //! \return Copied element.
   virtual ObjElement* copy() const { return new ObjElement(*this); }
+  //! \brief Assign values to a vector from a pointer to an array.
+  //! \tparam T1 Type of elements in the destination vector.
+  //! \tparam T2 Type of elements in the source array.
+  //! \param[in, out] Vector to assign values to.
+  //! \param src Pointer to the source array.
+  //! \param N Number of elements in the source array.
   template <typename T1, typename T2>
   void assign_values(std::vector<T1>& dst, const T2* src, const size_t &N)
   { assign_values(dst, std::vector<T2>(src, src+N)); }
+  //! \brief Assign values to a vector from stack array.
+  //! \tparam T1 Type of elements in the destination vector.
+  //! \tparam T2 Type of elements in the source array.
+  //! \param[in, out] Vector to assign values to.
+  //! \param src Source array.
   template <typename T1, typename T2, size_t N>
   void assign_values(std::vector<T1>& dst, const T2 (&src)[N])
   { assign_values(dst, std::vector<T2>(src, src+N)); }
+  //! \brief Assign values to a vector from a vector.
+  //! \tparam T1 Type of elements in the destination vector.
+  //! \tparam T2 Type of elements in the source vector.
+  //! \param[in, out] Vector to assign values to.
+  //! \param src Source vector.
   template <typename T1, typename T2>
   void assign_values(std::vector<T1>& dst, const std::vector<T2> &src) {
     for (auto it = src.begin(); it != src.end(); it++)
@@ -313,44 +433,68 @@ public:
   }
   template <typename T, size_t N>
   void assign_values(const T (&)[N]) {}
+  //! \brief Assign element members from an array of values stored in another
+  //!   class member during a previous call to assign_values.
   virtual void from_values() {}
+  //! \brief Read element members from an input stream.
+  //! \param in Input stream.
   virtual void read_values(std::istream&) {
     std::cerr << "Child class must overrride read_values" << std::endl;
   }
+  //! \brief Write element member to an output stream.
+  //! \param out Output stream.
   virtual void write_values(std::ostream&) const {
     std::cerr << "Child class must overrride write_values" << std::endl;
   }
+  //! \brief Check if another element is equivalent.
+  //! \param rhs0 Element to compare.
+  //! \return true if rhs is equivalent.
   virtual bool is_equal(const ObjElement*) const {
     std::cerr << "Child class must overrride is_equal" << std::endl;
     return false;
   }
+  //! \brief Get element values as an array of strings.
+  //! \return Array of string values.
   virtual std::vector<std::string> get_string_array() const {
     std::vector<std::string> out;
     std::cerr << "Child class must overrride get_string_array" << std::endl;
     return out;
   }
+  //! \brief Get element values as an array of ints.
+  //! \return Array of int values.
   virtual std::vector<int> get_int_array() const {
     std::vector<int> out;
     std::cerr << "Child class must overrride get_int_array" << std::endl;
     return out;
   }
+  //! \brief Get element values as an array of doubles.
+  //! \return Array of double values.
   virtual std::vector<double> get_double_array() const {
     std::vector<double> out;
     std::cerr << "Child class must overrride get_double_array" << std::endl;
     return out;
   }
+  //! \brief Read element members from an input stream into a vector.
+  //! \param in Input stream.
+  //! \param values Vector to store read values in.
   template <typename T>
   void read_values(std::istream &in, std::vector<T> &values) {
     T x = 0;
     while ((in.peek() != '\n') && (in >> x))
       values.push_back(x);
   }
+  //! \brief Write the element to an output stream.
+  //! \param out Output stream.
+  //! \return Output stream.
   std::ostream & write(std::ostream &out) const {
     out << code << " ";
     write_values(out);
     out << std::endl;
     return out;
   }
+  //! \brief Write element member to an output stream from a vector.
+  //! \param out Output stream.
+  //! \param values Values to write.
   template <typename T>
   void write_values(std::ostream &out, const std::vector<T> &values) const {
     for (auto it = values.begin(); it != values.end(); it++) {
@@ -359,13 +503,15 @@ public:
       out << *it;
     }
   }
+  //! \brief Get a string representation of the element.
+  //! \return String representation.
   std::string as_string() const {
     std::string out;
     std::stringstream ss(out);
     write(ss);
     return out;
   }
-  std::string code;
+  std::string code; //! Code indicating the type of element.
   friend std::ostream & operator << (std::ostream &out, const ObjElement &p);
 };
 
@@ -373,19 +519,24 @@ inline
 std::ostream & operator << (std::ostream &out, const ObjElement &p)
 { return p.write(out); };
 
-// Vertex data
+//! Vertex data
 class ObjVertex : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjVertex(const ObjVertex& rhs) :
     ObjElement(rhs), values(rhs.values), x(rhs.x), y(rhs.y), z(rhs.z), w(rhs.w), color(rhs.color) {}
+  //! \copydoc ObjElement::ObjElement(std::istream &)
   ObjVertex(std::istream &in) :
     ObjElement("v"), values(), x(0), y(0), z(0), w(-1), color() {
     ObjElement::read_values(in, values);
     // read_values(in);
     from_values();
   }
+  //! \copydoc ObjElement::ObjElement(const T &)
   template <typename T, size_t N>
   ObjVertex(const T (&src)[N]) : ObjVertex(std::vector<T>(src, src+N)) {}
+  //! \copydoc ObjElement::ObjElement(const std::vector<T>&)
+  //! The value type must be an integer or floating point.
   template <typename T>
   ObjVertex(const std::vector<T> &values0,
 	    RAPIDJSON_ENABLEIF((
@@ -419,6 +570,7 @@ public:
     ObjElement("v"), values(), x(0), y(0), z(0), w(-1), color() {
     RAPIDJSON_ASSERT(!sizeof("ObjVertex type is double"));
   }
+  //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 3)
 		     || (values.size() == 4)
@@ -437,8 +589,11 @@ public:
     else
       w = -1;
   }
+  //! \copydoc ObjElement::copy()
   ObjVertex* copy() const override { return new ObjVertex(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << x << " " << y << " " << z;
     if (color.is_set)
@@ -446,6 +601,7 @@ public:
     if (w >= 0)
       out << " " << w;
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjVertex* lhs = this;
@@ -456,29 +612,36 @@ public:
     if (!IS_EQUAL_DBL(lhs->w, rhs->w)) return false;
     return (lhs->color == rhs->color);
   }
+  //! \copydoc ObjElement::get_double_array
   std::vector<double> get_double_array() const override {
     std::vector<double> out({x, y, z});
     return out;
   }
   std::vector<double> values;
-  double x;
-  double y;
-  double z;
-  double w; // Negative indicates default weight of 1
-  ObjColor color;
+  double x; //! Vertex coordinate in the x direction
+  double y; //! Vertex coordinate in the y direction
+  double z; //! Vertex coordinate in the z direction
+  double w; //! Vertex weight, negative values indicate a default weight of 1
+  ObjColor color; //! Vertex color
 };
 
+//! Object vertex parameter
 class ObjVParameter : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjVParameter(const ObjVParameter& rhs) :
     ObjElement(rhs), values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
+  //! \copydoc ObjElement::ObjElement(std::istream&)
   ObjVParameter(std::istream &in) :
     ObjElement("vp"), values(), u(0), v(0), w(-1) {
     read_values(in);
     from_values();
   }
+  //! \copydoc ObjElement::ObjElement(const T&)
   template <typename T, size_t N>
   ObjVParameter(const T (&src)[N]) : ObjVParameter(std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \param values0 Vector of values.
   ObjVParameter(const std::vector<double> &values0) :
     ObjElement("vp"), values(), u(0), v(0), w(-1) {
     assign_values(values, values0);
@@ -489,6 +652,7 @@ public:
     ObjElement("vp"), values(), u(0), v(0), w(-1) {
     RAPIDJSON_ASSERT(!sizeof("ObjVParameter type is double"));
   }
+  //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 2)
 		     || (values.size() == 3));
@@ -499,13 +663,17 @@ public:
     else
       w = -1;
   }
+  //! \copydoc ObjElement::copy()
   ObjVParameter* copy() const override { return new ObjVParameter(*this); }
+  //! \copydoc ObjElement::read_values(std::istream&)
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values(std::ostream&)
   void write_values(std::ostream &out) const override {
     out << u << " " << v;
     if (w >= 0)
       out << " " << w;
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjVParameter* lhs = this;
@@ -515,27 +683,34 @@ public:
     if (!IS_EQUAL_DBL(lhs->w, rhs->w)) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_double_array
   std::vector<double> get_double_array() const override {
     std::vector<double> out({u, v, w});
     return out;
   }
-  std::vector<double> values;
-  double u;
-  double v;
-  double w; // Negative indicates default weight of 1
+  std::vector<double> values; //! Array of values.
+  double u; //! Parameter value in first dimension.
+  double v; //! Parameter value in second dimension.
+  double w; //! Parameter weight, negative values indicate a default weight of 1.
 };
 
+//! Vertex normal element.
 class ObjVNormal : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement& rhs)
   ObjVNormal(const ObjVNormal& rhs) :
     ObjElement(rhs), values(), i(rhs.i), j(rhs.j), k(rhs.k) {}
+  //! \copydoc ObjElement::ObjElement(std::istream&)
   ObjVNormal(std::istream &in) :
     ObjElement("vn"), values(), i(0), j(0), k(0) {
     read_values(in);
     from_values();
   }
+  //! \copydoc ObjElement::ObjElement(const T&)
   template <typename T, size_t N>
   ObjVNormal(const T (&src)[N]) : ObjVNormal(std::vector<T>(src, src+N)) {}
+  //! \copydoc ObjElement::ObjElement(const std::vector<T>)
+  //! Only double values are valid for ObjVNormal elements.
   ObjVNormal(const std::vector<double> &values0) :
     ObjElement("vn"), values(), i(0), j(0), k(0) {
     assign_values(values, values0);
@@ -546,17 +721,22 @@ public:
     ObjElement("vn"), values(), i(0), j(0), k(0) {
     RAPIDJSON_ASSERT(!sizeof("ObjVNormal type is double"));
   }
+  //! \copydoc ObjElement::from_values
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() == 3);
     i = values[0];
     j = values[1];
     k = values[2];
   }
+  //! \copydoc ObjElement::copy
   ObjVNormal* copy() const override { return new ObjVNormal(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << i << " " << j << " " << k;
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjVNormal* lhs = this;
@@ -566,27 +746,34 @@ public:
     if (!IS_EQUAL_DBL(lhs->k, rhs->k)) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_double_array
   std::vector<double> get_double_array() const override {
     std::vector<double> out({i, j, k});
     return out;
   }
-  std::vector<double> values;
-  double i;
-  double j;
-  double k;
+  std::vector<double> values; //! Vector of normal values.
+  double i; //! Normal vector in the x direction.
+  double j; //! Normal vector in the y direction.
+  double k; //! Normal vector in the z direction.
 };
 
+//! Texture vertex element.
 class ObjVTexture : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjVTexture(const ObjVTexture& rhs) :
     ObjElement(rhs), values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
+  //! \copydoc ObjElement::ObjElement(std::istream)
   ObjVTexture(std::istream &in) :
     ObjElement("vt"), values(), u(0), v(0), w(0) {
     read_values(in);
     from_values();
   }
+  //! \copydoc ObjElement::ObjElement(const T&)
   template <typename T, size_t N>
   ObjVTexture(const T (&src)[N]) : ObjVTexture(std::vector<T>(src, src+N)) {}
+  //! \copydoc ObjElement::ObjElement(const std::vector<T>)
+  //! Only double values are valid for ObjVTexture objects.
   ObjVTexture(const std::vector<double> &values0) :
     ObjElement("vt"), values(), u(0), v(0), w(0) {
     assign_values(values, values0);
@@ -597,6 +784,7 @@ public:
     ObjElement("vt"), values(), u(0), v(0), w(0) {
     RAPIDJSON_ASSERT(!sizeof("ObjVTexture type is double"));
   }
+  //! \copydoc ObjElement::from_values
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1)
 		     || (values.size() == 2)
@@ -609,7 +797,9 @@ public:
     if (values.size() == 3)
       w = values[2];
   }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  //! \copydoc ObjElement::write_vlaues
   void write_values(std::ostream &out) const override {
     out << u;
     if (v >= 0)
@@ -617,6 +807,7 @@ public:
     if (w >= 0)
       out << " " << w;
   }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjVTexture* lhs = this;
@@ -626,28 +817,36 @@ public:
     if (!IS_EQUAL_DBL(lhs->w, rhs->w)) return false;
     return true;
   }
+  //! \copydoc ObjElement::get_double_array
   std::vector<double> get_double_array() const override {
     std::vector<double> out({u, v, w});
     return out;
   }
-  std::vector<double> values;
-  double u;
-  double v; // Negative indicates default of 0
-  double w; // Negative indicates default of 0
+  std::vector<double> values; //! Vector of texture values.
+  double u; //! Texture coordinate in the horizontal direction.
+  double v; //! Texture coordinate in the vertical direction; a negative value indicates a default of 0.
+  double w; //! Texture coordinate in the depth direction; a negative value indicates a default of 0.
 };
 
 // Elements
+
+//! Point element.
 class ObjPoint : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjELement(const ObjElement&)
   ObjPoint(const ObjPoint& rhs) :
     ObjElement(rhs), values(rhs.values) {}
+  //! \copydoc ObjElement::ObjElement(std::istream&)
   ObjPoint(std::istream &in) :
     ObjElement("p"), values() {
     read_values(in);
     from_values();
   }
+  //! \copydoc ObjElement::ObjElement(const T&)
   template <typename T, size_t N>
   ObjPoint(const T (&src)[N]) : ObjPoint(std::vector<T>(src, src+N)) {}
+  //! \copydoc ObjElement::ObjElement(const std::vector<T>&)
+  //! Only integer values are allowed for ObjPoint elements.
   template <typename T>
   ObjPoint(const std::vector<T> &values0,
 	      RAPIDJSON_ENABLEIF((
@@ -857,15 +1056,18 @@ public:
     RAPIDJSON_ASSERT(values.size() >= 2);
   }
   ObjCurve* copy() const override { return new ObjCurve(*this); }
+  //! \copydoc ObjELement::read_values(std::istream&)
   void read_values(std::istream &in) override {
     in >> u0;
     in >> u1;
     ObjElement::read_values(in, values);
   }
+  //! \copydoc ObjELement::write_values(std::ostream&)
   void write_values(std::ostream &out) const override {
     out << u0 << " " << u1 << " ";
     ObjElement::write_values(out, values);
   }
+  //! \copydoc ObjELement::is_equal(const ObjElement*)
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjCurve* lhs = this;
@@ -1543,33 +1745,45 @@ public:
   double resolution;
 };
 
+//! Object name element.
 class ObjObjectName : public ObjElement {
 public:
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjObjectName(const ObjObjectName& rhs) :
     ObjElement(rhs), name(rhs.name) {}
+  //! \copydoc ObjElement::ObjElement(std::istream&)
   ObjObjectName(std::istream &in) :
     ObjElement("o"), name("") {
     read_values(in);
   }
+  //! \copydoc ObjElement::ObjElement(const T&)
   template <typename T, size_t N>
   ObjObjectName(const T (&src)[N]) : ObjObjectName(std::vector<T>(src, src+N)) {}
+  //! \copydoc ObjElement::ObjElement(const std::vector<T>&)
   template <typename T>
   ObjObjectName(const std::vector<T> &) :
     ObjElement("o"), name("") {
     RAPIDJSON_ASSERT(!sizeof("ObjObjectName cannot be initialized from an array"));
   }
+  //! \copydoc ObjElement::copy
   ObjObjectName* copy() const override { return new ObjObjectName(*this); }
+  //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { in >> name; }
+  //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override { out << name; }
+  //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
     const ObjObjectName* rhs = static_cast<const ObjObjectName*>(rhs0);
     if (this->name != rhs->name) return false;
     return true;
   }
-  std::string name;
+  std::string name; //! Object name.
 };
 
+//! \brief Read an element from an input stream.
+//! \param in Input stream.
+//! \return New element.
 inline ObjElement* read_obj_element(std::istream &in) {
   std::string word = "";
   ObjElement* out = NULL;
@@ -1578,6 +1792,11 @@ inline ObjElement* read_obj_element(std::istream &in) {
   return out;
 };
 
+//! \brief Read elements from an input stream until a certain character is
+//!    encountered.
+//! \param in Input stream.
+//! \param elements Vector to read elements into.
+//! \param break_at Character to stop at.
 inline void read_obj_elements(std::istream &in, std::vector<ObjElement*> &elements,
 			      const char break_at) {
   while (true) {
@@ -1597,21 +1816,52 @@ inline void read_obj_elements(std::istream &in, std::vector<ObjElement*> &elemen
 class ObjWavefront {
 public:
   ObjWavefront() : elements() {}
+  //! \brief Copy constructor.
+  //! \param rhs Instance to copy.
   ObjWavefront(const ObjWavefront& rhs) : elements() {
     for (auto it = rhs.elements.begin(); it != rhs.elements.end(); it++)
       elements.push_back((*it)->copy());
   }
+  //! \brief Create an ObjWavefront instance from C arrays of vertices.
+  //! \tparam Tv Type of value in vertex value arrays.
+  //! \tparam Mv Number of vertex elements.
+  //! \tparam Nv Number of values in the array for each vertex element.
+  //! \param vertices Array of vertex element value arrays.
   template<typename Tv, size_t Mv, size_t Nv>
   ObjWavefront(const Tv (&vertices)[Mv][Nv]) :
     elements() {
     add_element_set("v", vertices);
   }
+  //! \brief Create an ObjWavefront instance from C arrays of vertices and
+  //!   faces.
+  //! \tparam Tv Type of value in vertex value arrays.
+  //! \tparam Mv Number of vertex elements.
+  //! \tparam Nv Number of values in the array for each vertex element.
+  //! \tparam Tf Type of value in face value arrays.
+  //! \tparam Mf Number of face elements.
+  //! \tparam Nf Number of values in the array for each face element.
+  //! \param vertices Array of vertex element value arrays.
+  //! \param faces Array of face element value arrays.
   template<typename Tv, size_t Mv, size_t Nv,
 	   typename Tf, size_t Mf, size_t Nf>
   ObjWavefront(const Tv (&vertices)[Mv][Nv], const Tf (&faces)[Mf][Nf]={}) :
     ObjWavefront(vertices) {
     add_element_set("f", faces);
   }
+  //! \brief Create an ObjWavefront instance from C arrays of vertices,
+  //!   faces, and edges.
+  //! \tparam Tv Type of value in vertex value arrays.
+  //! \tparam Mv Number of vertex elements.
+  //! \tparam Nv Number of values in the array for each vertex element.
+  //! \tparam Tf Type of value in face value arrays.
+  //! \tparam Mf Number of face elements.
+  //! \tparam Nf Number of values in the array for each face element.
+  //! \tparam Te Type of value in edge value arrays.
+  //! \tparam Me Number of edge elements.
+  //! \tparam Ne Number of values in the array for each edge element.
+  //! \param vertices Array of vertex element value arrays.
+  //! \param faces Array of face element value arrays.
+  //! \param edges Array of edge element value arrays.
   template<typename Tv, size_t Mv, size_t Nv,
 	   typename Tf, size_t Mf, size_t Nf,
 	   typename Te, size_t Me, size_t Ne>
@@ -1625,19 +1875,35 @@ public:
       delete *it;
     // elements.resize(0);
   }
-  std::vector<ObjElement*> elements;
+  std::vector<ObjElement*> elements; //! All sets of elements in the 3D mesh.
 
+  //! \brief Add a set of elements to the geometry from a C array of value
+  //!   arrays.
+  //! \tparam T Type of value in the values array.
+  //! \tparam M Number of elements being added.
+  //! \tparam N Number of entries in each element's values array.
+  //! \param name Name of the type of elements being added.
+  //! \param values Array of value arrays defining the elements.
   template <typename T, size_t M, size_t N>
   void add_element_set(std::string name, const T (&values)[M][N]) {
     for (SizeType i = 0; i < M; i++)
       add_element(name, values[i]);
   }
+  //! \brief Add an element to the geometry from a C array of values.
+  //! \tparam T Type of value in the values array.
+  //! \tparam N Number of elements in the values array.
+  //! \param name Name of the type of element being added.
+  //! \param values Array of values defining the element.
   template <typename T, size_t N>
   void add_element(std::string name, const T (&values)[N]) {
     ObjElement* x = NULL;
     OBJ_ELEMENT_INIT(name, x, (std::vector<T>(values, values+N)));
     elements.push_back(x);
   }
+  //! \brief Add an element to the geometry from a C++ vector of values.
+  //! \tparam T Type of value in the values vector.
+  //! \param name Name of the type of element being added.
+  //! \param values Vector of values defining the element.
   template <typename T>
   void add_element(std::string name, const std::vector<T> &values) {
     ObjElement* x = NULL;
@@ -1645,6 +1911,10 @@ public:
     elements.push_back(x);
   }
 
+  //! \brief Check if another ObjWavefront instance is equivalent by
+  //!   comparing elements.
+  //! \param rhs Other instance for comparison.
+  //! \return true if rhs is equivalent.
   bool is_equal(const ObjWavefront& rhs) const {
     const ObjWavefront& lhs = *this;
     if (lhs.elements.size() != rhs.elements.size())
@@ -1656,11 +1926,17 @@ public:
     }
     return true;
   }
+  //! \brief Write elements to an output stream.
+  //! \param out Output stream.
+  //! \return Output stream.
   std::ostream & write(std::ostream &out) const {
     for (auto it = elements.begin(); it != elements.end(); it++)
       (*it)->write(out);
     return out;
   }
+  //! \brief Read elements from an input stream.
+  //! \param in Input stream.
+  //! \return Input stream.
   std::istream & read(std::istream &in) {
     read_obj_elements(in, elements);
     return in;
@@ -1670,14 +1946,27 @@ public:
   friend std::istream & operator >> (std::istream &in,  ObjWavefront &p);
 };
 
+//! \brief Check the equivalent of two ObjWavefront instances by comparing
+//!   elements (calls ObjWavefront::is_equal method).
+//! \param lhs First instance for comparison.
+//! \param rhs Second instance for comparison.
+//! \return true if the two instances are equivalent.
 inline
 bool operator == (const ObjWavefront& lhs, const ObjWavefront& rhs)
 { return lhs.is_equal(rhs); };
 
+//! \brief Write an ObjWavefront object to an output stream.
+//! \param out Output stream.
+//! \param p ObjWavefront object.
+//! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjWavefront &p)
 { return p.write(out); };
 
+//! \brief Read an ObjWavefront object from an input stream.
+//! \param in Input stream.
+//! \param p ObjWavefrotn object.
+//! \return Input stream.
 inline
 std::istream & operator >> (std::istream &in, ObjWavefront &p)
 { return p.read(in); };

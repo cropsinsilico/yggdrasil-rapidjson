@@ -436,18 +436,30 @@ public:
   //! \param x Unit to check against.
   //! \return true if this unit is not equal to x.
   bool operator!=(const Unit& x) const { return (!(*this == x)); }
+  //! \brief Perform power operation in place.
+  //! \param x Power to raise this unit to.
   void inplace_pow(const double x) {
     RAPIDJSON_ASSERT(!(has_offset() && (std::abs(x - 1.0) > DBL_EPSILON)));
     power_ = power_ * x;
   }
+  //! \brief Raise this unit to a power.
+  //! \param x Power to raise this unit to.
+  //! \return Resulting unit.
   Unit pow(const double x) const {
     Unit new_unit(*this);
     new_unit.inplace_pow(x);
     return new_unit;
   }
+  //! \brief Check if this unit and another have the same base unit.
+  //! \param x Unit to compare this unit to.
+  //! \return true if this unit and x have the same base unit.
   bool is_same_base(const Unit& x) const {
     return (x.names_[0] == names_[0]);
   }
+  //! \brief Check if a string matches any of the names or abbreviations
+  //!   associated with this unit.
+  //! \param str String to check.
+  //! \return true if str matches this unit.
   bool matches(const std::basic_string<Ch> str) const {
     for (auto n = names_.begin(); n != names_.end(); n++) {
       if (str.compare(*n) == 0)
@@ -461,6 +473,11 @@ public:
     }
     return false;
   }
+  //! \brief Check if a string matches any of the names or abbreviations
+  //!   associated with this unit with the provided prefix added.
+  //! \param str String to check.
+  //! \param prefix Prefix to add when checking against the provided string.
+  //! \return true if str matches this unit.
   bool matches(const std::basic_string<Ch> str, const UnitPrefix& prefix) const {
     for (auto n = names_.begin(); n != names_.end(); n++) {
       if (str.compare(prefix.name + (*n)) == 0)
@@ -473,6 +490,13 @@ public:
 	return true;
     return false;
   }
+  //! \brief Check if a string matches any of the names or abbreviations
+  //!   associated with this unit, checking for a partial match that allows
+  //!   the possibility that there is a prefix present.
+  //! \param str String to check.
+  //! \param possibilities Vector to add this unit to if it matches the
+  //!   end of the provided string.
+  //! \return true if str matches this unit.
   bool prefix_matches(const std::basic_string<Ch> str,
 		      std::vector<const Unit*>& possibilities) const {
     for (auto n = names_.begin(); n != names_.end(); n++) {
@@ -490,8 +514,15 @@ public:
     }
     return false;
   }
+  //! \brief Check if this unit has a non-zero offset.
+  //! \return true if this unit has a non-zero offset.
   bool has_offset() const { return (std::abs(offset_) > DBL_EPSILON); }
+  //! \brief Check if this unit has a power other than 1.
+  //! \return true if this unit has a power other than 1.
   bool has_power() const { return (std::abs(power_ - 1.0) > DBL_EPSILON); }
+  //! \brief Check if this unit is irreducible or a product of more than
+  //!   one irreducible unit.
+  //! \return true if the unit is irreducible.
   bool is_irreducible() const { return dim_.is_irreducible(); }
   // Units reduced() const {
   //   if (is_irreducible()) return Units({*this});
@@ -510,8 +541,13 @@ public:
   //   units[0].factor_ = units[0].factor_ * factor_;
   //   return Units(units);
   // }
-  double to_base(const double x) { return factor_ * (x - offset_); }
-  double from_base(const double x) { return (x / factor_) + offset_; }
+  // double to_base(const double x) { return factor_ * (x - offset_); }
+  // double from_base(const double x) { return (x / factor_) + offset_; }
+  //! \brief Get the conversion factors necessary to convert from this
+  //!   unit to another.
+  //! \param x Unit to convert to.
+  //! \return Two element vector where the first element is the scale factor
+  //!   and the second element is the offset.
   std::vector<double> conversion_factor(const Unit& x) const {
     RAPIDJSON_ASSERT(dimension() == x.dimension());
     // [a1 * (x - a2)]**a3 = [b1 * (y - b2)]**b3
@@ -522,10 +558,19 @@ public:
     std::vector<double> out { ratio, ratio * a[1] - b[1] };
     return out;
   }
+  //! \brief Get the conversion factors necessary to convert to/from this
+  //!   unit from the base system of units.
+  //! \return Two element vector where the first element is the scale factor
+  //!   and the second element is the offset.
   std::vector<double> conversion_factor() const {
     std::vector<double> out { std::pow(factor_, power_), offset_ };
     return out;
   }
+  //! \brief Find the unit that matches a string.
+  //! \param str String to find a unit for.
+  //! \param prefix_factor Prefix factor that is indicated by the string
+  //!   prefix.
+  //! \return Pointer to the matching unit.
   static const Unit<Ch>* find_unit(const std::basic_string<Ch> str, double& prefix_factor);
 private:
   std::vector<std::basic_string<Ch>> names_;
@@ -876,6 +921,7 @@ class GroupToken; // Forward declaration
 template<typename Ch>
 class TokenBase {
 public:
+  TokenBase(const TokenBase& rhs) : TokenBase(rhs.t, rhs.parent), units(rhs.units), finalized(rhs.finalized) {}
   TokenBase(const TokenType t0, TokenBase *parent0=nullptr) : t(t0), units(), finalized(false), parent(parent0) {}
   virtual ~TokenBase() {}
   virtual TokenBase<Ch>* current_token() { return this; }
