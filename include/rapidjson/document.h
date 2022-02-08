@@ -3307,8 +3307,12 @@ public:
   StringRefType GetPythonObjectClassName(PyObject* x, Allocator& allocator) {
     RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__module__"));
     RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__name__"));
-    const char* mod = PyUnicode_AsUTF8(PyObject_GetAttrString(x, "__module__"));
-    const char* cls = PyUnicode_AsUTF8(PyObject_GetAttrString(x, "__name__"));
+    PyObject *mod_py = PyObject_GetAttrString(x, "__module__");
+    PyObject *cls_py = PyObject_GetAttrString(x, "__name__");
+    const char* mod = PyUnicode_AsUTF8(mod_py);
+    const char* cls = PyUnicode_AsUTF8(cls_py);
+    Py_DECREF(mod_py);
+    Py_DECREF(cls_py);
     RAPIDJSON_ASSERT(mod != NULL);
     RAPIDJSON_ASSERT(cls != NULL);
     size_t mod_cls_siz = strlen(mod) + strlen(cls) + 2;
@@ -3326,6 +3330,7 @@ public:
     PyObject* x_attr = PyObject_GetAttrString(x, reinterpret_cast<const char*>(attr));
     RAPIDJSON_ASSERT(x_attr != NULL);
     out.SetPythonObjectRaw(x_attr, &allocator);
+    Py_DECREF(x_attr);
     return true;
   }
   PyObject* GetPythonObjectRaw() const {
@@ -3347,6 +3352,7 @@ public:
 	PyObject* ival = item->value.GetPythonObjectRaw();
 	result = PyDict_SetItemString(out, ikey, ival);
 	RAPIDJSON_ASSERT(result == 0);
+	Py_DECREF(ival);
       }
       return out;
     }
@@ -3360,6 +3366,7 @@ public:
 	PyObject* ival = item->GetPythonObjectRaw();
 	result = PyList_Append(out, ival);
 	RAPIDJSON_ASSERT(result == 0);
+	Py_DECREF(ival);
       }
       return out;
     }
@@ -3405,6 +3412,7 @@ public:
                   ValueType(PyDict_GetItem(x, ikey), *allocator),
                   *allocator);
       }
+      Py_DECREF(keys);
     } else if (PyBytes_CheckExact(x)) {
       // TODO: Encode as yggdrasil?
       RAPIDJSON_ASSERT(allocator);
@@ -3417,7 +3425,9 @@ public:
       // SetStringRaw(StringRef(PyUnicode_AsUTF8(x),
       //                        (size_t)(PyBytes_Size(x))),
       //              *allocator);
-      SetPythonObjectRaw(PyUnicode_AsUTF8String(x), allocator);
+      PyObject* x_bytes = PyUnicode_AsUTF8String(x);
+      SetPythonObjectRaw(x_bytes, allocator);
+      Py_DECREF(x_bytes);
     } else if (PyLong_Check(x)) {
       int overflow = 0;
       Set(static_cast<int64_t>(PyLong_AsLongLongAndOverflow(x, &overflow)));
@@ -4037,6 +4047,9 @@ public:
     RAPIDJSON_ASSERT(py_args);
     RAPIDJSON_ASSERT(py_kwargs);
     PyObject* py_inst = PyObject_Call(py_class, py_args, py_kwargs);
+    Py_DECREF(py_class);
+    Py_DECREF(py_args);
+    Py_DECREF(py_kwargs);
     return py_inst;
   }
   void GetObjWavefront(ObjWavefront &o) const {
