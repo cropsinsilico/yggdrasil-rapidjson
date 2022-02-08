@@ -433,7 +433,7 @@ public:
   virtual ~ObjElement() {}
   //! \brief Create a copy of the element.
   //! \return Copied element.
-  virtual ObjElement* copy() const { return new ObjElement(*this); }
+  virtual ObjElement* copy() const = 0;
   //! \brief Assign values to a vector from a pointer to an array.
   //! \tparam T1 Type of elements in the destination vector.
   //! \tparam T2 Type of elements in the source array.
@@ -463,43 +463,39 @@ public:
   }
   //! \brief Assign element members from an array of values stored in another
   //!   class member during a previous call to assign_values.
-  virtual void from_values() {}
+  virtual void from_values() {} // Do nothing, keep values in vector
   //! \brief Read element members from an input stream.
   //! \param in Input stream.
-  virtual void read_values(std::istream&) {
-    std::cerr << "Child class must overrride read_values" << std::endl;
-  }
+  virtual void read_values(std::istream& in) = 0;
   //! \brief Write element member to an output stream.
   //! \param out Output stream.
-  virtual void write_values(std::ostream&) const {
-    std::cerr << "Child class must overrride write_values" << std::endl;
-  }
+  virtual void write_values(std::ostream& out) const = 0;
   //! \brief Check if another element is equivalent.
   //! \param rhs0 Element to compare.
   //! \return true if rhs is equivalent.
-  virtual bool is_equal(const ObjElement*) const {
-    std::cerr << "Child class must overrride is_equal" << std::endl;
-    return false;
-  }
+  virtual bool is_equal(const ObjElement* rhs0) const = 0;
   //! \brief Get element values as an array of strings.
   //! \return Array of string values.
   virtual std::vector<std::string> get_string_array() const {
+    std::cerr << "get_string_array not implemented" << std::endl;
     std::vector<std::string> out;
-    std::cerr << "Child class must overrride get_string_array" << std::endl;
+    RAPIDJSON_ASSERT(out.size() > 0);
     return out;
   }
   //! \brief Get element values as an array of ints.
   //! \return Array of int values.
   virtual std::vector<int> get_int_array() const {
+    std::cerr << "get_int_array not implemented" << std::endl;
     std::vector<int> out;
-    std::cerr << "Child class must overrride get_int_array" << std::endl;
+    RAPIDJSON_ASSERT(out.size() > 0);
     return out;
   }
   //! \brief Get element values as an array of doubles.
   //! \return Array of double values.
   virtual std::vector<double> get_double_array() const {
+    std::cerr << "get_double_array not implemented" << std::endl;
     std::vector<double> out;
-    std::cerr << "Child class must overrride get_double_array" << std::endl;
+    RAPIDJSON_ASSERT(out.size() > 0);
     return out;
   }
   //! \brief Read element members from an input stream into a vector.
@@ -870,6 +866,8 @@ public:
     if (values.size() == 3)
       w = values[2];
   }
+  //! \copydoc ObjElement::copy
+  ObjVTexture* copy() const override { return new ObjVTexture(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -2209,7 +2207,7 @@ inline void read_obj_elements(std::istream &in, std::vector<ObjElement*> &elemen
   }
 };
 
-//! Obj wavefront container class.
+//! Obj wavefront 3D geometry container class.
 class ObjWavefront {
 public:
   ObjWavefront() : elements() {}
