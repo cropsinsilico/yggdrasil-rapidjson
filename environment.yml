@@ -3,3 +3,5 @@ channels:
   - conda-forge
 dependencies:
   - numpy
+  - cxx-compiler
+  - valgrind [platform startswith linux]
