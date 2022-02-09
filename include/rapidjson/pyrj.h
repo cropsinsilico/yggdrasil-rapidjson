@@ -105,6 +105,22 @@ void initialize_python(const std::string error_prefix="") {
   }
 };
 
+
+/*!
+  @brief Finalize Python.
+  @param[in] error_prefix Prefix to add to error messages.
+ */
+inline
+void finalize_python(const std::string error_prefix="") {
+  try {
+    // if (Py_IsInitialized())
+    //   Py_Finalize();
+  } catch (std::exception& e) {
+    throw std::runtime_error(error_prefix + "finalize_python: " + e.what());
+  }
+};
+
+
 /*!
   @brief Try to import a Python module, throw an error if it fails.
   @param[in] module_name const char* Name of the module to import (absolute path).

@@ -127,6 +127,25 @@ public:
 #endif
 #endif
 
+#ifdef RAPIDJSON_YGGDRASIL
+#define INIT_PYTHON()							\
+  {									\
+    initialize_python("test");						\
+    PyObject* path = PySys_GetObject("path");				\
+    RAPIDJSON_ASSERT(path);						\
+    const char* datadir = std::getenv("DATADIR");			\
+    RAPIDJSON_ASSERT(datadir);						\
+    PyObject* example_dir = PyUnicode_FromString(datadir);		\
+    RAPIDJSON_ASSERT(example_dir);					\
+    PyList_Append(path, example_dir);					\
+    Py_DECREF(example_dir);						\
+  }
+#define FINALIZE_PYTHON()			\
+  {						\
+    finalize_python("test");			\
+  }
+#endif // RAPIDJSON_YGGDRASIL
+
 class Random {
 public:
     Random(unsigned seed = 0) : mSeed(seed) {}

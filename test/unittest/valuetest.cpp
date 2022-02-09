@@ -1387,28 +1387,37 @@ TEST(Value, Ply) {
 
 // Python objects
 TEST(Value, PythonClass) {
-  initialize_python("test");
-  PyObject* path = PySys_GetObject("path");
-  RAPIDJSON_ASSERT(path);
-  const char* datadir = std::getenv("DATADIR");
-  RAPIDJSON_ASSERT(datadir);
-  PyObject* example_dir = PyUnicode_FromString(datadir);
-  RAPIDJSON_ASSERT(example_dir);
-  PyList_Append(path, example_dir);
-  Py_DECREF(example_dir);
+  INIT_PYTHON();
   PyObject* pyclass = import_python_class("example_python", "ExampleClass");
   RAPIDJSON_ASSERT(pyclass);
   PyObject* pyfunc = import_python_class("example_python", "example_function");
   RAPIDJSON_ASSERT(pyfunc);
-  PyObject* pyargs = PyList_New(0);
+  PyObject* pyargs_list = PyList_New(0);
+  RAPIDJSON_ASSERT(pyargs_list);
+  PyObject* pyargs_item1 = PyUnicode_FromString("hello");
+  PyObject* pyargs_item2 = PyFloat_FromDouble(0.5);
+  RAPIDJSON_ASSERT(PyList_Append(pyargs_list, pyargs_item1) == 0);
+  RAPIDJSON_ASSERT(PyList_Append(pyargs_list, pyargs_item2) == 0);
+  PyObject* pyargs = PyList_AsTuple(pyargs_list);
   RAPIDJSON_ASSERT(pyargs);
-  RAPIDJSON_ASSERT(PyList_Append(pyargs, PyUnicode_FromString("hello")) == 0);
-  RAPIDJSON_ASSERT(PyList_Append(pyargs, PyFloat_FromDouble(0.5)) == 0);
+  Py_DECREF(pyargs_list);
+  Py_DECREF(pyargs_item1);
+  Py_DECREF(pyargs_item2);
   PyObject* pykwargs = PyDict_New();
   RAPIDJSON_ASSERT(pykwargs);
-  RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, PyUnicode_FromString("a"), PyUnicode_FromString("world")) == 0);
-  RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, PyUnicode_FromString("b"), PyLong_FromLong(1)) == 0);
-  PyObject* pyinst = PyObject_Call(pyclass, PyList_AsTuple(pyargs), pykwargs);
+  PyObject* pykwargs_key1 = PyUnicode_FromString("a");
+  PyObject* pykwargs_key2 = PyUnicode_FromString("b");
+  PyObject* pykwargs_val1 = PyUnicode_FromString("world");
+  PyObject* pykwargs_val2 = PyLong_FromLong(1);
+  RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, pykwargs_key1, pykwargs_val1) == 0);
+  RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, pykwargs_key2, pykwargs_val2) == 0);
+  Py_DECREF(pykwargs_key1);
+  Py_DECREF(pykwargs_key2);
+  Py_DECREF(pykwargs_val1);
+  Py_DECREF(pykwargs_val2);
+  PyObject* pyinst = PyObject_Call(pyclass, pyargs, pykwargs);
+  if (!pyinst)
+    PyErr_WriteUnraisable(pyargs);
   RAPIDJSON_ASSERT(pyinst);
   Value x(pyclass);
   Value y(pyfunc);
@@ -1435,6 +1444,7 @@ TEST(Value, PythonClass) {
   Py_DECREF(pykwargs);
   Py_DECREF(pyinst);
   Py_DECREF(pyinst_cpy);
+  FINALIZE_PYTHON();
 }
 
 // schema

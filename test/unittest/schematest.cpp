@@ -1659,18 +1659,6 @@ TEST(SchemaValidator, Null) {
     RAPIDJSON_ASSERT(container.Accept(writer));				\
     std::cerr << name << ": " << buffer.GetString() << std::endl;	\
   }
-#define INIT_PYTHON()							\
-  {									\
-    initialize_python("test");						\
-    PyObject* path = PySys_GetObject("path");				\
-    RAPIDJSON_ASSERT(path);						\
-    const char* datadir = std::getenv("DATADIR");			\
-    RAPIDJSON_ASSERT(datadir);						\
-    PyObject* example_dir = PyUnicode_FromString(datadir);		\
-    RAPIDJSON_ASSERT(example_dir);					\
-    PyList_Append(path, example_dir);					\
-    Py_DECREF(example_dir);						\
-  }
   
 
 TEST(SchemaValidator, SubType) {
@@ -1791,6 +1779,7 @@ TEST(SchemaValidator, PythonClass) { // 31
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"disallowed\": \"invalid\""
 	       "}}");
+    FINALIZE_PYTHON();
 }
 
 TEST(SchemaValidator, PythonFunction) { // 31
@@ -1809,6 +1798,7 @@ TEST(SchemaValidator, PythonFunction) { // 31
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"disallowed\": \"invalid\""
 	       "}}");
+    FINALIZE_PYTHON();
 }
 
 TEST(SchemaValidator, PythonInstance) { // 31
@@ -1831,6 +1821,7 @@ TEST(SchemaValidator, PythonInstance) { // 31
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6e319-YGG-\"", true);
     // No args
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOltdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"", true);
+    FINALIZE_PYTHON();
 }
 
 #endif // RAPIDJSON_YGGDRASIL
