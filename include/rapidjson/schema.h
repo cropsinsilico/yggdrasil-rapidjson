@@ -1833,11 +1833,13 @@ protected:
     return true;
   }
   bool CheckPythonImport(Context& context, const Ch* str, SizeType length) const {
-    if (!(import_python_object(reinterpret_cast<const char*>(str),
-			       "CheckPythonImport", true))) {
+    PyObject* pyobj = import_python_object(reinterpret_cast<const char*>(str),
+					   "CheckPythonImport", true);
+    if (!(pyobj)) {
       context.error_handler.InvalidPythonImport(str, length);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonImport);
     }
+    Py_DECREF(pyobj);
     return true;
   }
 
