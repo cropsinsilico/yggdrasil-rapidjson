@@ -18,7 +18,7 @@ if(GTESTSRC_FOUND)
 
     if (WIN32 AND (NOT CYGWIN) AND (NOT MINGW))
         set(gtest_disable_pthreads ON)
-        set(gtest_force_shared_crt ON)
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     endif()
 
     IF(GTEST_SOURCE_DIR)
