@@ -2864,21 +2864,29 @@ public:
   explicit GenericValue(T x, Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetNDArrayRaw(&x, NULL, 0, {}, 0, &allocator); }
   template <typename T>
-  explicit GenericValue(T x, RAPIDJSON_DISABLEIF((
+    explicit GenericValue(T x, 
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+    RAPIDJSON_DISABLEIF((
     internal::OrExpr<internal::IsPointer<T>, internal::NotExpr<
     internal::OrExpr<internal::IsSame<T,uint8_t>,
     internal::OrExpr<internal::IsSame<T,uint16_t>,
     internal::OrExpr<internal::IsSame<T,int8_t>,
     internal::OrExpr<internal::IsSame<T,int16_t>,
     internal::OrExpr<internal::IsSame<T,std::complex<float>>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
     internal::OrExpr<internal::IsSame<T,std::complex<double>>,
     internal::OrExpr<internal::IsSame<T,long double>,
-    internal::IsSame<T,std::complex<long double>>>>>>>>>>>
+    internal::IsSame<T,std::complex<long double>>>>>>>>>>>))
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-    internal::IsSame<T,std::complex<double>>>>>>>>>
+    RAPIDJSON_DISABLEIF((
+    internal::OrExpr<internal::IsPointer<T>, internal::NotExpr<
+    internal::OrExpr<internal::IsSame<T,uint8_t>,
+    internal::OrExpr<internal::IsSame<T,uint16_t>,
+    internal::OrExpr<internal::IsSame<T,int8_t>,
+    internal::OrExpr<internal::IsSame<T,int16_t>,
+    internal::OrExpr<internal::IsSame<T,std::complex<float>>,
+    internal::IsSame<T,std::complex<double>>>>>>>>>))
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-    ))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+    ) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetNDArrayRaw(&x, NULL, 0, {}, 0); }
   // Explicit 1D Array
   template <typename T, SizeType N>
@@ -3671,94 +3679,115 @@ public:
   }
 
   template <typename T1, typename T2>
-  T2 CastPrecision(const T1& v1, RAPIDJSON_DISABLEIF((
+  T2 CastPrecision(const T1& v1,
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+      RAPIDJSON_DISABLEIF((
       internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
       internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
       internal::OrExpr<internal::IsSame<std::complex<long double>, T1>,
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
       internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
-      internal::IsSame<std::complex<long double>, T2>>>>>>
+      internal::IsSame<std::complex<long double>, T2>>>>>>))
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      internal::IsSame<std::complex<double>, T2>>>>
+      RAPIDJSON_DISABLEIF((
+      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
+      internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
+      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
+      internal::IsSame<std::complex<double>, T2>>>>))
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      ))) const { return static_cast<const T2>(v1); }
+      ) const { return static_cast<const T2>(v1); }
   template <typename T1, typename T2>
-  T2 CastPrecision(const T1& v1, RAPIDJSON_ENABLEIF((
+  T2 CastPrecision(const T1& v1,
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+      RAPIDJSON_ENABLEIF((
       internal::AndExpr<
       internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
       internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
       internal::IsSame<std::complex<long double>, T1>>>,
+      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
+      internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
+      internal::IsSame<std::complex<long double>, T2>>>>))
 #else //YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      internal::IsSame<std::complex<double>, T1>>,
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE      
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
-      internal::IsSame<std::complex<long double>, T2>>>>
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      internal::IsSame<std::complex<double>, T2>>>
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      ))) const { return T2(v1.real(), v1.imag()); }
-  template <typename T1, typename T2>
-  T2 CastPrecision(const T1& v1, RAPIDJSON_ENABLEIF((
+      RAPIDJSON_ENABLEIF((
       internal::AndExpr<
       internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
+      internal::IsSame<std::complex<double>, T1>>,
+      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
+      internal::IsSame<std::complex<double>, T2>>>))
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE      
+      ) const { return T2(v1.real(), v1.imag()); }
+  template <typename T1, typename T2>
+  T2 CastPrecision(const T1& v1,
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+      RAPIDJSON_ENABLEIF((
+      internal::AndExpr<
+      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
       internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
       internal::IsSame<std::complex<long double>, T1>>>,
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      internal::IsSame<std::complex<double>, T1>>,
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
       internal::NotExpr<
       internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
       internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
-      internal::IsSame<std::complex<long double>, T2>>>>>
+      internal::IsSame<std::complex<long double>, T2>>>>>))
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      internal::IsSame<std::complex<double>, T2>>>>
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE      
-      ))) const { return static_cast<const T2>(v1.real()); }
+      RAPIDJSON_ENABLEIF((
+      internal::AndExpr<
+      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
+      internal::IsSame<std::complex<double>, T1>>,
+      internal::NotExpr<
+      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
+      internal::IsSame<std::complex<double>, T2>>>>))
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+      ) const { return static_cast<const T2>(v1.real()); }
   template <typename T1, typename T2>
-  T2 CastPrecision(const T1& v1, RAPIDJSON_ENABLEIF((
+  T2 CastPrecision(const T1& v1,
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+      RAPIDJSON_ENABLEIF((
       internal::AndExpr<internal::NotExpr<
       internal::OrExpr<internal::IsSame<long, T1>,
       internal::OrExpr<internal::IsSame<unsigned long, T1>,
       internal::OrExpr<internal::IsSame<long long, T1>,
       internal::OrExpr<internal::IsSame<unsigned long long, T1>,
       internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
       internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
       internal::IsSame<std::complex<long double>, T1>>>>>>>>,
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      internal::IsSame<std::complex<double>, T1>>>>>>>,
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
       internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
       internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
-      internal::IsSame<std::complex<long double>, T2>>>>
+      internal::IsSame<std::complex<long double>, T2>>>>))
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      internal::IsSame<std::complex<double>, T2>>>
+      RAPIDJSON_ENABLEIF((
+      internal::AndExpr<internal::NotExpr<
+      internal::OrExpr<internal::IsSame<long, T1>,
+      internal::OrExpr<internal::IsSame<unsigned long, T1>,
+      internal::OrExpr<internal::IsSame<long long, T1>,
+      internal::OrExpr<internal::IsSame<unsigned long long, T1>,
+      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
+      internal::IsSame<std::complex<double>, T1>>>>>>>,
+      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
+      internal::IsSame<std::complex<double>, T2>>>))
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      ))) const { return T2(v1); }
+      ) const { return T2(v1); }
   template <typename T1, typename T2>
-  const T2 CastPrecision(const T1& v1, RAPIDJSON_ENABLEIF((
+  const T2 CastPrecision(const T1& v1,
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+      RAPIDJSON_ENABLEIF((
       internal::AndExpr<
       internal::OrExpr<internal::IsSame<long, T1>,
       internal::OrExpr<internal::IsSame<unsigned long, T1>,
       internal::OrExpr<internal::IsSame<long long, T1>,
       internal::IsSame<unsigned long long, T1>>>>,
       internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
       internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
-      internal::IsSame<std::complex<long double>, T2>>>>
+      internal::IsSame<std::complex<long double>, T2>>>>))
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      internal::IsSame<std::complex<double>, T2>>>
+      RAPIDJSON_ENABLEIF((
+      internal::AndExpr<
+      internal::OrExpr<internal::IsSame<long, T1>,
+      internal::OrExpr<internal::IsSame<unsigned long, T1>,
+      internal::OrExpr<internal::IsSame<long long, T1>,
+      internal::IsSame<unsigned long long, T1>>>>,
+      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
+      internal::IsSame<std::complex<double>, T2>>>))
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      ))) const { return T2(static_cast<const int>(v1)); }
+      ) const { return T2(static_cast<const int>(v1)); }
 
   template <typename T1, typename T2>
   void ChangePrecision(const unsigned char* bytes, T2* dst,
