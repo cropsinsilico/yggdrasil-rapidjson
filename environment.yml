@@ -5,5 +5,5 @@ dependencies:
   - numpy
   - c-compiler
   - cxx-compiler
-  - cmake
+  # - cmake
   # - valgrind [platform startswith linux]
