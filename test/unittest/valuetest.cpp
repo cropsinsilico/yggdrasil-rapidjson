@@ -1420,15 +1420,15 @@ TEST(Value, PythonClass) {
   Py_DECREF(pykwargs);
   Value x(pyclass);
   Value y(pyfunc);
-  // Value z(pyinst);
+  Value z(pyinst);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.HasSchema());
   EXPECT_TRUE(x.IsPythonClass());
   EXPECT_TRUE(y.IsPythonFunction());
-  // EXPECT_TRUE(z.IsPythonInstance());
+  EXPECT_TRUE(z.IsPythonInstance());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(kStringType, y.GetType());
-  // EXPECT_EQ(kObjectType, z.GetType());
+  EXPECT_EQ(kObjectType, z.GetType());
   PyObject* pyclass_cpy = x.GetPythonClass();
   PyObject* pyfunc_cpy = y.GetPythonFunction();
   // PyObject* pyinst_cpy = z.GetPythonInstance();
