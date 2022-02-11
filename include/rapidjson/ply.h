@@ -715,14 +715,14 @@ public:
   //! \param out Output stream.
   void write_header(std::ostream &out) const {
     out << "element " << name << " " << elements.size() << std::endl;
-    for (auto name = property_order.begin(); name != property_order.end(); name++) {
-      auto it = property_flags.find(*name);
+    for (auto iname = property_order.begin(); iname != property_order.end(); iname++) {
+      auto it = property_flags.find(*iname);
       RAPIDJSON_ASSERT(it != property_flags.end());
       
       out << "property " << PlyElement::flag2typename(it->second) << " ";
       if (it->second & PlyElement::kListFlag) {
 	uint16_t element_flag = PlyElement::kUint8Flag;
-	auto it_size = property_size_flags.find(*name);
+	auto it_size = property_size_flags.find(*iname);
 	if (it_size != property_size_flags.end())
 	  element_flag = it_size->second;
 	out << PlyElement::flag2typename(element_flag) << " "

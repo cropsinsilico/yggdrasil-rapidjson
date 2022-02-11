@@ -5,6 +5,7 @@ find_package(GTestSrc)
 
 add_definitions(-DRAPIDJSON_YGGDRASIL)
 add_definitions(-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION)
+add_definitions(-D_USE_MATH_DEFINES)
 
 include_directories(SYSTEM ${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
 
