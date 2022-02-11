@@ -112,7 +112,7 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
       - name: Configure (Windows)
         if: matrix.os == 'windows-latest'
-        shell: cmd /C CALL {0}
+        # shell: cmd /C CALL {0}
         run: |
           mkdir build
           cd build
