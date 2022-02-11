@@ -1763,60 +1763,60 @@ TEST(SchemaValidator, Shape) { // 30
 	       "}}");
 }
 
-TEST(SchemaValidator, PythonClass) { // 31
-    Document sd;
-    sd.Parse(
-        "{"
-        "  \"type\": \"class\""
-        "}");
-    SchemaDocument s(sd);
-    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", true);
-    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
-	       "", "class", "",
-	       "{ \"class\" : {"
-	       "    \"errorCode\": 31,"
-	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"disallowed\": \"invalid\""
-	       "}}");
-}
+// TEST(SchemaValidator, PythonClass) { // 31
+//     Document sd;
+//     sd.Parse(
+//         "{"
+//         "  \"type\": \"class\""
+//         "}");
+//     SchemaDocument s(sd);
+//     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", true);
+//     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
+// 	       "", "class", "",
+// 	       "{ \"class\" : {"
+// 	       "    \"errorCode\": 31,"
+// 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+// 	       "    \"disallowed\": \"invalid\""
+// 	       "}}");
+// }
 
-TEST(SchemaValidator, PythonFunction) { // 31
-    Document sd;
-    sd.Parse(
-        "{"
-        "  \"type\": \"function\""
-        "}");
-    SchemaDocument s(sd);
-    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", true);
-    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
-	       "", "class", "",
-	       "{ \"class\" : {"
-	       "    \"errorCode\": 31,"
-	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"disallowed\": \"invalid\""
-	       "}}");
-}
+// TEST(SchemaValidator, PythonFunction) { // 31
+//     Document sd;
+//     sd.Parse(
+//         "{"
+//         "  \"type\": \"function\""
+//         "}");
+//     SchemaDocument s(sd);
+//     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", true);
+//     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
+// 	       "", "class", "",
+// 	       "{ \"class\" : {"
+// 	       "    \"errorCode\": 31,"
+// 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+// 	       "    \"disallowed\": \"invalid\""
+// 	       "}}");
+// }
 
-TEST(SchemaValidator, PythonInstance) { // 31
-    Document sd;
-    sd.Parse(
-        "{"
-        "  \"type\": \"instance\""
-        "}");
-    SchemaDocument s(sd);
-    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", true);
-    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImludmFsaWQiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
-	       "", "class", "",
-	       "{ \"class\" : {"
-	       "    \"errorCode\": 31,"
-	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"disallowed\": \"invalid\""
-	       "}}");
-    // No kwargs
-    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6e319-YGG-\"", true);
-    // No args
-    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOltdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"", true);
-}
+// TEST(SchemaValidator, PythonInstance) { // 31
+//     Document sd;
+//     sd.Parse(
+//         "{"
+//         "  \"type\": \"instance\""
+//         "}");
+//     SchemaDocument s(sd);
+//     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", true);
+//     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImludmFsaWQiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
+// 	       "", "class", "",
+// 	       "{ \"class\" : {"
+// 	       "    \"errorCode\": 31,"
+// 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+// 	       "    \"disallowed\": \"invalid\""
+// 	       "}}");
+//     // No kwargs
+//     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6e319-YGG-\"", true);
+//     // No args
+//     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOltdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"", true);
+// }
 
 #endif // RAPIDJSON_YGGDRASIL
 
