@@ -102,7 +102,7 @@ if(NOT MSVC)
 	         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
     	set_tests_properties(valgrind_unittest PROPERTIES
                              ENVIRONMENT
-                             "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE};PYTHONMALLOC=malloc")
+                             "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
     endif((NOT RAPIDJSON_SKIP_VALGRIND_TESTS) AND VALGRIND_FOUND)
 
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
