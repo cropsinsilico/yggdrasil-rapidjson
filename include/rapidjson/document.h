@@ -1610,6 +1610,7 @@ public:
 			       
   
     template <typename T>
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
     RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
 				internal::OrExpr<internal::IsSame<T,uint8_t>,
 				internal::OrExpr<internal::IsSame<T,uint16_t>,
@@ -1617,14 +1618,21 @@ public:
 				internal::OrExpr<internal::IsSame<T,int16_t>,
 				internal::OrExpr<internal::IsSame<T,std::complex<float>>,
 				internal::OrExpr<internal::IsSame<T,std::complex<double>>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
 				internal::OrExpr<internal::IsSame<T,long double>,
 				internal::OrExpr<internal::IsSame<T,std::complex<long double>>,
 				internal::IsGenericValue<T> >>>>>>>>>),
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-				internal::IsGenericValue<T> >>>>>>>),
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 			       (GenericValue&))
+#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+    RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
+				internal::OrExpr<internal::IsSame<T,uint8_t>,
+				internal::OrExpr<internal::IsSame<T,uint16_t>,
+				internal::OrExpr<internal::IsSame<T,int8_t>,
+				internal::OrExpr<internal::IsSame<T,int16_t>,
+				internal::OrExpr<internal::IsSame<T,std::complex<float>>,
+				internal::OrExpr<internal::IsSame<T,std::complex<double>>,
+				internal::IsGenericValue<T> >>>>>>>),
+			       (GenericValue&))
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #else // RAPIDJSON_YGGDRASIL
     template <typename T>
     RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>, internal::IsGenericValue<T> >), (GenericValue&))
