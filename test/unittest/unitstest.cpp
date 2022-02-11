@@ -57,6 +57,8 @@ using namespace rapidjson;
 
 TEST(Unit, Base) {
   COMPARE_UNITS(1.0, "g", 0.001, "kg", true);
+  COMPARE_UNITS(1.0, "gram", 0.001, "kilogram", true);
+  COMPARE_UNITS(1.0, "grams", 0.001, "kilograms", true);
   COMPARE_UNITS(1.0, "g", 1.0, "kg", false);
   COMPARE_UNITS(1.0, "cm", 1.0, "g", false);
   COMPARE_UNITS(1.0, "g**2", 1e-6, "kg^2", true);

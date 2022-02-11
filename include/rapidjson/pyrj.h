@@ -81,9 +81,9 @@ void init_python_API() {
       if (!(Py_IsInitialized()))
 	err = "Failed to initialize Python";
     }
-    if (err.length() == 0) {
-      init_numpy_API();
-    }
+    // if (err.length() == 0) {
+    //   init_numpy_API();
+    // }
   }
 #ifdef _OPENMP
   }
