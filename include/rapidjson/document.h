@@ -1559,19 +1559,25 @@ public:
     */
 #ifdef RAPIDJSON_YGGDRASIL
     template <typename T>
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
     RAPIDJSON_ENABLEIF_RETURN((internal::OrExpr<internal::IsSame<T,uint8_t>,
 			       internal::OrExpr<internal::IsSame<T,uint16_t>,
 			       internal::OrExpr<internal::IsSame<T,int8_t>,
 			       internal::OrExpr<internal::IsSame<T,int16_t>,
 			       internal::OrExpr<internal::IsSame<T,std::complex<float>>,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
 			       internal::OrExpr<internal::IsSame<T,std::complex<double>>,
 			       internal::OrExpr<internal::IsSame<T,long double>,
 			       internal::IsSame<T,std::complex<long double>> >>>>>>>),
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
- 			       internal::IsSame<T,std::complex<double>> >>>>>),
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 			       (GenericValue&))
+#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+    RAPIDJSON_ENABLEIF_RETURN((internal::OrExpr<internal::IsSame<T,uint8_t>,
+			       internal::OrExpr<internal::IsSame<T,uint16_t>,
+			       internal::OrExpr<internal::IsSame<T,int8_t>,
+			       internal::OrExpr<internal::IsSame<T,int16_t>,
+			       internal::OrExpr<internal::IsSame<T,std::complex<float>>,
+ 			       internal::IsSame<T,std::complex<double>> >>>>>),
+			       (GenericValue&))
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
     AddMember(GenericValue& name, T value, Allocator& allocator) {
       GenericValue v(value, allocator);
       return AddMember(name, v, allocator);
@@ -2799,7 +2805,7 @@ public:
 
   template <typename T>
   static const ValueType& YggSubTypeString() {
-    switch (YggSubType<T>()) {
+    switch (GetYggSubType<T>()) {
     case kYggUintSubType:
       return GetUintSubTypeString();
     case kYggIntSubType:
@@ -3750,7 +3756,7 @@ public:
   void ChangePrecision(const unsigned char* bytes, T2* dst,
 		       SizeType nelements) const {
     const T1* src = reinterpret_cast<const T1*>(bytes);
-    RAPIDJSON_ASSERT(YggSubType<T1>() == YggSubType<T2>());
+    RAPIDJSON_ASSERT(GetYggSubType<T1>() == GetYggSubType<T2>());
     if (sizeof(T2) == sizeof(T1)) {
       memcpy(dst, src, nelements * sizeof(T2));
       return;
@@ -3766,7 +3772,7 @@ public:
     T2* v2 = (T2*)allocator.Malloc(nelements * sizeof(T2));
     RAPIDJSON_ASSERT(v2);
     ChangePrecision<T1,T2>(bytes, v2, nelements);
-    // RAPIDJSON_ASSERT(YggSubType<T1>() == YggSubType<T2>());
+    // RAPIDJSON_ASSERT(GetYggSubType<T1>() == GetYggSubType<T2>());
     // if (sizeof(T2) == sizeof(T1))
     //   return (T2*)bytes;
     // else if (sizeof(T2) < sizeof(T1))
@@ -3894,19 +3900,19 @@ public:
     void GetScalar(T& data, RAPIDJSON_DISABLEIF((
 	internal::IsSame<std::complex<double>, T>))) const {
     if (!IsYggdrasil()) {
-      if (IsInt() && (YggSubType<T>() == kYggIntSubType)) {
+      if (IsInt() && (GetYggSubType<T>() == kYggIntSubType)) {
 	data = static_cast<T>(GetInt());
 	return;
-      } else if (IsUint() && (YggSubType<T>() == kYggUintSubType)) {
+      } else if (IsUint() && (GetYggSubType<T>() == kYggUintSubType)) {
 	data = static_cast<T>(GetUint());
 	return;
-      } else if (IsInt64() && (YggSubType<T>() == kYggIntSubType)) {
+      } else if (IsInt64() && (GetYggSubType<T>() == kYggIntSubType)) {
 	data = static_cast<T>(GetInt64());
 	return;
-      } else if (IsUint64() && (YggSubType<T>() == kYggUintSubType)) {
+      } else if (IsUint64() && (GetYggSubType<T>() == kYggUintSubType)) {
 	data = static_cast<T>(GetUint64());
 	return;
-      } else if (IsDouble() && (YggSubType<T>() == kYggFloatSubType)) {
+      } else if (IsDouble() && (GetYggSubType<T>() == kYggFloatSubType)) {
 	data = static_cast<T>(GetDouble());
 	return;
       }

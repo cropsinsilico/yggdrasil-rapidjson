@@ -1770,7 +1770,6 @@ TEST(SchemaValidator, PythonClass) { // 31
         "  \"type\": \"class\""
         "}");
     SchemaDocument s(sd);
-    INIT_PYTHON();
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", true);
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
 	       "", "class", "",
@@ -1779,7 +1778,6 @@ TEST(SchemaValidator, PythonClass) { // 31
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"disallowed\": \"invalid\""
 	       "}}");
-    FINALIZE_PYTHON();
 }
 
 TEST(SchemaValidator, PythonFunction) { // 31
@@ -1789,7 +1787,6 @@ TEST(SchemaValidator, PythonFunction) { // 31
         "  \"type\": \"function\""
         "}");
     SchemaDocument s(sd);
-    INIT_PYTHON();
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", true);
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
 	       "", "class", "",
@@ -1798,7 +1795,6 @@ TEST(SchemaValidator, PythonFunction) { // 31
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"disallowed\": \"invalid\""
 	       "}}");
-    FINALIZE_PYTHON();
 }
 
 TEST(SchemaValidator, PythonInstance) { // 31
@@ -1808,7 +1804,6 @@ TEST(SchemaValidator, PythonInstance) { // 31
         "  \"type\": \"instance\""
         "}");
     SchemaDocument s(sd);
-    INIT_PYTHON();
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", true);
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImludmFsaWQiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
 	       "", "class", "",
@@ -1821,7 +1816,6 @@ TEST(SchemaValidator, PythonInstance) { // 31
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6e319-YGG-\"", true);
     // No args
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOltdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"", true);
-    FINALIZE_PYTHON();
 }
 
 #endif // RAPIDJSON_YGGDRASIL

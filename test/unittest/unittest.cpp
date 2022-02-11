@@ -14,6 +14,9 @@
 
 #include "unittest.h"
 #include "rapidjson/rapidjson.h"
+#ifdef RAPIDJSON_YGGDRASIL
+#include "rapidjson/pyrj.h"
+#endif // RAPIDJSON_YGGDRASIL
 
 #ifdef __clang__
 #pragma GCC diagnostic push
@@ -33,6 +36,10 @@ int main(int argc, char **argv) {
 
     std::cout << "RapidJSON v" << RAPIDJSON_VERSION_STRING << std::endl;
 
+#ifdef RAPIDJSON_YGGDRASIL
+    INIT_PYTHON();
+#endif // RAPIDJSON_YGGDRASIL
+    
 #ifdef _MSC_VER
     _CrtMemState memoryState = { 0 };
     (void)memoryState;
@@ -47,5 +54,10 @@ int main(int argc, char **argv) {
     // Current gtest constantly leak 2 blocks at exit
     _CrtMemDumpAllObjectsSince(&memoryState);
 #endif
+    
+#ifdef RAPIDJSON_YGGDRASIL
+    FINALIZE_PYTHON();
+#endif // RAPIDJSON_YGGDRASIL
+    
     return ret;
 }

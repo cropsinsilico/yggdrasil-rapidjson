@@ -113,8 +113,8 @@ void initialize_python(const std::string error_prefix="") {
 inline
 void finalize_python(const std::string error_prefix="") {
   try {
-    // if (Py_IsInitialized())
-    //   Py_Finalize();
+    if (Py_IsInitialized())
+      Py_Finalize();
   } catch (std::exception& e) {
     throw std::runtime_error(error_prefix + "finalize_python: " + e.what());
   }

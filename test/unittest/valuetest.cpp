@@ -1387,7 +1387,6 @@ TEST(Value, Ply) {
 
 // Python objects
 TEST(Value, PythonClass) {
-  INIT_PYTHON();
   PyObject* pyclass = import_python_class("example_python", "ExampleClass");
   RAPIDJSON_ASSERT(pyclass);
   PyObject* pyfunc = import_python_class("example_python", "example_function");
@@ -1416,8 +1415,6 @@ TEST(Value, PythonClass) {
   Py_DECREF(pykwargs_val1);
   Py_DECREF(pykwargs_val2);
   PyObject* pyinst = PyObject_Call(pyclass, pyargs, pykwargs);
-  if (!pyinst)
-    PyErr_WriteUnraisable(pyargs);
   RAPIDJSON_ASSERT(pyinst);
   Value x(pyclass);
   Value y(pyfunc);
@@ -1444,7 +1441,6 @@ TEST(Value, PythonClass) {
   Py_DECREF(pykwargs);
   Py_DECREF(pyinst);
   Py_DECREF(pyinst_cpy);
-  FINALIZE_PYTHON();
 }
 
 // schema

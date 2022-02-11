@@ -756,22 +756,22 @@ enum YggSubType {
 };
 
 
-template <typename T> inline enum YggSubType YggSubType() { return kYggNullSubType; }
-template<> inline enum YggSubType YggSubType<uint8_t>() { return kYggUintSubType; }
-template<> inline enum YggSubType YggSubType<uint16_t>() { return kYggUintSubType; }
-template<> inline enum YggSubType YggSubType<uint32_t>() { return kYggUintSubType; }
-template<> inline enum YggSubType YggSubType<uint64_t>() { return kYggUintSubType; }
-template<> inline enum YggSubType YggSubType<int8_t>() { return kYggIntSubType; }
-template<> inline enum YggSubType YggSubType<int16_t>() { return kYggIntSubType; }
-template<> inline enum YggSubType YggSubType<int32_t>() { return kYggIntSubType; }
-template<> inline enum YggSubType YggSubType<int64_t>() { return kYggIntSubType; }
-template<> inline enum YggSubType YggSubType<float>() { return kYggFloatSubType; }
-template<> inline enum YggSubType YggSubType<double>() { return kYggFloatSubType; }
-template<> inline enum YggSubType YggSubType<std::complex<float>>() { return kYggComplexSubType; }
-template<> inline enum YggSubType YggSubType<std::complex<double>>() { return kYggComplexSubType; }
+template <typename T> inline enum YggSubType GetYggSubType() { return kYggNullSubType; }
+template<> inline enum YggSubType GetYggSubType<uint8_t>() { return kYggUintSubType; }
+template<> inline enum YggSubType GetYggSubType<uint16_t>() { return kYggUintSubType; }
+template<> inline enum YggSubType GetYggSubType<uint32_t>() { return kYggUintSubType; }
+template<> inline enum YggSubType GetYggSubType<uint64_t>() { return kYggUintSubType; }
+template<> inline enum YggSubType GetYggSubType<int8_t>() { return kYggIntSubType; }
+template<> inline enum YggSubType GetYggSubType<int16_t>() { return kYggIntSubType; }
+template<> inline enum YggSubType GetYggSubType<int32_t>() { return kYggIntSubType; }
+template<> inline enum YggSubType GetYggSubType<int64_t>() { return kYggIntSubType; }
+template<> inline enum YggSubType GetYggSubType<float>() { return kYggFloatSubType; }
+template<> inline enum YggSubType GetYggSubType<double>() { return kYggFloatSubType; }
+template<> inline enum YggSubType GetYggSubType<std::complex<float>>() { return kYggComplexSubType; }
+template<> inline enum YggSubType GetYggSubType<std::complex<double>>() { return kYggComplexSubType; }
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-template<> inline enum YggSubType YggSubType<long double>() { return kYggFloatSubType; }
-template<> inline enum YggSubType YggSubType<std::complex<long double>>() { return kYggComplexSubType; }
+template<> inline enum YggSubType GetYggSubType<long double>() { return kYggFloatSubType; }
+template<> inline enum YggSubType GetYggSubType<std::complex<long double>>() { return kYggComplexSubType; }
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 
 #endif // RAPIDJSON_YGGDRASIL

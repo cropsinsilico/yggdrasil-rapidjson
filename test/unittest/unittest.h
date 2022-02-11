@@ -130,7 +130,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
 #define INIT_PYTHON()							\
   {									\
-    initialize_python("test");						\
+    rapidjson::initialize_python("test");				\
     PyObject* path = PySys_GetObject("path");				\
     RAPIDJSON_ASSERT(path);						\
     const char* datadir = std::getenv("DATADIR");			\
@@ -142,7 +142,7 @@ public:
   }
 #define FINALIZE_PYTHON()			\
   {						\
-    finalize_python("test");			\
+    rapidjson::finalize_python("test");		\
   }
 #endif // RAPIDJSON_YGGDRASIL
 
