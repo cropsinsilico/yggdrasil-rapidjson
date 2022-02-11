@@ -87,6 +87,11 @@ jobs:
           cd thirdparty/gtest
           git apply ../gtest.patch
           cd ../..
+      - name: Set up MSVC Compiler on windows
+        uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.os == 'windows-latest'
+        with:
+          toolset: 14.0
       - name: Set up miniconda test environment
         uses: conda-incubator/setup-miniconda@v2
         with:
