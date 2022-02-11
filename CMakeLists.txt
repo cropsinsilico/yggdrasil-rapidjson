@@ -27,6 +27,7 @@ else()
     PROJECT(RapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES CXX)
 endif()
 
+add_definitions(-DPython3_FIND_STRATEGY=LOCATION)
 find_package(PythonInterp 3.6 REQUIRED)
 find_package(PythonLibs 3.6 REQUIRED)
 # exec_program(${PYTHON_EXECUTABLE}
