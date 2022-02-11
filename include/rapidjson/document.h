@@ -4075,7 +4075,9 @@ public:
     // Args
     ConstMemberIterator ma = FindMember(GetArgsString());
     if (ma != MemberEnd()) {
-      py_args = PyList_AsTuple(ma->value.GetPythonObjectRaw());
+      PyObject* py_args_list = ma->value.GetPythonObjectRaw();
+      py_args = PyList_AsTuple(py_args_list);
+      Py_DECREF(py_args_list);
     } else {
       py_args = PyTuple_New(0);
     }
