@@ -3176,8 +3176,8 @@ public:
 	  ValueType v(StringRef(GetArrayString().GetString()));
 	  out.AddMember(GetTypeString(), v, allocator);
 	  ValueType items(kArrayType);
-	  for (ConstValueIterator v = Begin(); v != End(); ++v)
-	    items.PushBack(v->GetSchemaNested(allocator), allocator);
+	  for (ConstValueIterator v2 = Begin(); v2 != End(); ++v2)
+	    items.PushBack(v2->GetSchemaNested(allocator), allocator);
 	  out.AddMember(GetItemsString(), items, allocator);
 	  break;
 	}
