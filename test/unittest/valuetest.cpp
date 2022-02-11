@@ -1238,7 +1238,7 @@ TEST(Value, OneDArrayUInt) {
   uint8_t* cpy = NULL;
   SizeType len_cpy = 0;
   x.Get1DArray(cpy, len_cpy, allocator);
-  EXPECT_EQ((SizeType)3, len_cpy);
+  EXPECT_EQ(3u, len_cpy);
   for (SizeType i = 0; i < len_cpy; i++)
     EXPECT_EQ(arr[i], cpy[i]);
   EXPECT_EQ(u, x);
@@ -1284,7 +1284,7 @@ TEST(Value, NDArrayUInt) {
   SizeType* shape_cpy = NULL;
   SizeType ndim_cpy = 0;
   x.GetNDArray(cpy, shape_cpy, ndim_cpy, allocator);
-  EXPECT_EQ(2, ndim_cpy);
+  EXPECT_EQ(2u, ndim_cpy);
   for (SizeType i = 0; i < ndim_cpy; i++)
     EXPECT_EQ(shape[i], shape_cpy[i]);
   for (SizeType i = 0; i < shape[0]; i++) {
