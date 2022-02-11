@@ -3481,8 +3481,10 @@ public:
       SetObject();
       ResetSchema(allocator);
       AddSchemaMember(GetTypeString(), GetPythonInstanceString());
-      ValueType mod_cls(GetPythonObjectClassName(PyObject_GetAttrString(x, "__class__"),
+      PyObject* inst_class = PyObject_GetAttrString(x, "__class__");
+      ValueType mod_cls(GetPythonObjectClassName(inst_class,
 						 schema_->GetAllocator()));
+      Py_DECREF(inst_class);
       AddMember(GetPythonClassString(), mod_cls, schema_->GetAllocator());
       ValueType args;
       ValueType kwargs;
