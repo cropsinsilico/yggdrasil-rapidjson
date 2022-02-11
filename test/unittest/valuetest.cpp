@@ -1238,7 +1238,7 @@ TEST(Value, OneDArrayUInt) {
   uint8_t* cpy = NULL;
   SizeType len_cpy = 0;
   x.Get1DArray(cpy, len_cpy, allocator);
-  EXPECT_EQ(3, len_cpy);
+  EXPECT_EQ((SizeType)3, len_cpy);
   for (SizeType i = 0; i < len_cpy; i++)
     EXPECT_EQ(arr[i], cpy[i]);
   EXPECT_EQ(u, x);

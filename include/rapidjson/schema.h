@@ -1023,7 +1023,6 @@ public:
 	return false;
       if (!CheckUnits(context, schema))
 	return false;
-      return true;
     } else if (((*v == Get1DArrayString()) || (*v == GetNDArrayString())) &&
 	       (yggtype_ & (1 << kYggNDArraySchemaType))) {
       if (!CheckSubType(context, schema))
@@ -1034,35 +1033,33 @@ public:
 	return false;
       if (!CheckShape(context, schema))
 	return false;
-      return true;
     } else if (((*v == GetPythonClassString()) ||
 		(*v == GetPythonFunctionString())) &&
 	       (yggtype_ & (1 << kYggPythonImportSchemaType))) {
       if (!CheckPythonImport(context, str, length))
 	return false;
-      return true;
+    } else {
+      DisallowedType(context, *v);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
-    DisallowedType(context, *v);
-    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
-    return false;
+    return true;
   }
   template <typename ObjectType, typename YggSchemaValueType>
   bool Yggdrasil(Context& context, const ObjectType& o, YggSchemaValueType& schema) const {
     if (!CheckRequiredSchemaProperty(context, schema, GetTypeString()))
       return false;
     const ValueType* v = GetMember(schema, GetTypeString());
-    if ((*v == GetPythonInstanceString()) &&
-	(yggtype_ & (1 << kYggPythonInstanceSchemaType))) {
-      const ValueType* class_name = GetMember(o, GetPythonClassString());
-      if (!CheckPythonImport(context, class_name->GetString(),
-			     class_name->GetStringLength()))
-	return false;
-      // TODO: Check args/kwargs?
-      return true;
+    if (!((*v == GetPythonInstanceString()) &&
+	  (yggtype_ & (1 << kYggPythonInstanceSchemaType)))) {
+      DisallowedType(context, *v);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
-    DisallowedType(context, *v);
-    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
-    return false;
+    const ValueType* class_name = GetMember(o, GetPythonClassString());
+    if (!CheckPythonImport(context, class_name->GetString(),
+			   class_name->GetStringLength()))
+      return false;
+    // TODO: Check args/kwargs?
+    return true;
   }
 #endif // RAPIDJSON_YGGDRASIL
 
