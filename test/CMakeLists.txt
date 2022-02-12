@@ -7,12 +7,14 @@ add_definitions(-DRAPIDJSON_YGGDRASIL)
 add_definitions(-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION)
 add_definitions(-D_USE_MATH_DEFINES)
 
-include_directories(SYSTEM ${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
+# include_directories(SYSTEM ${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
+include_directories(SYSTEM ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
 
 # if(GTEST_FOUND)
 
 #     include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
-#     set(TEST_LIBRARIES ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY} ${PYTHON_LIBRARIES})
+##     set(TEST_LIBRARIES ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY} ${PYTHON_LIBRARIES})
+#     set(TEST_LIBRARIES ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY} ${Python3_LIBRARIES})
     
 if(GTESTSRC_FOUND)
 
@@ -26,7 +28,8 @@ if(GTESTSRC_FOUND)
     endif()
     include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
 
-    set(TEST_LIBRARIES gtest gtest_main ${PYTHON_LIBRARIES})
+    # set(TEST_LIBRARIES gtest gtest_main ${PYTHON_LIBRARIES})
+    set(TEST_LIBRARIES gtest gtest_main ${Python3_LIBRARIES})
 
 endif()
 

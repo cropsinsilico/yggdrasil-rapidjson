@@ -27,23 +27,21 @@ else()
     PROJECT(RapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES CXX)
 endif()
 
-add_definitions(-DPython3_FIND_STRATEGY=LOCATION)
-find_package(PythonInterp 3.6 REQUIRED)
-find_package(PythonLibs 3.6 REQUIRED)
+set(Python3_FIND_STRATEGY "LOCATION")
+find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+# find_package(PythonInterp 3.6 REQUIRED)
+# find_package(PythonLibs 3.6 REQUIRED)
 # exec_program(${PYTHON_EXECUTABLE}
-#              ARGS "-c \"import distutils.sysconfig as sysconfig; import os; print(os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')))\""
-#              OUTPUT_VARIABLE PYTHON_LIBRARIES
-#              RETURN_VALUE PYTHON_LIBRARIES_NOT_FOUND
-#              )
-exec_program(${PYTHON_EXECUTABLE}
-             ARGS "-c \"import numpy; print(numpy.get_include())\""
-             OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
-             RETURN_VALUE NUMPY_NOT_FOUND
-	     )
-if(NUMPY_NOT_FOUND)
+#              ARGS "-c \"import numpy; print(numpy.get_include())\""
+#              OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
+#              RETURN_VALUE NUMPY_NOT_FOUND
+# 	     )
+# if(NUMPY_NOT_FOUND)
+if(NOT Python3_NumPy_FOUND)
     message(FATAL_ERROR "NumPy headers not found")
 endif()
-if(PYTHON_LIBRARIES_NOT_FOUND)
+# if(PYTHON_LIBRARIES_NOT_FOUND)
+if(NOT Python3_FOUND)
     message(FATAL_ERROR "Python libraries not found")
 endif()
 

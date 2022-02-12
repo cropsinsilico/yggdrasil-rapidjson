@@ -84,6 +84,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|ARMClang")
         COMMENT "Creating debug symbols...")
 endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|ARMClang")
 
+set(PYTHON_EXECUTABLE "${Python3_EXECUTABLE}")
 add_test(NAME unittest
     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
