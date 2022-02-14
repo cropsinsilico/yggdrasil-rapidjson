@@ -45,6 +45,23 @@ if(NOT Python3_FOUND)
     message(FATAL_ERROR "Python libraries not found")
 endif()
 
+# Set environment variables required for embedding Python
+set(RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Python3_EXECUTABLE}")
+
+# There is an issue with embedding Python on Windows in conda environments
+# https://github.com/ContinuumIO/anaconda-issues/issues/11374
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    exec_program(${Python3_EXECUTABLE}
+	         ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('prefix'))\""
+                 OUTPUT_VARIABLE RAPIDJSON_PYTHONHOME
+                 RETURN_VALUE PYTHON_PREFIX_NOT_FOUND
+	         )
+    if(PYTHON_PREFIX_NOT_FOUND)
+        message(FATAL_ERROR "Python prefix not found")
+    endif()
+    set(RAPIDJSON_PYTHON_ENV "${RAPIDJSON_PYTHON_ENV};PYTHONHOME=${RAPIDJSON_PYTHONHOME}")
+endif()
+
 # compile in release with debug info mode by default
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)

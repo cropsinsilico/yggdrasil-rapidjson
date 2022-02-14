@@ -84,13 +84,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|ARMClang")
         COMMENT "Creating debug symbols...")
 endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|ARMClang")
 
-set(PYTHON_EXECUTABLE "${Python3_EXECUTABLE}")
+set(RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Python3_EXECUTABLE}")
+
+
 add_test(NAME unittest
     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set_tests_properties(unittest PROPERTIES
                      ENVIRONMENT
-		     "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
+		     "${RAPIDJSON_PYTHON_ENV}")
 
 
 option(RAPIDJSON_SKIP_VALGRIND_TESTS "Disable valgrind tests" OFF)
@@ -103,7 +105,7 @@ if(NOT MSVC)
 	         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
     	set_tests_properties(valgrind_unittest PROPERTIES
                              ENVIRONMENT
-                             "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${PYTHON_EXECUTABLE}")
+                             "${RAPIDJSON_PYTHON_ENV}")
     endif((NOT RAPIDJSON_SKIP_VALGRIND_TESTS) AND VALGRIND_FOUND)
 
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
