@@ -59,8 +59,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     if(PYTHON_PREFIX_NOT_FOUND)
         message(FATAL_ERROR "Python prefix not found")
     endif()
-    set(RAPIDJSON_PYTHON_ENV "${RAPIDJSON_PYTHON_ENV};PYTHONHOME=${RAPIDJSON_PYTHONHOME}")
+    set(RAPIDJSON_PYTHON_ENV "${RAPIDJSON_PYTHON_ENV};PYTHONHOME=${Python3_RUNTIME_LIBRARY_DIRS}")
 endif()
+message(STATUS "RAPIDJSON_PYTHON_ENV = ${RAPIDJSON_PYTHON_ENV}")
+message(STATUS "Python Runtime Library Dirs: ${Python3_RUNTIME_LIBRARY_DIRS}")
 
 # compile in release with debug info mode by default
 if(NOT CMAKE_BUILD_TYPE)
