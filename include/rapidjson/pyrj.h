@@ -28,6 +28,9 @@ extern "C" {
 #endif
 
 #include <iostream>
+#ifdef WIN32
+#include <stdlib.h>
+#endif // WIN32
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -66,6 +69,10 @@ void init_python_API() {
   {
 #endif
   if (!(Py_IsInitialized())) {
+#ifdef WIN32
+    // Work around for https://github.com/ContinuumIO/anaconda-issues/issues/11374
+    _putenv_s("CONDA_PY_ALLOW_REG_PATHS", "1");
+#endif // WIN32
     char *name = getenv("YGG_PYTHON_EXEC");
     if (name != NULL) {
       wchar_t *wname = Py_DecodeLocale(name, NULL);
