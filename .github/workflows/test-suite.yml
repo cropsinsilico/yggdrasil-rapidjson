@@ -55,18 +55,18 @@ jobs:
         run: |
           cd build
           ctest -C Debug --output-on-failure --verbose
-      - name: Collect coverage
-        run: |
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
-          ctest -T Coverage
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v1
-        with:
-          name: ${{ matrix.os }}-${{ matrix.python-install }}
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: build/Testing/CoverageInfo
-          functionalities: gcov
+      # - name: Collect coverage
+      #   run: |
+      #     cd build
+      #     cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
+      #     ctest -T Coverage
+      # - name: Upload coverage report
+      #   uses: codecov/codecov-action@v1
+      #   with:
+      #     name: ${{ matrix.os }}-${{ matrix.python-install }}
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     directory: build/Testing/CoverageInfo
+      #     functionalities: gcov
   build_conda:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -122,6 +122,14 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
           ctest -T Coverage
+      - name: Collect coverage with Gcovr (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          gcovr build --exclude-lines-by-pattern="RAPIDJSON_ASSERT\(.*" --json coverage.info
+      - name: Collect coverage with Gcovr (MacOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          gcovr build --gcov-executable="llvm-cov gcov" --exclude-lines-by-pattern="RAPIDJSON_ASSERT\(.*" --json coverage.info
       - name: Upload coverage report
         uses: codecov/codecov-action@v1
         with:

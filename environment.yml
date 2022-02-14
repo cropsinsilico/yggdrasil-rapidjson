@@ -5,5 +5,4 @@ dependencies:
   - numpy
   - c-compiler
   - cxx-compiler
-  # - cmake
-  # - valgrind [platform startswith linux]
+  - gcovr
