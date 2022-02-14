@@ -125,16 +125,16 @@ jobs:
       - name: Collect coverage with Gcovr (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          gcovr build --exclude-lines-by-pattern="RAPIDJSON_ASSERT\(.*" --json coverage.info
+          gcovr build --exclude-lines-by-pattern="RAPIDJSON_ASSERT\(.*" --html --html-details -o coverage.html
       - name: Collect coverage with Gcovr (MacOS)
         if: matrix.os == 'macos-latest'
         run: |
-          gcovr build --gcov-executable="llvm-cov gcov" --exclude-lines-by-pattern="RAPIDJSON_ASSERT\(.*" --json coverage.info
+          gcovr build --gcov-executable="llvm-cov gcov" --exclude-lines-by-pattern="RAPIDJSON_ASSERT\(.*" --html --html-details -o coverage.html
       - name: Upload coverage report
         uses: codecov/codecov-action@v1
         with:
           name: ${{ matrix.os }}-${{ matrix.python-install }}
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: coverage.info
+          file: coverage.html
           # directory: build/Testing/CoverageInfo
           functionalities: gcov
