@@ -29,18 +29,9 @@ endif()
 
 # set(Python3_FIND_STRATEGY "LOCATION")
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
-# find_package(PythonInterp 3.6 REQUIRED)
-# find_package(PythonLibs 3.6 REQUIRED)
-# exec_program(${PYTHON_EXECUTABLE}
-#              ARGS "-c \"import numpy; print(numpy.get_include())\""
-#              OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
-#              RETURN_VALUE NUMPY_NOT_FOUND
-# 	     )
-# if(NUMPY_NOT_FOUND)
 if(NOT Python3_NumPy_FOUND)
     message(FATAL_ERROR "NumPy headers not found")
 endif()
-# if(PYTHON_LIBRARIES_NOT_FOUND)
 if(NOT Python3_FOUND)
     message(FATAL_ERROR "Python libraries not found")
 endif()
@@ -51,17 +42,8 @@ set(RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Pyt
 # There is an issue with embedding Python on Windows in conda environments
 # https://github.com/ContinuumIO/anaconda-issues/issues/11374
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    # exec_program(${Python3_EXECUTABLE}
-    # 	         ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('prefix'))\""
-    #              OUTPUT_VARIABLE RAPIDJSON_PYTHONHOME
-    #              RETURN_VALUE PYTHON_PREFIX_NOT_FOUND
-    # 	         )
-    # if(PYTHON_PREFIX_NOT_FOUND)
-    #     message(FATAL_ERROR "Python prefix not found")
-    # endif()
     set(RAPIDJSON_PYTHON_ENV "${RAPIDJSON_PYTHON_ENV};PYTHONHOME=${Python3_RUNTIME_LIBRARY_DIRS}")
 endif()
-message(STATUS "RAPIDJSON_PYTHON_ENV = ${RAPIDJSON_PYTHON_ENV}")
 
 # compile in release with debug info mode by default
 if(NOT CMAKE_BUILD_TYPE)

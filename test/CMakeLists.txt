@@ -7,13 +7,11 @@ add_definitions(-DRAPIDJSON_YGGDRASIL)
 add_definitions(-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION)
 add_definitions(-D_USE_MATH_DEFINES)
 
-# include_directories(SYSTEM ${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
 include_directories(SYSTEM ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
 
 # if(GTEST_FOUND)
 
 #     include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
-##     set(TEST_LIBRARIES ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY} ${PYTHON_LIBRARIES})
 #     set(TEST_LIBRARIES ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY} ${Python3_LIBRARIES})
     
 if(GTESTSRC_FOUND)
@@ -28,7 +26,6 @@ if(GTESTSRC_FOUND)
     endif()
     include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
 
-    # set(TEST_LIBRARIES gtest gtest_main ${PYTHON_LIBRARIES})
     set(TEST_LIBRARIES gtest gtest_main ${Python3_LIBRARIES})
 
 endif()
@@ -43,6 +40,9 @@ if(TEST_LIBRARIES)
             set(CTEST_COVERAGE_EXTRA_FLAGS "gcov")
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
             set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+        else()
+            set(CTEST_COVERAGE_COMMAND "gcov")
+            set(CTEST_COVERAGE_EXTRA_FLAGS "")
         endif()
     endif(RAPIDJSON_ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang|ARMClang")
 
@@ -50,4 +50,12 @@ if(TEST_LIBRARIES)
     add_subdirectory(perftest)
     add_subdirectory(unittest)
     
+    if(RAPIDJSON_ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang|ARMClang")
+        file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/coverage)
+        add_test(NAME coverage
+                 COMMAND sh -c "gcovr ${CMAKE_BINARY_DIR} --gcov-executable=\"${CTEST_COVERAGE_COMMAND} ${CTEST_COVERAGE_EXTRA_FLAGS}\" --exclude-lines-by-pattern=\"RAPIDJSON_ASSERT\\(.*\" --coveralls ${CMAKE_BINARY_DIR}/coverage/coverage.info --html-details ${CMAKE_BINARY_DIR}/coverage/coverage.html"
+                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        set_tests_properties(coverage PROPERTIES DEPENDS "perftest;unittest")
+    endif()
+
 endif()

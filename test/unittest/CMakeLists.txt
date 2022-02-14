@@ -108,8 +108,8 @@ if(NOT MSVC)
 
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         add_test(NAME symbol_check
-        COMMAND sh -c "objdump -t -C libnamespacetest.a | grep rapidjson ; test $? -ne 0"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+                 COMMAND sh -c "objdump -t -C libnamespacetest.a | grep rapidjson ; test $? -ne 0"
+                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 endif(NOT MSVC)
