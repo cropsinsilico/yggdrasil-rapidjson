@@ -50,19 +50,18 @@ set(RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Pyt
 
 # There is an issue with embedding Python on Windows in conda environments
 # https://github.com/ContinuumIO/anaconda-issues/issues/11374
-# if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-#     exec_program(${Python3_EXECUTABLE}
-# 	         ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('prefix'))\""
-#                  OUTPUT_VARIABLE RAPIDJSON_PYTHONHOME
-#                  RETURN_VALUE PYTHON_PREFIX_NOT_FOUND
-# 	         )
-#     if(PYTHON_PREFIX_NOT_FOUND)
-#         message(FATAL_ERROR "Python prefix not found")
-#     endif()
-#     set(RAPIDJSON_PYTHON_ENV "${RAPIDJSON_PYTHON_ENV};PYTHONHOME=${Python3_RUNTIME_LIBRARY_DIRS}")
-# endif()
-# message(STATUS "RAPIDJSON_PYTHON_ENV = ${RAPIDJSON_PYTHON_ENV}")
-# message(STATUS "Python Runtime Library Dirs: ${Python3_RUNTIME_LIBRARY_DIRS}")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # exec_program(${Python3_EXECUTABLE}
+    # 	         ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('prefix'))\""
+    #              OUTPUT_VARIABLE RAPIDJSON_PYTHONHOME
+    #              RETURN_VALUE PYTHON_PREFIX_NOT_FOUND
+    # 	         )
+    # if(PYTHON_PREFIX_NOT_FOUND)
+    #     message(FATAL_ERROR "Python prefix not found")
+    # endif()
+    set(RAPIDJSON_PYTHON_ENV "${RAPIDJSON_PYTHON_ENV};PYTHONHOME=${Python3_RUNTIME_LIBRARY_DIRS}")
+endif()
+message(STATUS "RAPIDJSON_PYTHON_ENV = ${RAPIDJSON_PYTHON_ENV}")
 
 # compile in release with debug info mode by default
 if(NOT CMAKE_BUILD_TYPE)

@@ -104,15 +104,7 @@ jobs:
         run: |
           python -c "import sys; print(sys.executable)"
           python -c "import numpy; print(numpy.get_include())"
-      - name: Configure (not Windows)
-        if: matrix.os != 'windows-latest'
-        run: |
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
-      - name: Configure (Windows)
-        if: matrix.os == 'windows-latest'
-        # shell: cmd /C CALL {0}
+      - name: Configure
         run: |
           mkdir build
           cd build
