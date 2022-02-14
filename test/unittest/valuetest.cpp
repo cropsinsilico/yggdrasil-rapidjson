@@ -1431,16 +1431,16 @@ TEST(Value, PythonClass) {
   EXPECT_EQ(kObjectType, z.GetType());
   PyObject* pyclass_cpy = x.GetPythonClass();
   PyObject* pyfunc_cpy = y.GetPythonFunction();
-  // PyObject* pyinst_cpy = z.GetPythonInstance();
+  PyObject* pyinst_cpy = z.GetPythonInstance();
   EXPECT_EQ(PyObject_RichCompareBool(pyclass, pyclass_cpy, Py_EQ), 1);
   EXPECT_EQ(PyObject_RichCompareBool(pyfunc, pyfunc_cpy, Py_EQ), 1);
-  // EXPECT_EQ(PyObject_RichCompareBool(pyinst, pyinst_cpy, Py_EQ), 1);
+  EXPECT_EQ(PyObject_RichCompareBool(pyinst, pyinst_cpy, Py_EQ), 1);
   Py_DECREF(pyclass);
   Py_DECREF(pyclass_cpy);
   Py_DECREF(pyfunc);
   Py_DECREF(pyfunc_cpy);
   Py_DECREF(pyinst);
-  // Py_DECREF(pyinst_cpy);
+  Py_DECREF(pyinst_cpy);
 }
 
 // schema
