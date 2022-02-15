@@ -32,7 +32,7 @@ namespace units {
     static double amu_kg = 1.660538921e-27;
     static double amu_grams = amu_kg * 1.0e3;
     static double mass_hydrogen_kg = 1.007947 * amu_kg;
-    static double mass_proton_kg = 1.672623110e-27;
+    // static double mass_proton_kg = 1.672623110e-27;
 
     // Solar values (see Mamajek 2012)
     // https://sites.google.com/site/mamajeksstarnotes/bc-scale
@@ -45,7 +45,7 @@ namespace units {
 
     // Conversion Factors:  X au * mpc_per_au = Y mpc
     // length
-    static double mpc_per_mpc = 1e0;
+    // static double mpc_per_mpc = 1e0;
     static double mpc_per_kpc = 1e-3;
     static double mpc_per_pc = 1e-6;
     static double mpc_per_au = 4.84813682e-12;
@@ -58,8 +58,8 @@ namespace units {
     static double kpc_per_m = mpc_per_m / mpc_per_kpc;
     static double pc_per_m = mpc_per_m / mpc_per_pc;
     static double km_per_pc = 3.08567758e13;
-    static double cm_per_pc = 3.08567758e18;
-    static double cm_per_mpc = 3.08567758e21;
+    // static double cm_per_pc = 3.08567758e18;
+    // static double cm_per_mpc = 3.08567758e21;
     static double km_per_m = 1e-3;
     static double km_per_cm = 1e-5;
     static double m_per_cm = 1e-2;
@@ -70,7 +70,7 @@ namespace units {
     static double au_per_m = 6.68458712e-12;
     static double ang_per_m = 1.0e10;
 
-    static double m_per_fpc = 0.0324077929;
+    // static double m_per_fpc = 0.0324077929;
 
     static double kpc_per_mpc = 1.0 / mpc_per_kpc;
     static double pc_per_mpc = 1.0 / mpc_per_pc;
@@ -96,14 +96,14 @@ namespace units {
 
     // time
     // "IAU Style Manual" by G.A. Wilkins, Comm. 5, in IAU Transactions XXB (1989)
-    static double sec_per_Gyr = 31.5576e15;
-    static double sec_per_Myr = 31.5576e12;
-    static double sec_per_kyr = 31.5576e9;
+    // static double sec_per_Gyr = 31.5576e15;
+    // static double sec_per_Myr = 31.5576e12;
+    // static double sec_per_kyr = 31.5576e9;
     static double sec_per_year = 31.5576e6;
     static double sec_per_day = 86400.0;
     static double sec_per_hr = 3600.0;
     static double sec_per_min = 60.0;
-    static double day_per_year = 365.25;
+    // static double day_per_year = 365.25;
 
     // velocities, accelerations
     static double speed_of_light_m_per_s = 2.99792458e8;
@@ -117,7 +117,7 @@ namespace units {
     static double mu_0 = 4.0e-7 * M_PI;
     // permittivity of Free Space
     static double eps_0 = 1.0 / (pow(speed_of_light_m_per_s, 2) * mu_0);
-    static double avogadros_number = 6.02214085774e23;
+    // static double avogadros_number = 6.02214085774e23;
 
     // temperature / energy
     static double boltzmann_constant_J_per_K = 1.3806488e-23;
@@ -131,7 +131,7 @@ namespace units {
     static double eV_per_erg = 1.0 / erg_per_eV;
     static double kelvin_per_rankine = 5.0 / 9.0;
     static double watt_per_horsepower = 745.69987158227022;
-    static double erg_per_s_per_watt = 1e7;
+    // static double erg_per_s_per_watt = 1e7;
 
     // Solar System masses
     // Standish, E.M. (1995) "Report of the IAU WGAS Sub-Group on Numerical
@@ -152,16 +152,16 @@ namespace units {
     // Cosmological constants
     // Calculated with H = 100 km/s/Mpc, value given in units of h^2 g cm^-3
     // Multiply by h^2 to get the critical density in units of g cm^-3
-    static double rho_crit_g_cm3_h2 = 1.8788e-29;
-    static double primordial_H_mass_fraction = 0.76;
+    // static double rho_crit_g_cm3_h2 = 1.8788e-29;
+    // static double primordial_H_mass_fraction = 0.76;
 
     // Misc. Approximations
-    static double mass_mean_atomic_cosmology = 1.22;
-    static double mass_mean_atomic_galactic = 2.3;
+    // static double mass_mean_atomic_cosmology = 1.22;
+    // static double mass_mean_atomic_galactic = 2.3;
 
     // Miscellaneous
     // static double HUGE = 1.0e90;
-    static double TINY = 1.0e-40;
+    // static double TINY = 1.0e-40;
 
     // Planck units
     static double hbar_mks = 0.5 * planck_mks / M_PI;
@@ -181,7 +181,7 @@ namespace units {
     // logarithmic units
     // IEC 60027-3: https://webstore.iec.ch/publication/94
     // NIST Special Publication 811: https://www.nist.gov/pml/special-publication-811
-    static double neper_per_bel = log(10) / 2;
+    // static double neper_per_bel = log(10) / 2;
   }
 
 enum BaseDimension {

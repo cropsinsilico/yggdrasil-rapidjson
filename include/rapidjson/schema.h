@@ -962,7 +962,7 @@ public:
       if ((yggtype_ & (1 << kYggScalarSchemaType))) {
 	if (!(CheckScalar(context, GetFloatSubTypeString(), ValueType(8), ValueType())))
 	  return false;
-      } else
+      }
 #endif // RAPIDJSON_YGGDRASIL
         if (!(type_ & (1 << kNumberSchemaType))) {
             DisallowedType(context, GetNumberString());
@@ -1583,7 +1583,7 @@ protected:
 	  if (!(CheckScalar(context, GetIntSubTypeString(), ValueType(8), ValueType())))
 	    return false;
 	}
-      } else
+      }
 #endif // RAPIDJSON_YGGDRASIL
         if (!(type_ & ((1 << kIntegerSchemaType) | (1 << kNumberSchemaType)))) {
             DisallowedType(context, GetIntegerString());
@@ -1637,7 +1637,7 @@ protected:
       if ((yggtype_ & (1 << kYggScalarSchemaType))) {
 	if (!(CheckScalar(context, GetUintSubTypeString(), ValueType(8), ValueType())))
 	  return false;
-      } else
+      }
 #endif // RAPIDJSON_YGGDRASIL
         if (!(type_ & ((1 << kIntegerSchemaType) | (1 << kNumberSchemaType)))) {
             DisallowedType(context, GetIntegerString());

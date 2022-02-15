@@ -2,7 +2,8 @@ set -e
 # mkdir build
 # cd build
 cmake .. -DRAPIDJSON_SKIP_VALGRIND_TESTS=ON -DRAPIDJSON_ENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
-cmake --build . # --target tests
+# cmake --build .
+cmake --build . --target=tests
 # ctest -C Debug --output-on-failure --verbose
 ctest -R unittest
 ctest -R coverage
