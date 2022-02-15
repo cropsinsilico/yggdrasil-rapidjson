@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.15)
 if(POLICY CMP0025)
   # detect Apple's Clang
   cmake_policy(SET CMP0025 NEW)
@@ -27,7 +27,11 @@ else()
     PROJECT(RapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES CXX)
 endif()
 
-# set(Python3_FIND_STRATEGY "LOCATION")
+set(CONDA_PREFIX "$ENV{CONDA_PREFIX}")
+if(CONDA_PREFIX)
+    message(STATUS "CONDA_PREFIX = ${CONDA_PREFIX}")
+    set(Python3_ROOT_DIR "${CONDA_PREFIX}")
+endif()
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 if(NOT Python3_NumPy_FOUND)
     message(FATAL_ERROR "NumPy headers not found")

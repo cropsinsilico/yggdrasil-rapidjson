@@ -31,24 +31,35 @@ RAPIDJSON_DIAG_OFF(4822) // local class member function does not have a body
 
 using namespace rapidjson;
 
-#define CHECK_QUANTITY_EQUIVALENCE(a, b, expected)	\
-  {							\
+#define CHECK_QUANTITY_EQUIVALENCE(a, b, expected)			\
+  {									\
     if (a.equivalent_to(b) != expected) {				\
       std::cerr << "a = " << a << ", b = " << b;			\
       if (a.is_compatible(b)) {						\
 	std::cerr << ", b.as(a.units) = " << b.as(a.units()) << ", a.value - b.value = " << std::abs(b.value() - a.as(b.units()).value()) << ", " << (std::abs(b.value() - a.as(b.units()).value()) < DBL_EPSILON); \
       }									\
       std::cerr << std::endl;						\
-      EXPECT_TRUE(a.equivalent_to(b) == expected);			\
     }									\
+    EXPECT_TRUE(a.equivalent_to(b) == expected);			\
   }
 
-#define COMPARE_UNITS(av, au, bv, bu, expected)				\
+#define CHECK_QUANTITY_DIRECT_EQUALITY(a, b, expected)			\
+  {									\
+    if ((a==b) != expected) {						\
+      std::cerr << "a = " << a << ", b = " << b << std::endl;		\
+    }									\
+    EXPECT_TRUE((a==b) == expected);					\
+    EXPECT_FALSE((a!=b) == expected);					\
+  }
+
+#define COMPARE_UNITS(av, au, bv, bu, expected, direct)			\
   {									\
     units::Quantity<double, char> a(av, au);				\
     units::Quantity<double, char> b(bv, bu);				\
     CHECK_QUANTITY_EQUIVALENCE(a, b, expected);				\
     CHECK_QUANTITY_EQUIVALENCE(b, a, expected);				\
+    CHECK_QUANTITY_DIRECT_EQUALITY(a, b, direct);			\
+    CHECK_QUANTITY_DIRECT_EQUALITY(b, a, direct);			\
     if (expected) {							\
       EXPECT_TRUE(std::abs(a.value() - b.as(a.units()).value()) < DBL_EPSILON);	\
       EXPECT_TRUE(std::abs(b.value() - a.as(b.units()).value()) < DBL_EPSILON);	\
@@ -56,17 +67,19 @@ using namespace rapidjson;
   }
 
 TEST(Unit, Base) {
-  COMPARE_UNITS(1.0, "g", 0.001, "kg", true);
-  COMPARE_UNITS(1.0, "gram", 0.001, "kilogram", true);
-  COMPARE_UNITS(1.0, "grams", 0.001, "kilograms", true);
-  COMPARE_UNITS(1.0, "g", 1.0, "kg", false);
-  COMPARE_UNITS(1.0, "cm", 1.0, "g", false);
-  COMPARE_UNITS(1.0, "g**2", 1e-6, "kg^2", true);
-  COMPARE_UNITS(1.0, "hp", 745.69987158227022, "W", true);
-  COMPARE_UNITS(1.0, "km/s", 2236.936292054402, "mi/hr", true);
-  COMPARE_UNITS(1.0, "km s", 1.0, "km*s", true);
-  COMPARE_UNITS(1.0, "(km**2)(s**-1)", 1.0, "km**2/s", true);
-  COMPARE_UNITS(1.0, "(km*A)**2/((s**2)(g**3))", 1.0, "(km^2)*(A^2)*(s^-2)*(g^-3)", true);
+  units::Quantity<double, char> x(1.0, "kg");
+  std::cout << x << std::endl;
+  COMPARE_UNITS(1.0, "g", 0.001, "kg", true, false);
+  COMPARE_UNITS(1.0, "gram", 0.001, "kilogram", true, false);
+  COMPARE_UNITS(1.0, "grams", 0.001, "kilograms", true, false);
+  COMPARE_UNITS(1.0, "g", 1.0, "kg", false, false);
+  COMPARE_UNITS(1.0, "cm", 1.0, "g", false, false);
+  COMPARE_UNITS(1.0, "g**2", 1e-6, "kg^2", true, false);
+  COMPARE_UNITS(1.0, "hp", 745.69987158227022, "W", true, false);
+  COMPARE_UNITS(1.0, "km/s", 2236.936292054402, "mi/hr", true, false);
+  COMPARE_UNITS(1.0, "km s", 1.0, "km*s", true, true);
+  COMPARE_UNITS(1.0, "(km**2)(s**-1)", 1.0, "km**2/s", true, true);
+  COMPARE_UNITS(1.0, "(km*A)**2/((s**2)(g**3))", 1.0, "(km^2)*(A^2)*(s^-2)*(g^-3)", true, true);
 };
 
 #define UNIT_OPERATOR(au, op, bu, cu)				\
