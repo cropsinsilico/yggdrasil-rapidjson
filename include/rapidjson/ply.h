@@ -27,13 +27,7 @@ RAPIDJSON_NAMESPACE_BEGIN
     ptype3 pad3;							\
   } member
 #else
-// #define NUMBER_MEMBER_(name, member, type, padding_size)	\
-//   struct name {							\
-//     name(const type x) : padding(""), v(x) {}			\
-//     name() : name(0) {}						\
-//     char padding[padding_size];					\
-//     type v;							\
-//   } member
+// TODO
 #endif
 
 #define NUMBER_DATA_SWITCH_(x, flag, before, after)			\
