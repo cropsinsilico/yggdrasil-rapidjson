@@ -78,6 +78,8 @@ TEST(Unit, Base) {
   COMPARE_UNITS(1.0, "hp", 745.69987158227022, "W", true, false);
   COMPARE_UNITS(1.0, "km/s", 2236.936292054402, "mi/hr", true, false);
   COMPARE_UNITS(1.0, "km s", 1.0, "km*s", true, true);
+  COMPARE_UNITS(1.0, "g**(1+1)", 1.0, "g^2", true, true);
+  COMPARE_UNITS(1.0, "g**(3-1)", 1.0, "g^2", true, true);
   COMPARE_UNITS(1.0, "(km**2)(s**-1)", 1.0, "km**2/s", true, true);
   COMPARE_UNITS(1.0, "(km*A)**2/((s**2)(g**3))", 1.0, "(km^2)*(A^2)*(s^-2)*(g^-3)", true, true);
 };

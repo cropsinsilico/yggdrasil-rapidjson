@@ -623,7 +623,8 @@ public:
     }
     os << "])";
   }
-  static Units parse_units(const Ch* str, const size_t len);  // Forward declaration
+  static Units parse_units(const Ch* str, const size_t len,
+			   const bool verbose=false);  // Forward declaration
   Dimension dimension() const {
     Dimension out(dimensions::dimensionless);
     for (auto it = units_.begin(); it != units_.end(); it++)
@@ -976,13 +977,24 @@ public:
       return a / b;
     case '^':
       return std::pow(a, b);
+    case '+':
+      return a + b;
+    case '-':
+      return a - b;
     default:
-      RAPIDJSON_ASSERT((op == '*') || (op == '/') || (op == '^'));
+      RAPIDJSON_ASSERT((op == '*') || (op == '/') || (op == '^')
+		       || (op == '+') || (op == '-'));
     }
     return 0.0;
   }
   bool is_numeric() override { return true; }
   bool is_exp() { return (op == '^'); }
+  bool matches(const std::vector<char> ops) {
+    for (auto iop = ops.begin(); iop != ops.end(); iop++)
+      if (*iop == op)
+	return true;
+    return false;
+  }
   std::ostream & display(std::ostream &os) const override {
     os << "OperatorToken(" << op << ")";
     return os;
@@ -1078,6 +1090,9 @@ public:
 	curr = append(new WordToken<Ch>(c, (TokenBase<Ch>*)(this)));
       }
       return;
+    } else if ((c == '-') || (c == '+')) {
+      append_op(c);
+      return;
     }
     RAPIDJSON_ASSERT(curr->t == kWordToken);
     WordToken<Ch>* word = static_cast<WordToken<Ch>*>(curr);
@@ -1102,34 +1117,44 @@ public:
     x->parent = curr;
     return x;
   }
-  Units<Ch> finalize() override {
-    if ((tokens.size() == 0) || (this->finalized))
-      return this->units;
-    // Group exponents first so they get evaluate first
+  void group_operators(const char op) {
+    std::vector<char> ops {op};
+    group_operators(ops);
+  }
+  void group_operators(const std::vector<char> ops) {
+    if (tokens.size() <= 3)
+      return;
     std::vector<size_t> exponents;
-    if (tokens.size() > 3) {
-      for (size_t i = 1; i < tokens.size(); i++) {
-	if (tokens[i]->t == kOperatorToken) {
-	  OperatorToken<Ch> *op = static_cast<OperatorToken<Ch>*>(tokens[i]);
-	  if (op->is_exp()) {
-	    RAPIDJSON_ASSERT((i + 1) < tokens.size());
-	    exponents.push_back(i);
-	    GroupToken<Ch>* new_group = new GroupToken<Ch>(this);
-	    for (size_t ii = i - 1; ii <= (i + 1); ii++) {
-	      tokens[ii]->parent = new_group;
-	      new_group->append(tokens[ii]);
-	      tokens[ii] = nullptr;
-	    }
-	    tokens[i] = (TokenBase<Ch>*)(new_group);
-	    new_group->finalize();
-	    i++;
+    for (size_t i = 1; i < tokens.size(); i++) {
+      if (tokens[i]->t == kOperatorToken) {
+	OperatorToken<Ch> *op = static_cast<OperatorToken<Ch>*>(tokens[i]);
+	if (op->matches(ops)) {
+	  RAPIDJSON_ASSERT((i + 1) < tokens.size());
+	  GroupToken<Ch>* new_group = new GroupToken<Ch>(this);
+	  for (size_t ii = i - 1; ii <= (i + 1); ii++) {
+	    tokens[ii]->parent = new_group;
+	    new_group->append(tokens[ii]);
+	    tokens[ii] = nullptr;
 	  }
+	  tokens[i + 1] = (TokenBase<Ch>*)(new_group);
+	  new_group->finalize();
+	  exponents.push_back(i - 1);
+	  exponents.push_back(i);
+	  i++;
 	}
       }
     }
-    for (auto it = exponents.rbegin(); it != exponents.rend(); it++) {
-      tokens.erase(tokens.begin() + (int)(*it) + 1);
-      tokens.erase(tokens.begin() + (int)(*it) - 1);
+    for (auto it = exponents.rbegin(); it != exponents.rend(); it++)
+      tokens.erase(tokens.begin() + (int)(*it));
+  }
+  Units<Ch> finalize() override {
+    if ((tokens.size() == 0) || (this->finalized))
+      return this->units;
+    // Group operators first in order of operations
+    if (tokens.size() > 3) {
+      group_operators('^');
+      group_operators({'*', '/'});
+      group_operators({'+', '-'});
     }
     // Complete operations from left to right
     Units<Ch> out = tokens[0]->finalize();
@@ -1137,12 +1162,20 @@ public:
       value_ = tokens[0]->value();
       for (size_t i = 1; i < tokens.size(); i = i+2) {
 	RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
+	if (tokens[i + 1]->t == kOperatorToken) {
+	  OperatorToken<Ch> *iop = static_cast<OperatorToken<Ch>*>(tokens[i + 1]);
+	  std::cerr << "Operator: " << iop->op << std::endl;
+	}
 	RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
 	OperatorToken<Ch> *op = static_cast<OperatorToken<Ch>*>(tokens[i]);
 	value_ = op->operate(value_, tokens[i + 1]->value());
       }
     } else {
       for (size_t i = 1; i < tokens.size(); i = i+2) {
+	if (tokens[i + 1]->t == kOperatorToken) {
+	  OperatorToken<Ch> *iop = static_cast<OperatorToken<Ch>*>(tokens[i + 1]);
+	  std::cerr << "Operator: " << iop->op << std::endl;
+	}
 	RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
 	RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
 	OperatorToken<Ch> *op = static_cast<OperatorToken<Ch>*>(tokens[i]);
@@ -1186,8 +1219,10 @@ public:
 
 
 template<typename Ch>
-Units<Ch> Units<Ch>::parse_units(const Ch* str, const size_t len) {
-  // std::cerr << "parse_units(\"" << str << "\")" << std::endl;
+Units<Ch> Units<Ch>::parse_units(const Ch* str, const size_t len,
+				 const bool verbose) {
+  if (verbose)
+    std::cout << "parse_units(\"" << str << "\")" << std::endl;
   size_t i = 0;
   parser::GroupToken<Ch> token;
   Ch c;
@@ -1206,6 +1241,7 @@ Units<Ch> Units<Ch>::parse_units(const Ch* str, const size_t len) {
       token.current_group()->finalize();
       break;
     }
+    // + and - operators will be handled by the word token append
     case '/':
     case '^': {
       token.append_op(c);
@@ -1233,9 +1269,11 @@ Units<Ch> Units<Ch>::parse_units(const Ch* str, const size_t len) {
     default:
       token.append(c);
     }
-    // std::cerr << c << ": ";
-    // token.display(std::cerr);
-    // std::cerr << std::endl;
+    if (verbose) {
+      std::cout << c << ": ";
+      token.display(std::cout);
+      std::cout << std::endl;
+    }
   }
   return token.finalize();
 };
