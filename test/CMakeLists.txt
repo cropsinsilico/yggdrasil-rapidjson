@@ -51,11 +51,14 @@ if(TEST_LIBRARIES)
     add_subdirectory(unittest)
     
     if(RAPIDJSON_ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang|ARMClang")
-        file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/coverage)
-        add_test(NAME coverage
-                 COMMAND sh -c "gcovr ${CMAKE_BINARY_DIR} --gcov-executable=\"${CTEST_COVERAGE_COMMAND} ${CTEST_COVERAGE_EXTRA_FLAGS}\" --exclude-lines-by-pattern=\"RAPIDJSON_ASSERT\\(.*\" --coveralls ${CMAKE_BINARY_DIR}/coverage/coverage.info --html-details ${CMAKE_BINARY_DIR}/coverage/coverage.html"
-                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-        set_tests_properties(coverage PROPERTIES DEPENDS "perftest;unittest")
+        find_program(GCOVR_FOUND gcovr)
+        if(GCOVR_FOUND)
+            file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/coverage)
+            add_test(NAME coverage
+                     COMMAND sh -c "gcovr ${CMAKE_BINARY_DIR} --gcov-executable=\"${CTEST_COVERAGE_COMMAND} ${CTEST_COVERAGE_EXTRA_FLAGS}\" --exclude-lines-by-pattern=\"RAPIDJSON_ASSERT\\(.*\" --coveralls ${CMAKE_BINARY_DIR}/coverage/coverage.info --html-details ${CMAKE_BINARY_DIR}/coverage/coverage.html"
+                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+            set_tests_properties(coverage PROPERTIES DEPENDS "perftest;unittest")
+        endif()
     endif()
 
 endif()

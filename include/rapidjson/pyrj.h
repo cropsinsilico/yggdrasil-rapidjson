@@ -44,17 +44,17 @@ void init_numpy_API() {
 #pragma omp critical (numpy)
   {
 #endif
-  if (PyArray_API == NULL) {
+  if (PyArray_API == NULL) { // GCOVR_EXCL_START
     if (_import_array() < 0) {
       PyErr_Print();
       err = "Failed to _import_array";
     }
-  }
+  } // GCOVR_EXCL_STOP
 #ifdef _OPENMP
   }
 #endif
   if (err.length() > 0)
-    throw std::runtime_error(err);
+    throw std::runtime_error(err); // GCOVR_EXCL_LINE
 };
 
 
@@ -77,7 +77,7 @@ void init_python_API() {
     if (name != NULL) {
       wchar_t *wname = Py_DecodeLocale(name, NULL);
       if (wname == NULL) {
-	err = "Error decoding YGG_PYTHON_EXEC";
+	err = "Error decoding YGG_PYTHON_EXEC"; // GCOVR_EXCL_LINE
       } else {
 	Py_SetProgramName(wname);
 	PyMem_RawFree(wname);
@@ -86,7 +86,7 @@ void init_python_API() {
     if (err.length() == 0) {
       Py_Initialize();
       if (!(Py_IsInitialized()))
-	err = "Failed to initialize Python";
+	err = "Failed to initialize Python"; // GCOVR_EXCL_LINE
     }
     // if (err.length() == 0) {
     //   init_numpy_API();
@@ -96,7 +96,7 @@ void init_python_API() {
   }
 #endif
   if (err.length() > 0)
-    throw std::runtime_error(err);
+    throw std::runtime_error(err); // GCOVR_EXCL_LINE
 };
 
 /*!
@@ -108,7 +108,7 @@ void initialize_python(const std::string error_prefix="") {
   try {
     init_python_API();
   } catch (std::exception& e) {
-    throw std::runtime_error(error_prefix + "initialize_python: " + e.what());
+    throw std::runtime_error(error_prefix + "initialize_python: " + e.what()); // GCOVR_EXCL_LINE
   }
 };
 
@@ -123,7 +123,7 @@ void finalize_python(const std::string error_prefix="") {
     if (Py_IsInitialized())
       Py_Finalize();
   } catch (std::exception& e) {
-    throw std::runtime_error(error_prefix + "finalize_python: " + e.what());
+    throw std::runtime_error(error_prefix + "finalize_python: " + e.what()); // GCOVR_EXCL_LINE
   }
 };
 
@@ -142,11 +142,11 @@ PyObject* import_python_module(const char* module_name,
 			       const bool ignore_error=false) {
   initialize_python(error_prefix);
   PyObject* out = PyImport_ImportModule(module_name);
-  if (out == NULL) {
+  if (out == NULL) { // GCOVR_EXCL_START
     PyErr_Print();
     if (!(ignore_error))
       throw std::runtime_error(error_prefix + "import_python_module: Failed to import Python model '" + module_name + "'");
-  }
+  } // GCOVR_EXCL_STOP
   return out;
 };
 
@@ -169,14 +169,14 @@ PyObject* import_python_class(const char* module_name,
 					     error_prefix,
 					     ignore_error);
   if (py_module == NULL)
-    return py_module;
+    return py_module; // GCOVR_EXCL_LINE
   PyObject *out = PyObject_GetAttrString(py_module, class_name);
   Py_DECREF(py_module);
-  if (out == NULL) {
+  if (out == NULL) { // GCOVR_EXCL_START
     PyErr_Print();
     if (!(ignore_error))
       throw std::runtime_error(error_prefix + "import_python_class: Failed to import Python class/function/object '" + class_name + "'");
-  }
+  } // GCOVR_EXCL_STOP
   return out;
 };
 
@@ -188,7 +188,7 @@ PyObject* import_python_object(const char* mod_class,
   char class_name[100] = "";
   if (sscanf(mod_class, "%[^:]:%s", module_name, class_name) != 2) {
     if (!(ignore_error))
-      throw std::runtime_error(error_prefix + "import_python_object: Failed to import Python object '" + class_name + "'");
+      throw std::runtime_error(error_prefix + "import_python_object: Failed to import Python object '" + class_name + "'"); // GCOVR_EXCL_LINE
     return NULL;
   }
   return import_python_class(module_name, class_name, error_prefix, ignore_error);
