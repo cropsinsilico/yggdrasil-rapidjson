@@ -117,19 +117,11 @@ jobs:
         run: |
           cd build
           ctest -C Debug --output-on-failure --verbose
-      - name: Collect coverage
-        run: |
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
-          ctest -T Coverage
-      # - name: Collect coverage with Gcovr (Ubuntu)
-      #   if: matrix.os == 'ubuntu-latest'
+      # - name: Collect coverage
       #   run: |
-      #     gcovr build --exclude-lines-by-pattern="RAPIDJSON_ASSERT\(.*" --html --html-details -o coverage.html
-      # - name: Collect coverage with Gcovr (MacOS)
-      #   if: matrix.os == 'macos-latest'
-      #   run: |
-      #     gcovr build --gcov-executable="llvm-cov gcov" --exclude-lines-by-pattern="RAPIDJSON_ASSERT\(.*" --html --html-details -o coverage.html
+      #     cd build
+      #     cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
+      #     ctest -T Coverage
       - name: Upload coverage report
         uses: codecov/codecov-action@v1
         with:
