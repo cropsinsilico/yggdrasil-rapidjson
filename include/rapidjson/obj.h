@@ -35,6 +35,25 @@ RAPIDJSON_NAMESPACE_BEGIN
     else if (word == "end"   ) lhs = NULL;				\
     else RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported element signifier: ") + word)); \
   }
+#define GENERIC_ELEMENT_CONSTRUCTOR(cls)				\
+  /*! \copydoc ObjElement::ObjElement(const ObjElement*) */		\
+  cls(const ObjElement* rhs) : cls(static_cast<cls>(rhs)) {}		\
+  /*! \copydoc ObjElement::copy() */					\
+  cls* copy() const override { return new cls(*this); }
+#define C_ARRAY_CONSTRUCTOR(cls)					\
+  /*! \brief Initialize an element from a C array of values. */		\
+  /*! \tparam T Array element type. */					\
+  /*! \tparam N Array size. */						\
+  /*! \param src Array of values. */					\
+  template <typename T, size_t N>					\
+  cls(const T (&values)[N]) : cls(std::vector<T>(values, values+N)) {}
+#define DUMMY_ARRAY_CONSTRUCTOR(cls)		\
+  C_ARRAY_CONSTRUCTOR(cls);			\
+  /*! \brief Raise an error. */			\
+  template <typename T>				\
+  cls(const std::vector<T> &) {			\
+    RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from a vector")); \
+  }
 
 //! Checks if two values are equal using == operator.
 template <typename T>
@@ -429,6 +448,18 @@ public:
   //! \brief Copy constructor.
   //! \param rhs Element to copy.
   ObjElement(const ObjElement& rhs) : code(rhs.code) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
+  template <typename T, size_t N>
+  ObjElement(const std::string& code0, const T (&src)[N]) :
+    ObjElement(code0, std::vector<T>(src, src+N)) {}
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer or floating point.
+  template <typename T>
+  ObjElement(const std::string& code0, const std::vector<T> &) : code(code0) {
+    RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
+  }
+  
   //! \brief Destructor.
   virtual ~ObjElement() {}
   //! \brief Create a copy of the element.
@@ -562,12 +593,6 @@ public:
     // read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjVertex(const T (&src)[N]) : ObjVertex(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //! \param values0 Vector of values.
@@ -606,6 +631,8 @@ public:
     ObjElement("v"), values(), x(0), y(0), z(0), w(-1), color() {
     RAPIDJSON_ASSERT(!sizeof("ObjVertex type is double"));
   }
+  C_ARRAY_CONSTRUCTOR(ObjVertex);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjVertex);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 3)
@@ -625,8 +652,6 @@ public:
     else
       w = -1;
   }
-  //! \copydoc ObjElement::copy()
-  ObjVertex* copy() const override { return new ObjVertex(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -679,12 +704,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjVParameter(const T (&src)[N]) : ObjVParameter(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //! \param values0 Vector of values.
@@ -700,6 +719,8 @@ public:
     ObjElement("vp"), values(), u(0), v(0), w(-1) {
     RAPIDJSON_ASSERT(!sizeof("ObjVParameter type is double"));
   }
+  C_ARRAY_CONSTRUCTOR(ObjVParameter);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjVParameter);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 2)
@@ -711,8 +732,6 @@ public:
     else
       w = -1;
   }
-  //! \copydoc ObjElement::copy()
-  ObjVParameter* copy() const override { return new ObjVParameter(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -758,12 +777,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjVNormal(const T (&src)[N]) : ObjVNormal(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
   ObjVNormal(const std::vector<double> &values0) :
@@ -771,6 +784,8 @@ public:
     assign_values(values, values0);
     from_values();
   }
+  C_ARRAY_CONSTRUCTOR(ObjVNormal);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjVNormal);
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //!   Only double values are valid for ObjVNormal elements.
@@ -786,8 +801,6 @@ public:
     j = values[1];
     k = values[2];
   }
-  //! \copydoc ObjElement::copy
-  ObjVNormal* copy() const override { return new ObjVNormal(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -831,12 +844,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjVTexture(const T (&src)[N]) : ObjVTexture(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //!   Only double values are valid for ObjVTexture objects.
@@ -853,6 +860,8 @@ public:
     ObjElement("vt"), values(), u(0), v(0), w(0) {
     RAPIDJSON_ASSERT(!sizeof("ObjVTexture type is double"));
   }
+  C_ARRAY_CONSTRUCTOR(ObjVTexture);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjVTexture);
   //! \copydoc ObjElement::from_values
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1)
@@ -866,8 +875,6 @@ public:
     if (values.size() == 3)
       w = values[2];
   }
-  //! \copydoc ObjElement::copy
-  ObjVTexture* copy() const override { return new ObjVTexture(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -921,12 +928,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjPoint(const T (&src)[N]) : ObjPoint(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //!   Only integer values are allowed for ObjPoint elements.
@@ -966,8 +967,8 @@ public:
     ObjElement("p"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjPoint type is ObjRef"));
   }
-  //! \copydoc ObjElement::copy
-  ObjPoint* copy() const override { return new ObjPoint(*this); }
+  C_ARRAY_CONSTRUCTOR(ObjPoint);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjPoint);
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1004,8 +1005,6 @@ public:
     // ObjElement::read_values(in, values);
     from_values();
   }
-  // template <typename T, size_t N>
-  // ObjLine(const T (&src)[N]) : ObjLine(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //! \param values0 Vector of values.
@@ -1044,11 +1043,11 @@ public:
     ObjElement("l"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjLine type is ObjRefVertex"));
   }
+  C_ARRAY_CONSTRUCTOR(ObjLine);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjLine);
   //! \copydoc ObjElement::from_values()
   void from_values() override
   { RAPIDJSON_ASSERT(values.size() >= 2); }
-  //! \copydoc ObjElement::copy
-  ObjLine* copy() const override { return new ObjLine(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1084,8 +1083,6 @@ public:
     // read_values(in);
     from_values();
   }
-  // template <typename T, size_t N>
-  // ObjFace(const T (&src)[N]) : ObjFace(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //! \param values0 Vector of values.
@@ -1124,12 +1121,12 @@ public:
     ObjElement("f"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjFace type is ObjRefVertex"));
   }
+  C_ARRAY_CONSTRUCTOR(ObjFace);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjFace);
   //! \copydoc ObjElement::from_values
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() >= 3);
   }
-  //! \copydoc ObjElement::copy
-  ObjFace* copy() const override { return new ObjFace(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1168,29 +1165,42 @@ public:
   //! \brief Initialize an element from a C array of values.
   //! \tparam T Array element type.
   //! \tparam N Array size.
+  //! \param u00 Starting curve parameter value.
+  //! \param u10 Ending curve parameter value.
   //! \param src Array of values.
   template <typename T, size_t N>
-  ObjCurve(const T (&src)[N]) : ObjCurve(std::vector<T>(src, src+N)) {}
+  ObjCurve(const double& u00, const double& u10, const T (&src)[N]) :
+    ObjCurve(u00, u10, std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
+  //! \param u00 Starting curve parameter value.
+  //! \param u10 Ending curve parameter value.
   //! \param values0 Vector of values.
-  ObjCurve(const std::vector<ObjRef> &values0) :
-    ObjElement("curv"), values(), u0(0), u1(0) {
+  //! \tparam T Vector element type. Must be an integer or floating point.
+  //!   Only integer values are allowed for ObjPoint elements.
+  template <typename T>
+  ObjCurve(const double& u00, const double& u10,
+	   const std::vector<T> &values0,
+	   RAPIDJSON_ENABLEIF((
+      internal::OrExpr<internal::IsSame<T,int>,
+      internal::OrExpr<internal::IsSame<T,int8_t>,
+      internal::OrExpr<internal::IsSame<T,uint8_t>,
+      internal::OrExpr<internal::IsSame<T,int16_t>,
+      internal::OrExpr<internal::IsSame<T,uint16_t>,
+      internal::OrExpr<internal::IsSame<T,int32_t>,
+      internal::OrExpr<internal::IsSame<T,uint32_t>,
+      internal::OrExpr<internal::IsSame<T,int64_t>,
+      internal::OrExpr<internal::IsSame<T,ObjRef>,
+      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+    ObjElement("curv"), values(), u0(u00), u1(u10) {
     assign_values(values, values0);
     from_values();
   }
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer or floating point.
-  template <typename T>
-  ObjCurve(const std::vector<T> &) :
-    ObjElement("curv"), values(), u0(0), u1(0) {
-    RAPIDJSON_ASSERT(!sizeof("ObjCurve type is ObjRef"));
-  }
+  DUMMY_ARRAY_CONSTRUCTOR(ObjCurve);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjCurve);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() >= 2);
   }
-  //! \copydoc ObjElement::copy()
-  ObjCurve* copy() const override { return new ObjCurve(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     in >> u0;
@@ -1239,14 +1249,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjCurve2D(const T (&src)[N]) : ObjCurve2D(std::vector<T>(src, src+N)) {}
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \param values0 Vector of values.
   ObjCurve2D(const std::vector<ObjRef> &values0) :
     ObjElement("curv2"), values() {
     assign_values(values, values0);
@@ -1259,12 +1261,12 @@ public:
     ObjElement("curv2"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjCurve2D type is ObjRef"));
   }
+  C_ARRAY_CONSTRUCTOR(ObjCurve2D);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjCurve2D);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() >= 2);
   }
-  //! \copydoc ObjElement::copy
-  ObjCurve2D* copy() const override { return new ObjCurve2D(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1303,25 +1305,51 @@ public:
   //! \brief Initialize an element from a C array of values.
   //! \tparam T Array element type.
   //! \tparam N Array size.
+  //! \param s00 Starting curve parameter value in 1st dimension.
+  //! \param s10 Ending curve parameter value in 1st dimension.
+  //! \param t00 Starting curve parameter value in 2nd dimension.
+  //! \param t10 Ending curve parameter value in 2nd dimension.
   //! \param src Array of values.
   template <typename T, size_t N>
-  ObjSurface(const T (&src)[N]) : ObjSurface(std::vector<T>(src, src+N)) {}
+  ObjSurface(const double& s00, const double& s10,
+	     const double& t00, const double& t10,
+	     const T (&src)[N]) :
+    ObjSurface(s00, s10, t00, t10, std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer.
+  //! \param s00 Starting curve parameter value in 1st dimension.
+  //! \param s10 Ending curve parameter value in 1st dimension.
+  //! \param t00 Starting curve parameter value in 2nd dimension.
+  //! \param t10 Ending curve parameter value in 2nd dimension.
   //! \param values0 Vector of values.
-  ObjSurface(const std::vector<ObjRefVertex> &values0) :
-    ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {
+  template <typename T>
+  ObjSurface(const double& s00, const double& s10,
+	     const double& t00, const double& t10,
+	     const std::vector<T> &values0,
+	     RAPIDJSON_ENABLEIF((
+      internal::OrExpr<internal::IsSame<T,int>,
+      internal::OrExpr<internal::IsSame<T,int8_t>,
+      internal::OrExpr<internal::IsSame<T,uint8_t>,
+      internal::OrExpr<internal::IsSame<T,int16_t>,
+      internal::OrExpr<internal::IsSame<T,uint16_t>,
+      internal::OrExpr<internal::IsSame<T,int32_t>,
+      internal::OrExpr<internal::IsSame<T,uint32_t>,
+      internal::OrExpr<internal::IsSame<T,int64_t>,
+      internal::OrExpr<internal::IsSame<T,ObjRef>,
+      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+    ObjElement("surf"), values(), s0(s00), s1(s10), t0(t00), t1(t10) {
     assign_values(values, values0);
     from_values();
   }
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer or floating point.
-  template <typename T>
-  ObjSurface(const std::vector<T> &) :
-    ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {
-    RAPIDJSON_ASSERT(!sizeof("ObjSurface type is ObjRefVertex"));
-  }
-  //! \copydoc ObjElement::copy
-  ObjSurface* copy() const override { return new ObjSurface(*this); }
+  // //! \brief Initialize and element from a C++ vector of values.
+  // //! \tparam T Vector element type. Must be an integer or floating point.
+  // template <typename T>
+  // ObjSurface(const std::vector<T> &) :
+  //   ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {
+  //   RAPIDJSON_ASSERT(!sizeof("ObjSurface type is ObjRefVertex"));
+  // }
+  DUMMY_ARRAY_CONSTRUCTOR(ObjSurface);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjSurface);
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     in >> s0;
@@ -1381,12 +1409,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjFreeFormType(const T (&src)[N]) : ObjFreeFormType(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
   ObjFreeFormType(const std::vector<std::string> &values0) :
@@ -1401,6 +1423,8 @@ public:
     ObjElement("cstype"), values(), elements() {
     RAPIDJSON_ASSERT(!sizeof("ObjFreeFormType type is string"));
   }
+  C_ARRAY_CONSTRUCTOR(ObjFreeFormType);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjFreeFormType);
   ~ObjFreeFormType() {
     for (auto it = elements.begin(); it != elements.end(); it++)
       delete *it;
@@ -1411,8 +1435,6 @@ public:
     RAPIDJSON_ASSERT((values.size() == 1)
 		     || (values.size() == 2));
   }
-  //! \copydoc ObjElement::copy
-  ObjFreeFormType* copy() const override { return new ObjFreeFormType(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     ObjElement::read_values(in, values);
@@ -1467,12 +1489,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjDegree(const T (&src)[N]) : ObjDegree(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
   ObjDegree(const std::vector<uint16_t> &values0) :
@@ -1487,12 +1503,12 @@ public:
     ObjElement("deg"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjDegree type is uint16_t"));
   }
+  C_ARRAY_CONSTRUCTOR(ObjDegree);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjDegree);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1) || (values.size() == 2));
   }
-  //! \copydoc ObjElement::copy
-  ObjDegree* copy() const override { return new ObjDegree(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1532,25 +1548,27 @@ public:
   //! \brief Initialize an element from a C array of values.
   //! \tparam T Array element type.
   //! \tparam N Array size.
+  //! \param direction0 Basis direction.
   //! \param src Array of values.
   template <typename T, size_t N>
-  ObjBasisMatrix(const T (&src)[N]) : ObjBasisMatrix(std::vector<T>(src, src+N)) {}
+  ObjBasisMatrix(const std::string& direction0, const T (&src)[N]) : ObjBasisMatrix(direction, std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
+  //! \param direction0 Basis direction.
   //! \param values0 Vector of values.
-  ObjBasisMatrix(const std::vector<double> &values0) :
-    ObjElement("bmat"), values(), direction("") {
+  ObjBasisMatrix(const std::string& direction0, const std::vector<double> &values0) :
+    ObjElement("bmat"), values(), direction(direction0) {
     assign_values(values, values0);
     from_values();
   }
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer or floating point.
-  template <typename T>
-  ObjBasisMatrix(const std::vector<T> &) :
-    ObjElement("bmat"), values(), direction("") {
-    RAPIDJSON_ASSERT(!sizeof("ObjBasisMatrix type is double"));
-  }
-  //! \copydoc ObjElement::copy
-  ObjBasisMatrix* copy() const override { return new ObjBasisMatrix(*this); }
+  // //! \brief Initialize and element from a C++ vector of values.
+  // //! \tparam T Vector element type. Must be an integer or floating point.
+  // template <typename T>
+  // ObjBasisMatrix(const std::vector<T> &) :
+  //   ObjElement("bmat"), values(), direction("") {
+  //   RAPIDJSON_ASSERT(!sizeof("ObjBasisMatrix type is double"));
+  // }
+  DUMMY_ARRAY_CONSTRUCTOR(ObjBasisMatrix);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjBasisMatrix);
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     in >> direction;
@@ -1589,12 +1607,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjStep(const T (&src)[N]) : ObjStep(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
   ObjStep(const std::vector<double> &values0) :
@@ -1609,12 +1621,12 @@ public:
     ObjElement("step"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjStep type is double"));
   }
+  C_ARRAY_CONSTRUCTOR(ObjStep);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjStep);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1) || (values.size() == 2));
   }
-  //! \copydoc ObjElement::copy
-  ObjStep* copy() const override { return new ObjStep(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1650,28 +1662,23 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjParameter(const T (&src)[N]) : ObjParameter(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
+  //! \param direction0 Parameter direction.
   //! \param values0 Vector of values.
-  ObjParameter(const std::vector<double> &values0) :
-    ObjElement("parm"), values(), direction("") {
+  ObjParameter(const std::string& direction0, const std::vector<double> &values0) :
+    ObjElement("parm"), values(), direction(direction0) {
     assign_values(values, values0);
     from_values();
   }
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer or floating point.
-  template <typename T>
-  ObjParameter(const std::vector<T> &) :
-    ObjElement("parm"), values(), direction("") {
-    RAPIDJSON_ASSERT(sizeof("ObjParameter type is double"));
-  }
-  //! \copydoc ObjElement::copy
-  ObjParameter* copy() const override { return new ObjParameter(*this); }
+  DUMMY_ARRAY_CONSTRUCTOR(ObjParameter);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjParameter);
+  // //! \brief Initialize and element from a C++ vector of values.
+  // //! \tparam T Vector element type. Must be an integer or floating point.
+  // template <typename T>
+  // ObjParameter(const std::vector<T> &) :
+  //   ObjElement("parm"), values(), direction("") {
+  //   RAPIDJSON_ASSERT(sizeof("ObjParameter type is double"));
+  // }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     in >> direction;
@@ -1710,12 +1717,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjTrim(const T (&src)[N]) : ObjTrim(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
   ObjTrim(const std::vector<ObjRefCurve> &values0) :
@@ -1730,8 +1731,8 @@ public:
     ObjElement("trim"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjTrim type is ObjRefCurve"));
   }
-  //! \copydoc ObjElement::copy
-  ObjTrim* copy() const override { return new ObjTrim(*this); }
+  C_ARRAY_CONSTRUCTOR(ObjTrim);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjTrim);
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1760,12 +1761,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjHole(const T (&src)[N]) : ObjHole(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
   ObjHole(const std::vector<ObjRefCurve> &values0) :
@@ -1780,8 +1775,8 @@ public:
     ObjElement("hole"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjHole type is ObjRefCurve"));
   }
-  //! \copydoc ObjElement::copy
-  ObjHole* copy() const override { return new ObjHole(*this); }
+  C_ARRAY_CONSTRUCTOR(ObjHole);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjHole);
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1810,12 +1805,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjScrv(const T (&src)[N]) : ObjScrv(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
   ObjScrv(const std::vector<ObjRefCurve> &values0) :
@@ -1830,8 +1819,8 @@ public:
     ObjElement("scrv"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjScrv type is ObjRefCurve"));
   }
-  //! \copydoc ObjElement::copy
-  ObjScrv* copy() const override { return new ObjScrv(*this); }
+  C_ARRAY_CONSTRUCTOR(ObjScrv);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjScrv);
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1860,12 +1849,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjSpecialPoints(const T (&src)[N]) : ObjSpecialPoints(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
   ObjSpecialPoints(const std::vector<ObjRef> &values0) :
@@ -1880,8 +1863,8 @@ public:
     ObjElement("sp"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjSpecialPoints type is ObjRef"));
   }
-  //! \copydoc ObjElement::copy
-  ObjSpecialPoints* copy() const override { return new ObjSpecialPoints(*this); }
+  C_ARRAY_CONSTRUCTOR(ObjSpecialPoints);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjSpecialPoints);
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1910,12 +1893,6 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjConnect(const T (&src)[N]) : ObjConnect(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
   ObjConnect(const std::vector<ObjRefSurface> &values0) :
@@ -1930,8 +1907,8 @@ public:
     ObjElement("con"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjConnect type is ObjRefSurface"));
   }
-  //! \copydoc ObjElement::copy
-  ObjConnect* copy() const override { return new ObjConnect(*this); }
+  C_ARRAY_CONSTRUCTOR(ObjConnect);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjConnect);
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
   //! \copydoc ObjElement::write_values
@@ -1965,33 +1942,29 @@ public:
     read_values(in);
     from_values();
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjGroup(const T (&src)[N]) : ObjGroup(std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
-  ObjGroup(const std::vector<std::string> &values0) :
+  ObjGroup(const std::vector<std::string> &values0,
+	   const std::vector<ObjElement*> &elements0) :
     ObjElement("g"), values(), elements() {
     assign_values(values, values0);
+    assign_values(elements, elements0);
     from_values();
   }
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer or floating point.
-  template <typename T>
-  ObjGroup(const std::vector<T> &) :
-    ObjElement("g"), values(), elements() {
-    RAPIDJSON_ASSERT(!sizeof("ObjGroup type is string"));
-  }
+  DUMMY_ARRAY_CONSTRUCTOR(ObjGroup);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjGroup);
+  // //! \brief Initialize and element from a C++ vector of values.
+  // //! \tparam T Vector element type. Must be an integer or floating point.
+  // template <typename T>
+  // ObjGroup(const std::vector<T> &) :
+  //   ObjElement("g"), values(), elements() {
+  //   RAPIDJSON_ASSERT(!sizeof("ObjGroup type is string"));
+  // }
   ~ObjGroup() {
     for (auto it = elements.begin(); it != elements.end(); it++)
       delete *it;
     elements.resize(0);
   }
-  //! \copydoc ObjElement::copy
-  ObjGroup* copy() const override { return new ObjGroup(*this); }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     ObjElement::read_values(in, values);
@@ -2035,21 +2008,8 @@ public:
     ObjElement("s"), group_number(-1) {
     read_values(in);
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjSmoothingGroup(const T (&src)[N]) : ObjSmoothingGroup(std::vector<T>(src, src+N)) {}
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer or floating point.
-  template <typename T>
-  ObjSmoothingGroup(const std::vector<T> &) :
-    ObjElement("s"), group_number(-1) {
-    RAPIDJSON_ASSERT(!sizeof("ObjSmoothingGroup cannot be initialized from an array"));
-  }
-  //! \copydoc ObjElement::copy
-  ObjSmoothingGroup* copy() const override { return new ObjSmoothingGroup(*this); }
+  DUMMY_ARRAY_CONSTRUCTOR(ObjSmoothingGroup);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjSmoothingGroup);
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     std::string word;
@@ -2089,21 +2049,8 @@ public:
     ObjElement("mg"), group_number(-1), resolution(0) {
     read_values(in);
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjMergingGroup(const T (&src)[N]) : ObjMergingGroup(std::vector<T>(src, src+N)) {}
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer or floating point.
-  template <typename T>
-  ObjMergingGroup(const std::vector<T> &) :
-    ObjElement("mg"), group_number(-1), resolution(0) {
-    RAPIDJSON_ASSERT(!sizeof("ObjMergingGroup type cannot be initialized from an array"));
-  }
-  //! \copydoc ObjElement::copy
-  ObjMergingGroup* copy() const override { return new ObjMergingGroup(*this); }
+  DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjMergingGroup);
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     std::string word;
@@ -2150,21 +2097,11 @@ public:
     ObjElement("o"), name("") {
     read_values(in);
   }
-  //! \brief Initialize an element from a C array of values.
-  //! \tparam T Array element type.
-  //! \tparam N Array size.
-  //! \param src Array of values.
-  template <typename T, size_t N>
-  ObjObjectName(const T (&src)[N]) : ObjObjectName(std::vector<T>(src, src+N)) {}
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer or floating point.
-  template <typename T>
-  ObjObjectName(const std::vector<T> &) :
-    ObjElement("o"), name("") {
-    RAPIDJSON_ASSERT(!sizeof("ObjObjectName cannot be initialized from an array"));
-  }
-  //! \copydoc ObjElement::copy
-  ObjObjectName* copy() const override { return new ObjObjectName(*this); }
+  DUMMY_ARRAY_CONSTRUCTOR(ObjObjectName);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjObjectName);
+  //! \brief Initialize an object name element.
+  //! \param name0 Object name.
+  ObjObjectName(const std::string& name0) : ObjElement("o"), name(name0) {}
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override { in >> name; }
   //! \copydoc ObjElement::write_values
@@ -2309,6 +2246,74 @@ public:
     ObjElement* x = NULL;
     OBJ_ELEMENT_INIT(name, x, (values));
     elements.push_back(x);
+  }
+
+  //! \brief Add an element to the geometry.
+  //! \param x New element.
+  void add_element(const ObjElement& x) {
+    ObjElement* x_cpy = NULL;
+    OBJ_ELEMENT_INIT(x.code, x_cpy, (&x));
+    elements.push_back(x_cpy);
+  }
+  //! \brief Add an element to the geometry.
+  //! \tparam T Type of value in the values vector.
+  //! \param u0 1st element parameter.
+  //! \param u1 2nd element parameter.
+  //! \param values Vector of additional values defining the element.
+  template <typename T>
+  void add_element(const std::string name,
+		   const double& u0, const double& u1,
+		   const std::vector<T> &values) {
+    ObjElement* x = NULL;
+    if (name == "curv") x = new ObjCurve(u0, u1, values);
+    else RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported element signifier: ") + name));
+    elements.push_back(x);
+  }
+  //! \brief Add an element to the geometry from a C array of values.
+  //! \tparam T Type of value in the values array.
+  //! \tparam N Number of elements in the values array.
+  //! \param name Name of the type of element being added.
+  //! \param u0 1st element parameter.
+  //! \param u1 2nd element parameter.
+  //! \param values Array of values defining the element.
+  template <typename T, size_t N>
+  void add_element(std::string name,
+		   const double& u0, const double& u1,
+		   const T (&values)[N]) {
+    add_element(name, u0, u1, std::vector<T>(values, values+N));
+  }
+  //! \brief Add an element to the geometry.
+  //! \tparam T Type of value in the values vector.
+  //! \param u0 1st element parameter.
+  //! \param u1 2nd element parameter.
+  //! \param u2 3rd element parameter.
+  //! \param u3 4th element parameter.
+  //! \param values Vector of additional values defining the element.
+  template <typename T>
+  void add_element(const std::string name,
+		   const double& u0, const double& u1,
+		   const double& u2, const double& u3,
+		   const std::vector<T> &values) {
+    ObjElement* x = NULL;
+    if (name == "surf") x = new ObjSurface(u0, u1, u2, u3, values);
+    else RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported element signifier: ") + name));
+    elements.push_back(x);
+  }
+  //! \brief Add an element to the geometry from a C array of values.
+  //! \tparam T Type of value in the values array.
+  //! \tparam N Number of elements in the values array.
+  //! \param name Name of the type of element being added.
+  //! \param u0 1st element parameter.
+  //! \param u1 2nd element parameter.
+  //! \param u2 3rd element parameter.
+  //! \param u3 4th element parameter.
+  //! \param values Array of values defining the element.
+  template <typename T, size_t N>
+  void add_element(std::string name,
+		   const double& u0, const double& u1,
+		   const double& u2, const double& u3,
+		   const T (&values)[N]) {
+    add_element(name, u0, u1, std::vector<T>(values, values+N));
   }
 
   //! \brief Check if another ObjWavefront instance is equivalent by

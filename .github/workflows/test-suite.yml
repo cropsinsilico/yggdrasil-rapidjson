@@ -47,7 +47,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=${env:pythonLocation}
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=$env:pythonLocation
       - name: Configure
         if: matrix.os != 'windows-latest'
         run: |
