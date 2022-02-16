@@ -43,20 +43,22 @@ if (NOT DEFINED Python_FIND_FRAMEWORK)
 endif ()
 
 message(STATUS "Python executable is ${Python3_EXECUTABLE}")
-set(CONDA_PREFIX "$ENV{CONDA_PREFIX}")
-if(CONDA_PREFIX)
-    message(STATUS "CONDA_PREFIX = ${CONDA_PREFIX}")
-    set(Python3_ROOT_DIR "${CONDA_PREFIX}")
-else()
-    if(Python3_EXECUTABLE)
-        exec_program(python  # ${Python3_EXECUTABLE}
-	             ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
-		     OUTPUT_VARIABLE PYTHON_ROOT
-		     RETURN_VALUE ROOT_NOT_FOUND)
-        if(ROOT_NOT_FOUND)
-	    message(FATAL_ERROR "Python root not found")
-	endif()
-	set(Python3_ROOT_DIR "${RETURN_VALUE}")
+if(NOT Python3_ROOT_DIR)
+    set(CONDA_PREFIX "$ENV{CONDA_PREFIX}")
+    if(CONDA_PREFIX)
+        message(STATUS "CONDA_PREFIX = ${CONDA_PREFIX}")
+        set(Python3_ROOT_DIR "${CONDA_PREFIX}")
+    else()
+        if(Python3_EXECUTABLE)
+            exec_program(python  # ${Python3_EXECUTABLE}
+	                 ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
+		         OUTPUT_VARIABLE PYTHON_ROOT
+		         RETURN_VALUE ROOT_NOT_FOUND)
+            if(ROOT_NOT_FOUND)
+  	        message(FATAL_ERROR "Python root not found")
+            endif()
+	    set(Python3_ROOT_DIR "${RETURN_VALUE}")
+        endif()
     endif()
 endif()
 # if(Python3_ROOT_DIR)

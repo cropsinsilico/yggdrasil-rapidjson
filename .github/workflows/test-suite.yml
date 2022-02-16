@@ -97,8 +97,10 @@ jobs:
           mkdir build
           cd build
           PYTHON_EXECUTABLE=$(python -c "import sys; print(sys.executable)")
+          PYTHON_ROOT=$(python -c "import sysconfig; print(sysconfig.get_config_var('base'))")
           echo "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}"
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON -DPython3_EXECUTABLE=${PYTHON_EXECUTABLE}
+          echo "PYTHON_ROOT = ${PYTHON_ROOT}"
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON -DPython3_EXECUTABLE=${PYTHON_EXECUTABLE} -DPython3_ROOT_DIR=${PYTHON_ROOT}
       - name: Build
         run: |
           cd build
