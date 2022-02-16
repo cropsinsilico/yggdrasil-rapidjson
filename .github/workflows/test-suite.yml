@@ -46,7 +46,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_EXECUTABLE=${pythonLocation}
       - name: Build
         run: |
           cd build
@@ -96,11 +96,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          PYTHON_EXECUTABLE=$(python -c "import sys; print(sys.executable)")
-          PYTHON_ROOT=$(python -c "import sysconfig; print(sysconfig.get_config_var('base'))")
-          echo "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}"
-          echo "PYTHON_ROOT = ${PYTHON_ROOT}"
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON -DPython3_EXECUTABLE=${PYTHON_EXECUTABLE} -DPython3_ROOT_DIR=${PYTHON_ROOT}
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
       - name: Build
         run: |
           cd build
@@ -109,11 +105,6 @@ jobs:
         run: |
           cd build
           ctest -C Debug --output-on-failure --verbose
-      # - name: Collect coverage
-      #   run: |
-      #     cd build
-      #     cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
-      #     ctest -T Coverage
       - name: Upload coverage report
         uses: codecov/codecov-action@v1
         with:

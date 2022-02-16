@@ -50,7 +50,7 @@ if(NOT Python3_ROOT_DIR)
         set(Python3_ROOT_DIR "${CONDA_PREFIX}")
     else()
         if(Python3_EXECUTABLE)
-            exec_program(python  # ${Python3_EXECUTABLE}
+            exec_program(${Python3_EXECUTABLE}
 	                 ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
 		         OUTPUT_VARIABLE PYTHON_ROOT
 		         RETURN_VALUE ROOT_NOT_FOUND)
@@ -61,9 +61,9 @@ if(NOT Python3_ROOT_DIR)
         endif()
     endif()
 endif()
-# if(Python3_ROOT_DIR)
-message(STATUS "Python root directory is ${Python3_ROOT_DIR}")
-# endif()
+if(Python3_ROOT_DIR)
+    message(STATUS "Python root directory is ${Python3_ROOT_DIR}")
+endif()
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 if(NOT Python3_NumPy_FOUND)
     message(FATAL_ERROR "NumPy headers not found")
