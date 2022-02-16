@@ -27,6 +27,7 @@ RAPIDJSON_NAMESPACE_BEGIN
 namespace units {
 
   namespace constants {
+    
     // Elementary masses
     static double mass_electron_kg = 9.10938291e-31;
     static double amu_kg = 1.660538921e-27;
@@ -131,6 +132,9 @@ namespace units {
     static double eV_per_erg = 1.0 / erg_per_eV;
     static double kelvin_per_rankine = 5.0 / 9.0;
     static double watt_per_horsepower = 745.69987158227022;
+    static double celcius_zero_kelvin = -273.15;
+    static double farenheit_zero_celcius = 32.0;
+    static double farenheit_zero_kelvin = celcius_zero_kelvin / kelvin_per_rankine + farenheit_zero_celcius;
     // static double erg_per_s_per_watt = 1e7;
 
     // Solar System masses
@@ -183,6 +187,16 @@ namespace units {
     // NIST Special Publication 811: https://www.nist.gov/pml/special-publication-811
     // static double neper_per_bel = log(10) / 2;
   }
+
+  static inline
+  bool compare_doubles(const double &a, const double &b) {
+    // double abs_precision = 1.0e-13; // DBL_EPSILON;
+    double abs_precision = DBL_EPSILON;
+    double rel_precision = DBL_EPSILON;
+    if ((std::abs(a) < abs_precision) || (std::abs(b) < abs_precision))
+      return (std::abs((a - b)*(b - a)) <= abs_precision);
+    return (std::abs(((a - b)*(b - a)) / (a * b)) <= rel_precision);
+  };
 
 enum BaseDimension {
   kLengthUnit = 0,
@@ -245,7 +259,7 @@ public:
   }
   bool operator==(const Dimension& x) const {
     for (size_t i = 0; i < 8; i++)
-      if (std::abs(powers_[i] - x.powers_[i]) > DBL_EPSILON)
+      if (!(compare_doubles(powers_[i], x.powers_[i])))
 	return false;
     return true;
   }
@@ -253,14 +267,14 @@ public:
   bool is_irreducible() const {
     int ndim = 0;
     for (size_t i = 0; i < 8; i++)
-      if (std::abs(powers_[i]) > DBL_EPSILON)
+      if (!(compare_doubles(powers_[i], 0.0)))
 	ndim++;
     return (ndim == 1);
   }
   std::vector<Dimension> reduced() const {
     std::vector<Dimension> out;
     for (size_t i = 0; i < 8; i++)
-      if (std::abs(powers_[i]) > DBL_EPSILON)
+      if (!(compare_doubles(powers_[i], 0.0)))
 	out.push_back(Dimension((BaseDimension)i, powers_[i]));
     return out;
   }
@@ -427,9 +441,9 @@ public:
     if (names_ != x.names_) return false;
     if (abbrs_ != x.abbrs_) return false;
     if (dim_ != x.dim_) return false;
-    if (std::abs(factor_ - x.factor_) > DBL_EPSILON) return false;
-    if (std::abs(offset_ - x.offset_) > DBL_EPSILON) return false;
-    if (std::abs(power_ - x.power_) > DBL_EPSILON) return false;
+    if (!(compare_doubles(factor_, x.factor_))) return false;
+    if (!(compare_doubles(offset_, x.offset_))) return false;
+    if (!(compare_doubles(power_, x.power_))) return false;
     return true;
   }
   //! \brief Check if this unit is not equal to another.
@@ -439,7 +453,7 @@ public:
   //! \brief Perform power operation in place.
   //! \param x Power to raise this unit to.
   void inplace_pow(const double x) {
-    RAPIDJSON_ASSERT(!(has_offset() && (std::abs(x - 1.0) > DBL_EPSILON)));
+    RAPIDJSON_ASSERT(!(has_offset() && (!(compare_doubles(x, 1.0)))));
     power_ = power_ * x;
   }
   //! \brief Raise this unit to a power.
@@ -516,10 +530,10 @@ public:
   }
   //! \brief Check if this unit has a non-zero offset.
   //! \return true if this unit has a non-zero offset.
-  bool has_offset() const { return (std::abs(offset_) > DBL_EPSILON); }
+  bool has_offset() const { return (!(compare_doubles(offset_, 0.0))); }
   //! \brief Check if this unit has a power other than 1.
   //! \return true if this unit has a power other than 1.
-  bool has_power() const { return (std::abs(power_ - 1.0) > DBL_EPSILON); }
+  bool has_power() const { return (!(compare_doubles(power_, 1.0))); }
   //! \brief Check if this unit is irreducible or a product of more than
   //!   one irreducible unit.
   //! \return true if the unit is irreducible.
@@ -530,7 +544,7 @@ public:
   //   // std::vector<Dimension> dims dim_.reduced();
   //   std::vector<Unit> units;
   //   for (size_t i = 0; i < 8; i++) {
-  //     if (std::abs(dim_.powers_[i]) > DBL_EPSILON) {
+  //     if (!(compare_doubles(dim_.powers_[i], 0.0))) {
   // 	Unit new_unit(base_units[i]);
   // 	// TODO: Check this, may need to divide by base unit factor in the
   // 	// case of grams
@@ -552,10 +566,15 @@ public:
     RAPIDJSON_ASSERT(dimension() == x.dimension());
     // [a1 * (x - a2)]**a3 = [b1 * (y - b2)]**b3
     // y = [a1 * (x - a2)]**(a3/b3) / b1 + b2
+    // v2 = a1 * (v1 - a2)
+    // v3 = (v2 / b1) + b2
+    // v3 = (a1 / b1) * (v1 - a2) + b2
+    // v3 = (a1 / b1) * v1 - (a1 / b1) * a2 + b2
+    // v3 = (a1 / b1) * v1 - ((a1 / b1) * a2 - b2)
     std::vector<double> a = conversion_factor();
     std::vector<double> b = x.conversion_factor();
     double ratio = a[0] / b[0];
-    std::vector<double> out { ratio, ratio * a[1] - b[1] };
+    std::vector<double> out { ratio, a[1] - b[1] / ratio };
     return out;
   }
   //! \brief Get the conversion factors necessary to convert to/from this
@@ -598,12 +617,12 @@ public:
   Units(const std::vector<Unit<Ch>> units) : units_(units) {}
   Units(const std::basic_string<Ch> str) : Units(str.c_str(), str.length()) {}
   Units(const Ch* str) : Units(str, strlen(str)) {}
-  Units(const Ch str[], const size_t len) : units_() {
-    Units<Ch> new_units = parse_units(str, len);
+  Units(const Ch str[], const size_t len, const bool verbose=false) : units_() {
+    Units<Ch> new_units = parse_units(str, len, verbose);
     units_.insert(units_.begin(), new_units.units_.begin(), new_units.units_.end());
   }
   template<typename SourceEncoding, typename DestEncoding=ASCII<char>>
-  static Units parse_units(const typename SourceEncoding::Ch* str, const size_t len) {
+  static Units parse_units(const typename SourceEncoding::Ch* str, const size_t len, const bool verbose=false) {
     GenericStringStream<SourceEncoding> src(str);
     GenericStringBuffer<DestEncoding> dst;
     PutReserve(src, len);
@@ -612,7 +631,7 @@ public:
       Transcoder<SourceEncoding, DestEncoding>::Transcode(src, dst);
     }
     // Pass pointer to token and populate this structure instead?
-    return parse_units(dst.GetString(), dst.GetLength());
+    return parse_units(dst.GetString(), dst.GetLength(), verbose);
   }
   void display(std::ostream& os) const {
     size_t i = 0;
@@ -779,7 +798,7 @@ std::vector<Unit<Ch>> get_prefixable_units() {
     Unit<Ch>("weber", "Wb", dimensions::magnetic_flux),
     Unit<Ch>("lumen", "lm", dimensions::luminous_flux),
     Unit<Ch>("lux", "lx", dimensions::luminous_flux / dimensions::area),
-    Unit<Ch>({"celcius", "degree_celsius", "degree_Celsius", "celsius"}, {"degC", "°C"}, dimensions::temperature, 1.0, -273.15),
+    Unit<Ch>({"celcius", "degree_celsius", "degree_Celsius", "celsius"}, {"degC", "°C"}, dimensions::temperature, 1.0, constants::celcius_zero_kelvin),
     // other
     Unit<Ch>("calorie", "cal", dimensions::energy, 4.184),
     Unit<Ch>("year", "yr", dimensions::time, constants::sec_per_year),
@@ -804,7 +823,7 @@ std::vector<Unit<Ch>> get_unprefixable_units() {
     Unit<Ch>("yard", "yd", dimensions::length, 0.9144),
     Unit<Ch>("mile", "mi", dimensions::length, 1609.344),
     Unit<Ch>("furlong", "fur", dimensions::length, constants::m_per_ft * 660.0),
-    Unit<Ch>({"farenheit", "degree_fahrenheit", "degree_Fahrenheit"}, {"degF", "°F"}, dimensions::temperature, constants::kelvin_per_rankine, -459.67),
+    Unit<Ch>({"farenheit", "degree_fahrenheit", "degree_Fahrenheit"}, {"degF", "°F"}, dimensions::temperature, constants::kelvin_per_rankine, constants::farenheit_zero_kelvin),
     Unit<Ch>({"rankine", "degree_rankine"}, {"degR"}, dimensions::temperature, constants::kelvin_per_rankine),
     Unit<Ch>("pound_force", "lbf", dimensions::force, constants::kg_per_pound * constants::standard_gravity_m_per_s2),
     Unit<Ch>({"pound", "pound_mass"}, {"lb", "lbm"}, dimensions::mass, constants::kg_per_pound),
@@ -881,8 +900,7 @@ const Unit<Ch>* Unit<Ch>::find_unit(const std::basic_string<Ch> str, double& pre
   std::basic_string<Ch> whitespace = " \t\f\v\n\r";
   idx_beg = str.find_first_not_of(whitespace);
   idx_end = str.find_last_not_of(whitespace);
-  if (idx_end == std::string::npos)
-    idx_end = str.size() - 1;
+  RAPIDJSON_ASSERT(idx_end != std::string::npos);
   std::basic_string<Ch> substr = str.substr(idx_beg, idx_end + 1);
   std::vector<const Unit<Ch>*> possibilities;
   for (auto it = prefixable_units.begin(); it != prefixable_units.end(); it++) {
@@ -903,8 +921,8 @@ const Unit<Ch>* Unit<Ch>::find_unit(const std::basic_string<Ch> str, double& pre
       }      
     }
   }
-  std::cerr << "No match found for \"" << substr << "\"" << std::endl;
-  return nullptr;
+  std::cerr << "No match found for \"" << substr << "\"" << std::endl; // GCOVR_EXCL_LINE
+  return nullptr; // GCOVR_EXCL_LINE
 };
 
 namespace parser {
@@ -931,9 +949,9 @@ public:
     finalized = true;
     return units;
   }
-  virtual double value() { return 0.0; }
+  virtual double value() { return 0.0; } // GCOVR_EXCL_LINE
   virtual bool is_numeric() { return false; }
-  virtual void append(const Ch) {}
+  virtual void append(const Ch) {} // GCOVR_EXCL_LINE
   virtual std::ostream & display(std::ostream &os) const {
     os << "TokenBase(" << t << ")";
     return os;
@@ -961,9 +979,9 @@ public:
     case '/':
       return a / b;
     default:
-      RAPIDJSON_ASSERT((op == '*') || (op == '/'));
+      RAPIDJSON_ASSERT((op == '*') || (op == '/')); // GCOVR_EXCL_LINE
     }
-    return this->units;
+    return this->units; // GCOVR_EXCL_LINE
   }
   Units<Ch> operate(const Units<Ch>& a, const double& b) {
     RAPIDJSON_ASSERT(op == '^');
@@ -982,10 +1000,10 @@ public:
     case '-':
       return a - b;
     default:
-      RAPIDJSON_ASSERT((op == '*') || (op == '/') || (op == '^')
+      RAPIDJSON_ASSERT((op == '*') || (op == '/') || (op == '^') // GCOVR_EXCL_LINE
 		       || (op == '+') || (op == '-'));
     }
-    return 0.0;
+    return 0.0; // GCOVR_EXCL_LINE
   }
   bool is_numeric() override { return true; }
   bool is_exp() { return (op == '^'); }
@@ -1162,20 +1180,12 @@ public:
       value_ = tokens[0]->value();
       for (size_t i = 1; i < tokens.size(); i = i+2) {
 	RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
-	if (tokens[i + 1]->t == kOperatorToken) {
-	  OperatorToken<Ch> *iop = static_cast<OperatorToken<Ch>*>(tokens[i + 1]);
-	  std::cerr << "Operator: " << iop->op << std::endl;
-	}
 	RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
 	OperatorToken<Ch> *op = static_cast<OperatorToken<Ch>*>(tokens[i]);
 	value_ = op->operate(value_, tokens[i + 1]->value());
       }
     } else {
       for (size_t i = 1; i < tokens.size(); i = i+2) {
-	if (tokens[i + 1]->t == kOperatorToken) {
-	  OperatorToken<Ch> *iop = static_cast<OperatorToken<Ch>*>(tokens[i + 1]);
-	  std::cerr << "Operator: " << iop->op << std::endl;
-	}
 	RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
 	RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
 	OperatorToken<Ch> *op = static_cast<OperatorToken<Ch>*>(tokens[i]);
@@ -1298,7 +1308,7 @@ public:
   bool operator==(const Quantity& x) const {
     if (units_ != x.units_)
       return false;
-    return std::abs(value_ - x.value_) < DBL_EPSILON;
+    return compare_doubles(value_, x.value_);
   }
   bool operator!=(const Quantity& x) const { return (!(*this==x)); }
   Quantity operator*(const Quantity& x) const {

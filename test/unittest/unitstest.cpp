@@ -36,7 +36,9 @@ using namespace rapidjson;
     if (a.equivalent_to(b) != expected) {				\
       std::cerr << "a = " << a << ", b = " << b;			\
       if (a.is_compatible(b)) {						\
-	std::cerr << ", b.as(a.units) = " << b.as(a.units()) << ", a.value - b.value = " << std::abs(b.value() - a.as(b.units()).value()) << ", " << (std::abs(b.value() - a.as(b.units()).value()) < DBL_EPSILON); \
+	std::cerr << ", b.as(a.units) = " << b.as(a.units()) << ", a.value - b.value = " << std::abs(b.value() - a.as(b.units()).value()) << ", b.value - a.value = " << std::abs(a.value() - b.as(a.units()).value()) << ", " << units::compare_doubles(b.value(), a.as(b.units()).value()) << ", " << units::compare_doubles(a.value(), b.as(a.units()).value()); \
+      }	else if (expected) {						\
+	std::cerr << ", not compat, adim = " << a.dimension() << ", bdim = " << b.dimension(); \
       }									\
       std::cerr << std::endl;						\
     }									\
@@ -61,8 +63,8 @@ using namespace rapidjson;
     CHECK_QUANTITY_DIRECT_EQUALITY(a, b, direct);			\
     CHECK_QUANTITY_DIRECT_EQUALITY(b, a, direct);			\
     if (expected) {							\
-      EXPECT_TRUE(std::abs(a.value() - b.as(a.units()).value()) < DBL_EPSILON);	\
-      EXPECT_TRUE(std::abs(b.value() - a.as(b.units()).value()) < DBL_EPSILON);	\
+      EXPECT_TRUE(units::compare_doubles(a.value(), b.as(a.units()).value())); \
+      EXPECT_TRUE(units::compare_doubles(b.value(), a.as(b.units()).value())); \
     }									\
   }
 
@@ -74,14 +76,22 @@ TEST(Unit, Base) {
   COMPARE_UNITS(1.0, "grams", 0.001, "kilograms", true, false);
   COMPARE_UNITS(1.0, "g", 1.0, "kg", false, false);
   COMPARE_UNITS(1.0, "cm", 1.0, "g", false, false);
+  COMPARE_UNITS(1.0, "cm", 1.0, "cm/s", false, false);
   COMPARE_UNITS(1.0, "g**2", 1e-6, "kg^2", true, false);
   COMPARE_UNITS(1.0, "hp", 745.69987158227022, "W", true, false);
   COMPARE_UNITS(1.0, "km/s", 2236.936292054402, "mi/hr", true, false);
+  COMPARE_UNITS(0.0, "°C", 273.15, "K", true, false);
+  COMPARE_UNITS(32.0, "°F", 0.0, "°C", true, false);
+  COMPARE_UNITS(41.0, "°F", 5.0, "°C", true, false);
   COMPARE_UNITS(1.0, "km s", 1.0, "km*s", true, true);
   COMPARE_UNITS(1.0, "g**(1+1)", 1.0, "g^2", true, true);
   COMPARE_UNITS(1.0, "g**(3-1)", 1.0, "g^2", true, true);
+  COMPARE_UNITS(1.0, "g**(6/3)", 1.0, "g^2", true, true);
+  COMPARE_UNITS(1.0, "g**(1*2)", 1.0, "g^2", true, true);
   COMPARE_UNITS(1.0, "(km**2)(s**-1)", 1.0, "km**2/s", true, true);
   COMPARE_UNITS(1.0, "(km*A)**2/((s**2)(g**3))", 1.0, "(km^2)*(A^2)*(s^-2)*(g^-3)", true, true);
+  const char test_units[] = "(km*A)**2/((s**2)(g**3))";
+  units::Units<char>(test_units, strlen(test_units), true);
 };
 
 #define UNIT_OPERATOR(au, op, bu, cu)				\
