@@ -3791,19 +3791,99 @@ public:
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
       ) const { return T2(static_cast<const int>(v1)); }
 
+
+#define CAST_SOURCE				\
+  const T1* src = reinterpret_cast<const T1*>(bytes);
+#define SAME_PRECISION				\
+  if (sizeof(T2) == sizeof(T1)) {		\
+    memcpy(dst, src, nelements * sizeof(T2));	\
+    return;					\
+  }
+#define DIFF_PRECISION				\
+  if (sizeof(T2) < sizeof(T1))			\
+    printf("WARNING: Loosing precision.");	\
+  for (SizeType i = 0; i < nelements; i++)	\
+    dst[i] = CastPrecision<T1, T2>(src[i]);
+  
   template <typename T1, typename T2>
   void ChangePrecision(const unsigned char* bytes, T2* dst,
-		       SizeType nelements) const {
-    const T1* src = reinterpret_cast<const T1*>(bytes);
-    RAPIDJSON_ASSERT(GetYggSubType<T1>() == GetYggSubType<T2>());
-    if (sizeof(T2) == sizeof(T1)) {
-      memcpy(dst, src, nelements * sizeof(T2));
-      return;
-    } else if (sizeof(T2) < sizeof(T1))
-      printf("WARNING: Loosing precision.");
-    for (SizeType i = 0; i < nelements; i++)
-      dst[i] = CastPrecision<T1, T2>(src[i]);
+		       SizeType nelements,
+		       RAPIDJSON_ENABLEIF((
+		       internal::AndExpr<internal::IsSame<std::complex<float>, T1>,
+		       internal::IsSame<std::complex<float>, T2>>))) const {
+    CAST_SOURCE;
+    SAME_PRECISION;
   }
+  template <typename T1, typename T2>
+  void ChangePrecision(const unsigned char* bytes, T2* dst,
+		       SizeType nelements,
+		       RAPIDJSON_ENABLEIF((
+		       internal::AndExpr<internal::IsSame<std::complex<double>, T1>,
+		       internal::IsSame<std::complex<double>, T2>>))) const {
+    CAST_SOURCE;
+    SAME_PRECISION;
+  }
+  template <typename T1, typename T2>
+  void ChangePrecision(const unsigned char* bytes, T2* dst,
+		       SizeType nelements,
+		       RAPIDJSON_ENABLEIF((
+		       internal::AndExpr<internal::IsSame<std::complex<float>, T1>,
+		       internal::IsSame<std::complex<double>, T2>>))) const {
+    CAST_SOURCE;
+    DIFF_PRECISION;
+  }
+  template <typename T1, typename T2>
+  void ChangePrecision(const unsigned char* bytes, T2* dst,
+		       SizeType nelements,
+		       RAPIDJSON_ENABLEIF((
+		       internal::AndExpr<internal::IsSame<std::complex<double>, T1>,
+		       internal::IsSame<std::complex<float>, T2>>))) const {
+    CAST_SOURCE;
+    DIFF_PRECISION;
+  }
+
+  template <typename T1, typename T2>
+  void ChangePrecision(const unsigned char* bytes, T2* dst,
+		       SizeType nelements,
+		       RAPIDJSON_ENABLEIF((
+		       internal::AndExpr<
+		       internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
+		       internal::IsSame<std::complex<double>, T1>>,
+		       internal::NotExpr<
+		       internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
+		       internal::IsSame<std::complex<double>, T2>>>>))) const {
+    RAPIDJSON_ASSERT(GetYggSubType<T1>() == GetYggSubType<T2>());
+  }
+  template <typename T1, typename T2>
+  void ChangePrecision(const unsigned char* bytes, T2* dst,
+		       SizeType nelements,
+		       RAPIDJSON_ENABLEIF((
+		       internal::AndExpr<
+		       internal::NotExpr<
+		       internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
+		       internal::IsSame<std::complex<double>, T1>>>,
+		       internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
+		       internal::IsSame<std::complex<double>, T2>>>))) const {
+    RAPIDJSON_ASSERT(GetYggSubType<T1>() == GetYggSubType<T2>());
+  }
+  template <typename T1, typename T2>
+  void ChangePrecision(const unsigned char* bytes, T2* dst,
+		       SizeType nelements,
+		       RAPIDJSON_ENABLEIF((
+		       internal::NotExpr<
+		       internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
+		       internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
+		       internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
+		       internal::IsSame<std::complex<double>, T2>>>>>))) const {
+    RAPIDJSON_ASSERT(GetYggSubType<T1>() == GetYggSubType<T2>());
+    CAST_SOURCE;
+    SAME_PRECISION;
+    DIFF_PRECISION;
+  }
+
+#undef CAST_SOURCE
+#undef SAME_PRECISION
+#undef DIFF_PRECISION
 
   template <typename T1, typename T2>
     T2* ChangePrecision(const unsigned char* bytes, SizeType nelements,

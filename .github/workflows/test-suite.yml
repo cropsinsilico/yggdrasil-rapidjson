@@ -96,7 +96,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON -DPython3_EXECUTABLE=$(which python)
       - name: Build
         run: |
           cd build
