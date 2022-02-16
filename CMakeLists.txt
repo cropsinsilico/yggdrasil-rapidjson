@@ -42,13 +42,14 @@ if (NOT DEFINED Python_FIND_FRAMEWORK)
     set(Python_FIND_FRAMEWORK "LAST")
 endif ()
 
+message(STATUS "Python executable is ${Python3_EXECUTABLE}")
 set(CONDA_PREFIX "$ENV{CONDA_PREFIX}")
 if(CONDA_PREFIX)
     message(STATUS "CONDA_PREFIX = ${CONDA_PREFIX}")
     set(Python3_ROOT_DIR "${CONDA_PREFIX}")
 else()
     if(Python3_EXECUTABLE)
-        exec_program(${Python3_EXECUTABLE}
+        exec_program(python  # ${Python3_EXECUTABLE}
 	             ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
 		     OUTPUT_VARIABLE PYTHON_ROOT
 		     RETURN_VALUE ROOT_NOT_FOUND)
