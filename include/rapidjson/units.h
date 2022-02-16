@@ -937,10 +937,13 @@ enum TokenType {
 template<typename Ch>
 class GroupToken; // Forward declaration
 
-// #define TOKEN_COPY(cls)			\
-//   TokenBase<Ch>* copy() const override {	\
-//     return static_cast<TokenBase<Ch>*>(new cls<Ch>(static_cast<cls<Ch>*>(this))); \
-//   }
+
+/*
+  #define TOKEN_COPY(cls)			\
+  TokenBase<Ch>* copy() const override {				\
+  return static_cast<TokenBase<Ch>*>(new cls<Ch>(static_cast<cls<Ch>*>(this))); \
+  }
+*/
 
 template<typename Ch>
 class TokenBase {
@@ -963,15 +966,16 @@ public:
     return os;
   }
   // virtual TokenBase<Ch>* copy() const { return new TokenBase<Ch>(*this); }
-  TokenBase<Ch>& operator=(const TokenBase<Ch>& other); // {
-  //   if (this != &other) {
-  //     RAPIDJSON_ASSERT(t == other.t);
-  //     parent = other.parent;
-  //     units = Units<Ch>(other.units);
-  //     finalized = other.finalized;
-  //   }
-  //   return *this;
-  // }
+  TokenBase<Ch>& operator=(const TokenBase<Ch>& other); /* {
+    if (this != &other) {
+      RAPIDJSON_ASSERT(t == other.t);
+      parent = other.parent;
+      units = Units<Ch>(other.units);
+      finalized = other.finalized;
+    }
+    return *this;
+  }
+  */
   TokenType t;
   Units<Ch> units;
   bool finalized;
@@ -1034,14 +1038,16 @@ public:
     os << "OperatorToken(" << op << ")";
     return os;
   }
-  // TOKEN_COPY(OperatorToken);
-  // TokenBase<Ch>& operator=(const TokenBase<Ch>& other) {
-  //   TokenBase<Ch>::operator=(other);
-  //   const OperatorToken<Ch>* otherT = static_cast<OperatorToken<Ch>*>(&other);
-  //   if (this != otherT)
-  //     op = otherT->op;
-  //   return *this;
-  // }
+  /*
+  TOKEN_COPY(OperatorToken);
+  TokenBase<Ch>& operator=(const TokenBase<Ch>& other) {
+    TokenBase<Ch>::operator=(other);
+    const OperatorToken<Ch>* otherT = static_cast<OperatorToken<Ch>*>(&other);
+    if (this != otherT)
+      op = otherT->op;
+    return *this;
+  }
+  */
   Ch op;
 };
 
@@ -1067,14 +1073,16 @@ public:
     os << "WordToken(" << word << ")";
     return os;
   }
-  // TOKEN_COPY(WordToken);
-  // TokenBase<Ch>& operator=(const TokenBase<Ch>& other) {
-  //   TokenBase<Ch>::operator=(other);
-  //   const WordToken<Ch>* otherT = static_cast<WordToken<Ch>*>(&other);
-  //   if (this != otherT)
-  //     word = otherT->word;
-  //   return *this;
-  // }
+  /*
+  TOKEN_COPY(WordToken);
+  TokenBase<Ch>& operator=(const TokenBase<Ch>& other) {
+    TokenBase<Ch>::operator=(other);
+    const WordToken<Ch>* otherT = static_cast<WordToken<Ch>*>(&other);
+    if (this != otherT)
+      word = otherT->word;
+    return *this;
+  }
+  */
   std::basic_string<Ch> word;
   friend NumberToken<Ch>;
 };
@@ -1099,10 +1107,12 @@ template<typename Ch>
 class GroupToken : public TokenBase<Ch> {
 public:
   GroupToken(TokenBase<Ch> *parent0=nullptr) : TokenBase<Ch>(kGroupToken, parent0), tokens(), value_(0.0) {}
-  // GroupToken(const GroupToken<Ch>& rhs) : TokenBase<Ch>(rhs), tokens(), values_(rhs.value) {
-  //   for (auto it = rhs.tokens.begin(); it != rhs.tokens.end(); it++)
-  //     tokens.push_back((*it)->copy());
-  // }
+  /*
+  GroupToken(const GroupToken<Ch>& rhs) : TokenBase<Ch>(rhs), tokens(), values_(rhs.value) {
+    for (auto it = rhs.tokens.begin(); it != rhs.tokens.end(); it++)
+      tokens.push_back((*it)->copy());
+  }
+  */
   ~GroupToken() override {
     for (size_t i = 0; i < tokens.size(); i++)
       delete tokens[i];
@@ -1260,20 +1270,22 @@ public:
     os << ")";
     return os;
   }
-  // TOKEN_COPY(GroupToken);
-  // TokenBase<Ch>& operator=(const TokenBase<Ch>& other) {
-  //   TokenBase<Ch>::operator=(other);
-  //   const GroupToken<Ch>* otherT = static_cast<GroupToken<Ch>*>(&other);
-  //   if (this != otherT) {
-  //     for (size_t i = 0; i < tokens.size(); i++)
-  // 	delete tokens[i];
-  //     tokens.clear();
-  //     for (auto it = otherT->tokens.begin(); it != otherT->tokens.end(); it++)
-  // 	token.push_back((*it)->copy();
-  //     value_ = otherT->value_;
-  //   }
-  //   return *this;
-  // }
+  /*
+  TOKEN_COPY(GroupToken);
+  TokenBase<Ch>& operator=(const TokenBase<Ch>& other) {
+    TokenBase<Ch>::operator=(other);
+    const GroupToken<Ch>* otherT = static_cast<GroupToken<Ch>*>(&other);
+    if (this != otherT) {
+      for (size_t i = 0; i < tokens.size(); i++)
+	delete tokens[i];
+      tokens.clear();
+      for (auto it = otherT->tokens.begin(); it != otherT->tokens.end(); it++)
+	token.push_back((*it)->copy();
+      value_ = otherT->value_;
+    }
+    return *this;
+  }
+  */
   std::vector<TokenBase<Ch>*> tokens;
   double value_;
 };
