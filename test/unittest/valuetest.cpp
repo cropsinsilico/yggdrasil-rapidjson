@@ -1317,25 +1317,28 @@ TEST(Value, NDArrayUInt) {
   EXPECT_FALSE(x.IsObject());
   EXPECT_FALSE(x.IsArray());
 }
-TEST(Value, ObjWavefront) {
-  double vertices[8][3] = 
-    {{0.0, 0.0, 0.0},
-     {0.0, 0.0, 1.0},
-     {0.0, 1.0, 1.0},
-     {0.0, 1.0, 0.0},
-     {1.0, 0.0, 0.0},
-     {1.0, 0.0, 1.0},
-     {1.0, 1.0, 1.0},
-     {1.0, 1.0, 0.0}};
-  int faces[2][3] = 
-    {{3, 0, 1},
-     {3, 0, 2}};
-  int edges[5][2] = 
-    {{0, 1},
-     {1, 2},
-     {2, 3},
-     {3, 0},
+#define ARRAYS_3D				\
+  double vertices[8][3] =			\
+    {{0.0, 0.0, 0.0},				\
+     {0.0, 0.0, 1.0},				\
+     {0.0, 1.0, 1.0},				\
+     {0.0, 1.0, 0.0},				\
+     {1.0, 0.0, 0.0},				\
+     {1.0, 0.0, 1.0},				\
+     {1.0, 1.0, 1.0},				\
+     {1.0, 1.0, 0.0}};				\
+  int faces[2][3] =				\
+    {{3, 0, 1},					\
+     {3, 0, 2}};				\
+  int edges[5][2] =				\
+    {{0, 1},					\
+     {1, 2},					\
+     {2, 3},					\
+     {3, 0},					\
      {2, 0}};
+  
+TEST(Value, ObjWavefront) {
+  ARRAYS_3D;
   rapidjson::ObjWavefront obj(vertices, faces, edges);
   rapidjson::Document doc;
   rapidjson::Value x(obj);
@@ -1351,25 +1354,9 @@ TEST(Value, ObjWavefront) {
   x.GetPly(cpy_ply);
   EXPECT_EQ(ply, cpy_ply);
 }
+    
 TEST(Value, Ply) {
-  const double vertices[8][3] = 
-    {{0.0, 0.0, 0.0},
-     {0.0, 0.0, 1.0},
-     {0.0, 1.0, 1.0},
-     {0.0, 1.0, 0.0},
-     {1.0, 0.0, 0.0},
-     {1.0, 0.0, 1.0},
-     {1.0, 1.0, 1.0},
-     {1.0, 1.0, 0.0}};
-  int faces[2][3] = 
-    {{3, 0, 1},
-     {3, 0, 2}};
-  int edges[5][2] = 
-    {{0, 1},
-     {1, 2},
-     {2, 3},
-     {3, 0},
-     {2, 0}};
+  ARRAYS_3D;
   rapidjson::Ply ply(vertices, faces, edges);
   rapidjson::Document doc;
   rapidjson::Value x(ply);

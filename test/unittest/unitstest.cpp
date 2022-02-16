@@ -70,7 +70,7 @@ using namespace rapidjson;
 
 TEST(Unit, Base) {
   units::Quantity<double, char> x(1.0, "kg");
-  std::cout << x << std::endl;
+  std::cout << "x = " << x << ", dim = " << x.units().dimension() << std::endl;
   COMPARE_UNITS(1.0, "g", 0.001, "kg", true, false);
   COMPARE_UNITS(1.0, "gram", 0.001, "kilogram", true, false);
   COMPARE_UNITS(1.0, "grams", 0.001, "kilograms", true, false);
