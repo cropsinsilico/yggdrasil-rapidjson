@@ -46,8 +46,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          python -c "import sysconfig; print(sysconfig.get_config_var('base'))"
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_EXECUTABLE=${pythonLocation}
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=${pythonLocation}
       - name: Build
         run: |
           cd build
