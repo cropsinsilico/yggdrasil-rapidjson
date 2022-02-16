@@ -861,7 +861,7 @@ public:
     u = values[0];
     v = -1.0;
     w = -1.0;
-    if (values.size() == 2)
+    if (values.size() >= 2)
       v = values[1];
     if (values.size() == 3)
       w = values[2];
@@ -880,11 +880,15 @@ public:
   }
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
+    std::cerr << "before code" << std::endl;
     if (rhs0->code != this->code) return false;
     const ObjVTexture* lhs = this;
     const ObjVTexture* rhs = static_cast<const ObjVTexture*>(rhs0);
+    std::cerr << "u here" << std::endl;
     if (!IS_EQUAL_DBL(lhs->u, rhs->u)) return false;
+    std::cerr << "v here" << std::endl;
     if (!IS_EQUAL_DBL(lhs->v, rhs->v)) return false;
+    std::cerr << "w here" << std::endl;
     if (!IS_EQUAL_DBL(lhs->w, rhs->w)) return false;
     return true;
   }

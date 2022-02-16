@@ -43,6 +43,13 @@ jobs:
           python -c "import sys; print(sys.executable)"
           python -c "import numpy; print(numpy.get_include())"
       - name: Configure
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=${env:pythonLocation}
+      - name: Configure
+        if: matrix.os != 'windows-latest'
         run: |
           mkdir build
           cd build

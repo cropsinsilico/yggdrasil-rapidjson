@@ -1353,6 +1353,17 @@ TEST(Value, ObjWavefront) {
   rapidjson::Ply cpy_ply;
   x.GetPly(cpy_ply);
   EXPECT_EQ(ply, cpy_ply);
+  // More complex elements that do not map 1-to-1 with Ply
+  obj.add_element("vp", {1.0, 2.0});
+  obj.add_element("vp", {2.0, 1.0, 3.0});
+  obj.add_element("vn", {1.0, 2.0, 3.0});
+  obj.add_element("vt", {1.0});
+  obj.add_element("vt", {2.0, 1.0});
+  obj.add_element("vt", {3.0, 2.0, 1.0});
+  rapidjson::Value x2(obj);
+  rapidjson::ObjWavefront cpy2;
+  x2.GetObjWavefront(cpy2);
+  EXPECT_EQ(obj, cpy2);
 }
     
 TEST(Value, Ply) {
