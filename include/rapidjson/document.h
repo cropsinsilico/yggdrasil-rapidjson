@@ -3843,8 +3843,7 @@ public:
   }
 
   template <typename T1, typename T2>
-  void ChangePrecision(const unsigned char* bytes, T2* dst,
-		       SizeType nelements,
+  void ChangePrecision(const unsigned char*, T2*, SizeType,
 		       RAPIDJSON_ENABLEIF((
 		       internal::AndExpr<
 		       internal::OrExpr<internal::IsSame<std::complex<float>, T1>,

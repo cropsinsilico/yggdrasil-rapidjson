@@ -950,21 +950,21 @@ class TokenBase {
 private:
   TokenBase(const TokenBase<Ch>& rhs); // : t(rhs.t), parent(rhs.parent), units(rhs.units), finalized(rhs.finalized) {}
 public:
-  TokenBase(const TokenType t0, TokenBase *parent0=nullptr) : t(t0), units(), finalized(false), parent(parent0) {}
+  TokenBase(const TokenType t0, TokenBase *parent0=nullptr) : t(t0), units(), finalized(false), parent(parent0), value_(0.0) {}
   virtual ~TokenBase() {}
   virtual TokenBase<Ch>* current_token() { return this; }
-  virtual GroupToken<Ch>* current_group() { return nullptr; }
   virtual Units<Ch> finalize() {
     finalized = true;
     return units;
   }
-  virtual double value() { return 0.0; } // GCOVR_EXCL_LINE
-  virtual bool is_numeric() { return false; }
-  virtual void append(const Ch) {} // GCOVR_EXCL_LINE
-  virtual std::ostream & display(std::ostream &os) const {
-    os << "TokenBase(" << t << ")";
-    return os;
+  double value() {
+    RAPIDJSON_ASSERT(is_numeric());
+    finalize();
+    return value_;
   }
+  virtual bool is_numeric() { return false; }
+  virtual void append(const Ch) = 0;
+  virtual std::ostream & display(std::ostream &os) const = 0;
   // virtual TokenBase<Ch>* copy() const { return new TokenBase<Ch>(*this); }
   TokenBase<Ch>& operator=(const TokenBase<Ch>& other); /* {
     if (this != &other) {
@@ -980,6 +980,7 @@ public:
   Units<Ch> units;
   bool finalized;
   TokenBase<Ch> *parent;
+  double value_;
   template<typename Ch2>
   friend std::ostream & operator << (std::ostream &os, const TokenBase<Ch2>* x);
 };
@@ -993,6 +994,7 @@ class OperatorToken : public TokenBase<Ch> {
 public:
   OperatorToken(const Ch op0, TokenBase<Ch> *parent0=nullptr) : TokenBase<Ch>(kOperatorToken, parent0), op(op0) { this->finalize(); }
   // OperatorToken(const OperatorToken<Ch>& rhs) : TokenBase(rhs), op(rhs.op) {}
+  void append(const Ch c) override { RAPIDJSON_ASSERT(!c); } // GCOVR_EXCL_LINE
   Units<Ch> operate(const Units<Ch>& a, const Units<Ch>& b) {
     switch (op) {
     case '*':
@@ -1093,8 +1095,9 @@ public:
   NumberToken(const Ch c, TokenBase<Ch> *parent0=nullptr) : WordToken<Ch>(c, parent0) {}
   // NumberToken(const NumberToken<Ch>& rhs) : WordToken(rhs) {}
   bool is_numeric() override { return true; }
-  double value() override { return atof(this->word.c_str()); }
   Units<Ch> finalize() override {
+    if (!(this->finalized))
+      this->value_ = atof(this->word.c_str());
     return TokenBase<Ch>::finalize();
   }
   std::ostream & display(std::ostream &os) const override {
@@ -1106,9 +1109,9 @@ public:
 template<typename Ch>
 class GroupToken : public TokenBase<Ch> {
 public:
-  GroupToken(TokenBase<Ch> *parent0=nullptr) : TokenBase<Ch>(kGroupToken, parent0), tokens(), value_(0.0) {}
+  GroupToken(TokenBase<Ch> *parent0=nullptr) : TokenBase<Ch>(kGroupToken, parent0), tokens() {}
   /*
-  GroupToken(const GroupToken<Ch>& rhs) : TokenBase<Ch>(rhs), tokens(), values_(rhs.value) {
+  GroupToken(const GroupToken<Ch>& rhs) : TokenBase<Ch>(rhs), tokens() {
     for (auto it = rhs.tokens.begin(); it != rhs.tokens.end(); it++)
       tokens.push_back((*it)->copy());
   }
@@ -1123,11 +1126,13 @@ public:
       return TokenBase<Ch>::current_token();
     return tokens[tokens.size() - 1]->current_token();
   }
-  GroupToken<Ch>* current_group() override {
+  GroupToken<Ch>* current_group() {
     int idx = (int)(tokens.size()) - 1;
     if ((idx >= 0) && (tokens[(size_t)idx]->t == kGroupToken)
-	&& (!(tokens[(size_t)idx]->finalized)))
-      return tokens[(size_t)idx]->current_group();
+	&& (!(tokens[(size_t)idx]->finalized))) {
+      GroupToken<Ch>* grp = static_cast<GroupToken<Ch>*>(tokens[(size_t)idx]);
+      return grp->current_group();
+    }
     return this;
   }
   OperatorToken<Ch>* append_op(const Ch c, bool dont_descend=false) {
@@ -1226,12 +1231,12 @@ public:
     // Complete operations from left to right
     Units<Ch> out = tokens[0]->finalize();
     if (is_numeric()) {
-      value_ = tokens[0]->value();
+      this->value_ = tokens[0]->value();
       for (size_t i = 1; i < tokens.size(); i = i+2) {
 	RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
 	RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
 	OperatorToken<Ch> *op = static_cast<OperatorToken<Ch>*>(tokens[i]);
-	value_ = op->operate(value_, tokens[i + 1]->value());
+	this->value_ = op->operate(this->value_, tokens[i + 1]->value());
       }
     } else {
       for (size_t i = 1; i < tokens.size(); i = i+2) {
@@ -1255,11 +1260,6 @@ public:
     }
     return true;
   }
-  double value() override {
-    RAPIDJSON_ASSERT(is_numeric());
-    finalize();
-    return value_;
-  }
   std::ostream & display(std::ostream &os) const override {
     os << "GroupToken(";
     size_t i = 0;
@@ -1281,13 +1281,12 @@ public:
       tokens.clear();
       for (auto it = otherT->tokens.begin(); it != otherT->tokens.end(); it++)
 	token.push_back((*it)->copy();
-      value_ = otherT->value_;
+      this->value_ = otherT->value_;
     }
     return *this;
   }
   */
   std::vector<TokenBase<Ch>*> tokens;
-  double value_;
 };
 
 } // namespace parser
