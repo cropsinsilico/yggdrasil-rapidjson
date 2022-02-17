@@ -1578,8 +1578,7 @@ public:
   //! \param values0 Vector of values.
   //! \param elements0 Vector of group elements.
   ObjGroup(const std::vector<std::string> &values0,
-	   const std::vector<ObjElement*> &elements0) :
-    ObjElement() {
+	   const std::vector<ObjElement*> &elements0) : ObjGroup() {
     assign_values(values, values0);
     assign_values(elements, elements0);
     from_values();
