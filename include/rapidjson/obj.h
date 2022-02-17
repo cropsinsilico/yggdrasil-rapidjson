@@ -40,7 +40,9 @@ RAPIDJSON_NAMESPACE_BEGIN
   cls(const ObjElement* rhs) : cls(*static_cast<const cls*>(rhs)) {}	\
   /*! \brief Initialize an element by reading from an input stream. */	\
   /*! \param in Input stream to read from. */				\
-  cls(std::istream &in) : cls() {					\
+  /*! \param parent0 The element's parent group. */			\
+  cls(std::istream &in, const ObjGroupBase* parent0 = nullptr) :	\
+    cls(parent0) {							\
     read_values(in);							\
     from_values();							\
   }									\
@@ -64,7 +66,13 @@ RAPIDJSON_NAMESPACE_BEGIN
 		internal::OrExpr<internal::IsSame<T,int64_t>,  \
 		  internal::OrExpr<internal::IsSame<T,ObjRef>, \
 		    internal::IsSame<T,uint64_t>>>>>>>>>>
-#define COMPATIBLE_WITH_FLOAT(T)				       \
+#define COMPATIBLE_WITH_UINT(T)				       \
+      internal::OrExpr<internal::IsSame<T,uint8_t>,	       \
+	  internal::OrExpr<internal::IsSame<T,uint16_t>,       \
+	      internal::OrExpr<internal::IsSame<T,uint32_t>,   \
+		  internal::OrExpr<internal::IsSame<T,ObjRef>, \
+		      internal::IsSame<T,uint64_t>>>>>
+#define COMPATIBLE_WITH_FLOAT(T)			       \
   internal::OrExpr<internal::IsSame<T,int>,	               \
     internal::OrExpr<internal::IsSame<T,int8_t>,               \
       internal::OrExpr<internal::IsSame<T,uint8_t>,	       \
@@ -80,88 +88,123 @@ RAPIDJSON_NAMESPACE_BEGIN
   internal::OrExpr<internal::IsSame<T,ObjRefVertex>, COMPATIBLE_WITH_INT(T)>
 #define COMPATIBLE_WITH_TYPE(T1, T2)		 \
   internal::IsSame<T1,T2>
-#define GENERIC_CONSTRUCTOR_VECTOR_INT_EXCL(cls) \
-  /*! \brief Raise an error if non-int vector is provided. */		\
-  /*! \tparam T Type of vector elements. */				\
-  template <typename T>							\
-  cls(const std::vector<T>&, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_INT(T)))) : \
-    cls() {						\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from integers.")); \
-}
-#define GENERIC_CONSTRUCTOR_VECTOR_FLOAT_EXCL(cls) \
-  /*! \brief Raise an error if non-float vector is provided. */		\
-  /*! \tparam T Type of vector elements. */				\
-  template <typename T>							\
-  cls(const std::vector<T>&, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) : \
-    cls() {								\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from floats.")); \
-  }
-#define GENERIC_CONSTRUCTOR_VECTOR_VERT_EXCL(cls) \
-  /*! \brief Raise an error if non-vert vector is provided. */		\
-  /*! \tparam T Type of vector elements. */				\
-  template <typename T>							\
-  cls(const std::vector<T>&, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_VERT(T)))) : \
-    cls() {								\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from vertices.")); \
-  }
-#define GENERIC_CONSTRUCTOR_VECTOR_TYPE_EXCL(cls, T2)			\
-  /*! \brief Raise an error if non-type vector is provided. */		\
-  /*! \tparam T Type of vector elements. */				\
-  template <typename T>							\
-  cls(const std::vector<T>&, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, T2)))) : \
-    cls() {								\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from" #T2 ".")); \
-  }
+#define GENERIC_CONSTRUCTOR_EMPTY(cls, code)				\
+  /*! \brief Empty constructor. */					\
+  /*! \param parent0 The element's parent group. */			\
+  cls(const ObjGroupBase* parent0 = nullptr) :				\
+    ObjElement(#code, parent0)
+#define GENERIC_CONSTRUCTOR_COPY(cls)					\
+  /*! \copydoc ObjElement::ObjElement(const ObjElement&) */		\
+  cls(const cls& rhs) :							\
+    ObjElement(rhs)
 #define GENERIC_CONSTRUCTOR_VECTOR_INT(cls)				\
   /*! \brief Initialize and element from a C++ vector of int values. */	\
   /*! \tparam T Vector element type. Must be int castable. */		\
   /*! \param values0 Vector of values. */				\
+  /*! \param parent0 The element's parent group. */			\
   template <typename T>							\
   cls(const std::vector<T> &values0,					\
-      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) : cls() {		\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) : cls(parent0) {	\
     assign_values(values, values0);					\
     from_values();							\
   }									\
-  GENERIC_CONSTRUCTOR_VECTOR_INT_EXCL(cls);				\
+  /*! \brief Raise an error if non-int vector is provided. */		\
+  /*! \tparam T Type of vector elements. */				\
+  template <typename T>							\
+  cls(const std::vector<T>&,						\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_INT(T)))) : cls(parent0) {	\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from integers.")); \
+  }									\
+  C_ARRAY_CONSTRUCTOR(cls);						\
+  GENERIC_ELEMENT_CONSTRUCTOR(cls);
+#define GENERIC_CONSTRUCTOR_VECTOR_UINT(cls)				\
+  /*! \brief Initialize and element from a C++ vector of uint values. */ \
+  /*! \tparam T Vector element type. Must be unsigned int castable. */	\
+  /*! \param values0 Vector of values. */				\
+  /*! \param parent0 The element's parent group. */			\
+  template <typename T>							\
+  cls(const std::vector<T> &values0,					\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_UINT(T)))) : cls(parent0) {	\
+    assign_values(values, values0);					\
+    from_values();							\
+  }									\
+  /*! \brief Raise an error if non-uint vector is provided. */		\
+  /*! \tparam T Type of vector elements. */				\
+  template <typename T>							\
+  cls(const std::vector<T>&,						\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_UINT(T)))) : cls(parent0) {	\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from unsigned integers.")); \
+  }									\
   C_ARRAY_CONSTRUCTOR(cls);						\
   GENERIC_ELEMENT_CONSTRUCTOR(cls);
 #define GENERIC_CONSTRUCTOR_VECTOR_FLOAT(cls)				\
   /*! \brief Initialize and element from a C++ vector of float values. */ \
   /*! \tparam T Vector element type. Must be float castable. */		\
   /*! \param values0 Vector of values. */				\
+  /*! \param parent0 The element's parent group. */			\
   template <typename T>							\
   cls(const std::vector<T> &values0,					\
-      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) : cls() {		\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) : cls(parent0) {	\
     assign_values(values, values0);					\
     from_values();							\
   }									\
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT_EXCL(cls);				\
+  /*! \brief Raise an error if non-float vector is provided. */		\
+  /*! \tparam T Type of vector elements. */				\
+  template <typename T>							\
+  cls(const std::vector<T>&,						\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) : cls(parent0) {	\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from floats.")); \
+  }									\
   C_ARRAY_CONSTRUCTOR(cls);						\
   GENERIC_ELEMENT_CONSTRUCTOR(cls);
 #define GENERIC_CONSTRUCTOR_VECTOR_VERT(cls)				\
   /*! \brief Initialize and element from a C++ vector of vertex values. */ \
-  /*! \tparam T Vector element type. Must be vertex castable. */		\
+  /*! \tparam T Vector element type. Must be vertex castable. */	\
   /*! \param values0 Vector of values. */				\
+  /*! \param parent0 The element's parent group. */			\
   template <typename T>							\
   cls(const std::vector<T> &values0,					\
-      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_VERT(T)))) : cls() {		\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_VERT(T)))) : cls(parent0) {	\
     assign_values(values, values0);					\
     from_values();							\
   }									\
-  GENERIC_CONSTRUCTOR_VECTOR_VERT_EXCL(cls);				\
+  /*! \brief Raise an error if non-vert vector is provided. */		\
+  /*! \tparam T Type of vector elements. */				\
+  template <typename T>							\
+  cls(const std::vector<T>&,						\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_VERT(T)))) :	cls(parent0) {	\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from vertices.")); \
+  }									\
   C_ARRAY_CONSTRUCTOR(cls);						\
   GENERIC_ELEMENT_CONSTRUCTOR(cls);
 #define GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, T2)			\
   /*! \brief Initialize and element from a C++ vector of type values. */ \
   /*! \tparam T Vector element type. Must be castable to type. */	\
   /*! \param values0 Vector of values. */				\
+  /*! \param parent0 The element's parent group. */			\
   template <typename T>							\
   cls(const std::vector<T> &values0,					\
-      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, T2)))) : cls() {	\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, T2)))) : cls(parent0) { \
     assign_values(values, values0);					\
     from_values();							\
   }									\
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE_EXCL(cls, T2);			\
+  /*! \brief Raise an error if non-type vector is provided. */		\
+  /*! \tparam T Type of vector elements. */				\
+  template <typename T>							\
+  cls(const std::vector<T>&,						\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, T2)))) : cls(parent0){ \
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from" #T2 ".")); \
+  }									\
   C_ARRAY_CONSTRUCTOR(cls);						\
   GENERIC_ELEMENT_CONSTRUCTOR(cls);
 
@@ -207,8 +250,9 @@ inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
 
 // Forward declaration
 class ObjElement;
+class ObjGroupBase;
 inline void read_obj_elements(std::istream &in, std::vector<ObjElement*> &elements,
-			      const char break_at = 0);
+			      const char break_at = 0, const ObjGroupBase* parent = nullptr);
 
 //! ObjWavefront color.
 class ObjColor {
@@ -551,27 +595,35 @@ inline
 std::istream & operator >> (std::istream &in, ObjRefSurface &p)
 { return p.read(in); };
 
-
 //! ObjWavefront element base class.
 class ObjElement {
 public:
   //! \brief Empty constructor.
-  ObjElement() : code("") {}
+  //! \param parent0 The element's parent group.
+  ObjElement(const ObjGroupBase* parent0 = nullptr) : code(""), parent(parent0) {}
   //! \brief Initialize an element from an element code.
   //! \param code0 Element code.
-  ObjElement(const std::string& code0) : code(code0) {}
+  //! \param parent0 The element's parent group.
+  ObjElement(const std::string& code0,
+	     const ObjGroupBase* parent0 = nullptr) :
+    code(code0), parent(parent0) {}
   //! \brief Copy constructor.
   //! \param rhs Element to copy.
-  ObjElement(const ObjElement& rhs) : code(rhs.code) {}
+  ObjElement(const ObjElement& rhs) :
+    code(rhs.code), parent(rhs.parent) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
+  //! \param parent0 The element's parent group.
   template <typename T, size_t N>
-  ObjElement(const std::string& code0, const T (&src)[N]) :
-    ObjElement(code0, std::vector<T>(src, src+N)) {}
+  ObjElement(const std::string& code0, const T (&src)[N],
+	     const ObjGroupBase* parent0 = nullptr) :
+    ObjElement(code0, std::vector<T>(src, src+N), parent0) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
+  //! \param parent0 The element's parent group.
   template <typename T>
-  ObjElement(const std::string& code0, const std::vector<T> &) : code(code0) {
+  ObjElement(const std::string& code0, const std::vector<T> &,
+	     const ObjGroupBase* parent0 = nullptr) : code(code0), parent(parent0) {
     RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
   }
   
@@ -683,6 +735,8 @@ public:
   }
   //! Code indicating the type of element.
   std::string code;
+  //! Pointer to the parent element class.
+  const ObjGroupBase* parent;
   friend std::ostream & operator << (std::ostream &out, const ObjElement &p);
 };
 
@@ -697,11 +751,10 @@ std::ostream & operator << (std::ostream &out, const ObjElement &p)
 //! Vertex data
 class ObjVertex : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjVertex() : ObjElement("v"), values(), x(0), y(0), z(0), w(-1), color() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjVertex(const ObjVertex& rhs) :
-    ObjElement(rhs), values(rhs.values), x(rhs.x), y(rhs.y), z(rhs.z), w(rhs.w), color(rhs.color) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjVertex, v),
+    values(), x(0), y(0), z(0), w(-1), color() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjVertex),
+    values(rhs.values), x(rhs.x), y(rhs.y), z(rhs.z), w(rhs.w), color(rhs.color) {}
   GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVertex);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
@@ -764,11 +817,10 @@ public:
 //! Object vertex parameter
 class ObjVParameter : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjVParameter() : ObjElement("vp"), values(), u(0), v(0), w(-1) {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjVParameter(const ObjVParameter& rhs) :
-    ObjElement(rhs), values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjVParameter, vp),
+    values(), u(0), v(0), w(-1) {}
+  GENERIC_CONSTRUCTOR_COPY(ObjVParameter),
+    values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
   GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVParameter);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
@@ -816,11 +868,10 @@ public:
 //! Vertex normal element.
 class ObjVNormal : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjVNormal() : ObjElement("vn"), values(), i(0), j(0), k(0) {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement& rhs)
-  ObjVNormal(const ObjVNormal& rhs) :
-    ObjElement(rhs), values(), i(rhs.i), j(rhs.j), k(rhs.k) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjVNormal, vn),
+    values(), i(0), j(0), k(0) {}
+  GENERIC_CONSTRUCTOR_COPY(ObjVNormal),
+    values(), i(rhs.i), j(rhs.j), k(rhs.k) {}
   GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVNormal);
   //! \copydoc ObjElement::from_values
   void from_values() override {
@@ -862,11 +913,10 @@ public:
 //! Texture vertex element.
 class ObjVTexture : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjVTexture() : ObjElement("vt"), values(), u(0), v(0), w(0) {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjVTexture(const ObjVTexture& rhs) :
-    ObjElement(rhs), values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjVTexture, vt),
+    values(), u(0), v(0), w(0) {}
+  GENERIC_CONSTRUCTOR_COPY(ObjVTexture),
+    values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
   GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVTexture);
   //! \copydoc ObjElement::from_values
   void from_values() override {
@@ -924,11 +974,8 @@ public:
 //! Point element.
 class ObjPoint : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjPoint() : ObjElement("p"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjPoint(const ObjPoint& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjPoint, p), values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjPoint), values(rhs.values) {}
   GENERIC_CONSTRUCTOR_VECTOR_INT(ObjPoint);
   GENERIC_READ_VALUES;
   GENERIC_WRITE_VALUES;
@@ -954,11 +1001,8 @@ public:
 //! Line element.
 class ObjLine : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjLine() : ObjElement("l"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjLine(const ObjLine& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjLine, l), values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjLine), values(rhs.values) {}
   GENERIC_CONSTRUCTOR_VECTOR_VERT(ObjLine);
   //! \copydoc ObjElement::from_values()
   void from_values() override
@@ -986,11 +1030,8 @@ public:
 //! Face element.
 class ObjFace : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjFace() : ObjElement("f"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjFace(const ObjFace& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjFace, f), values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjFace), values(rhs.values) {}
   GENERIC_CONSTRUCTOR_VECTOR_VERT(ObjFace);
   GENERIC_READ_VALUES;
   GENERIC_WRITE_VALUES;
@@ -1020,31 +1061,34 @@ public:
 //! Curve element.
 class ObjCurve : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjCurve() : ObjElement("curv"), values(), u0(0), u1(0) {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjCurve(const ObjCurve& rhs) :
-    ObjElement(rhs), values(rhs.values), u0(rhs.u0), u1(rhs.u1) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjCurve, curv),
+    values(), u0(0), u1(0) {}
+  GENERIC_CONSTRUCTOR_COPY(ObjCurve),
+    values(rhs.values), u0(rhs.u0), u1(rhs.u1) {}
   //! \brief Initialize an element from a C array of values.
   //! \tparam T Array element type.
   //! \tparam N Array size.
   //! \param u00 Starting curve parameter value.
   //! \param u10 Ending curve parameter value.
+  //! \param parent0 The element's parent group.
   //! \param src Array of values.
   template <typename T, size_t N>
-  ObjCurve(const double& u00, const double& u10, const T (&src)[N]) :
-    ObjCurve(u00, u10, std::vector<T>(src, src+N)) {}
+  ObjCurve(const double& u00, const double& u10, const T (&src)[N],
+	   const ObjGroupBase* parent0 = nullptr) :
+    ObjCurve(u00, u10, std::vector<T>(src, src+N), parent0) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param u00 Starting curve parameter value.
   //! \param u10 Ending curve parameter value.
   //! \param values0 Vector of values.
+  //! \param parent0 The element's parent group.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //!   Only integer values are allowed for ObjPoint elements.
   template <typename T>
   ObjCurve(const double& u00, const double& u10,
 	   const std::vector<T> &values0,
+	   const ObjGroupBase* parent0 = nullptr,
 	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
-    ObjElement("curv"), values(), u0(u00), u1(u10) {
+    ObjElement("curv", parent0), values(), u0(u00), u1(u10) {
     assign_values(values, values0);
     from_values();
   }
@@ -1093,11 +1137,8 @@ public:
 //! 2D curve element.
 class ObjCurve2D : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjCurve2D() : ObjElement("curv2"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjCurve2D(const ObjCurve2D& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjCurve2D, curv2), values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjCurve2D), values(rhs.values) {}
   GENERIC_CONSTRUCTOR_VECTOR_INT(ObjCurve2D);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
@@ -1127,11 +1168,10 @@ public:
 //! Surface element.
 class ObjSurface : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjSurface() : ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjSurface(const ObjSurface& rhs) :
-    ObjElement(rhs), values(rhs.values), s0(rhs.s0), s1(rhs.s1), t0(rhs.t0), t1(rhs.t1) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjSurface, surf),
+    values(), s0(0), s1(0), t0(0), t1(0) {}
+  GENERIC_CONSTRUCTOR_COPY(ObjSurface),
+    values(rhs.values), s0(rhs.s0), s1(rhs.s1), t0(rhs.t0), t1(rhs.t1) {}
   //! \brief Initialize an element from a C array of values.
   //! \tparam T Array element type.
   //! \tparam N Array size.
@@ -1140,11 +1180,13 @@ public:
   //! \param t00 Starting curve parameter value in 2nd dimension.
   //! \param t10 Ending curve parameter value in 2nd dimension.
   //! \param src Array of values.
+  //! \param parent0 The element's parent group.
   template <typename T, size_t N>
   ObjSurface(const double& s00, const double& s10,
 	     const double& t00, const double& t10,
-	     const T (&src)[N]) :
-    ObjSurface(s00, s10, t00, t10, std::vector<T>(src, src+N)) {}
+	     const T (&src)[N],
+	     const ObjGroupBase* parent0 = nullptr) :
+    ObjSurface(s00, s10, t00, t10, std::vector<T>(src, src+N), parent0) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer.
   //! \param s00 Starting curve parameter value in 1st dimension.
@@ -1152,12 +1194,14 @@ public:
   //! \param t00 Starting curve parameter value in 2nd dimension.
   //! \param t10 Ending curve parameter value in 2nd dimension.
   //! \param values0 Vector of values.
+  //! \param parent0 The element's parent group.
   template <typename T>
   ObjSurface(const double& s00, const double& s10,
 	     const double& t00, const double& t10,
 	     const std::vector<T> &values0,
+	     const ObjGroupBase* parent0 = nullptr,
 	     RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
-    ObjElement("surf"), values(), s0(s00), s1(s10), t0(t00), t1(t10) {
+    ObjElement("surf", parent0), values(), s0(s00), s1(s10), t0(t00), t1(t10) {
     assign_values(values, values0);
     from_values();
   }
@@ -1207,23 +1251,91 @@ public:
   double t1;
 };
 
-//! Free-form elements.
-class ObjFreeFormType : public ObjElement {
+//! Element grouping base class.
+class ObjGroupBase : public ObjElement {
 public:
   //! \brief Empty constructor.
-  ObjFreeFormType() : ObjElement("cstype"), values(), elements() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjFreeFormType(const ObjFreeFormType& rhs) :
-    ObjElement(rhs), values(rhs.values), elements() {
+  //! \param parent0 The element's parent group.
+  ObjGroupBase(const ObjGroupBase* parent0 = nullptr)
+    : ObjElement(parent0), elements() {}
+  //! \brief Initialize an element group from an element code.
+  //! \param parent0 The element's parent group.
+  ObjGroupBase(const std::string& code,
+	       const ObjGroupBase* parent0 = nullptr)
+    : ObjElement(code, parent0), elements() {}
+  //! \brief Initialize an element group from an element code.
+  //! \param parent0 The element's parent group.
+  ObjGroupBase(const std::string& code,
+	       const std::vector<ObjElement*> &elements0,
+	       const ObjGroupBase* parent0 = nullptr)
+    : ObjGroupBase(code, parent0) {
+    assign_values(elements, elements0);
+  }
+  GENERIC_CONSTRUCTOR_COPY(ObjGroupBase), elements() {
     for (auto it = rhs.elements.begin(); it != rhs.elements.end(); it++)
       elements.push_back((*it)->copy());
   }
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjFreeFormType, std::string);
-  ~ObjFreeFormType() {
+  DUMMY_ARRAY_CONSTRUCTOR(ObjGroupBase);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjGroupBase);
+  ~ObjGroupBase() {
     for (auto it = elements.begin(); it != elements.end(); it++)
       delete *it;
     elements.resize(0);
   }
+  //! \copydoc ObjElement::read_values
+  void read_values(std::istream &in) override {
+    read_obj_elements(in, elements, 0, this);
+  }
+  //! \copydoc ObjElement::write_values
+  void write_values(std::ostream &out) const override {
+    for (auto it = elements.begin(); it != elements.end(); it++)
+      (*it)->write(out);
+  }
+  //! \copydoc ObjElement::is_equal
+  bool is_equal(const ObjElement* rhs0) const override {
+    if (rhs0->code != this->code) return false;
+    const ObjGroupBase* lhs = this;
+    const ObjGroupBase* rhs = static_cast<const ObjGroupBase*>(rhs0);
+    if (lhs->elements.size() != rhs->elements.size()) return false;
+    for (auto lit = lhs->elements.begin(), rit = rhs->elements.begin();
+	 lit != lhs->elements.end(); lit++, rit++) {
+      if (!((*lit)->is_equal(*rit)))
+	return false;
+    }
+    return true;
+  }
+  //! Vector of elements in the group.
+  std::vector<ObjElement*> elements;
+};
+
+// //! Free-form sub-selements.
+// class ObjGroupMemberBase : public ObjElement {
+// public:
+//   //! \brief Empty constructor.
+//   ObjGroupMemberBase() : ObjElement(), parent() {}
+//   //! \brief Initialize an element from an element code.
+//   //! \param code0 Element code.
+//   //! \param parent0 The element's parent group.
+//   ObjGroupMemberBase(const std::string& code, const ObjGroupBase* parent0 = nullptr) :
+//     ObjElement(code), parent(parent0) {}
+//   //! \copydoc ObjElement::ObjElement(const ObjElement&)
+//   ObjGroupMemberBase(const ObjGroupMemberBase& rhs) :
+//     ObjElement(rhs), parent(rhs.parent) {}
+//   //! Pointer to the parent element class.
+//   const ObjElement* parent;
+// };
+
+//! Free-form element group.
+class ObjFreeFormType : public ObjGroupBase {
+public:
+  //! \brief Empty constructor.
+  //! \param parent0 The element's parent group.
+  ObjFreeFormType(const ObjGroupBase* parent0 = nullptr) :
+    ObjGroupBase("cstype", parent0), values() {}
+  //! \copydoc ObjElement::ObjElement(const ObjElement&)
+  ObjFreeFormType(const ObjFreeFormType& rhs) :
+    ObjGroupBase(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjFreeFormType, std::string);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1)
@@ -1232,28 +1344,21 @@ public:
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     ObjElement::read_values(in, values);
-    read_obj_elements(in, elements);
+    ObjGroupBase::read_values(in);
   }
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     ObjElement::write_values(out, values);
     out << std::endl;
-    for (auto it = elements.begin(); it != elements.end(); it++)
-      (*it)->write(out);
+    ObjGroupBase::write_values(out);
     out << "end";
   }
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
-    if (rhs0->code != this->code) return false;
+    if (!ObjGroupBase::is_equal(rhs0)) return false;
     const ObjFreeFormType* lhs = this;
     const ObjFreeFormType* rhs = static_cast<const ObjFreeFormType*>(rhs0);
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
-    if (lhs->elements.size() != rhs->elements.size()) return false;
-    for (auto lit = lhs->elements.begin(), rit = rhs->elements.begin();
-	 lit != lhs->elements.end(); lit++, rit++) {
-      if (!((*lit)->is_equal(*rit)))
-	return false;
-    }
     return true;
   }
   //! \copydoc ObjElement::get_string_array
@@ -1267,19 +1372,14 @@ public:
   }
   //! Vector of free form type values.
   std::vector<std::string> values;
-  //! Vector of elements in free form type.
-  std::vector<ObjElement*> elements;
 };
 
 //! Degree element.
 class ObjDegree : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjDegree() : ObjElement("deg"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjDegree(const ObjDegree& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjDegree, uint16_t);
+  GENERIC_CONSTRUCTOR_EMPTY(ObjDegree, deg), values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjDegree), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_VECTOR_UINT(ObjDegree);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1) || (values.size() == 2));
@@ -1309,23 +1409,27 @@ public:
 //! Basis matrix element.
 class ObjBasisMatrix : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjBasisMatrix() : ObjElement("bmat"), values(), direction("") {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjBasisMatrix(const ObjBasisMatrix& rhs) :
-    ObjElement(rhs), values(rhs.values), direction(rhs.direction) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjBasisMatrix, bmat),
+    values(), direction("") {}
+  GENERIC_CONSTRUCTOR_COPY(ObjBasisMatrix),
+    values(rhs.values), direction(rhs.direction) {}
   //! \brief Initialize an element from a C array of values.
   //! \tparam T Array element type.
   //! \tparam N Array size.
   //! \param direction0 Basis direction.
   //! \param src Array of values.
+  //! \param parent0 The element's parent group.
   template <typename T, size_t N>
-  ObjBasisMatrix(const std::string& direction0, const T (&src)[N]) : ObjBasisMatrix(direction0, std::vector<T>(src, src+N)) {}
+  ObjBasisMatrix(const std::string& direction0, const T (&src)[N],
+		 const ObjGroupBase* parent0 = nullptr) :
+    ObjBasisMatrix(direction0, std::vector<T>(src, src+N), parent0) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param direction0 Basis direction.
   //! \param values0 Vector of values.
-  ObjBasisMatrix(const std::string& direction0, const std::vector<double> &values0) :
-    ObjElement("bmat"), values(), direction(direction0) {
+  //! \param parent0 The element's parent group.
+  ObjBasisMatrix(const std::string& direction0, const std::vector<double> &values0,
+		 const ObjGroupBase* parent0 = nullptr) :
+    ObjElement("bmat", parent0), values(), direction(direction0) {
     assign_values(values, values0);
     from_values();
   }
@@ -1360,11 +1464,8 @@ public:
 //! Step element.
 class ObjStep : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjStep() : ObjElement("step"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjStep(const ObjStep& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjStep, step), values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjStep), values(rhs.values) {}
   GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjStep);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
@@ -1394,19 +1495,20 @@ public:
 //! Parameter element.
 class ObjParameter : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjParameter() : ObjElement("parm"), values(), direction("") {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjParameter(const ObjParameter& rhs) :
-    ObjElement(rhs), values(rhs.values), direction(rhs.direction) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjParameter, parm),
+    values(), direction("") {}
+  GENERIC_CONSTRUCTOR_COPY(ObjParameter),
+    values(rhs.values), direction(rhs.direction) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be catable to double.
   //! \param direction0 Parameter direction.
   //! \param values0 Vector of values.
+  //! \param parent0 The element's parent group.
   template<typename T>
   ObjParameter(const std::string& direction0, const std::vector<T> &values0,
+	       const ObjGroupBase* parent0 = nullptr,
 	       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
-    ObjElement("parm"), values(), direction(direction0) {
+    ObjElement("parm", parent0), values(), direction(direction0) {
     assign_values(values, values0);
     from_values();
   }
@@ -1414,8 +1516,9 @@ public:
   //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjParameter(const std::vector<T> &,
+	       const ObjGroupBase* parent0 = nullptr,
 	       RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
-    ObjParameter() {
+    ObjParameter(parent0) {
     RAPIDJSON_ASSERT(sizeof("ObjParameter type is double"));
   }
   DUMMY_ARRAY_CONSTRUCTOR(ObjParameter);
@@ -1449,11 +1552,10 @@ public:
 //! Trim element.
 class ObjTrim : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjTrim() : ObjElement("trim"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjTrim(const ObjTrim& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjTrim, trim),
+    values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjTrim),
+    values(rhs.values) {}
   GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjTrim, ObjRefCurve);
   GENERIC_READ_VALUES;
   GENERIC_WRITE_VALUES;
@@ -1472,11 +1574,10 @@ public:
 //! Hole element.
 class ObjHole : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjHole() : ObjElement("hole"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjHole(const ObjHole& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjHole, hole),
+    values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjHole),
+    values(rhs.values) {}
   GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjHole, ObjRefCurve);
   GENERIC_READ_VALUES;
   GENERIC_WRITE_VALUES
@@ -1495,11 +1596,10 @@ public:
 //! Special curve element.
 class ObjScrv : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjScrv() : ObjElement("scrv"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjScrv(const ObjScrv& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjScrv, scrv),
+    values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjScrv),
+    values(rhs.values) {}
   GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjScrv, ObjRefCurve);
   GENERIC_READ_VALUES;
   GENERIC_WRITE_VALUES;
@@ -1518,11 +1618,10 @@ public:
 //! Special points element.
 class ObjSpecialPoints : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjSpecialPoints() : ObjElement("sp"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjSpecialPoints(const ObjSpecialPoints& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjSpecialPoints, sp),
+    values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjSpecialPoints),
+    values(rhs.values) {}
   GENERIC_CONSTRUCTOR_VECTOR_INT(ObjSpecialPoints);
   GENERIC_READ_VALUES;
   GENERIC_WRITE_VALUES;
@@ -1541,11 +1640,10 @@ public:
 //! Connection element.
 class ObjConnect : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjConnect() : ObjElement("con"), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjConnect(const ObjConnect& rhs) :
-    ObjElement(rhs), values(rhs.values) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjConnect, con),
+    values() {}
+  GENERIC_CONSTRUCTOR_COPY(ObjConnect),
+    values(rhs.values) {}
   GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjConnect, ObjRefSurface);
   GENERIC_READ_VALUES;
   GENERIC_WRITE_VALUES;
@@ -1564,72 +1662,67 @@ public:
 // Grouping
 
 //! Group of elements.
-class ObjGroup : public ObjElement {
+class ObjGroup : public ObjGroupBase {
 public:
   //! \brief Empty constructor.
-  ObjGroup() : ObjElement("g"), values(), elements() {}
+  //! \param parent0 The element's parent group.
+  ObjGroup(const ObjGroupBase* parent0 = nullptr) :
+    ObjGroupBase("g", parent0), values() {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjGroup(const ObjGroup& rhs) :
-    ObjElement(rhs), values(rhs.values), elements() {
-    for (auto it = rhs.elements.begin(); it != rhs.elements.end(); it++)
-      elements.push_back((*it)->copy());
+    ObjGroupBase(rhs), values(rhs.values) {}
+  //! \copydoc ObjElement::ObjElement(const ObjElement*)
+  ObjGroup(const ObjElement* rhs) :
+    ObjGroup(*static_cast<const ObjGroup*>(rhs)) {}
+  //! \brief Initialize an element by reading from an input stream.
+  //! \param in Input stream to read from.
+  //! \param parent0 The element's parent group.
+  ObjGroup(std::istream &in, const ObjGroupBase* parent0 = nullptr) :
+    ObjGroupBase(parent0) {
+    read_values(in);
+    from_values();
   }
   //! \brief Initialize and element from a C++ vector of values.
   //! \param values0 Vector of values.
   //! \param elements0 Vector of group elements.
+  //! \param parent0 The element's parent group.
   ObjGroup(const std::vector<std::string> &values0,
-	   const std::vector<ObjElement*> &elements0) : ObjGroup() {
+	   const std::vector<ObjElement*> &elements0,
+	   const ObjGroupBase* parent0 = nullptr)
+    : ObjGroupBase("g", elements0, parent0), values() {
     assign_values(values, values0);
-    assign_values(elements, elements0);
     from_values();
   }
   DUMMY_ARRAY_CONSTRUCTOR(ObjGroup);
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjGroup);
-  ~ObjGroup() {
-    for (auto it = elements.begin(); it != elements.end(); it++)
-      delete *it;
-    elements.resize(0);
-  }
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in) override {
     ObjElement::read_values(in, values);
-    read_obj_elements(in, elements, 'g');
+    read_obj_elements(in, elements, 'g', this);
   }
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     ObjElement::write_values(out, values);
-    out << std::endl;
-    for (auto it = elements.begin(); it != elements.end(); it++)
-      (*it)->write(out);
+    ObjGroupBase::write_values(out);
   }
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
-    if (rhs0->code != this->code) return false;
+    if (!ObjGroupBase::is_equal(rhs0)) return false;
     const ObjGroup* lhs = this;
     const ObjGroup* rhs = static_cast<const ObjGroup*>(rhs0);
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
-    if (lhs->elements.size() != rhs->elements.size()) return false;
-    for (auto lit = lhs->elements.begin(), rit = rhs->elements.begin();
-	 lit != lhs->elements.end(); lit++, rit++) {
-      if (!((*lit)->is_equal(*rit)))
-	return false;
-    }
     return true;
   }
   //! Vector of element values in the group.
   std::vector<std::string> values;
-  //! Vector of elements in the group.
-  std::vector<ObjElement*> elements;
 };
 
 //! Smoothing group element.
 class ObjSmoothingGroup : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjSmoothingGroup() : ObjElement("s"), group_number(-1) {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjSmoothingGroup(const ObjSmoothingGroup& rhs) :
-    ObjElement(rhs), group_number(rhs.group_number) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjSmoothingGroup, s),
+    group_number(-1) {}
+  GENERIC_CONSTRUCTOR_COPY(ObjSmoothingGroup),
+    group_number(rhs.group_number) {}
   DUMMY_ARRAY_CONSTRUCTOR(ObjSmoothingGroup);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjSmoothingGroup);
   //! \copydoc ObjElement::read_values
@@ -1663,11 +1756,10 @@ public:
 //! Merging group.
 class ObjMergingGroup : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjMergingGroup() : ObjElement("mg"), group_number(-1), resolution(0) {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjMergingGroup(const ObjMergingGroup& rhs) :
-    ObjElement(rhs), group_number(rhs.group_number), resolution(rhs.resolution) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjMergingGroup, mg),
+    group_number(-1), resolution(0) {}
+  GENERIC_CONSTRUCTOR_COPY(ObjMergingGroup),
+    group_number(rhs.group_number), resolution(rhs.resolution) {}
   DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjMergingGroup);
   //! \copydoc ObjElement::read_values
@@ -1708,11 +1800,8 @@ public:
 //! Object name element.
 class ObjObjectName : public ObjElement {
 public:
-  //! \brief Empty constructor.
-  ObjObjectName() : ObjElement("o"), name("") {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjObjectName(const ObjObjectName& rhs) :
-    ObjElement(rhs), name(rhs.name) {}
+  GENERIC_CONSTRUCTOR_EMPTY(ObjObjectName, o), name("") {}
+  GENERIC_CONSTRUCTOR_COPY(ObjObjectName), name(rhs.name) {}
   DUMMY_ARRAY_CONSTRUCTOR(ObjObjectName);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjObjectName);
   //! \brief Initialize an object name element.
@@ -1735,12 +1824,13 @@ public:
 
 //! \brief Read an element from an input stream.
 //! \param in Input stream.
+//! \param parent Optional element group that will contain the read elements.
 //! \return New element.
-inline ObjElement* read_obj_element(std::istream &in) {
+inline ObjElement* read_obj_element(std::istream &in, const ObjGroupBase* parent = nullptr) {
   std::string word = "";
   ObjElement* out = NULL;
   if (in >> word)
-    OBJ_ELEMENT_INIT(word, out, (in));
+    OBJ_ELEMENT_INIT(word, out, (in, parent));
   return out;
 };
 
@@ -1748,16 +1838,17 @@ inline ObjElement* read_obj_element(std::istream &in) {
 //!    encountered.
 //! \param in Input stream.
 //! \param elements Vector to read elements into.
+//! \param parent Optional element group that will contain the read elements.
 //! \param break_at Character to stop at.
 inline void read_obj_elements(std::istream &in, std::vector<ObjElement*> &elements,
-			      const char break_at) {
+			      const char break_at, const ObjGroupBase* parent) {
   while (true) {
     if (break_at) {
       in >> std::skipws;
       if (in.peek() == break_at)
 	return;
     }
-    ObjElement* x = read_obj_element(in);
+    ObjElement* x = read_obj_element(in, parent);
     if (x == NULL)
       break;
     elements.push_back(x);
@@ -1996,17 +2087,15 @@ std::istream & operator >> (std::istream &in, ObjWavefront &p)
 #undef GENERIC_READ_VALUES
 #undef DUMMY_ARRAY_CONSTRUCTOR
 #undef GENERIC_CONSTRUCTOR_VECTOR_TYPE
-#undef GENERIC_CONSTRUCTOR_VECTOR_TYPE_EXCL
 #undef GENERIC_CONSTRUCTOR_VECTOR_VERT
-#undef GENERIC_CONSTRUCTOR_VECTOR_VERT_EXCL
 #undef GENERIC_CONSTRUCTOR_VECTOR_FLOAT
-#undef GENERIC_CONSTRUCTOR_VECTOR_FLOAT_EXCL
 #undef GENERIC_CONSTRUCTOR_VECTOR_INT
-#undef GENERIC_CONSTRUCTOR_VECTOR_INT_EXCL
+#undef GENERIC_CONSTRUCTOR_VECTOR_UINT
 #undef COMPATIBLE_WITH_TYPE
 #undef COMPATIBLE_WITH_VERT
 #undef COMPATIBLE_WITH_FLOAT
 #undef COMPATIBLE_WITH_INT
+#undef COMPATIBLE_WITH_UINT
 #undef C_ARRAY_CONSTRUCTOR
 #undef GENERIC_ELEMENT_CONSTRUCTOR
 #undef OBJ_ELEMENT_INIT

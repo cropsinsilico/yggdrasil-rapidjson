@@ -1364,6 +1364,9 @@ TEST(Value, ObjWavefront) {
   obj.add_element("curv", 1.0, 3.0, {0u, 1u, 2u});
   obj.add_element("curv2", {0u, 1u, 2u});
   obj.add_element("surf", 0.0, 1.0, 2.0, 3.0, {0u, 1u, 2u});
+  // obj.add_element("cstype",);
+  obj.add_element("deg", {1u});
+  obj.add_element("deg", {1u, 2u});
   rapidjson::Value x2(obj);
   rapidjson::ObjWavefront cpy2;
   x2.GetObjWavefront(cpy2);
