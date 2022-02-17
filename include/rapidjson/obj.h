@@ -47,6 +47,41 @@ RAPIDJSON_NAMESPACE_BEGIN
   /*! \param src Array of values. */					\
   template <typename T, size_t N>					\
   cls(const T (&values)[N]) : cls(std::vector<T>(values, values+N)) {}
+#define COMPATIBLE_WITH_INT(T)				       \
+  internal::OrExpr<internal::IsSame<T,int>,	               \
+    internal::OrExpr<internal::IsSame<T,int8_t>,               \
+      internal::OrExpr<internal::IsSame<T,uint8_t>,	       \
+	internal::OrExpr<internal::IsSame<T,int16_t>,	       \
+	  internal::OrExpr<internal::IsSame<T,uint16_t>,       \
+	    internal::OrExpr<internal::IsSame<T,int32_t>,      \
+	      internal::OrExpr<internal::IsSame<T,uint32_t>,   \
+		internal::OrExpr<internal::IsSame<T,int64_t>,  \
+		  internal::OrExpr<internal::IsSame<T,ObjRef>, \
+		    internal::IsSame<T,uint64_t>>>>>>>>>>
+#define COMPATIBLE_WITH_FLOAT(T)				       \
+  internal::OrExpr<internal::IsSame<T,int>,	               \
+    internal::OrExpr<internal::IsSame<T,int8_t>,               \
+      internal::OrExpr<internal::IsSame<T,uint8_t>,	       \
+	internal::OrExpr<internal::IsSame<T,int16_t>,	       \
+	  internal::OrExpr<internal::IsSame<T,uint16_t>,       \
+	    internal::OrExpr<internal::IsSame<T,int32_t>,      \
+	      internal::OrExpr<internal::IsSame<T,uint32_t>,   \
+		internal::OrExpr<internal::IsSame<T,int64_t>,  \
+		  internal::OrExpr<internal::IsSame<T,float>, \
+  		    internal::OrExpr<internal::IsSame<T,double>, \
+		      internal::IsSame<T,uint64_t>>>>>>>>>>>
+#define COMPATIBLE_WITH_VERT(T)						\
+  internal::OrExpr<internal::IsSame<T,ObjRefVertex>, COMPATIBLE_WITH_INT(T)>
+#define EXCLUDE_VECTOR_NON_INT(cls, code)				\
+  /*! \brief Raise an error if non-int vector is provided. */		\
+  /*! \tparam T Type of vector elements. */				\
+  template <typename T>							\
+  cls(const std::vector<T>&, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_INT(T)))) : \
+    ObjElement(#code), values() {					\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from integers.")); \
+}
+
+
 #define DUMMY_ARRAY_CONSTRUCTOR(cls)		\
   C_ARRAY_CONSTRUCTOR(cls);			\
   /*! \brief Raise an error. */			\
@@ -54,6 +89,13 @@ RAPIDJSON_NAMESPACE_BEGIN
   cls(const std::vector<T> &) {			\
     RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from a vector")); \
   }
+#define GENERIC_READ_VALUES						\
+  /*! \copydoc ObjElement::read_values */				\
+  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+#define GENERIC_WRITE_VALUES						\
+  /*! \copydoc ObjElement::write_values */				\
+  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+
 
 //! Checks if two values are equal using == operator.
 template <typename T>
@@ -164,17 +206,7 @@ public:
   //! \param v0 Index of the vertex's coordinates
   template <typename T>
   ObjRefVertex(const T& v0,
-	       RAPIDJSON_ENABLEIF((
-      internal::OrExpr<internal::IsSame<T,int>,
-      internal::OrExpr<internal::IsSame<T,int8_t>,
-      internal::OrExpr<internal::IsSame<T,uint8_t>,
-      internal::OrExpr<internal::IsSame<T,int16_t>,
-      internal::OrExpr<internal::IsSame<T,uint16_t>,
-      internal::OrExpr<internal::IsSame<T,int32_t>,
-      internal::OrExpr<internal::IsSame<T,uint32_t>,
-      internal::OrExpr<internal::IsSame<T,int64_t>,
-      internal::OrExpr<internal::IsSame<T,ObjRef>,
-      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+	       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjRefVertex(v0, -1, -1) {}
   //! \brief Write the vertex to an output stream.
   //! \param out Output stream.
@@ -582,13 +614,14 @@ std::ostream & operator << (std::ostream &out, const ObjElement &p)
 //! Vertex data
 class ObjVertex : public ObjElement {
 public:
+  //! \brief Empty constructor.
+  ObjVertex() : ObjElement("v"), values(), x(0), y(0), z(0), w(-1), color() {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjVertex(const ObjVertex& rhs) :
     ObjElement(rhs), values(rhs.values), x(rhs.x), y(rhs.y), z(rhs.z), w(rhs.w), color(rhs.color) {}
   //! \brief Initialize an element by reading from an input stream.
   //! \param in Input stream to read from.
-  ObjVertex(std::istream &in) :
-    ObjElement("v"), values(), x(0), y(0), z(0), w(-1), color() {
+  ObjVertex(std::istream &in) : ObjVertex() {
     ObjElement::read_values(in, values);
     // read_values(in);
     from_values();
@@ -598,18 +631,7 @@ public:
   //! \param values0 Vector of values.
   template <typename T>
   ObjVertex(const std::vector<T> &values0,
-	    RAPIDJSON_ENABLEIF((
-     internal::OrExpr<internal::IsSame<T,double>,
-     internal::OrExpr<internal::IsSame<T,float>,
-     internal::OrExpr<internal::IsSame<T,int8_t>,
-     internal::OrExpr<internal::IsSame<T,uint8_t>,
-     internal::OrExpr<internal::IsSame<T,int16_t>,
-     internal::OrExpr<internal::IsSame<T,uint16_t>,
-     internal::OrExpr<internal::IsSame<T,int32_t>,
-     internal::OrExpr<internal::IsSame<T,uint32_t>,
-     internal::OrExpr<internal::IsSame<T,int64_t>,
-     internal::IsSame<T,uint64_t>>>>>>>>>>))) :
-    ObjElement("v"), values(), x(0), y(0), z(0), w(-1), color() {
+	    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) : ObjVertex() {
     assign_values(values, values0);
     from_values();
   }
@@ -617,17 +639,7 @@ public:
   //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjVertex(const std::vector<T> &,
-	    RAPIDJSON_DISABLEIF((
-     internal::OrExpr<internal::IsSame<T,double>,
-     internal::OrExpr<internal::IsSame<T,float>,
-     internal::OrExpr<internal::IsSame<T,int8_t>,
-     internal::OrExpr<internal::IsSame<T,uint8_t>,
-     internal::OrExpr<internal::IsSame<T,int16_t>,
-     internal::OrExpr<internal::IsSame<T,uint16_t>,
-     internal::OrExpr<internal::IsSame<T,int32_t>,
-     internal::OrExpr<internal::IsSame<T,uint32_t>,
-     internal::OrExpr<internal::IsSame<T,int64_t>,
-     internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+	    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("v"), values(), x(0), y(0), z(0), w(-1), color() {
     RAPIDJSON_ASSERT(!sizeof("ObjVertex type is double"));
   }
@@ -652,8 +664,7 @@ public:
     else
       w = -1;
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  GENERIC_READ_VALUES;
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << x << " " << y << " " << z;
@@ -732,8 +743,7 @@ public:
     else
       w = -1;
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  GENERIC_READ_VALUES;
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << u << " " << v;
@@ -801,8 +811,7 @@ public:
     j = values[1];
     k = values[2];
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  GENERIC_READ_VALUES;
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << i << " " << j << " " << k;
@@ -875,8 +884,7 @@ public:
     if (values.size() == 3)
       w = values[2];
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  GENERIC_READ_VALUES;
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
     out << u;
@@ -934,17 +942,7 @@ public:
   //! \param values0 Vector of values.
   template <typename T>
   ObjPoint(const std::vector<T> &values0,
-	      RAPIDJSON_ENABLEIF((
-      internal::OrExpr<internal::IsSame<T,int>,
-      internal::OrExpr<internal::IsSame<T,int8_t>,
-      internal::OrExpr<internal::IsSame<T,uint8_t>,
-      internal::OrExpr<internal::IsSame<T,int16_t>,
-      internal::OrExpr<internal::IsSame<T,uint16_t>,
-      internal::OrExpr<internal::IsSame<T,int32_t>,
-      internal::OrExpr<internal::IsSame<T,uint32_t>,
-      internal::OrExpr<internal::IsSame<T,int64_t>,
-      internal::OrExpr<internal::IsSame<T,ObjRef>,
-      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjElement("p"), values() {
     assign_values(values, values0);
     from_values();
@@ -953,26 +951,14 @@ public:
   //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjPoint(const std::vector<T> &,
-	      RAPIDJSON_DISABLEIF((
-      internal::OrExpr<internal::IsSame<T,int>,
-      internal::OrExpr<internal::IsSame<T,int8_t>,
-      internal::OrExpr<internal::IsSame<T,uint8_t>,
-      internal::OrExpr<internal::IsSame<T,int16_t>,
-      internal::OrExpr<internal::IsSame<T,uint16_t>,
-      internal::OrExpr<internal::IsSame<T,int32_t>,
-      internal::OrExpr<internal::IsSame<T,uint32_t>,
-      internal::OrExpr<internal::IsSame<T,int64_t>,
-      internal::OrExpr<internal::IsSame<T,ObjRef>,
-      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+	   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjElement("p"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjPoint type is ObjRef"));
   }
   C_ARRAY_CONSTRUCTOR(ObjPoint);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjPoint);
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES;
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -1010,17 +996,7 @@ public:
   //! \param values0 Vector of values.
   template <typename T>
   ObjLine(const std::vector<T> &values0,
-	  RAPIDJSON_ENABLEIF((
-      internal::OrExpr<internal::IsSame<T,ObjRefVertex>,
-      internal::OrExpr<internal::IsSame<T,int>,
-      internal::OrExpr<internal::IsSame<T,int8_t>,
-      internal::OrExpr<internal::IsSame<T,uint8_t>,
-      internal::OrExpr<internal::IsSame<T,int16_t>,
-      internal::OrExpr<internal::IsSame<T,uint16_t>,
-      internal::OrExpr<internal::IsSame<T,int32_t>,
-      internal::OrExpr<internal::IsSame<T,uint32_t>,
-      internal::OrExpr<internal::IsSame<T,int64_t>,
-      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+	  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_VERT(T)))) :
     ObjElement("l"), values() {
     assign_values(values, values0);
     from_values();
@@ -1029,17 +1005,7 @@ public:
   //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjLine(const std::vector<T> &,
-	  RAPIDJSON_DISABLEIF((
-      internal::OrExpr<internal::IsSame<T,ObjRefVertex>,
-      internal::OrExpr<internal::IsSame<T,int>,
-      internal::OrExpr<internal::IsSame<T,int8_t>,
-      internal::OrExpr<internal::IsSame<T,uint8_t>,
-      internal::OrExpr<internal::IsSame<T,int16_t>,
-      internal::OrExpr<internal::IsSame<T,uint16_t>,
-      internal::OrExpr<internal::IsSame<T,int32_t>,
-      internal::OrExpr<internal::IsSame<T,uint32_t>,
-      internal::OrExpr<internal::IsSame<T,int64_t>,
-      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+	  RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_VERT(T)))) :
     ObjElement("l"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjLine type is ObjRefVertex"));
   }
@@ -1048,10 +1014,8 @@ public:
   //! \copydoc ObjElement::from_values()
   void from_values() override
   { RAPIDJSON_ASSERT(values.size() >= 2); }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES;
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -1088,17 +1052,7 @@ public:
   //! \param values0 Vector of values.
   template <typename T>
   ObjFace(const std::vector<T> &values0,
-	  RAPIDJSON_ENABLEIF((
-      internal::OrExpr<internal::IsSame<T,ObjRefVertex>,
-      internal::OrExpr<internal::IsSame<T,int>,
-      internal::OrExpr<internal::IsSame<T,int8_t>,
-      internal::OrExpr<internal::IsSame<T,uint8_t>,
-      internal::OrExpr<internal::IsSame<T,int16_t>,
-      internal::OrExpr<internal::IsSame<T,uint16_t>,
-      internal::OrExpr<internal::IsSame<T,int32_t>,
-      internal::OrExpr<internal::IsSame<T,uint32_t>,
-      internal::OrExpr<internal::IsSame<T,int64_t>,
-      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+	  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_VERT(T)))) :
     ObjElement("f"), values() {
     assign_values(values, values0);
     from_values();
@@ -1107,17 +1061,7 @@ public:
   //! \tparam T Vector element type. Must be an integer or floating point.
   template <typename T>
   ObjFace(const std::vector<T> &,
-	  RAPIDJSON_DISABLEIF((
-      internal::OrExpr<internal::IsSame<T,ObjRefVertex>,
-      internal::OrExpr<internal::IsSame<T,int>,
-      internal::OrExpr<internal::IsSame<T,int8_t>,
-      internal::OrExpr<internal::IsSame<T,uint8_t>,
-      internal::OrExpr<internal::IsSame<T,int16_t>,
-      internal::OrExpr<internal::IsSame<T,uint16_t>,
-      internal::OrExpr<internal::IsSame<T,int32_t>,
-      internal::OrExpr<internal::IsSame<T,uint32_t>,
-      internal::OrExpr<internal::IsSame<T,int64_t>,
-      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+	  RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_VERT(T)))) :
     ObjElement("f"), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjFace type is ObjRefVertex"));
   }
@@ -1127,10 +1071,8 @@ public:
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() >= 3);
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES;
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -1180,17 +1122,7 @@ public:
   template <typename T>
   ObjCurve(const double& u00, const double& u10,
 	   const std::vector<T> &values0,
-	   RAPIDJSON_ENABLEIF((
-      internal::OrExpr<internal::IsSame<T,int>,
-      internal::OrExpr<internal::IsSame<T,int8_t>,
-      internal::OrExpr<internal::IsSame<T,uint8_t>,
-      internal::OrExpr<internal::IsSame<T,int16_t>,
-      internal::OrExpr<internal::IsSame<T,uint16_t>,
-      internal::OrExpr<internal::IsSame<T,int32_t>,
-      internal::OrExpr<internal::IsSame<T,uint32_t>,
-      internal::OrExpr<internal::IsSame<T,int64_t>,
-      internal::OrExpr<internal::IsSame<T,ObjRef>,
-      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjElement("curv"), values(), u0(u00), u1(u10) {
     assign_values(values, values0);
     from_values();
@@ -1249,28 +1181,30 @@ public:
     read_values(in);
     from_values();
   }
-  ObjCurve2D(const std::vector<ObjRef> &values0) :
+  //! \brief Initialize and element from a C++ vector of values.
+  //! \tparam T Vector element type. Must be an integer.
+  //! \param values0 Vector of values.
+  template <typename T>
+  ObjCurve2D(const std::vector<T> &values0,
+	     RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjElement("curv2"), values() {
     assign_values(values, values0);
     from_values();
   }
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer or floating point.
-  template <typename T>
-  ObjCurve2D(const std::vector<T> &) :
-    ObjElement("curv2"), values() {
-    RAPIDJSON_ASSERT(!sizeof("ObjCurve2D type is ObjRef"));
-  }
+  // template <typename T>
+  // ObjCurve2D(const std::vector<T> &) :
+  //   ObjElement("curv2"), values() {
+  //   RAPIDJSON_ASSERT(!sizeof("ObjCurve2D type is ObjRef"));
+  // }
+  EXCLUDE_VECTOR_NON_INT(ObjCurve2D, curv2);
   C_ARRAY_CONSTRUCTOR(ObjCurve2D);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjCurve2D);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() >= 2);
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES;
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -1326,17 +1260,7 @@ public:
   ObjSurface(const double& s00, const double& s10,
 	     const double& t00, const double& t10,
 	     const std::vector<T> &values0,
-	     RAPIDJSON_ENABLEIF((
-      internal::OrExpr<internal::IsSame<T,int>,
-      internal::OrExpr<internal::IsSame<T,int8_t>,
-      internal::OrExpr<internal::IsSame<T,uint8_t>,
-      internal::OrExpr<internal::IsSame<T,int16_t>,
-      internal::OrExpr<internal::IsSame<T,uint16_t>,
-      internal::OrExpr<internal::IsSame<T,int32_t>,
-      internal::OrExpr<internal::IsSame<T,uint32_t>,
-      internal::OrExpr<internal::IsSame<T,int64_t>,
-      internal::OrExpr<internal::IsSame<T,ObjRef>,
-      internal::IsSame<T,uint64_t>>>>>>>>>>))) :
+	     RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjElement("surf"), values(), s0(s00), s1(s10), t0(t00), t1(t10) {
     assign_values(values, values0);
     from_values();
@@ -1509,10 +1433,8 @@ public:
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1) || (values.size() == 2));
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES;
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -1627,10 +1549,8 @@ public:
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1) || (values.size() == 2));
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES;
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -1733,10 +1653,8 @@ public:
   }
   C_ARRAY_CONSTRUCTOR(ObjTrim);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjTrim);
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES;
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -1777,10 +1695,8 @@ public:
   }
   C_ARRAY_CONSTRUCTOR(ObjHole);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjHole);
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -1821,10 +1737,8 @@ public:
   }
   C_ARRAY_CONSTRUCTOR(ObjScrv);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjScrv);
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES;
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -1865,10 +1779,8 @@ public:
   }
   C_ARRAY_CONSTRUCTOR(ObjSpecialPoints);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjSpecialPoints);
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES;
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -1909,10 +1821,8 @@ public:
   }
   C_ARRAY_CONSTRUCTOR(ObjConnect);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjConnect);
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  GENERIC_READ_VALUES;
+  GENERIC_WRITE_VALUES;
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
     if (rhs0->code != this->code) return false;
@@ -2376,6 +2286,18 @@ inline
 std::istream & operator >> (std::istream &in, ObjWavefront &p)
 { return p.read(in); };
 
+#undef GENERIC_WRITE_VALUES
+#undef GENERIC_READ_VALUES
+#undef DUMMY_ARRAY_CONSTRUCTOR
+#undef EXCLUDE_VECTOR_NON_INT
+#undef COMPATIBLE_WITH_VERT
+#undef COMPATIBLE_WITH_FLOAT
+#undef COMPATIBLE_WITH_INT
+#undef C_ARRAY_CONSTRUCTOR
+#undef GENERIC_ELEMENT_CONSTRUCTOR
+#undef OBJ_ELEMENT_INIT
+#undef IS_EQUAL_DBL
+#undef IS_EQUAL_FLT
 
 RAPIDJSON_NAMESPACE_END
 
