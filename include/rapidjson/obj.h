@@ -72,21 +72,54 @@ RAPIDJSON_NAMESPACE_BEGIN
 		      internal::IsSame<T,uint64_t>>>>>>>>>>>
 #define COMPATIBLE_WITH_VERT(T)						\
   internal::OrExpr<internal::IsSame<T,ObjRefVertex>, COMPATIBLE_WITH_INT(T)>
-#define EXCLUDE_VECTOR_NON_INT(cls, code)				\
+#define GENERIC_CONSTRUCTOR_VECTOR_INT_EXCL(cls) \
   /*! \brief Raise an error if non-int vector is provided. */		\
   /*! \tparam T Type of vector elements. */				\
   template <typename T>							\
   cls(const std::vector<T>&, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_INT(T)))) : \
-    ObjElement(#code), values() {					\
+    ObjElement(), values() {						\
     RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from integers.")); \
 }
+#define GENERIC_CONSTRUCTOR_VECTOR_FLOAT_EXCL(cls) \
+  /*! \brief Raise an error if non-float vector is provided. */		\
+  /*! \tparam T Type of vector elements. */				\
+  template <typename T>							\
+  cls(const std::vector<T>&, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) : \
+    ObjElement(), values() {						\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from floats.")); \
+}
+#define GENERIC_CONSTRUCTOR_VECTOR_INT(cls)				\
+  /*! \brief Initialize and element from a C++ vector of int values. */	\
+  /*! \tparam T Vector element type. Must be int castable. */		\
+  /*! \param values0 Vector of values. */				\
+  template <typename T>							\
+  cls(const std::vector<T> &values0,					\
+      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) : cls() {		\
+    assign_values(values, values0);					\
+    from_values();							\
+  }									\
+  GENERIC_CONSTRUCTOR_VECTOR_INT_EXCL(cls);				\
+  C_ARRAY_CONSTRUCTOR(cls);						\
+  GENERIC_ELEMENT_CONSTRUCTOR(cls);
+#define GENERIC_CONSTRUCTOR_VECTOR_FLOAT(cls)				\
+  /*! \brief Initialize and element from a C++ vector of float values. */ \
+  /*! \tparam T Vector element type. Must be float castable. */		\
+  /*! \param values0 Vector of values. */				\
+  template <typename T>							\
+  cls(const std::vector<T> &values0,					\
+      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) : cls() {		\
+    assign_values(values, values0);					\
+    from_values();							\
+  }									\
+  GENERIC_CONSTRUCTOR_VECTOR_FLOAT_EXCL(cls);				\
+  C_ARRAY_CONSTRUCTOR(cls);						\
+  GENERIC_ELEMENT_CONSTRUCTOR(cls);
 
-
-#define DUMMY_ARRAY_CONSTRUCTOR(cls)		\
-  C_ARRAY_CONSTRUCTOR(cls);			\
-  /*! \brief Raise an error. */			\
-  template <typename T>				\
-  cls(const std::vector<T> &) {			\
+#define DUMMY_ARRAY_CONSTRUCTOR(cls)					\
+  C_ARRAY_CONSTRUCTOR(cls);						\
+  /*! \brief Raise an error. */						\
+  template <typename T>							\
+  cls(const std::vector<T> &) : cls() {					\
     RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from a vector")); \
   }
 #define GENERIC_READ_VALUES						\
@@ -1095,12 +1128,13 @@ public:
 //! Curve element.
 class ObjCurve : public ObjElement {
 public:
+  //! \brief Empty constructor.
+  ObjCurve() : ObjElement("curv"), values(), u0(0), u1(0) {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjCurve(const ObjCurve& rhs) :
     ObjElement(rhs), values(rhs.values), u0(rhs.u0), u1(rhs.u1) {}
   //! \copydoc ObjVertex::ObjVertex(std::istream&)
-  ObjCurve(std::istream &in) :
-    ObjElement("curv"), values(), u0(0), u1(0) {
+  ObjCurve(std::istream &in) : ObjCurve() {
     read_values(in);
     from_values();
   }
@@ -1172,33 +1206,17 @@ public:
 //! 2D curve element.
 class ObjCurve2D : public ObjElement {
 public:
+  //! \brief Empty constructor.
+  ObjCurve2D() : ObjElement("curv2"), values() {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjCurve2D(const ObjCurve2D& rhs) :
     ObjElement(rhs), values(rhs.values) {}
   //! \copydoc ObjVertex::ObjVertex(std::istream&)
-  ObjCurve2D(std::istream &in) :
-    ObjElement("curv2"), values() {
+  ObjCurve2D(std::istream &in) : ObjCurve2D() {
     read_values(in);
     from_values();
   }
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Vector element type. Must be an integer.
-  //! \param values0 Vector of values.
-  template <typename T>
-  ObjCurve2D(const std::vector<T> &values0,
-	     RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
-    ObjElement("curv2"), values() {
-    assign_values(values, values0);
-    from_values();
-  }
-  // template <typename T>
-  // ObjCurve2D(const std::vector<T> &) :
-  //   ObjElement("curv2"), values() {
-  //   RAPIDJSON_ASSERT(!sizeof("ObjCurve2D type is ObjRef"));
-  // }
-  EXCLUDE_VECTOR_NON_INT(ObjCurve2D, curv2);
-  C_ARRAY_CONSTRUCTOR(ObjCurve2D);
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjCurve2D);
+  GENERIC_CONSTRUCTOR_VECTOR_INT(ObjCurve2D);
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() >= 2);
@@ -1227,12 +1245,13 @@ public:
 //! Surface element.
 class ObjSurface : public ObjElement {
 public:
+  //! \brief Empty constructor.
+  ObjSurface() : ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjSurface(const ObjSurface& rhs) :
     ObjElement(rhs), values(rhs.values), s0(rhs.s0), s1(rhs.s1), t0(rhs.t0), t1(rhs.t1) {}
   //! \copydoc ObjVertex::ObjVertex(std::istream&)
-  ObjSurface(std::istream &in) :
-    ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {
+  ObjSurface(std::istream &in) : ObjSurface() {
     read_values(in);
     from_values();
   }
@@ -1265,13 +1284,6 @@ public:
     assign_values(values, values0);
     from_values();
   }
-  // //! \brief Initialize and element from a C++ vector of values.
-  // //! \tparam T Vector element type. Must be an integer or floating point.
-  // template <typename T>
-  // ObjSurface(const std::vector<T> &) :
-  //   ObjElement("surf"), values(), s0(0), s1(0), t0(0), t1(0) {
-  //   RAPIDJSON_ASSERT(!sizeof("ObjSurface type is ObjRefVertex"));
-  // }
   DUMMY_ARRAY_CONSTRUCTOR(ObjSurface);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjSurface);
   //! \copydoc ObjElement::read_values
@@ -1458,12 +1470,13 @@ public:
 //! Basis matrix element.
 class ObjBasisMatrix : public ObjElement {
 public:
+  //! \brief Empty constructor.
+  ObjBasisMatrix() : ObjElement("bmat"), values(), direction("") {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjBasisMatrix(const ObjBasisMatrix& rhs) :
     ObjElement(rhs), values(rhs.values), direction(rhs.direction) {}
   //! \copydoc ObjVertex::ObjVertex(std::istream&)
-  ObjBasisMatrix(std::istream &in) :
-    ObjElement("bmat"), values(), direction("") {
+  ObjBasisMatrix(std::istream &in) : ObjBasisMatrix() {
     read_values(in);
     from_values();
   }
@@ -1473,7 +1486,7 @@ public:
   //! \param direction0 Basis direction.
   //! \param src Array of values.
   template <typename T, size_t N>
-  ObjBasisMatrix(const std::string& direction0, const T (&src)[N]) : ObjBasisMatrix(direction, std::vector<T>(src, src+N)) {}
+  ObjBasisMatrix(const std::string& direction0, const T (&src)[N]) : ObjBasisMatrix(direction0, std::vector<T>(src, src+N)) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \param direction0 Basis direction.
   //! \param values0 Vector of values.
@@ -1482,13 +1495,6 @@ public:
     assign_values(values, values0);
     from_values();
   }
-  // //! \brief Initialize and element from a C++ vector of values.
-  // //! \tparam T Vector element type. Must be an integer or floating point.
-  // template <typename T>
-  // ObjBasisMatrix(const std::vector<T> &) :
-  //   ObjElement("bmat"), values(), direction("") {
-  //   RAPIDJSON_ASSERT(!sizeof("ObjBasisMatrix type is double"));
-  // }
   DUMMY_ARRAY_CONSTRUCTOR(ObjBasisMatrix);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjBasisMatrix);
   //! \copydoc ObjElement::read_values
@@ -1573,12 +1579,13 @@ public:
 //! Parameter element.
 class ObjParameter : public ObjElement {
 public:
+  //! \brief Empty constructor.
+  ObjParameter() : ObjElement("parm"), values(), direction("") {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjParameter(const ObjParameter& rhs) :
     ObjElement(rhs), values(rhs.values), direction(rhs.direction) {}
   //! \copydoc ObjVertex::ObjVertex(std::istream&)
-  ObjParameter(std::istream &in) :
-    ObjElement("parm"), values(), direction("") {
+  ObjParameter(std::istream &in) : ObjParameter() {
     read_values(in);
     from_values();
   }
@@ -1840,6 +1847,8 @@ public:
 //! Group of elements.
 class ObjGroup : public ObjElement {
 public:
+  //! \brief Empty constructor.
+  ObjGroup() : ObjElement("g"), values(), elements() {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjGroup(const ObjGroup& rhs) :
     ObjElement(rhs), values(rhs.values), elements() {
@@ -1847,8 +1856,7 @@ public:
       elements.push_back((*it)->copy());
   }
   //! \copydoc ObjVertex::ObjVertex(std::istream&)
-  ObjGroup(std::istream &in) :
-    ObjElement("g"), values(), elements() {
+  ObjGroup(std::istream &in) : ObjGroup() {
     read_values(in);
     from_values();
   }
@@ -1910,12 +1918,13 @@ public:
 //! Smoothing group element.
 class ObjSmoothingGroup : public ObjElement {
 public:
+  //! \brief Empty constructor.
+  ObjSmoothingGroup() : ObjElement("s"), group_number(-1) {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjSmoothingGroup(const ObjSmoothingGroup& rhs) :
     ObjElement(rhs), group_number(rhs.group_number) {}
   //! \copydoc ObjVertex::ObjVertex(std::istream&)
-  ObjSmoothingGroup(std::istream &in) :
-    ObjElement("s"), group_number(-1) {
+  ObjSmoothingGroup(std::istream &in) : ObjSmoothingGroup() {
     read_values(in);
   }
   DUMMY_ARRAY_CONSTRUCTOR(ObjSmoothingGroup);
@@ -1951,12 +1960,13 @@ public:
 //! Merging group.
 class ObjMergingGroup : public ObjElement {
 public:
+  //! \brief Empty constructor.
+  ObjMergingGroup() : ObjElement("mg"), group_number(-1), resolution(0) {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjMergingGroup(const ObjMergingGroup& rhs) :
     ObjElement(rhs), group_number(rhs.group_number), resolution(rhs.resolution) {}
   //! \copydoc ObjVertex::ObjVertex(std::istream&)
-  ObjMergingGroup(std::istream &in) :
-    ObjElement("mg"), group_number(-1), resolution(0) {
+  ObjMergingGroup(std::istream &in) : ObjMergingGroup() {
     read_values(in);
   }
   DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup);
@@ -1999,12 +2009,13 @@ public:
 //! Object name element.
 class ObjObjectName : public ObjElement {
 public:
+  //! \brief Empty constructor.
+  ObjObjectName() : ObjElement("o"), name("") {}
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjObjectName(const ObjObjectName& rhs) :
     ObjElement(rhs), name(rhs.name) {}
   //! \copydoc ObjVertex::ObjVertex(std::istream&)
-  ObjObjectName(std::istream &in) :
-    ObjElement("o"), name("") {
+  ObjObjectName(std::istream &in) : ObjObjectName() {
     read_values(in);
   }
   DUMMY_ARRAY_CONSTRUCTOR(ObjObjectName);
@@ -2223,7 +2234,7 @@ public:
 		   const double& u0, const double& u1,
 		   const double& u2, const double& u3,
 		   const T (&values)[N]) {
-    add_element(name, u0, u1, std::vector<T>(values, values+N));
+    add_element(name, u0, u1, u2, u3, std::vector<T>(values, values+N));
   }
 
   //! \brief Check if another ObjWavefront instance is equivalent by
@@ -2289,7 +2300,8 @@ std::istream & operator >> (std::istream &in, ObjWavefront &p)
 #undef GENERIC_WRITE_VALUES
 #undef GENERIC_READ_VALUES
 #undef DUMMY_ARRAY_CONSTRUCTOR
-#undef EXCLUDE_VECTOR_NON_INT
+#undef GENERIC_CONSTRUCTOR_VECTOR_INT
+#undef GENERIC_CONSTRUCTOR_VECTOR_INT_EXCL
 #undef COMPATIBLE_WITH_VERT
 #undef COMPATIBLE_WITH_FLOAT
 #undef COMPATIBLE_WITH_INT
