@@ -657,7 +657,7 @@ public:
   template <typename T1, typename T2>
   void assign_values(std::vector<T1>& dst, const std::vector<T2> &src) {
     for (auto it = src.begin(); it != src.end(); it++)
-      dst.emplace_back(*it);
+      dst.emplace_back((T1)(*it));
   }
   //! \brief Assign element members from an array of values stored in another
   //!   class member during a previous call to assign_values.
@@ -733,6 +733,8 @@ public:
     write(ss);
     return out;
   }
+  //! Disable copy assignment for elements.
+  ObjElement& operator=(const ObjElement* other);
   //! Code indicating the type of element.
   std::string code;
   //! Pointer to the parent element class.
@@ -1678,7 +1680,7 @@ public:
   //! \param in Input stream to read from.
   //! \param parent0 The element's parent group.
   ObjGroup(std::istream &in, const ObjGroupBase* parent0 = nullptr) :
-    ObjGroupBase(parent0) {
+    ObjGroupBase(parent0), values() {
     read_values(in);
     from_values();
   }
