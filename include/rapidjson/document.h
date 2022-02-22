@@ -4184,19 +4184,22 @@ public:
       ss >> o;
     } else if (IsPly()) {
       Ply p = GetPly();
+      size_t nvert = 0;
       for (auto name = p.element_order.begin(); name != p.element_order.end(); name++) {
 	if ((*name) == "vertex") {
 	  for (auto it = p.elements[*name].elements.begin();
-	       it != p.elements[*name].elements.end(); it++)
+	       it != p.elements[*name].elements.end(); it++) {
 	    o.add_element("v", it->get_double_array());
+	    nvert++;
+	  }
 	} else if ((*name) == "face") {
 	  for (auto it = p.elements[*name].elements.begin();
 	       it != p.elements[*name].elements.end(); it++)
-	    o.add_element("f", it->get_int_array());
+	    o.add_element("f", it->get_int_array(nvert));
 	} else if ((*name) == "edge") {
 	  for (auto it = p.elements[*name].elements.begin();
 	       it != p.elements[*name].elements.end(); it++)
-	    o.add_element("l", it->get_int_array());
+	    o.add_element("l", it->get_int_array(nvert));
 	} else
 	  RAPIDJSON_ASSERT(((*name) == "vertex") ||
 			   ((*name) == "face") ||
@@ -4218,16 +4221,18 @@ public:
       ss >> p;
     } else if (IsObjWavefront()) {
       ObjWavefront o = GetObjWavefront();
+      size_t nvert = 0;
       for (auto it = o.elements.begin(); it != o.elements.end(); it++) {
 	if ((*it)->code == "v") {
 	  std::vector<std::string> property_names {"x", "y", "z"};
 	  p.add_element("vertex", (*it)->get_double_array(), property_names);
+	  nvert++;
 	} else if ((*it)->code == "f") {
 	  std::vector<std::string> property_names {"vertex_index"};
-	  p.add_element("face", (*it)->get_int_array(), property_names);
+	  p.add_element("face", (*it)->get_int_array(nvert), property_names);
 	} else if ((*it)->code == "l") {
 	  std::vector<std::string> property_names {"vertex1", "vertex2"};
-	  p.add_element("edge", (*it)->get_int_array(), property_names);
+	  p.add_element("edge", (*it)->get_int_array(nvert), property_names);
 	}
 	else
 	  RAPIDJSON_ASSERT(((*it)->code == "v") ||

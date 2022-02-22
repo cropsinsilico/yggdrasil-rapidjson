@@ -44,7 +44,7 @@ RAPIDJSON_NAMESPACE_BEGIN
     else if (word == "trace_obj" ) lhs = new ObjTraceFile args;		\
     else if (word == "ctech"     ) lhs = new ObjCTech args;		\
     else if (word == "stech"     ) lhs = new ObjSTech args;		\
-    else if (word == "end"       ) lhs = NULL;				\
+    else if (word == "end"       ) lhs = nullptr;			\
     else RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported element signifier: ") + word)); \
   }
 #define GENERIC_ELEMENT_CONSTRUCTOR(cls)				\
@@ -53,9 +53,12 @@ RAPIDJSON_NAMESPACE_BEGIN
   /*! \brief Initialize an element by reading from an input stream. */	\
   /*! \param in Input stream to read from. */				\
   /*! \param parent0 The element's parent group. */			\
-  cls(std::istream &in, const ObjGroupBase* parent0 = nullptr) :	\
+  /*! \param dont_descend If true, subelements will not be read from */ \
+  /*!   the input stream. */						\
+  cls(std::istream &in, const ObjGroupBase* parent0 = nullptr,		\
+      const bool& dont_descend = false) :				\
     cls(parent0) {							\
-    read_values(in);							\
+    read_values(in, dont_descend);					\
     from_values();							\
   }									\
   /*! \copydoc ObjElement::copy() */					\
@@ -228,14 +231,6 @@ RAPIDJSON_NAMESPACE_BEGIN
   }									\
   C_ARRAY_CONSTRUCTOR(cls);						\
   GENERIC_ELEMENT_CONSTRUCTOR(cls);
-// /*! \brief Raise an error if non-type vector is provided. */		\
-  // /*! \tparam T Type of vector elements. */				\
-// template <typename T>						\
-  // cls(const std::vector<T>&,						\
-  //     const ObjGroupBase* parent0 = nullptr,				\
-  //     RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, T2)))) : cls(parent0){ \
-  //   RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from" #T2 ".")); \
-  // }									\
 
 #define DUMMY_ARRAY_CONSTRUCTOR(cls)					\
   C_ARRAY_CONSTRUCTOR(cls);						\
@@ -247,7 +242,7 @@ RAPIDJSON_NAMESPACE_BEGIN
   }
 #define GENERIC_READ_VALUES						\
   /*! \copydoc ObjElement::read_values */				\
-  void read_values(std::istream &in) override { ObjElement::read_values(in, values); }
+  void read_values(std::istream &in, const bool&) override { ObjElement::read_values(in, values); }
 #define GENERIC_WRITE_VALUES						\
   /*! \copydoc ObjElement::write_values */				\
   void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
@@ -265,13 +260,23 @@ RAPIDJSON_NAMESPACE_BEGIN
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;	\
     return true;							\
   }
-#define GENERIC_GET_INT_ARRAY					\
-  /*! \copydoc ObjElement::get_int_array */			\
-  std::vector<int> get_int_array() const override {		\
-    std::vector<int> out;					\
-    for (auto it = values.begin(); it != values.end(); it++)	\
-      out.push_back((int)(*it));				\
-    return out;							\
+#define GENERIC_GET_INT_ARRAY						\
+  /*! \param nvert Number of vertices previously added to a Ply */	\
+  /*!   object being constructed from this geometry. */			\
+  /*! \copydoc ObjElement::get_int_array */				\
+  std::vector<int> get_int_array(const size_t nvert=0) const override {	\
+    std::vector<int> out;						\
+    int v = 0;								\
+    for (auto it = values.begin(); it != values.end(); it++) {		\
+      v = (int)(*it);							\
+      if (nvert > 0) {							\
+	if (v < 0)							\
+	  v = (int)(nvert) + v + 1;					\
+	v--;								\
+      }									\
+      out.push_back(v);							\
+    }									\
+    return out;								\
   }
 #define GENERIC_GET_STRING_ARRAY				\
   /*! \copydoc ObjElement::get_string_array */			\
@@ -299,7 +304,7 @@ RAPIDJSON_NAMESPACE_BEGIN
   /*! \param value0 Scalar value. */					\
   /*! \param parent0 Parent group. */					\
   template <typename T>							\
-  cls(const type& value0,						\
+  cls(const T& value0,							\
       const ObjGroupBase* parent0 = nullptr,				\
       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, type)))) :		\
     ObjElement(#codeS, parent0), value(value0) {}			\
@@ -307,14 +312,14 @@ RAPIDJSON_NAMESPACE_BEGIN
   /*! \param value0 Scalar value. */					\
   /*! \param parent0 Parent group. */					\
   template <typename T>							\
-  cls(const type&,							\
+  cls(const T&,								\
       const ObjGroupBase* parent0 = nullptr,				\
       RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, type)))) :		\
     cls(parent0) {							\
     RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from" #type ".")); \
   }									\
   /*! \copydoc ObjElement::read_values */				\
-  void read_values(std::istream &in) override {				\
+  void read_values(std::istream &in, const bool&) override {		\
     in >> value;							\
   }									\
   /*! \copydoc ObjElement::write_values */				\
@@ -415,8 +420,9 @@ class ObjGroup;
 class ObjSmoothingGroup;
 class ObjMergingGroup;
 class ObjObjectName;
-inline void read_obj_elements(std::istream &in, std::vector<ObjElement*> &elements,
-			      const char break_at = 0, const ObjGroupBase* parent = nullptr);
+inline ObjElement* read_obj_element(std::istream &in,
+				    const ObjGroupBase* parent,
+				    const bool& dont_descend=false);
 
 //! ObjWavefront color.
 class ObjColor {
@@ -469,7 +475,7 @@ typedef int64_t ObjRef;
 class ObjRefVertex {
 public:
   ObjRefVertex() :
-    v(-1), vt(-1), vn(-1), Nparam(-1) {}
+    v(0), vt(0), vn(0), Nparam(-1) {}
   //! Copy constructor
   ObjRefVertex(const ObjRefVertex& rhs) :
     v(rhs.v), vt(rhs.vt), vn(rhs.vn), Nparam(rhs.Nparam) {}
@@ -480,13 +486,13 @@ public:
   //! \param Nparam0 The number of parameters specified by the vertex. If
   //!    not provided, it will be determined by chcking the values of v0, vt0,
   //!    and vn0. (1: (v), 2: (v, vt), 3: (v, vt, vn)).
-  ObjRefVertex(ObjRef v0, ObjRef vt0=-1, ObjRef vn0=-1,
+  ObjRefVertex(ObjRef v0, ObjRef vt0=0, ObjRef vn0=0,
 	       int8_t Nparam0=-1) :
     v(v0), vt(vt0), vn(vn0), Nparam(Nparam0) {
     if (Nparam < 0) {
-      if (vn >= 0)
+      if (vn != 0)
 	Nparam = 3;
-      else if (vt >= 0)
+      else if (vt != 0)
 	Nparam = 2;
       else
 	Nparam = 1;
@@ -498,7 +504,7 @@ public:
   template <typename T>
   ObjRefVertex(const T& v0,
 	       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
-    ObjRefVertex(v0, -1, -1) {}
+    ObjRefVertex(v0, 0, 0) {}
   //! \brief Write the vertex to an output stream.
   //! \param out Output stream.
   //! \return Output stream.
@@ -506,12 +512,12 @@ public:
     out << v;
     if (Nparam > 1) {
       out << "/";
-      if (vt >= 0)
+      if (vt != 0)
 	out << vt;
     }
     if (Nparam > 2) {
       out << "/";
-      if (vn >= 0)
+      if (vn != 0)
 	out << vn;
     }
     return out;
@@ -525,9 +531,9 @@ public:
     std::istringstream ss_word(word);
     std::string token;
     // std::istringstream ss_token;
-    v = -1;
-    vt = -1;
-    vn = -1;
+    v = 0;
+    vt = 0;
+    vn = 0;
     Nparam = 0;
     // v
     RAPIDJSON_ASSERT(std::getline(ss_word, token, '/'));
@@ -543,7 +549,6 @@ public:
     {
       std::istringstream ss_token(token);
       ss_token >> vt;
-      std::cerr << "token = " << token << ", vt = " << vt << std::endl;
     }
     // vn
     if (!std::getline(ss_word, token, '/')) {
@@ -869,7 +874,9 @@ public:
   virtual void from_values() {} // Do nothing, keep values in vector
   //! \brief Read element members from an input stream.
   //! \param in Input stream.
-  virtual void read_values(std::istream& in) = 0;
+  //! \param dont_descend If true, subelements will not be read from the
+  //!   input stream.
+  virtual void read_values(std::istream& in, const bool& dont_descend=false) = 0;
   //! \brief Write element member to an output stream.
   //! \param out Output stream.
   virtual void write_values(std::ostream& out) const = 0;
@@ -887,7 +894,7 @@ public:
   }
   //! \brief Get element values as an array of ints.
   //! \return Array of int values.
-  virtual std::vector<int> get_int_array() const {
+  virtual std::vector<int> get_int_array(const size_t=0) const {
     std::cerr << "get_int_array not implemented" << std::endl;
     std::vector<int> out;
     RAPIDJSON_ASSERT(out.size() > 0);
@@ -904,15 +911,16 @@ public:
   //! \brief Read elements from an input stream.
   //! \param in Input stream.
   //! \return Input stream.
-  std::istream & read(std::istream &in) {
-    read_values(in);
+  std::istream & read(std::istream &in, const bool& dont_descend=false) {
+    read_values(in, dont_descend);
     return in;
   }
   //! \brief Read element members from an input stream into a vector.
   //! \param in Input stream.
   //! \param values Vector to store read values in.
   template <typename T>
-  void read_values(std::istream &in, std::vector<T> &values) {
+  void read_values(std::istream &in, std::vector<T> &values,
+		   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
     T x = 0;
     while ((in.peek() != '\n') && (in >> x))
       values.push_back(x);
@@ -924,14 +932,17 @@ public:
     std::string x = "";
     while ((in.peek() != '\n') && (in >> x))
       values.push_back(x);
+    in >> std::skipws;
   }
   //! \brief Write the element to an output stream.
   //! \param out Output stream.
   //! \return Output stream.
   std::ostream & write(std::ostream &out) const {
-    out << code << " ";
+    if (code != "")
+      out << code << " ";
     write_values(out);
-    out << std::endl;
+    if (code != "g")
+      out << std::endl;
     return out;
   }
   //! \brief Write element member to an output stream from a vector.
@@ -1218,7 +1229,7 @@ public:
     ObjGroupBase(code, parent0) {
     assign_values(elements, elements0);
   }
-  GENERIC_CONSTRUCTOR_COPY(ObjGroupBase), elements() {
+  GENERIC_CONSTRUCTOR_COPY(ObjGroupBase), elements(), finalized(rhs.finalized) {
     for (auto it = rhs.elements.begin(); it != rhs.elements.end(); it++)
       elements.push_back((*it)->copy());
   }
@@ -1234,26 +1245,40 @@ public:
   //! \brief Finalize the group.
   void finalize() { finalized = true; }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override {
-    read_obj_elements(in, elements, 0, this);
-    finalize();
+  void read_values(std::istream &in, const bool& dont_descend=false) override {
+    read_group_header(in);
+    if (!dont_descend) {
+      while (!finalized) {
+	ObjElement* x = read_obj_element(in, this, true);
+	add_element(x);
+      }
+    }
   }
+  //! \brief Read group header information.
+  //! \param in Input stream.
+  virtual void read_group_header(std::istream &) {}
+  //! \brief Write group header information.
+  //! \param out Output stream.
+  virtual void write_group_header(std::ostream &) const {}
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
+    if (this->code != "") {
+      write_group_header(out);
+      out << std::endl;
+    }
     for (auto it = elements.begin(); it != elements.end(); it++)
       (*it)->write(out);
   }
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
-    if (rhs0->code != this->code) return false;
+    if (rhs0->code != this->code)
+      return false;
     const ObjGroupBase* lhs = this;
     const ObjGroupBase* rhs = static_cast<const ObjGroupBase*>(rhs0);
     if (lhs->elements.size() != rhs->elements.size()) return false;
     for (auto lit = lhs->elements.begin(), rit = rhs->elements.begin();
-	 lit != lhs->elements.end(); lit++, rit++) {
-      if (!((*lit)->is_equal(*rit)))
-	return false;
-    }
+	 lit != lhs->elements.end(); lit++, rit++)
+      if (!((*lit)->is_equal(*rit))) return false;
     return true;
   }
   //! Vector of elements in the group.
@@ -1281,37 +1306,50 @@ public:
   }
   //! \brief Add an element to the geometry.
   //! \param x New element.
-  void add_element(ObjElement* x) {
+  //! \return New element.
+  ObjElement* add_element(ObjElement* x) {
+    RAPIDJSON_ASSERT(!finalized);
     if (elements.size() > 0) {
       ObjElement* last = elements.back();
-      if (last->is_group() && (!(x->is_group()))) {
+      if (last->is_group()) {
 	ObjGroupBase* last_grp = static_cast<ObjGroupBase*>(last);
 	if (!(last_grp->finalized)) {
-	  last_grp->elements.push_back(x);
-	  return;
+	  if ((x != nullptr) && (last_grp->code == "g") && (x->code == "g"))
+	    last_grp->finalize();
+	  else
+	    return last_grp->add_element(x);
 	}
       }
     }
-    elements.push_back(x);
+    if (x == nullptr) {
+      finalize();
+    } else {
+      x->parent = this;
+      elements.push_back(x);
+    }
+    return x;
   }
   //! \brief Add an element to the geometry.
   //! \param x New element.
-  void add_element(const ObjElement& x);
+  //! \return New element.
+  ObjElement* add_element(const ObjElement& x);
   //! \brief Add an element to the geometry from a C++ vector of values.
   //! \tparam T Type of value in the values vector.
   //! \param name Name of the type of element being added.
   //! \param values Vector of values defining the element.
+  //! \return New element.
   template <typename T>
-  void add_element(std::string name, const std::vector<T> &values);
+  ObjElement* add_element(std::string name, const std::vector<T> &values);
   //! \brief Add an element to the geometry from a C array of values.
   //! \tparam T Type of value in the values array.
   //! \tparam N Number of elements in the values array.
   //! \param name Name of the type of element being added.
   //! \param values Array of values defining the element.
+  //! \return New element.
   template <typename T, size_t N>
-  void add_element(std::string name, const T (&values)[N],
-		   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_ANY(T)))) {
-    add_element(name, std::vector<T>(values, values+N));
+  ObjElement* add_element(std::string name, const T (&values)[N],
+			  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_ANY(T)))) {
+    return add_element(name, std::vector<T>(values, values+N));
   }
 
   // Curve element methods
@@ -1320,10 +1358,11 @@ public:
   //! \param u0 1st element parameter.
   //! \param u1 2nd element parameter.
   //! \param values Vector of additional values defining the element.
+  //! \return New element.
   template <typename T>
-  void add_element(const std::string name,
-		   const double& u0, const double& u1,
-		   const std::vector<T> &values);
+  ObjElement* add_element(const std::string name,
+			  const double& u0, const double& u1,
+			  const std::vector<T> &values);
   //! \brief Add an element to the geometry from a C array of values.
   //! \tparam T Type of value in the values array.
   //! \tparam N Number of elements in the values array.
@@ -1331,11 +1370,12 @@ public:
   //! \param u0 1st element parameter.
   //! \param u1 2nd element parameter.
   //! \param values Array of values defining the element.
+  //! \return New element.
   template <typename T, size_t N>
-  void add_element(std::string name,
-		   const double& u0, const double& u1,
-		   const T (&values)[N]) {
-    add_element(name, u0, u1, std::vector<T>(values, values+N));
+  ObjElement* add_element(std::string name,
+			  const double& u0, const double& u1,
+			  const T (&values)[N]) {
+    return add_element(name, u0, u1, std::vector<T>(values, values+N));
   }
 
   // Surface element methods
@@ -1346,11 +1386,12 @@ public:
   //! \param u2 3rd element parameter.
   //! \param u3 4th element parameter.
   //! \param values Vector of additional values defining the element.
+  //! \return New element.
   template <typename T>
-  void add_element(const std::string name,
-		   const double& u0, const double& u1,
-		   const double& u2, const double& u3,
-		   const std::vector<T> &values);
+  ObjElement* add_element(const std::string name,
+			  const double& u0, const double& u1,
+			  const double& u2, const double& u3,
+			  const std::vector<T> &values);
   //! \brief Add an element to the geometry from a C array of values.
   //! \tparam T Type of value in the values array.
   //! \tparam N Number of elements in the values array.
@@ -1360,12 +1401,13 @@ public:
   //! \param u2 3rd element parameter.
   //! \param u3 4th element parameter.
   //! \param values Array of values defining the element.
+  //! \return New element.
   template <typename T, size_t N>
-  void add_element(std::string name,
-		   const double& u0, const double& u1,
-		   const double& u2, const double& u3,
-		   const T (&values)[N]) {
-    add_element(name, u0, u1, u2, u3, std::vector<T>(values, values+N));
+  ObjElement* add_element(std::string name,
+			  const double& u0, const double& u1,
+			  const double& u2, const double& u3,
+			  const T (&values)[N]) {
+    return add_element(name, u0, u1, u2, u3, std::vector<T>(values, values+N));
   }
 
   // Parameter element methods
@@ -1374,32 +1416,44 @@ public:
   //! \param name Name of the type of element being added.
   //! \param direction Name of the parameter direction.
   //! \param values Vector of additional values defining the element.
+  //! \return New element.
   template <typename T>
-  void add_element(std::string name, std::string direction,
-		   const std::vector<T> &values);
+  ObjElement* add_element(std::string name, std::string direction,
+			  const std::vector<T> &values);
   //! \brief Add a parameter element to the geometry.
   //! \tparam T Type of value in the values array.
   //! \tparam N Number of elements in the values array.
   //! \param name Name of the type of element being added.
   //! \param direction Name of the parameter direction.
   //! \param values Array of values defining the element. 
+  //! \return New element.
   template <typename T, size_t N>
-  void add_element(std::string name, std::string direction,
-		   const T (&values)[N]) {
-    add_element(name, direction, std::vector<T>(values, values+N));
+  ObjElement* add_element(std::string name, std::string direction,
+			  const T (&values)[N]) {
+    return add_element(name, direction, std::vector<T>(values, values+N));
   }
 
-  //! \brief Add a smoothing group element.
+  //! \brief Add a scalar group element.
+  //! \param name Name of the type of element being added.
+  //! \param value Scalar value.
+  //! \return New element.
+  ObjElement* add_element(std::string name, const char* value) {
+    std::string s(value);
+    return add_element(name, s);
+  }
+
+  //! \brief Add a scalar group element.
   //! \tparam T Type of value.
   //! \param name Name of the type of element being added.
-  //! \param value Smoothing group.
+  //! \param value Scalar value.
+  //! \return New element.
   template<typename T>
-  void add_element(std::string name, const T& value);
+  RAPIDJSON_DISABLEIF_RETURN((internal::IsPointer<T>), (ObjElement*)) add_element(std::string name, const T& value);
 
   // template<typename T>
-  // void add_element(std::string name, const T& value, const double& resolution);
+  // ObjElement* add_element(std::string name, const T& value, const double& resolution);
 
-  // void add_element(std::string name, 
+  // ObjElement* add_element(std::string name, 
 };
 
 
@@ -1420,14 +1474,9 @@ public:
   ObjFreeFormElement(const ObjFreeFormElement& rhs) : ObjGroupBase(rhs) {}
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
-    out << std::endl;
     ObjGroupBase::write_values(out);
     out << "end";
   }
-  // //! \copydoc ObjElement::read_values
-  // void read_values(std::istream &in) override {
-  //   ObjGroupBase::read_values(in);
-  // }
 };
 
 #define FREEFORM_CONSTRUCTOR_EMPTY(cls, code)				\
@@ -1470,11 +1519,11 @@ public:
     RAPIDJSON_ASSERT(values.size() >= 2);
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override {
+  void read_values(std::istream &in, const bool& dont_descend=false) override {
     in >> u0;
     in >> u1;
     ObjElement::read_values(in, values);
-    ObjFreeFormElement::read_values(in);
+    ObjFreeFormElement::read_values(in, dont_descend);
   }
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
@@ -1515,9 +1564,9 @@ public:
   GENERIC_CONSTRUCTOR_VECTOR_INT(ObjCurve2D);
   GENERIC_GET_INT_ARRAY;
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override {
+  void read_values(std::istream &in, const bool& dont_descend=false) override {
     ObjElement::read_values(in, values);
-    ObjFreeFormElement::read_values(in);
+    ObjFreeFormElement::read_values(in, dont_descend);
   }
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
@@ -1568,13 +1617,13 @@ public:
   DUMMY_ARRAY_CONSTRUCTOR(ObjSurface);
   GENERIC_ELEMENT_CONSTRUCTOR(ObjSurface);
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override {
+  void read_values(std::istream &in, const bool& dont_descend=false) override {
     in >> s0;
     in >> s1;
     in >> t0;
     in >> t1;
     ObjElement::read_values(in, values);
-    ObjFreeFormElement::read_values(in);
+    ObjFreeFormElement::read_values(in, dont_descend);
   }
   //! \copydoc ObjElement::write_values
   void write_values(std::ostream &out) const override {
@@ -1693,7 +1742,7 @@ public:
     RAPIDJSON_ASSERT(values.size() == ((n + 1)*(n + 1)));
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override {
+  void read_values(std::istream &in, const bool&) override {
     in >> direction;
     ObjElement::read_values(in, values);
   }
@@ -1750,7 +1799,7 @@ public:
   //! \param direction0 Parameter direction.
   //! \param parent0 The element's parent group.
   template <typename T>
-  ObjParameter(const std::string& direction0, const std::vector<T> &,
+  ObjParameter(const std::string&, const std::vector<T> &,
 	       const ObjGroupBase* parent0 = nullptr,
 	       RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjParameter(parent0) {
@@ -1763,7 +1812,7 @@ public:
     RAPIDJSON_ASSERT((direction == "u") || (direction == "v"));
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override {
+  void read_values(std::istream &in, const bool&) override {
     in >> direction;
     ObjElement::read_values(in, values);
   }
@@ -1812,72 +1861,43 @@ public:
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjGroup(const ObjGroup& rhs) :
     ObjGroupBase(rhs), values(rhs.values) {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement*)
-  ObjGroup(const ObjElement* rhs) :
-    ObjGroup(*static_cast<const ObjGroup*>(rhs)) {}
-  //! \brief Initialize an element by reading from an input stream.
-  //! \param in Input stream to read from.
-  //! \param parent0 The element's parent group.
-  ObjGroup(std::istream &in, const ObjGroupBase* parent0 = nullptr) :
-    ObjGroupBase(parent0), values() {
-    read_values(in);
-    from_values();
-  }
-  //! \brief Initialize and element from a C++ vector of values.
-  //! \tparam T Type of values in vector.
-  //! \param values0 Vector of values.
-  //! \param elements0 Vector of group elements.
-  //! \param parent0 The element's parent group.
-  template<typename T>
-  ObjGroup(const std::vector<T> &values0,
-	   const std::vector<ObjElement*> &elements0 = {},
-	   const ObjGroupBase* parent0 = nullptr,
-	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) :
-    ObjGroupBase("g", elements0, parent0), values() {
-    assign_values(values, values0);
-    from_values();
-  }
-  //! \brief Raise an error if the input value is not a string.
-  //! \tparam T Type of values in vector.
-  //! \param values0 Vector of values.
-  //! \param elements0 Vector of group elements.
-  //! \param parent0 The element's parent group.
-  template<typename T>
-  ObjGroup(const std::vector<T> &values0,
-	   const std::vector<ObjElement*> &elements0 = {},
-	   const ObjGroupBase* parent0 = nullptr,
-	   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) :
-    ObjGroupBase("g", elements0, parent0), values() {
-    RAPIDJSON_ASSERT(!sizeof("ObjGroup type is string"));
-  }
+  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjGroup, std::string);
   //! \brief Initialize and element from a scalar.
   //! \tparam T Type of value.
   //! \param value Scalar value.
-  //! \param elements0 Vector of group elements.
   //! \param parent0 The element's parent group.
   template<typename T>
   ObjGroup(const T &value,
-	   const std::vector<ObjElement*> &elements0 = {},
 	   const ObjGroupBase* parent0 = nullptr) :
-    ObjGroup(std::vector<T>{value}, elements0, parent0) {}
-  DUMMY_ARRAY_CONSTRUCTOR(ObjGroup);
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override {
+    ObjGroup(std::vector<T>{value}, parent0) {}
+  //! \copydoc ObjGroupBase::read_group_header
+  void read_group_header(std::istream &in) override {
     ObjElement::read_values(in, values);
-    read_obj_elements(in, elements, 'g', this);
-    this->finalized = true;
   }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  //! \copydoc ObjGroupBase::write_group_header
+  void write_group_header(std::ostream &out) const override {
     ObjElement::write_values(out, values);
-    ObjGroupBase::write_values(out);
   }
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const override {
-    if (!ObjGroupBase::is_equal(rhs0)) return false;
+    if (!ObjGroupBase::is_equal(rhs0))
+      return false;
     const ObjGroup* lhs = this;
     const ObjGroup* rhs = static_cast<const ObjGroup*>(rhs0);
-    if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
+    std::string lhs_str = "";
+    std::string rhs_str = "";
+    for (auto it = lhs->values.begin(); it != lhs->values.end(); it++) {
+      if (it != lhs->values.begin())
+	lhs_str.append(" ");
+      lhs_str.append(*it);
+    }
+    for (auto it = rhs->values.begin(); it != rhs->values.end(); it++) {
+      if (it != rhs->values.begin())
+	rhs_str.append(" ");
+      rhs_str.append(*it);
+    }
+    if (lhs_str != rhs_str)
+      return false;
     return true;
   }
   //! Vector of element values in the group.
@@ -1898,17 +1918,19 @@ public:
 class ObjMergingGroup : public ObjSmoothingGroup {
 public:
   ObjMergingGroup(const ObjGroupBase* parent0 = nullptr) :
-    ObjSmoothingGroup(parent), resolution(0) { this->code = "mg"; }
+    ObjSmoothingGroup(parent0), resolution(0) { this->code = "mg"; }
   ObjMergingGroup(const ObjMergingGroup& rhs) :
     ObjSmoothingGroup(rhs), resolution(rhs.resolution) {}
   ObjMergingGroup(const ObjElement* rhs) :
-    ObjSmoothingGroup(*static_cast<const ObjMergingGroup*>(rhs)) {}
-  ObjMergingGroup(std::istream &in, const ObjGroupBase* parent0 = nullptr) :
-    ObjSmoothingGroup(in, parent0) { this->code = "mg"; }
+    ObjMergingGroup(*static_cast<const ObjMergingGroup*>(rhs)) {}
+  ObjMergingGroup(std::istream &in, const ObjGroupBase* parent0 = nullptr,
+		  const bool& dont_descend = false) :
+    ObjSmoothingGroup(in, parent0, dont_descend), resolution(0)
+  { this->code = "mg"; }
   DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup);
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override {
-    ObjSmoothingGroup::read_values(in);
+  void read_values(std::istream &in, const bool& dont_descend = false) override {
+    ObjSmoothingGroup::read_values(in, dont_descend);
     if (this->value == "off")
       resolution = 0.0;
     else
@@ -2016,7 +2038,7 @@ public:
       RAPIDJSON_ASSERT((values.size() == 2));
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override {
+  void read_values(std::istream &in, const bool&) override {
     in >> technique;
     RAPIDJSON_ASSERT(((technique == "cparm" ) ||
 		      (technique == "cspace") ||
@@ -2081,7 +2103,7 @@ public:
       RAPIDJSON_ASSERT((values.size() == 2));
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in) override {
+  void read_values(std::istream &in, const bool&) override {
     in >> technique;
     RAPIDJSON_ASSERT(((technique == "cparma") ||
 		      (technique == "cparmb") ||
@@ -2112,34 +2134,17 @@ public:
 //! \brief Read an element from an input stream.
 //! \param in Input stream.
 //! \param parent Optional element group that will contain the read elements.
+//! \param dont_descend If true, subelements will not be read from the
+//!   input stream.
 //! \return New element.
-inline ObjElement* read_obj_element(std::istream &in, const ObjGroupBase* parent = nullptr) {
+inline ObjElement* read_obj_element(std::istream &in,
+				    const ObjGroupBase* parent,
+				    const bool& dont_descend) {
   std::string word = "";
-  ObjElement* out = NULL;
+  ObjElement* out = nullptr;
   if (in >> word)
-    OBJ_ELEMENT_INIT(word, out, (in, parent));
+    OBJ_ELEMENT_INIT(word, out, (in, parent, dont_descend));
   return out;
-};
-
-//! \brief Read elements from an input stream until a certain character is
-//!    encountered.
-//! \param in Input stream.
-//! \param elements Vector to read elements into.
-//! \param break_at Character to stop at.
-//! \param parent Optional element group that will contain the read elements.
-inline void read_obj_elements(std::istream &in, std::vector<ObjElement*> &elements,
-			      const char break_at, const ObjGroupBase* parent) {
-  while (true) {
-    if (break_at) {
-      in >> std::skipws;
-      if (in.peek() == break_at)
-	return;
-    }
-    ObjElement* x = read_obj_element(in, parent);
-    if (x == NULL)
-      break;
-    elements.push_back(x);
-  }
 };
 
 //! Obj wavefront 3D geometry container class.
@@ -2239,56 +2244,51 @@ std::istream & operator >> (std::istream &in, ObjWavefront &p)
 { return p.read(in); };
 
 inline
-void ObjGroupBase::add_element(const ObjElement& x) {
-  ObjElement* x_cpy = NULL;
+ObjElement* ObjGroupBase::add_element(const ObjElement& x) {
+  ObjElement* x_cpy = nullptr;
   OBJ_ELEMENT_INIT(x.code, x_cpy, (&x));
-  ObjGroupBase::add_element(x_cpy);
+  return ObjGroupBase::add_element(x_cpy);
 };
 template <typename T>
-void ObjGroupBase::add_element(std::string name, const std::vector<T> &values) {
-  ObjElement* x = NULL;
-  if (name == "g") {
-    x = new ObjGroup(values, std::vector<ObjElement*>{}, this);
-  } else {
-    OBJ_ELEMENT_INIT(name, x, (values, this));
-  }
-  ObjGroupBase::add_element(x);
+ObjElement* ObjGroupBase::add_element(std::string name,
+				      const std::vector<T> &values) {
+  ObjElement* x = nullptr;
+  OBJ_ELEMENT_INIT(name, x, (values, this));
+  return ObjGroupBase::add_element(x);
 };
 template <typename T>
-void ObjGroupBase::add_element(const std::string name,
-			       const double& u0, const double& u1,
-			       const std::vector<T> &values) {
-  ObjElement* x = NULL;
+ObjElement* ObjGroupBase::add_element(const std::string name,
+				      const double& u0, const double& u1,
+				      const std::vector<T> &values) {
+  ObjElement* x = nullptr;
   if (name == "curv") x = new ObjCurve(u0, u1, values, this);
   else RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported element signifier: ") + name));
-  ObjGroupBase::add_element(x);
+  return ObjGroupBase::add_element(x);
 };
 template <typename T>
-void ObjGroupBase::add_element(const std::string name,
-			       const double& u0, const double& u1,
-			       const double& u2, const double& u3,
-			       const std::vector<T> &values) {
-  ObjElement* x = NULL;
+ObjElement* ObjGroupBase::add_element(const std::string name,
+				      const double& u0, const double& u1,
+				      const double& u2, const double& u3,
+				      const std::vector<T> &values) {
+  ObjElement* x = nullptr;
   if (name == "surf") x = new ObjSurface(u0, u1, u2, u3, values, this);
   else RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported element signifier: ") + name));
-  ObjGroupBase::add_element(x);
+  return ObjGroupBase::add_element(x);
 };
 template <typename T>
-void ObjGroupBase::add_element(std::string name, std::string direction,
-			       const std::vector<T> &values) {
-  ObjElement* x = NULL;
+ObjElement* ObjGroupBase::add_element(std::string name, std::string direction,
+				      const std::vector<T> &values) {
+  ObjElement* x = nullptr;
   if      (name == "parm" ) x = new ObjParameter(direction, values, this);
   else if (name == "ctech") x = new ObjCTech(direction, values, this);
   else if (name == "stech") x = new ObjSTech(direction, values, this);
   else RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported element signifier: ") + name));
-  ObjGroupBase::add_element(x);
+  return ObjGroupBase::add_element(x);
 };
 template<typename T>
-void ObjGroupBase::add_element(std::string name, const T& value) {
-  ObjElement* x = NULL;
-  if      (name == "g"         ) x = new ObjGroup(value,
-						  std::vector<ObjElement*>{},
-						  this);
+RAPIDJSON_DISABLEIF_RETURN((internal::IsPointer<T>), (ObjElement*)) ObjGroupBase::add_element(std::string name, const T& value) {
+  ObjElement* x = nullptr;
+  if      (name == "g"         ) x = new ObjGroup(value, this);
   else if (name == "s"         ) x = new ObjSmoothingGroup(value, this);
   else if (name == "bevel"     ) x = new ObjBevel(value, this);
   else if (name == "c_interp"  ) x = new ObjCInterp(value, this);
@@ -2299,12 +2299,12 @@ void ObjGroupBase::add_element(std::string name, const T& value) {
   else if (name == "shadow_obj") x = new ObjShadowFile(value, this);
   else if (name == "trace_obj" ) x = new ObjTraceFile(value, this);
   else RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported element signifier: ") + name));
-  ObjGroupBase::add_element(x);
+  return ObjGroupBase::add_element(x);
 };
 // 
 // template<typename T>
-// void ObjGroupBase::add_element(std::string name, const T& value, const double& resolution) {
-// ObjElement* x = NULL;
+// ObjElement* ObjGroupBase::add_element(std::string name, const T& value, const double& resolution) {
+// ObjElement* x = nullptr;
 // if (name == "mg") x = new ObjMergingGroup(value, resolution, this);
 // else RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported element signifier: ") + name));
 // ObjGroupBase::add_element(x);

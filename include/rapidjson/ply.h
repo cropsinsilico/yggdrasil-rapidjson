@@ -533,13 +533,19 @@ public:
     return T(0);
   }
   //! \brief Get element values as an array of ints.
+  //! \param nvert Number of vertices previously added to an ObjWavefront
+  //!   object being constructed from this geometry.
   //! \return Array of int values.
-  std::vector<int> get_int_array() const {
+  std::vector<int> get_int_array(const size_t nvert=0) const {
     std::vector<int> out;
     for (auto name = property_order.begin(); name != property_order.end(); name++) {
       auto it = properties.find(*name);
       RAPIDJSON_ASSERT(it != properties.end());
       extend_aray_data(it->second, out);
+    }
+    if (nvert > 0) {
+      for (size_t i = 0; i < out.size(); i++)
+	out[i] = out[i] + 1;
     }
     return out;
   }

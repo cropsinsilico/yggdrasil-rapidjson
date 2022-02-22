@@ -1317,29 +1317,30 @@ TEST(Value, NDArrayUInt) {
   EXPECT_FALSE(x.IsObject());
   EXPECT_FALSE(x.IsArray());
 }
-#define ARRAYS_3D				\
-  double vertices[8][3] =			\
-    {{0.0, 0.0, 0.0},				\
-     {0.0, 0.0, 1.0},				\
-     {0.0, 1.0, 1.0},				\
-     {0.0, 1.0, 0.0},				\
-     {1.0, 0.0, 0.0},				\
-     {1.0, 0.0, 1.0},				\
-     {1.0, 1.0, 1.0},				\
-     {1.0, 1.0, 0.0}};				\
-  int faces[2][3] =				\
-    {{3, 0, 1},					\
-     {3, 0, 2}};				\
-  int edges[5][2] =				\
-    {{0, 1},					\
-     {1, 2},					\
-     {2, 3},					\
-     {3, 0},					\
-     {2, 0}};
+#define ARRAYS_3D(zero)						\
+  double vertices_ ## zero[8][3] =				\
+    {{0.0, 0.0, 0.0},						\
+     {0.0, 0.0, 1.0},						\
+     {0.0, 1.0, 1.0},						\
+     {0.0, 1.0, 0.0},						\
+     {1.0, 0.0, 0.0},						\
+     {1.0, 0.0, 1.0},						\
+     {1.0, 1.0, 1.0},						\
+     {1.0, 1.0, 0.0}};						\
+  int faces_ ## zero[2][3] =					\
+    {{3 + zero, 0 + zero, 1 + zero},				\
+     {3 + zero, 0 + zero, 2 + zero}};				\
+  int edges_ ## zero[5][2] =					\
+    {{0 + zero, 1 + zero},					\
+     {1 + zero, 2 + zero},					\
+     {2 + zero, 3 + zero},					\
+     {3 + zero, 0 + zero},					\
+     {2 + zero, 0 + zero}};
   
 TEST(Value, ObjWavefront) {
-  ARRAYS_3D;
-  rapidjson::ObjWavefront obj(vertices, faces, edges);
+  ARRAYS_3D(0);
+  ARRAYS_3D(1);
+  rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   rapidjson::Document doc;
   rapidjson::Value x(obj);
   EXPECT_TRUE(x.IsYggdrasil());
@@ -1349,7 +1350,7 @@ TEST(Value, ObjWavefront) {
   rapidjson::ObjWavefront cpy;
   x.GetObjWavefront(cpy);
   EXPECT_EQ(obj, cpy);
-  rapidjson::Ply ply(vertices, faces, edges);
+  rapidjson::Ply ply(vertices_0, faces_0, edges_0);
   rapidjson::Ply cpy_ply;
   x.GetPly(cpy_ply);
   EXPECT_EQ(ply, cpy_ply);
@@ -1360,7 +1361,7 @@ TEST(Value, ObjWavefront) {
   obj.add_element("vt", {1.0});
   obj.add_element("vt", {2.0, 1.0});
   obj.add_element("vt", {3.0, 2.0, 1.0});
-  obj.add_element("p", {0u, 1u, 2u});
+  obj.add_element("p", {3u, 1u, 2u});
   // Taylor curve
   obj.add_element("cstype", std::vector<std::string>{"taylor"});
   obj.add_element("deg", {4u});
@@ -1404,7 +1405,6 @@ TEST(Value, ObjWavefront) {
   obj.add_element("parm", "u", {0.0, 0.0, 0.0, 1.0, 1.0, 1.0});
   obj.add_element("parm", "v", {0.0, 0.0, 0.0, 1.0, 1.0, 1.0});
   obj.end_group();
-
   // Trimmed NURB surface
   obj.add_element("cstype", std::vector<std::string>{"rat", "bezier"});
   obj.add_element("deg", {3u});
@@ -1419,107 +1419,104 @@ TEST(Value, ObjWavefront) {
   obj.add_element("parm", "v", {-2.00, -2.00, -2.00, -2.00, -2.00, -2.00});
   obj.add_element("trim", {ObjRefCurve(0.0, 2.0, 1)});
   obj.end_group();
-
-  // // Two trimming regions with a hole
-  // obj.add_element("deg", {1u});
-  // obj.add_element("cstype", std::vector<std::string>{"bezier"});
-  // obj.add_element("curv2", {1, 2, 3, 4, 1});
-  // obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
-  // obj.end_group();
-  // obj.add_element("curv2", {5, 6, 7, 8, 5});
-  // obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
-  // obj.end_group();
-  // obj.add_element("curv2", {9, 10, 11, 12, 9});
-  // obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
-  // obj.end_group();
-  // obj.add_element("curv2", {13, 14, 15, 16, 13});
-  // obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
-  // obj.end_group();
-  // obj.add_element("deg", {1u, 1u});
-  // obj.add_element("cstype", std::vector<std::string>{"bezier"});
-  // obj.add_element("surf", 0.0, 2.0, 0.0, 2.0, {1, 2, 3, 4});
-  // obj.add_element("parm", "u", {0.00, 2.00});
-  // obj.add_element("parm", "v", {0.00, 2.00});
-  // obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 1)});
-  // obj.add_element("hole", {ObjRefCurve(0.0, 4.0, 2)});
-  // obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 3)});
-  // obj.add_element("hole", {ObjRefCurve(0.0, 4.0, 4)});
-  // obj.end_group();
-
-  // // Trimming with a special curve
-  // obj.add_element("cstype", std::vector<std::string>{"rat", "bezier"});
-  // obj.add_element("deg", {3u});
-  // obj.add_element("curv2", {-6, -5, -4, -3, -2, -1, -6});
-  // obj.add_element("parm", "u", {0.00, 1.00, 2.00});
-  // obj.end_group();
-  // obj.add_element("curv2", {-4, -3, -2, -1});
-  // obj.add_element("parm", "u", {2.00, 10.00});
-  // obj.end_group();
-  // obj.add_element("cstype", std::vector<std::string>{"rat", "bspline"});
-  // obj.add_element("deg", {2u, 2u});
-  // obj.add_element("surf", -1.0, 2.5, -2.0, 2.0, {-9, -8, -7, -6, -5, -4, -3, -2, -1});
-  // obj.add_element("parm", "u", {-1.00, -1.00, -1.00, 2.50, 2.50, 2.50});
-  // obj.add_element("parm", "v", {-2.00, -2.00, -2.00, 2.00, 2.00, 2.00});
-  // obj.add_element("trim", {ObjRefCurve(0.0, 2.0, 1)});
-  // obj.add_element("scrv", {ObjRefCurve(4.2, 9.7, 2)});
-  // obj.end_group();
-
-  // // Trimming with special points
-  // obj.add_element("cstype", std::vector<std::string>{"bezier"});
-  // obj.add_element("deg", {3u});
-  // obj.add_element("curv", 0.2, 0.9, {-4, -3, -2, -1});
-  // obj.add_element("sp", {1});
-  // obj.add_element("parm", "u", {0.00, 1.00});
-  // obj.end_group();
-  // obj.add_element("cstype", std::vector<std::string>{"rat", "bezier"});
-  // obj.add_element("curv2", {-6, -5, -4, -3, -2, -1, -6});
-  // obj.add_element("parm", "u", {0.00, 1.00, 2.00});
-  // obj.add_element("sp", {2, 3});
-  // obj.end_group();
-  // obj.add_element("cstype", std::vector<std::string>{"rat", "bspline"});
-  // obj.add_element("deg", {2u, 2u});
-  // obj.add_element("surf", -1.0, 2.5, -2.0, 2.0, {-9, -8, -7, -6, -5, -4, -3, -2, -1});
-  // obj.add_element("parm", "u", {-1.00, -1.00, -1.00, 2.50, 2.50, 2.50});
-  // obj.add_element("parm", "v", {-2.00, -2.00, -2.00, 2.00, 2.00, 2.00});
-  // obj.add_element("trim", {ObjRefCurve(0.0, 2.0, 1)});
-  // obj.add_element("sp", {4});
-  // obj.end_group();
-
-  // // Connectivity between two surfaces
-  // obj.add_element("cstype", std::vector<std::string>{"bezier"});
-  // obj.add_element("deg", {1u, 1u});
-  // obj.add_element("curv2", {1, 2, 3, 4, 1});
-  // obj.add_element("parm", "u", {0.0, 1.0, 2.0, 3.0, 4.0});
-  // obj.end_group();
-  // obj.add_element("surf", 0.0, 1.0, 0.0, 1.0, {1, 2, 3, 4});
-  // obj.add_element("parm", "u", {0.0, 1.0});
-  // obj.add_element("parm", "v", {0.0, 1.0});
-  // obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 1)});
-  // obj.end_group();
-  // obj.add_element("surf", 0.0, 1.0, 0.0, 1.0, {5, 6, 7, 8});
-  // obj.add_element("parm", "u", {0.0, 1.0});
-  // obj.add_element("parm", "v", {0.0, 1.0});
-  // obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 1)});
-  // obj.end_group();
-  // obj.add_element("con", {ObjRefSurface(1, 2.0, 2.0, 1), ObjRefSurface(2, 4.0, 3.0, 1)});
-  // obj.add_element("g", "front cube");
-  // obj.add_element("f", {1, 2, 3, 4});
-  // obj.end_group();
-  // obj.add_element("g", "back cube");
-  // obj.add_element("f", {8, 7, 6, 5});
-  // obj.end_group();
-  // obj.add_element("g", "right cube");
-  // obj.add_element("f", {4, 3, 7, 8});
-  // obj.end_group();
-  // obj.add_element("g", "top cube");
-  // obj.add_element("f", {5, 1, 4, 8});
-  // obj.end_group();
-  // obj.add_element("g", "left cube");
-  // obj.add_element("f", {5, 6, 2, 1});
-  // obj.end_group();
-  // obj.add_element("g", "bottom cube");
-  // obj.add_element("f", {2, 6, 7, 3});
-  // obj.end_group();
+  // Two trimming regions with a hole
+  obj.add_element("deg", {1u});
+  obj.add_element("cstype", std::vector<std::string>{"bezier"});
+  obj.add_element("curv2", {1, 2, 3, 4, 1});
+  obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
+  obj.end_group();
+  obj.add_element("curv2", {5, 6, 7, 8, 5});
+  obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
+  obj.end_group();
+  obj.add_element("curv2", {9, 10, 11, 12, 9});
+  obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
+  obj.end_group();
+  obj.add_element("curv2", {13, 14, 15, 16, 13});
+  obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
+  obj.end_group();
+  obj.add_element("deg", {1u, 1u});
+  obj.add_element("cstype", std::vector<std::string>{"bezier"});
+  obj.add_element("surf", 0.0, 2.0, 0.0, 2.0, {1, 2, 3, 4});
+  obj.add_element("parm", "u", {0.00, 2.00});
+  obj.add_element("parm", "v", {0.00, 2.00});
+  obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 1)});
+  obj.add_element("hole", {ObjRefCurve(0.0, 4.0, 2)});
+  obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 3)});
+  obj.add_element("hole", {ObjRefCurve(0.0, 4.0, 4)});
+  obj.end_group();
+  // Trimming with a special curve
+  obj.add_element("cstype", std::vector<std::string>{"rat", "bezier"});
+  obj.add_element("deg", {3u});
+  obj.add_element("curv2", {-6, -5, -4, -3, -2, -1, -6});
+  obj.add_element("parm", "u", {0.00, 1.00, 2.00});
+  obj.end_group();
+  obj.add_element("curv2", {-4, -3, -2, -1});
+  obj.add_element("parm", "u", {2.00, 10.00});
+  obj.end_group();
+  obj.add_element("cstype", std::vector<std::string>{"rat", "bspline"});
+  obj.add_element("deg", {2u, 2u});
+  obj.add_element("surf", -1.0, 2.5, -2.0, 2.0, {-9, -8, -7, -6, -5, -4, -3, -2, -1});
+  obj.add_element("parm", "u", {-1.00, -1.00, -1.00, 2.50, 2.50, 2.50});
+  obj.add_element("parm", "v", {-2.00, -2.00, -2.00, 2.00, 2.00, 2.00});
+  obj.add_element("trim", {ObjRefCurve(0.0, 2.0, 1)});
+  obj.add_element("scrv", {ObjRefCurve(4.2, 9.7, 2)});
+  obj.end_group();
+  // Trimming with special points
+  obj.add_element("cstype", std::vector<std::string>{"bezier"});
+  obj.add_element("deg", {3u});
+  obj.add_element("curv", 0.2, 0.9, {-4, -3, -2, -1});
+  obj.add_element("sp", {1});
+  obj.add_element("parm", "u", {0.00, 1.00});
+  obj.end_group();
+  obj.add_element("cstype", std::vector<std::string>{"rat", "bezier"});
+  obj.add_element("curv2", {-6, -5, -4, -3, -2, -1, -6});
+  obj.add_element("parm", "u", {0.00, 1.00, 2.00});
+  obj.add_element("sp", {2, 3});
+  obj.end_group();
+  obj.add_element("cstype", std::vector<std::string>{"rat", "bspline"});
+  obj.add_element("deg", {2u, 2u});
+  obj.add_element("surf", -1.0, 2.5, -2.0, 2.0, {-9, -8, -7, -6, -5, -4, -3, -2, -1});
+  obj.add_element("parm", "u", {-1.00, -1.00, -1.00, 2.50, 2.50, 2.50});
+  obj.add_element("parm", "v", {-2.00, -2.00, -2.00, 2.00, 2.00, 2.00});
+  obj.add_element("trim", {ObjRefCurve(0.0, 2.0, 1)});
+  obj.add_element("sp", {4});
+  obj.end_group();
+  // Connectivity between two surfaces
+  obj.add_element("cstype", std::vector<std::string>{"bezier"});
+  obj.add_element("deg", {1u, 1u});
+  obj.add_element("curv2", {1, 2, 3, 4, 1});
+  obj.add_element("parm", "u", {0.0, 1.0, 2.0, 3.0, 4.0});
+  obj.end_group();
+  obj.add_element("surf", 0.0, 1.0, 0.0, 1.0, {1, 2, 3, 4});
+  obj.add_element("parm", "u", {0.0, 1.0});
+  obj.add_element("parm", "v", {0.0, 1.0});
+  obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 1)});
+  obj.end_group();
+  obj.add_element("surf", 0.0, 1.0, 0.0, 1.0, {5, 6, 7, 8});
+  obj.add_element("parm", "u", {0.0, 1.0});
+  obj.add_element("parm", "v", {0.0, 1.0});
+  obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 1)});
+  obj.end_group();
+  obj.add_element("con", {ObjRefSurface(1, 2.0, 2.0, 1),
+			  ObjRefSurface(2, 4.0, 3.0, 1)});
+  obj.add_element("g", std::vector<std::string>{"front", "cube"});
+  obj.add_element("f", {1, 2, 3, 4});
+  obj.end_group();
+  obj.add_element("g", std::vector<std::string>{"back", "cube"});
+  obj.add_element("f", {8, 7, 6, 5});
+  obj.end_group();
+  obj.add_element("g", std::vector<std::string>{"right", "cube"});
+  obj.add_element("f", {4, 3, 7, 8});
+  obj.end_group();
+  obj.add_element("g", std::vector<std::string>{"top", "cube"});
+  obj.add_element("f", {5, 1, 4, 8});
+  obj.end_group();
+  obj.add_element("g", std::vector<std::string>{"left", "cube"});
+  obj.add_element("f", {5, 6, 2, 1});
+  obj.end_group();
+  obj.add_element("g", std::vector<std::string>{"bottom", "cube"});
+  obj.add_element("f", {2, 6, 7, 3});
+  obj.end_group();
 
   // // Two adjoining squares with a smoothing group
   // obj.add_element("g", "all");
@@ -1542,12 +1539,14 @@ TEST(Value, ObjWavefront) {
   rapidjson::Value x2(obj);
   rapidjson::ObjWavefront cpy2;
   x2.GetObjWavefront(cpy2);
+  obj.is_equal(&cpy2);
   EXPECT_EQ(obj, cpy2);
 }
     
 TEST(Value, Ply) {
-  ARRAYS_3D;
-  rapidjson::Ply ply(vertices, faces, edges);
+  ARRAYS_3D(0);
+  ARRAYS_3D(1);
+  rapidjson::Ply ply(vertices_0, faces_0, edges_0);
   rapidjson::Document doc;
   rapidjson::Value x(ply);
   EXPECT_TRUE(x.IsYggdrasil());
@@ -1556,7 +1555,7 @@ TEST(Value, Ply) {
   rapidjson::Ply cpy = rapidjson::Ply();
   x.GetPly(cpy);
   EXPECT_EQ(ply, cpy);
-  rapidjson::ObjWavefront obj(vertices, faces, edges);
+  rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   rapidjson::ObjWavefront cpy_obj;
   x.GetObjWavefront(cpy_obj);
   EXPECT_EQ(obj, cpy_obj);
