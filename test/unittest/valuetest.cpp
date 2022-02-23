@@ -1501,45 +1501,95 @@ TEST(Value, ObjWavefront) {
 			  ObjRefSurface(2, 4.0, 3.0, 1)});
   obj.add_element("g", std::vector<std::string>{"front", "cube"});
   obj.add_element("f", {1, 2, 3, 4});
-  obj.end_group();
   obj.add_element("g", std::vector<std::string>{"back", "cube"});
   obj.add_element("f", {8, 7, 6, 5});
-  obj.end_group();
   obj.add_element("g", std::vector<std::string>{"right", "cube"});
   obj.add_element("f", {4, 3, 7, 8});
-  obj.end_group();
   obj.add_element("g", std::vector<std::string>{"top", "cube"});
   obj.add_element("f", {5, 1, 4, 8});
-  obj.end_group();
   obj.add_element("g", std::vector<std::string>{"left", "cube"});
   obj.add_element("f", {5, 6, 2, 1});
-  obj.end_group();
   obj.add_element("g", std::vector<std::string>{"bottom", "cube"});
   obj.add_element("f", {2, 6, 7, 3});
+  // Two adjoining squares with a smoothing group
+  obj.add_element("g", "all");
+  obj.add_element("s", 1);
+  obj.add_element("f", {1, 2, 3, 4});
+  obj.add_element("f", {4, 3, 5, 6});
+  // Two adjoining squares with vertex normals
+  obj.add_element("g", "all");
+  obj.add_element("s", 1);
+  obj.add_element("f", {ObjRefVertex(1, 0, 1), ObjRefVertex(2, 0, 2),
+			ObjRefVertex(3, 0, 3), ObjRefVertex(4, 0, 4)});
+  obj.add_element("f", {ObjRefVertex(4, 0, 4), ObjRefVertex(3, 0, 3),
+			ObjRefVertex(5, 0, 5), ObjRefVertex(6, 0, 6)});
+  // Merging group
+  obj.add_element("g", "all");
+  obj.add_element("mg", 1, 0.500);
+  obj.add_element("cstype", std::vector<std::string>{"bezier"});
+  obj.add_element("deg", {3u, 3u});
+  obj.add_element("surf", 0.00, 1.00, 0.00, 1.00,
+		  {13u, 14u, 15u, 16u, 9u, 10u, 11u, 12u, 5u, 6u, 7u, 8u, 1u,
+		   2u, 3u, 4u});
+  obj.add_element("parm", "u", {0.000, 1.000});
+  obj.add_element("parm", "v", {0.000, 1.000});
   obj.end_group();
-
-  // // Two adjoining squares with a smoothing group
-  // obj.add_element("g", "all");
-  // obj.add_element("s", 1);
-  // obj.add_element("f", {1, 2, 3, 4});
-  // obj.add_element("f", {4, 3, 5, 6});
-  // obj.end_group();
-
-  // // Two adjoining squares with vertex normals
-  // obj.add_element("g", "all");
-  // obj.add_element("s", 1);
-  // obj.add_element("f", {ObjRefVertex(1, -1, 1), ObjRefVertex(2, -1, 2),
-  // ObjRefVertex(3, -1, 3), ObjRefVertex(4, -1, 4)});
-  // obj.add_element("f", {ObjRefVertex(4, -1, 4), ObjRefVertex(3, -1, 3),
-  // ObjRefVertex(5, -1, 5), ObjRefVertex(6, -1, 6)});
-  // obj.end_group();
-
-  // // Merging group
-  
+  obj.add_element("surf", 0.00, 1.00, 0.00, 1.00,
+		  {29u, 30u, 31u, 32u, 25u, 26u, 27u, 28u, 21u, 22u, 23u,
+		   24u, 17u, 18u, 19u, 20u});
+  obj.add_element("parm", "u", {0.000, 1.000});
+  obj.add_element("parm", "v", {0.000, 1.000});
+  obj.end_group();
+  // Cube with materials casting a shadow
+  obj.add_element("mtllib", "master.mtl");
+  obj.add_element("shadow_obj", "cube.obj");
+  obj.add_element("g", "front");
+  obj.add_element("usemtl", "red");
+  obj.add_element("f", {1, 2, 3, 4});
+  obj.add_element("g", "back");
+  obj.add_element("usemtl", "blue");
+  obj.add_element("f", {8, 7, 6, 5});
+  obj.add_element("g", "right");
+  obj.add_element("usemtl", "green");
+  obj.add_element("f", {4, 3, 7, 8});
+  obj.add_element("g", "top");
+  obj.add_element("usemtl", "gold");
+  obj.add_element("f", {5, 1, 4, 8});
+  obj.add_element("g", "left");
+  obj.add_element("usemtl", "orange");
+  obj.add_element("f", {5, 6, 2, 1});
+  obj.add_element("g", "bottom");
+  obj.add_element("usemtl", "purple");
+  obj.add_element("f", {2, 6, 7, 3});
+  // Cube with materials casting a reflection
+  obj.add_element("mtllib", "master.mtl");
+  obj.add_element("trace_obj", "cube.obj");
+  obj.add_element("g", "front");
+  obj.add_element("usemtl", "red");
+  obj.add_element("f", {1, 2, 3, 4});
+  obj.add_element("g", "back");
+  obj.add_element("usemtl", "blue");
+  obj.add_element("f", {8, 7, 6, 5});
+  obj.add_element("g", "right");
+  obj.add_element("usemtl", "green");
+  obj.add_element("f", {4, 3, 7, 8});
+  obj.add_element("g", "top");
+  obj.add_element("usemtl", "gold");
+  obj.add_element("f", {5, 1, 4, 8});
+  obj.add_element("g", "left");
+  obj.add_element("usemtl", "orange");
+  obj.add_element("f", {5, 6, 2, 1});
+  obj.add_element("g", "bottom");
+  obj.add_element("usemtl", "purple");
+  obj.add_element("f", {2, 6, 7, 3});
+  // Texture-mapped square
+  obj.add_element("mtllib", "master.mtl");
+  obj.add_element("usemtl", "wood");
+  obj.add_element("f", {ObjRefVertex(1, 2, 0), ObjRefVertex(2, 2, 0),
+			ObjRefVertex(3, 3, 0), ObjRefVertex(4, 4, 0)});
   rapidjson::Value x2(obj);
   rapidjson::ObjWavefront cpy2;
   x2.GetObjWavefront(cpy2);
-  obj.is_equal(&cpy2);
   EXPECT_EQ(obj, cpy2);
 }
     
@@ -1621,8 +1671,19 @@ TEST(Value, PythonClass) {
 
 // schema
 TEST(Value, Schema) {
-  // TODO
+  Value::AllocatorType allocator;
+  Value a(kObjectType);
+  a.AddMember("type", "int", allocator);
+  a.AddMember("precision", 8, allocator);
+  Value x(kObjectType);
+  x.SetSchema(&allocator);
+  x.AddMember("type", "int", allocator);
+  x.AddMember("precision", 8, allocator);
+  EXPECT_TRUE(x.IsSchema());
+  EXPECT_EQ(kObjectType, x.GetType());
+  EXPECT_EQ(a.GetObject(), x.GetSchema());
 }
+
 #endif // RAPIDJSON_YGGDRASIL
 
 TEST(Value, Array) {

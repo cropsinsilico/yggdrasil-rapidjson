@@ -5,12 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Yggdrasil Specific
 
 ### TODO
-* Verify Ply & Obj valgrind errors disappear on Linux
 * Add docstrings to new methods
-* Schema type
+* Schema type validation
 
 ### IN PROGRESS
-* Continuous integration
 
 ### COMPLETE
 * Added schema to document class
@@ -22,6 +20,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Python instance
 * Coverage (via gcov/llvm-cov and ctest)
 * Unit-full type
+* Schema type
+* Continuous integration
 
 ## [Unreleased]
 

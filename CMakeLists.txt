@@ -81,6 +81,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     set(RAPIDJSON_PYTHON_ENV "${RAPIDJSON_PYTHON_ENV};PYTHONHOME=${Python3_RUNTIME_LIBRARY_DIRS}")
 endif()
 
+# Generate the metaschema header file
+exec_program(${Python3_EXECUTABLE}
+             ARGS "${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py ${CMAKE_CURRENT_SOURCE_DIR}/include/rapidjson/metaschema.h")
+
 # compile in release with debug info mode by default
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)

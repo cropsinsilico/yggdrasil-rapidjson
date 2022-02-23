@@ -848,7 +848,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
         YGG_SCHEMA_INIT_CONSTRUCT;
 	if (rhs.HasSchema())
-	  SetSchema(rhs.GetSchema(), &allocator);
+	  SetValueSchema(rhs.GetValueSchema(), &allocator);
 #endif // RAPIDJSON_YGGDRASIL
         switch (rhs.GetType()) {
         case kObjectType:
@@ -2773,6 +2773,7 @@ public:
   RAPIDJSON_STRING_(PythonInstance, 'i', 'n', 's', 't', 'a', 'n', 'c', 'e')
   RAPIDJSON_STRING_(Obj, 'o', 'b', 'j')
   RAPIDJSON_STRING_(Ply, 'p', 'l', 'y')
+  RAPIDJSON_STRING_(Schema, 's', 'c', 'h', 'e', 'm', 'a')
   RAPIDJSON_STRING_(Any, 'a', 'n', 'y')
   // props
   RAPIDJSON_STRING_(SubType, 's', 'u', 'b', 't', 'y', 'p', 'e')
@@ -2836,20 +2837,20 @@ public:
   //! Constructors for strings w/ schema
   GenericValue(const Ch* s, SizeType length,
 	       const Ch* schema, SizeType schema_length) RAPIDJSON_NOEXCEPT :
-    GenericValue(s, length) { SetSchemaRaw(schema, schema_length); }
+    GenericValue(s, length) { SetValueSchemaRaw(schema, schema_length); }
   explicit GenericValue(StringRefType s,
 			const Ch* schema, SizeType schema_length) RAPIDJSON_NOEXCEPT :
-    GenericValue(s) { SetSchemaRaw(schema, schema_length); }
+    GenericValue(s) { SetValueSchemaRaw(schema, schema_length); }
   GenericValue(const Ch* s, SizeType length, Allocator& allocator,
 	       const Ch* schema, SizeType schema_length) :
-    GenericValue(s, length, allocator) { SetSchemaRaw(schema, schema_length, &allocator); }
+    GenericValue(s, length, allocator) { SetValueSchemaRaw(schema, schema_length, &allocator); }
   GenericValue(const Ch* s, Allocator& allocator,
 	       const Ch* schema, SizeType schema_length) :
-    GenericValue(s, allocator) { SetSchemaRaw(schema, schema_length, &allocator); }
+    GenericValue(s, allocator) { SetValueSchemaRaw(schema, schema_length, &allocator); }
 #if RAPIDJSON_HAS_STDSTRING
   GenericValue(const std::basic_string<Ch>& s, Allocator& allocator,
 	       const Ch* schema, SizeType schema_length) :
-    GenericValue(s, allocator) { SetSchemaRaw(schema, schema_length, &allocator); }
+    GenericValue(s, allocator) { SetValueSchemaRaw(schema, schema_length, &allocator); }
 #endif
   template <typename T>
   explicit GenericValue(T x, const Ch* units_str, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
@@ -3039,23 +3040,23 @@ public:
   { SetPythonObjectRaw(x); }
   explicit GenericValue(PyObject* x, Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetPythonObjectRaw(x, &allocator); }
-  explicit GenericValue(ObjWavefront x) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetObjRaw(x); }
-  explicit GenericValue(Ply x) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetPlyRaw(x); }
+  explicit GenericValue(ObjWavefront x, Allocator* allocator = 0) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  { SetObjRaw(x, allocator); }
+  explicit GenericValue(Ply x, Allocator* allocator = 0) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  { SetPlyRaw(x, allocator); }
   // Explicit schema provided
   // template <typename SourceAllocator>
   // explicit GenericValue(const Ch* s, SizeType length,
-  // 			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length)); SetSchema(schema); }
+  // 			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length)); SetValueSchema(schema); }
   template <typename SourceAllocator>
   explicit GenericValue(const Ch* s, SizeType length, Allocator& allocator,
-			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length), allocator); SetSchema(schema, &allocator); }
+			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length), allocator); SetValueSchema(schema, &allocator); }
   template <typename SourceAllocator>
   explicit GenericValue(const Ch* s, SizeType length,
-			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length)); SetSchema(schema); }
-  template <typename SourceAllocator>
-  explicit GenericValue(const Object& o, Allocator& allocator,
-			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetObject(); SetSchema(schema, &allocator); CopyFrom(o.value_, allocator, true); }
+			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length)); SetValueSchema(schema); }
+  // template <typename SourceAllocator>
+  // explicit GenericValue(const Object& o, Allocator& allocator,
+  // 			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetObject(); SetValueSchema(schema, &allocator); CopyFrom(o.value_, allocator, true); }
 
   // TODO: Pass stack allocator?
   void InitSchema(Allocator* allocator = 0) {
@@ -3089,12 +3090,12 @@ public:
   }
   // TODO: additional location where setschema called without allocator
   template <typename SourceStackAllocator>
-  void SetSchema(GenericDocument<Encoding, Allocator, SourceStackAllocator>& schema) {
-    return SetSchema(schema, schema.GetAllocator());
+  void SetValueSchema(GenericDocument<Encoding, Allocator, SourceStackAllocator>& schema) {
+    return SetValueSchema(schema, schema.GetAllocator());
   }
   // Non-copy version
   // template <typename SourceAllocator>
-  // void SetSchema(GenericValue<Encoding,SourceAllocator>& schema,
+  // void SetValueSchema(GenericValue<Encoding,SourceAllocator>& schema,
   // 		 SourceAllocator* allocator = 0) {
   //   RAPIDJSON_ASSERT(schema.IsObject());
   //   if (schema_ == NULL)
@@ -3103,8 +3104,8 @@ public:
   // }
   // Copy version
   template <typename SourceAllocator>
-  void SetSchema(const GenericValue<Encoding,SourceAllocator>& schema,
-		 Allocator* allocator = 0) {
+  void SetValueSchema(const GenericValue<Encoding,SourceAllocator>& schema,
+		      Allocator* allocator = 0) {
     RAPIDJSON_ASSERT(schema.IsObject());
     if (schema_ == NULL)
       InitSchema(allocator);
@@ -3123,7 +3124,7 @@ public:
     RAPIDJSON_ASSERT(HasUnits());
     return schema_->FindMember(GetUnitsString())->value;
   }
-  const SchemaValueType& GetSchema() const {
+  const SchemaValueType& GetValueSchema() const {
     RAPIDJSON_ASSERT(schema_ != NULL);
     return *schema_;
   }
@@ -3234,6 +3235,9 @@ public:
 	      return false;
 	}
       }
+      if ((schema[GetTypeString()] == GetPythonInstanceString()) ||
+	  (schema[GetTypeString()] == GetSchemaString()))
+	SetValueSchema(schema, allocator);
       return true;
     case kArrayType:
       if (schema.IsObject() &&
@@ -3257,18 +3261,18 @@ public:
 	    (schema[GetTypeString()] == GetPythonInstanceString()) ||
 	    (schema[GetTypeString()] == GetObjString()) ||
 	    (schema[GetTypeString()] == GetPlyString())) {
-	  SetSchema(schema, allocator);
+	  SetValueSchema(schema, allocator);
 	}
       }
       break;
     default:
       if (IsYggdrasil())
-	SetSchema(schema, allocator);
+	SetValueSchema(schema, allocator);
     }
     return true;
   }
 
-  void SetSchemaRaw(const Ch* s, SizeType,
+  void SetValueSchemaRaw(const Ch* s, SizeType,
 		    Allocator* allocator = 0) {
     ResetSchema(allocator);
     // GenericStringStream<Encoding> ss(s);
@@ -3526,6 +3530,7 @@ public:
     std::stringstream ss;
     ss << x;
     std::string s = ss.str();
+    std::cerr << "TO STRING: " << s << std::endl;
     ResetSchema(allocator);
     SetStringRaw(StringRef(s.c_str(), s.size()),
                  schema_->GetAllocator());
@@ -3614,6 +3619,10 @@ public:
   bool IsPly() const {
     if (!IsYggdrasil()) return false;
     return (GetYggType() == GetPlyString());
+  }
+  bool IsSchema() const {
+    if (!IsYggdrasil()) return false;
+    return (GetYggType() == GetSchemaString());
   }
   enum YggSubType GetSubTypeCode() const {
     const ValueType& subtype = GetSubType();
@@ -4248,38 +4257,47 @@ public:
     GetPly(p);
     return p;
   }
+  Object GetSchema() { RAPIDJSON_ASSERT(IsSchema()); return GetObject(); }
 
   template<typename T>
   GenericValue& SetScalar(T x, const Ch* units_str=NULL,
-			  SizeType units_len=0) {
+			  SizeType units_len=0,
+			  Allocator* allocator = 0) {
     this->~GenericValue();
-    new (this) GenericValue(x, units_str, units_len);
+    new (this) GenericValue(x, units_str, units_len, allocator);
     return *this; }
   template<typename T>
   GenericValue& Set1DArray(T* x, SizeType nelements,
 			   const Ch* units_str=NULL,
-			   SizeType units_len=0) {
+			   SizeType units_len=0,
+			   Allocator* allocator = 0) {
     this->~GenericValue();
-    new (this) GenericValue(x, nelements, units_str, units_len);
+    new (this) GenericValue(x, nelements, units_str, units_len, allocator);
     return *this; }
   template<typename T>
   GenericValue& SetNDArray(T* x, SizeType shape[], SizeType ndim,
 			   const Ch* units_str=NULL,
-			   SizeType units_len=0) {
+			   SizeType units_len=0, Allocator* allocator = 0) {
     this->~GenericValue();
-    new (this) GenericValue(x, shape, ndim, units_str, units_len);
+    new (this) GenericValue(x, shape, ndim, units_str, units_len, allocator);
     return *this; }
-  GenericValue& SetPythonInstance(PyObject* x) {
+  GenericValue& SetPythonInstance(PyObject* x, Allocator* allocator = 0) {
     this->~GenericValue();
-    new (this) GenericValue(x);
+    new (this) GenericValue(x, allocator);
     return *this; }
-  GenericValue& SetObj(ObjWavefront x) {
+  GenericValue& SetObj(ObjWavefront x, Allocator* allocator = 0) {
     this->~GenericValue();
-    new (this) GenericValue(x);
+    new (this) GenericValue(x, allocator);
     return *this; }
-  GenericValue& SetPly(Ply x) {
+  GenericValue& SetPly(Ply x, Allocator* allocator = 0) {
     this->~GenericValue();
-    new (this) GenericValue(x);
+    new (this) GenericValue(x, allocator);
+    return *this; }
+  GenericValue& SetSchema(Allocator* allocator = 0) {
+    this->~GenericValue();
+    new (this) GenericValue(kObjectType);
+    ResetSchema(allocator);
+    AddSchemaMember(GetTypeString(), GetSchemaString());
     return *this; }
 
 // protected:
