@@ -3530,7 +3530,6 @@ public:
     std::stringstream ss;
     ss << x;
     std::string s = ss.str();
-    std::cerr << "TO STRING: " << s << std::endl;
     ResetSchema(allocator);
     SetStringRaw(StringRef(s.c_str(), s.size()),
                  schema_->GetAllocator());
@@ -4724,7 +4723,7 @@ public:
 	os_body.GetString(), (SizeType)(os_body.GetLength()),
 	GetAllocator(),
 	os_schema.GetString(), (SizeType)(os_schema.GetLength()));
-    if (x->IsPythonInstance()) {
+    if (x->IsPythonInstance() || x->IsSchema()) {
       GenericDocument x_obj(&GetAllocator());
       x_obj.Parse(os_body.GetString());
       x->SetObjectRaw(x_obj.GetMembersPointer(), x_obj.MemberCount(), GetAllocator());

@@ -200,6 +200,7 @@ enum ValidateErrorCode {
     kValdiateErrorUnits,                       //!< Property has units that are compatible with the schema.
     kValidateErrorShape,                       //!< Property has a shape that does not match the schema.
     kValidateErrorPythonImport,                //!< Property is not an importable Python object.
+    kValidateErrorInvalidSchema,               //!< Property is not a valid JSON schema.
 #endif // RAPIDJSON_YGGDRASIL
 };
 

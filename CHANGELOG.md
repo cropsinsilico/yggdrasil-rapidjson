@@ -6,8 +6,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### TODO
 * Add docstrings to new methods
-* Schema type validation
 * Value tests with unit-ful types
+* Add namespaces for ply, obj, base64?
+* Add normalization
 
 ### IN PROGRESS
 
@@ -19,7 +20,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Python class
 * Python function
 * Python instance
-* Coverage (via gcov/llvm-cov and ctest)
+* Coverage (via gcov/llvm-cov gcovr and cmake)
 * Unit-full type
 * Schema type
 * Continuous integration

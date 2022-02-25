@@ -1818,6 +1818,37 @@ TEST(SchemaValidator, PythonInstance) { // 31
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOltdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"", true);
 }
 
+TEST(SchemaValidator, Schema) { // 32
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"schema\""
+        "}");
+  SchemaDocument s(sd);
+  Value::AllocatorType allocator;
+  Value a(kObjectType);
+  a.SetSchema();
+  a.AddMember("type", "int", allocator);
+  a.AddMember("precision", 8, allocator);
+  DISPLAY_STRING("SCHEMA VALID", a);
+  Value b(kObjectType);
+  b.SetSchema();
+  b.AddMember("type", "invalid", allocator);
+  DISPLAY_STRING("SCHEMA INVALID", b);
+  VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"", true);
+  INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW52YWxpZCJ9-YGG-\"",
+	     "", "schema", "",
+	     "{ \"schema\": {"
+	     "    \"errorCode\": 32,"
+	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	     "    \"errors\": "
+	     "        ["
+	     "            {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
+	     "            {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
+	     "        ]"
+	     "}}");
+}
+
 #endif // RAPIDJSON_YGGDRASIL
 
 // Additional tests
