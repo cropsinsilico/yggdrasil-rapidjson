@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### TODO
 * Add docstrings to new methods
 * Schema type validation
+* Value tests with unit-ful types
 
 ### IN PROGRESS
 

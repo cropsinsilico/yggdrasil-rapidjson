@@ -2002,7 +2002,7 @@ public:
     RAPIDJSON_ASSERT(!sizeof("ObjMergingGroup must be initialized from a string or integer."));
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool& dont_descend = false) override {
+  void read_values(std::istream &in, const bool&) override {
     in >> value;
     if (value == "off")
       resolution = 0.0;
