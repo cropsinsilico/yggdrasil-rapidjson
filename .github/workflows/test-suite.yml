@@ -30,6 +30,9 @@ jobs:
         run: |
           # sudo apt-get install -y valgrind
           sudo apt-get install -y libc6-dbg gdb valgrind
+          sudo apt upgrade --fix-missing
+          sudo apt autoremove -y
+          apt autoclean -y
       - name: Setup Python
         uses: actions/setup-python@v2
       - name: Fix Python path on mac
