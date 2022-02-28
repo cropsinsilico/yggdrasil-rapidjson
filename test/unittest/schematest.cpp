@@ -1825,16 +1825,6 @@ TEST(SchemaValidator, Schema) { // 32
         "  \"type\": \"schema\""
         "}");
   SchemaDocument s(sd);
-  Value::AllocatorType allocator;
-  Value a(kObjectType);
-  a.SetSchema();
-  a.AddMember("type", "int", allocator);
-  a.AddMember("precision", 8, allocator);
-  DISPLAY_STRING("SCHEMA VALID", a);
-  Value b(kObjectType);
-  b.SetSchema();
-  b.AddMember("type", "invalid", allocator);
-  DISPLAY_STRING("SCHEMA INVALID", b);
   VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"", true);
   INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW52YWxpZCJ9-YGG-\"",
 	     "", "schema", "",
