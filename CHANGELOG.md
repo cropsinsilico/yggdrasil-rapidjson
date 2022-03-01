@@ -6,11 +6,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### TODO
 * Add docstrings to new methods
-* Value tests with unit-ful types
 * Add namespaces for ply, obj, base64?
 * Add normalization
+* Add "encoding" property for bytes
 
 ### IN PROGRESS
+* Value tests with unit-ful types
 
 ### COMPLETE
 * Added schema to document class

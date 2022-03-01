@@ -497,6 +497,22 @@ TEST(Value, Int) {
     EXPECT_EQ(4444l, z.Set<long>(4444l).Get<long>());
     EXPECT_TRUE(z.IsInt());
 #endif
+
+#ifdef RAPIDJSON_YGGDRASIL
+    units::Quantity<int,Value::Ch> q1(1234, "g");
+    units::Quantity<int,Value::Ch> q2(1234e6, "ug");
+    EXPECT_TRUE(q1.equivalent_to(q2));
+    Value zq1(1234, "g");
+    Value zq2(q2);
+    EXPECT_EQ(1234e6, zq1.template GetScalar<int>("ug"));
+    EXPECT_EQ(1234, zq2.template GetScalar<int>("g"));
+    EXPECT_EQ(q1, zq1.template GetScalarQuantity<int>("g"));
+    EXPECT_EQ(q1, zq2.template GetScalarQuantity<int>("g"));
+    EXPECT_EQ(q1, zq1.template GetScalarQuantity<int>());
+    EXPECT_EQ(q2, zq1.template GetScalarQuantity<int>("ug"));
+    EXPECT_EQ(q2, zq2.template GetScalarQuantity<int>("ug"));
+    EXPECT_EQ(q2, zq2.template GetScalarQuantity<int>());
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(Value, Uint) {
@@ -554,6 +570,22 @@ TEST(Value, Uint) {
     EXPECT_EQ(4444ul, z.Set<unsigned long>(4444ul).Get<unsigned long>());
     EXPECT_TRUE(x.IsUint());
 #endif
+    
+#ifdef RAPIDJSON_YGGDRASIL
+    units::Quantity<unsigned,Value::Ch> q1(1234u, "g");
+    units::Quantity<unsigned,Value::Ch> q2(1234000000u, "ug");
+    EXPECT_TRUE(q1.equivalent_to(q2));
+    Value zq1(1234u, "g");
+    Value zq2(q2);
+    EXPECT_EQ(1234000000u, zq1.template GetScalar<unsigned>("ug"));
+    EXPECT_EQ(1234u, zq2.template GetScalar<unsigned>("g"));
+    EXPECT_EQ(q1, zq1.template GetScalarQuantity<unsigned>("g"));
+    EXPECT_EQ(q1, zq2.template GetScalarQuantity<unsigned>("g"));
+    EXPECT_EQ(q1, zq1.template GetScalarQuantity<unsigned>());
+    EXPECT_EQ(q2, zq1.template GetScalarQuantity<unsigned>("ug"));
+    EXPECT_EQ(q2, zq2.template GetScalarQuantity<unsigned>("ug"));
+    EXPECT_EQ(q2, zq2.template GetScalarQuantity<unsigned>());
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(Value, Int64) {
@@ -702,6 +734,22 @@ TEST(Value, Double) {
     EXPECT_EQ(56.78, z.Get<double>());
     EXPECT_EQ(57.78, z.Set(57.78).Get<double>());
     EXPECT_EQ(58.78, z.Set<double>(58.78).Get<double>());
+
+#ifdef RAPIDJSON_YGGDRASIL
+    units::Quantity<double,Value::Ch> q1(1234.0, "g");
+    units::Quantity<double,Value::Ch> q2(1234.0e6, "ug");
+    EXPECT_TRUE(q1.equivalent_to(q2));
+    Value zq1(1234.0, "g");
+    Value zq2(q2);
+    EXPECT_EQ(1234.0e6, zq1.template GetScalar<double>("ug"));
+    EXPECT_EQ(1234.0, zq2.template GetScalar<double>("g"));
+    EXPECT_EQ(q1, zq1.template GetScalarQuantity<double>("g"));
+    EXPECT_EQ(q1, zq2.template GetScalarQuantity<double>("g"));
+    EXPECT_EQ(q1, zq1.template GetScalarQuantity<double>());
+    EXPECT_EQ(q2, zq1.template GetScalarQuantity<double>("ug"));
+    EXPECT_EQ(q2, zq2.template GetScalarQuantity<double>("ug"));
+    EXPECT_EQ(q2, zq2.template GetScalarQuantity<double>());
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(Value, Float) {
@@ -739,6 +787,22 @@ TEST(Value, Float) {
     EXPECT_EQ(56.78f, z.Get<float>());
     EXPECT_EQ(57.78f, z.Set(57.78f).Get<float>());
     EXPECT_EQ(58.78f, z.Set<float>(58.78f).Get<float>());
+
+#ifdef RAPIDJSON_YGGDRASIL
+    units::Quantity<float,Value::Ch> q1(1234.0, "g");
+    units::Quantity<float,Value::Ch> q2(1234.0e6, "ug");
+    EXPECT_TRUE(q1.equivalent_to(q2));
+    Value zq1(1234.0, "g");
+    Value zq2(q2);
+    EXPECT_EQ(1234.0e6, zq1.template GetScalar<float>("ug"));
+    EXPECT_EQ(1234.0, zq2.template GetScalar<float>("g"));
+    EXPECT_EQ(q1, zq1.template GetScalarQuantity<float>("g"));
+    EXPECT_EQ(q1, zq2.template GetScalarQuantity<float>("g"));
+    EXPECT_EQ(q1, zq1.template GetScalarQuantity<float>());
+    EXPECT_EQ(q2, zq1.template GetScalarQuantity<float>("ug"));
+    EXPECT_EQ(q2, zq2.template GetScalarQuantity<float>("ug"));
+    EXPECT_EQ(q2, zq2.template GetScalarQuantity<float>());
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(Value, IsLosslessDouble) {
@@ -1126,7 +1190,6 @@ static void TestArray(T& x, Allocator& allocator) {
 
 #ifdef RAPIDJSON_YGGDRASIL
 
-// TODO: Test compatible units
 TEST(Value, ScalarUInt) {
   Value x(uint8_t(12));
   Value y(uint8_t(12), "umol");
@@ -1194,13 +1257,13 @@ TEST(Value, ScalarInt) {
   EXPECT_FALSE(x.IsArray());
 }
 TEST(Value, ScalarComplex) {
-  Value x(std::complex<double>(12));
-  Value y(std::complex<double>(12), "cm");
-  Value z(std::complex<double>(12), "g");
+  Value x(std::complex<double>(2.2, 3.4));
+  Value y(std::complex<double>(2.2, 3.4), "cm");
+  Value z(std::complex<double>(2.2, 3.4), "g");
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(kYggComplexSubType, x.GetSubTypeCode());
-  EXPECT_EQ(std::complex<double>(12), x.template GetScalar<std::complex<double>>());
+  EXPECT_EQ(std::complex<double>(2.2, 3.4), x.template GetScalar<std::complex<double>>());
   EXPECT_EQ(x, y);
   EXPECT_EQ(x, z);
   EXPECT_NE(y, z);

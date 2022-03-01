@@ -19,12 +19,47 @@
 #include "stream.h"
 #include "stringbuffer.h"
 #include "internal/meta.h"
+#include <wchar.h>
 
 RAPIDJSON_NAMESPACE_BEGIN
 
 #ifdef RAPIDJSON_YGGDRASIL
 
 namespace units {
+
+  template<typename T>
+  inline bool compare_values(const T& a, const T& b) {
+    return compare_values(static_cast<double>(a), static_cast<double>(b));
+  }
+  template<>
+  inline bool compare_values(const double &a, const double &b) {    
+    // double abs_precision = 1.0e-13; // DBL_EPSILON;
+    double abs_precision = DBL_EPSILON;
+    double rel_precision = DBL_EPSILON;
+    if ((std::abs(a) < abs_precision) || (std::abs(b) < abs_precision))
+      return (std::abs((a - b)*(b - a)) <= abs_precision);
+    return (std::abs(((a - b)*(b - a)) / (a * b)) <= rel_precision);
+  }
+  template<>
+  inline bool compare_values(const std::complex<float>& a,
+			     const std::complex<float>& b) {
+    if (!compare_values(a.real(), b.real())) return false;
+    return compare_values(a.imag(), b.imag());
+  }
+  template<>
+  inline bool compare_values(const std::complex<double>& a,
+			     const std::complex<double>& b) {
+    if (!compare_values(a.real(), b.real())) return false;
+    return compare_values(a.imag(), b.imag());
+  }
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+  template<>
+  inline bool compare_values(const std::complex<long double>& a,
+			     const std::complex<long double>& b) {
+    if (!compare_values(a.real(), b.real())) return false;
+    return compare_values(a.imag(), b.imag());
+  }
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 
   namespace constants {
     
@@ -188,16 +223,6 @@ namespace units {
     // static double neper_per_bel = log(10) / 2;
   }
 
-  static inline
-  bool compare_doubles(const double &a, const double &b) {
-    // double abs_precision = 1.0e-13; // DBL_EPSILON;
-    double abs_precision = DBL_EPSILON;
-    double rel_precision = DBL_EPSILON;
-    if ((std::abs(a) < abs_precision) || (std::abs(b) < abs_precision))
-      return (std::abs((a - b)*(b - a)) <= abs_precision);
-    return (std::abs(((a - b)*(b - a)) / (a * b)) <= rel_precision);
-  };
-
 enum BaseDimension {
   kLengthUnit = 0,
   kMassUnit = 1,
@@ -209,6 +234,14 @@ enum BaseDimension {
   kAngleUnit = 7,
   kDimensionlessUnit = 8
 };
+
+// Forward declarations
+template<typename Ch=char>
+class Unit;
+template<typename Ch=char>
+class Units;
+template<typename T, typename Ch=char>
+class Quantity;
 
 class Dimension {
 public:
@@ -259,7 +292,7 @@ public:
   }
   bool operator==(const Dimension& x) const {
     for (size_t i = 0; i < 8; i++)
-      if (!(compare_doubles(powers_[i], x.powers_[i])))
+      if (!(compare_values(powers_[i], x.powers_[i])))
 	return false;
     return true;
   }
@@ -267,14 +300,14 @@ public:
   bool is_irreducible() const {
     int ndim = 0;
     for (size_t i = 0; i < 8; i++)
-      if (!(compare_doubles(powers_[i], 0.0)))
+      if (!(compare_values(powers_[i], 0.0)))
 	ndim++;
     return (ndim == 1);
   }
   std::vector<Dimension> reduced() const {
     std::vector<Dimension> out;
     for (size_t i = 0; i < 8; i++)
-      if (!(compare_doubles(powers_[i], 0.0)))
+      if (!(compare_values(powers_[i], 0.0)))
 	out.push_back(Dimension((BaseDimension)i, powers_[i]));
     return out;
   }
@@ -346,90 +379,235 @@ namespace dimensions {
   static Dimension inductance = magnetic_flux / current;
 } // namespace dimensions
 
+template<typename T1>
+double char_to_double(const std::basic_string<T1>& x,
+		      RAPIDJSON_ENABLEIF((internal::IsSame<T1,char>))) {
+  return atof(x.c_str());
+}
+template<typename T1>
+double char_to_double(const std::basic_string<T1>& x,
+		      RAPIDJSON_ENABLEIF((internal::IsSame<T1,wchar_t>))) {
+  return wcstod(x.c_str(), NULL);
+}
+template<typename T1, typename T2>
+const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
+					  RAPIDJSON_ENABLEIF((internal::IsSame<T1,T2>))) {
+  return x;
+}
+template<typename T1, typename T2>
+const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
+					  RAPIDJSON_ENABLEIF((internal::AndExpr<
+							      internal::IsSame<T1,char>,
+							      internal::IsSame<T2,wchar_t>>))) {
+  std::basic_string<wchar_t> wx;
+  size_t N = x.size() + 1;
+  wx.resize(N + 1);
+  size_t M = std::mbstowcs(&wx[0], x.data(), N);
+  RAPIDJSON_ASSERT(M < N);
+  wx.resize(M);
+  return wx;
+};
+template<typename T1, typename T2>
+const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
+					  RAPIDJSON_ENABLEIF((internal::AndExpr<
+							      internal::IsSame<T1,wchar_t>,
+							      internal::IsSame<T2,char>>))) {
+  std::basic_string<char> wx;
+  size_t N = 4 * x.size();
+  wx.resize(N);
+  size_t M = std::wcstombs(&wx[0], x.data(), N);
+  RAPIDJSON_ASSERT(M < N);
+  wx.resize(M);
+  return wx;
+};
+  
+#define STATIC_VECTORS(type, name)					\
+  static std::vector<type<char>> name ## _char = get_ ## name<char>();	\
+  static std::vector<type<wchar_t>> name ## _wchar_t = get_ ## name<wchar_t>();	\
+  template<typename Ch>							\
+  inline const std::vector<type<Ch>> name();				\
+  template <>								\
+  inline const std::vector<type<char>> name()				\
+  { return name ## _char; }						\
+  template <>								\
+  inline const std::vector<type<wchar_t>> name()			\
+  { return name ## _wchar_t; }
 
 //! Unit prefix.
+template<typename Ch>
 class UnitPrefix {
 public:
+  UnitPrefix() : abbr(), factor(1.0), name() {}
   UnitPrefix(const char* abbr0, const double& factor0, const char* name0) :
-    abbr(), factor(factor0), name() {
-    strcpy(abbr, abbr0);
-    strcpy(name, name0);
+    abbr(convert_chars<char,Ch>(abbr0)), factor(factor0),
+    name(convert_chars<char,Ch>(name0)) {}
+  //! Abbreviation associated with the prefix.
+  std::basic_string<Ch> abbr;
+  //! Factor that the prefix implies.
+  double factor;
+  //! Full name associated with the prefix.
+  std::basic_string<Ch> name;
+
+  //! \brief Determine if this unit prefix is identical to another.
+  //! \param x Unit prefix for comparison.
+  //! \return true if the unit prefixes are identical.
+  bool operator==(const UnitPrefix& x) const {
+    if (abbr != x.abbr) return false;
+    return compare_values(factor, x.factor);
   }
-  char abbr[3]; //! Abbreviation associated with the prefix.
-  double factor; //! Factor that the prefix implies.
-  char name[7]; //! Full name associated with the prefix.
+  //! \brief Determine if this unit prefix is not identical to another.
+  //! \param x Unit prefix for comparison.
+  //! \return true if the unit prefixes are not identical.
+  bool operator!=(const UnitPrefix& x) const { return (!(*this == x)); }
+  
+  friend class Unit<Ch>;
 };
 
 // This dictionary formatting from magnitude package (secondarily via unyt), credit to Juan Reyero.
-static std::vector<UnitPrefix> unit_prefixes {
-  UnitPrefix("Y", 1e24, "yotta"),
-  UnitPrefix("Z", 1e21, "zetta"),
-  UnitPrefix("E", 1e18, "exa"),
-  UnitPrefix("P", 1e15, "peta"),
-  UnitPrefix("T", 1e12, "tera"),
-  UnitPrefix("G", 1e9, "giga"),
-  UnitPrefix("M", 1e6, "mega"),
-  UnitPrefix("k", 1e3, "kilo"),
-  UnitPrefix("h", 1e2, "hecto"),
-  UnitPrefix("da", 1e1, "deca"),
-  UnitPrefix("d", 1e-1, "deci"),
-  UnitPrefix("c", 1e-2, "centi"),
-  UnitPrefix("m", 1e-3, "mili"),
-  UnitPrefix("µ", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
-  UnitPrefix("u", 1e-6, "micro"),
-  UnitPrefix("μ", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
-  UnitPrefix("n", 1e-9, "nano"),
-  UnitPrefix("p", 1e-12, "pico"),
-  UnitPrefix("f", 1e-15, "femto"),
-  UnitPrefix("a", 1e-18, "atto"),
-  UnitPrefix("z", 1e-21, "zepto"),
-  UnitPrefix("y", 1e-24, "yocto")
+template<typename Ch>
+std::vector<UnitPrefix<Ch>> get_unit_prefixes() {
+  std::vector<UnitPrefix<Ch>> out {
+    UnitPrefix<Ch>("Y", 1e24, "yotta"),
+    UnitPrefix<Ch>("Z", 1e21, "zetta"),
+    UnitPrefix<Ch>("E", 1e18, "exa"),
+    UnitPrefix<Ch>("P", 1e15, "peta"),
+    UnitPrefix<Ch>("T", 1e12, "tera"),
+    UnitPrefix<Ch>("G", 1e9, "giga"),
+    UnitPrefix<Ch>("M", 1e6, "mega"),
+    UnitPrefix<Ch>("k", 1e3, "kilo"),
+    UnitPrefix<Ch>("h", 1e2, "hecto"),
+    UnitPrefix<Ch>("da", 1e1, "deca"),
+    UnitPrefix<Ch>("d", 1e-1, "deci"),
+    UnitPrefix<Ch>("c", 1e-2, "centi"),
+    UnitPrefix<Ch>("m", 1e-3, "mili"),
+    UnitPrefix<Ch>("µ", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
+    UnitPrefix<Ch>("u", 1e-6, "micro"),
+    UnitPrefix<Ch>("μ", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
+    UnitPrefix<Ch>("n", 1e-9, "nano"),
+    UnitPrefix<Ch>("p", 1e-12, "pico"),
+    UnitPrefix<Ch>("f", 1e-15, "femto"),
+    UnitPrefix<Ch>("a", 1e-18, "atto"),
+    UnitPrefix<Ch>("z", 1e-21, "zepto"),
+    UnitPrefix<Ch>("y", 1e-24, "yocto")
+  };
+  return out;
 };
 
-
-// Forward declarations
-template<typename Ch=char>
-class Unit;
-template<typename Ch=char>
-class Units;
-template<typename T, typename Ch=char>
-class Quantity;
+STATIC_VECTORS(UnitPrefix, unit_prefixes);
 
 //! Unit.
 template<typename Ch>
 class Unit {
 public:
-  Unit() : names_(), abbrs_(), dim_(), factor_(1.0), offset_(0.0), power_(1.0) {}
+  //! \brief Empty constructor.
+  Unit() : names_(), abbrs_(), dim_(), factor_(1.0), offset_(0.0), power_(1.0), prefix_() {}
+  //! \brief Constructor from a look-up table.
+  //! \param x Base unit.
+  //! \param prefix Prefix that should be applied to the base unit.
+  Unit(const Unit& x, const UnitPrefix<Ch>& prefix) : Unit(x) {
+    prefix_ = prefix;
+    RAPIDJSON_ASSERT(!(has_power() && has_offset()));
+  }
+  //! \brief Construct from a single name/abbreviation.
+  //! \tparam Ch2 Character type of the provided name and abbreviation.
+  //! \param name Name.
+  //! \param abbr Abbreviation.
+  //! \param dim Dimensions.
+  //! \param factor Scale factor from the base unit system.
+  //! \param offset Offset from the zero point of the base unit system.
+  //! \param power Power that will be applied to the unit during conversion.
+  //! \param prefix Prefix that should be applied to the base unit.
+  template<typename Ch2>
+  Unit(const Ch2* name, const Ch2* abbr, const Dimension dim,
+       const double factor=1.0, const double offset=0.0,
+       const double power=1.0, const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>(),
+       RAPIDJSON_ENABLEIF((internal::AndExpr<internal::IsSame<Ch2, char>,
+			   internal::NotExpr<internal::IsSame<Ch2, Ch>>>))) :
+    Unit({convert_chars<Ch2,Ch>(name)}, {convert_chars<Ch2,Ch>(abbr)},
+	 dim, factor, offset, power, prefix) {}
+  //! \brief Construct from a single name/abbreviation.
+  //! \param name Name.
+  //! \param abbr Abbreviation.
+  //! \param dim Dimensions.
+  //! \param factor Scale factor from the base unit system.
+  //! \param offset Offset from the zero point of the base unit system.
+  //! \param power Power that will be applied to the unit during conversion.
+  //! \param prefix Prefix that should be applied to the base unit.
   Unit(const Ch* name, const Ch* abbr, const Dimension dim,
-       const double factor=1.0, const double offset=0.0, const double power=1.0) :
-    names_(), abbrs_(), dim_(dim), factor_(factor),
-    offset_(offset), power_(power) {
-    names_.push_back(std::basic_string<Ch>(name));
-    abbrs_.push_back(std::basic_string<Ch>(abbr));
+       const double factor=1.0, const double offset=0.0,
+       const double power=1.0, const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>()) :
+    Unit({std::basic_string<Ch>(name)}, {std::basic_string<Ch>(abbr)},
+	 dim, factor, offset, power, prefix) {}
+  //! \brief Construct from a single name/abbreviation.
+  //! \param names Names.
+  //! \param abbrs Abbreviations.
+  //! \param dim Dimensions.
+  //! \param factor Scale factor from the base unit system.
+  //! \param offset Offset from the zero point of the base unit system.
+  //! \param power Power that will be applied to the unit during conversion.
+  //! \param prefix Prefix that should be applied to the base unit.
+  Unit(const std::vector<std::basic_string<char>>& names,
+       const std::vector<std::basic_string<char>>& abbrs,
+       const Dimension dim, const double factor=1.0, const double offset=0.0,
+       const double power=1.0, const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>()) :
+    names_(), abbrs_(), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
+    RAPIDJSON_ASSERT((names.size() > 0) && (abbrs.size() > 0));
+    assign_chars<Ch,char>(names_, names);
+    assign_chars<Ch,char>(abbrs_, abbrs);
+    RAPIDJSON_ASSERT((names_.size() > 0) && (abbrs_.size() > 0));
   }
-  Unit(const std::vector<std::basic_string<Ch>> names,
-       const std::vector<std::basic_string<Ch>> abbrs, const Dimension dim,
-       const double factor=1.0, const double offset=0.0, const double power=1.0) :
-    names_(names), abbrs_(abbrs), dim_(dim), factor_(factor),
-    offset_(offset), power_(power) {
+  //! \brief Construct from a single name/abbreviation.
+  //! \param names Names.
+  //! \param abbrs Abbreviations.
+  //! \param dim Dimensions.
+  //! \param factor Scale factor from the base unit system.
+  //! \param offset Offset from the zero point of the base unit system.
+  //! \param power Power that will be applied to the unit during conversion.
+  //! \param prefix Prefix that should be applied to the base unit.
+  Unit(const std::vector<std::basic_string<wchar_t>>& names,
+       const std::vector<std::basic_string<wchar_t>>& abbrs,
+       const Dimension dim, const double factor=1.0, const double offset=0.0,
+       const double power=1.0, const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>()) :
+    names_(), abbrs_(), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
+    RAPIDJSON_ASSERT((names.size() > 0) && (abbrs.size() > 0));
+    assign_chars<Ch,wchar_t>(names_, names);
+    assign_chars<Ch,wchar_t>(abbrs_, abbrs);
+    RAPIDJSON_ASSERT((names_.size() > 0) && (abbrs_.size() > 0));
   }
-  Unit(const std::basic_string<Ch> str, const double power=1.0) : Unit() {
-    double prefix_factor = 1.0;
-    const Unit* found = find_unit(str, prefix_factor);
-    RAPIDJSON_ASSERT(found);
-    names_.insert(names_.begin(), found->names_.begin(), found->names_.end());
-    abbrs_.insert(abbrs_.begin(), found->abbrs_.begin(), found->abbrs_.end());
-    dim_ = Dimension(found->dim_);
-    factor_ = prefix_factor * found->factor_;
-    offset_ = found->offset_;
+  //! \brief Construct a unit by looking up a string in the tables of
+  //!   recognized units.
+  //! \param str Unit string.
+  //! \param power Power that should be applied to the located unit.
+  //! \param prefix Prefix that should be applied to the base unit.
+  Unit(const std::basic_string<Ch> str, const double& power=1.0) : Unit() {
+    RAPIDJSON_ASSERT(from_table(str));
     power_ = power; // Base units do not have powers
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
+  }
+  //! \brief Set instance attributes based on an entry from one of the lookup
+  //!   tables.
+  //! \param found Table entry.
+  //! \param prefix Prefix that should be applied to the base unit.
+  //! \return true if the unit could be initialized, false otherwise.
+  bool from_table(const Unit<Ch>& found,
+		  const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>()) {
+    RAPIDJSON_ASSERT((found.names_.size() > 0) && (found.abbrs_.size() > 0));
+    names_.insert(names_.begin(), found.names_.begin(), found.names_.end());
+    abbrs_.insert(abbrs_.begin(), found.abbrs_.begin(), found.abbrs_.end());
+    RAPIDJSON_ASSERT((names_.size() > 0) && (abbrs_.size() > 0));
+    dim_ = found.dim_;
+    factor_ = found.factor_;
+    offset_ = found.offset_;
+    prefix_ = prefix;
+    return true;
   }
   //! \brief Write the unit to an output stream with class information.
   //! \param os Output stream.
   void display(std::ostream& os) const {
-    os << "Unit(\"" << names_[0] << "\", " << dim_ << ", " << factor_
-       << ", " << offset_ << ")**" << power_;
+    RAPIDJSON_ASSERT(names_.size() > 0);
+    os << "Unit(\"" << convert_chars<Ch,char>(prefix_.name)
+       << convert_chars<Ch,char>(names_[0]) << "\", " << dim_ << ", "
+       << factor_ << ", " << offset_ << ")**" << power_;
   }
   //! \brief Get the dimensions of the unit, including the power.
   //! \return The dimensions of the unit.
@@ -441,9 +619,10 @@ public:
     if (names_ != x.names_) return false;
     if (abbrs_ != x.abbrs_) return false;
     if (dim_ != x.dim_) return false;
-    if (!(compare_doubles(factor_, x.factor_))) return false;
-    if (!(compare_doubles(offset_, x.offset_))) return false;
-    if (!(compare_doubles(power_, x.power_))) return false;
+    if (!(compare_values(factor_, x.factor_))) return false;
+    if (!(compare_values(offset_, x.offset_))) return false;
+    if (!(compare_values(power_, x.power_))) return false;
+    if (prefix_ != x.prefix_) return false;
     return true;
   }
   //! \brief Check if this unit is not equal to another.
@@ -453,7 +632,7 @@ public:
   //! \brief Perform power operation in place.
   //! \param x Power to raise this unit to.
   void inplace_pow(const double x) {
-    RAPIDJSON_ASSERT(!(has_offset() && (!(compare_doubles(x, 1.0)))));
+    RAPIDJSON_ASSERT(!(has_offset() && (!(compare_values(x, 1.0)))));
     power_ = power_ * x;
   }
   //! \brief Raise this unit to a power.
@@ -468,6 +647,8 @@ public:
   //! \param x Unit to compare this unit to.
   //! \return true if this unit and x have the same base unit.
   bool is_same_base(const Unit& x) const {
+    RAPIDJSON_ASSERT(x.names_.size() > 0);
+    RAPIDJSON_ASSERT(names_.size() > 0);
     return (x.names_[0] == names_[0]);
   }
   //! \brief Check if a string matches any of the names or abbreviations
@@ -478,7 +659,7 @@ public:
     for (auto n = names_.begin(); n != names_.end(); n++) {
       if (str.compare(*n) == 0)
 	return true;
-      if (str.compare(*n + "s") == 0)
+      if (str.compare(*n + convert_chars<char,Ch>("s")) == 0)
 	return true;
     }
     for (auto n = abbrs_.begin(); n != abbrs_.end(); n++) {
@@ -492,11 +673,11 @@ public:
   //! \param str String to check.
   //! \param prefix Prefix to add when checking against the provided string.
   //! \return true if str matches this unit.
-  bool matches(const std::basic_string<Ch> str, const UnitPrefix& prefix) const {
+  bool matches(const std::basic_string<Ch> str, const UnitPrefix<Ch>& prefix) const {
     for (auto n = names_.begin(); n != names_.end(); n++) {
       if (str.compare(prefix.name + (*n)) == 0)
 	return true;
-      if (str.compare(prefix.name + (*n) + "s") == 0)
+      if (str.compare(prefix.name + (*n) + convert_chars<char,Ch>("s")) == 0)
 	return true;
     }
     for (auto n = abbrs_.begin(); n != abbrs_.end(); n++)
@@ -518,7 +699,7 @@ public:
 	  (str.compare(str.length() - n->length(), n->length(), *n) == 0))
 	possibilities.push_back(this);
       if ((str.length() > n->length()) &&
-	  (str.compare(str.length() - (n->length() + 1), n->length() + 1, *n + "s") == 0))
+	  (str.compare(str.length() - (n->length() + 1), n->length() + 1, *n + convert_chars<char,Ch>("s")) == 0))
 	possibilities.push_back(this);
     }
     for (auto n = abbrs_.begin(); n != abbrs_.end(); n++) {
@@ -530,33 +711,14 @@ public:
   }
   //! \brief Check if this unit has a non-zero offset.
   //! \return true if this unit has a non-zero offset.
-  bool has_offset() const { return (!(compare_doubles(offset_, 0.0))); }
+  bool has_offset() const { return (!(compare_values(offset_, 0.0))); }
   //! \brief Check if this unit has a power other than 1.
   //! \return true if this unit has a power other than 1.
-  bool has_power() const { return (!(compare_doubles(power_, 1.0))); }
+  bool has_power() const { return (!(compare_values(power_, 1.0))); }
   //! \brief Check if this unit is irreducible or a product of more than
   //!   one irreducible unit.
   //! \return true if the unit is irreducible.
   bool is_irreducible() const { return dim_.is_irreducible(); }
-  // Units reduced() const {
-  //   if (is_irreducible()) return Units({*this});
-  //   RAPIDJSON_ASSERT(not has_offset());
-  //   // std::vector<Dimension> dims dim_.reduced();
-  //   std::vector<Unit> units;
-  //   for (size_t i = 0; i < 8; i++) {
-  //     if (!(compare_doubles(dim_.powers_[i], 0.0))) {
-  // 	Unit new_unit(base_units[i]);
-  // 	// TODO: Check this, may need to divide by base unit factor in the
-  // 	// case of grams
-  // 	new_unit.inplace_pow(dim_.powers_[i]);
-  // 	units.push_back(new_unit);
-  //     }
-  //   }
-  //   units[0].factor_ = units[0].factor_ * factor_;
-  //   return Units(units);
-  // }
-  // double to_base(const double x) { return factor_ * (x - offset_); }
-  // double from_base(const double x) { return (x / factor_) + offset_; }
   //! \brief Get the conversion factors necessary to convert from this
   //!   unit to another.
   //! \param x Unit to convert to.
@@ -582,15 +744,14 @@ public:
   //! \return Two element vector where the first element is the scale factor
   //!   and the second element is the offset.
   std::vector<double> conversion_factor() const {
-    std::vector<double> out { std::pow(factor_, power_), offset_ };
+    std::vector<double> out { std::pow(factor_ * prefix_.factor, power_),
+      offset_ };
     return out;
   }
-  //! \brief Find the unit that matches a string.
+  //! \brief Find the unit that matches a string in one of the look up tables.
   //! \param str String to find a unit for.
-  //! \param prefix_factor Prefix factor that is indicated by the string
-  //!   prefix.
-  //! \return Pointer to the matching unit.
-  static const Unit<Ch>* find_unit(const std::basic_string<Ch> str, double& prefix_factor);
+  //! \return true if a unit could be located, false otherwise.
+  bool from_table(const std::basic_string<Ch> str);
 private:
   std::vector<std::basic_string<Ch>> names_;
   std::vector<std::basic_string<Ch>> abbrs_;
@@ -598,29 +759,87 @@ private:
   double factor_;
   double offset_;
   double power_;
+  UnitPrefix<Ch> prefix_;
+
+  static const std::basic_string<Ch> get_whitespace() {
+    static const Ch s[] = {' ', '\t', '\f', '\v', '\n', '\r', '\0'};
+    return std::basic_string<Ch>(s);
+  }
+  template<typename Ch2, typename Ch1>
+  static void assign_chars(std::vector<std::basic_string<Ch2>>& dest,
+			   const std::vector<std::basic_string<Ch1>>& src,
+			   RAPIDJSON_ENABLEIF((internal::IsSame<Ch2,Ch1>))) {
+    dest.insert(dest.begin(), src.begin(), src.end()); }
+  template<typename Ch2, typename Ch1>
+  static void assign_chars(std::vector<std::basic_string<Ch2>>& dest,
+			   const std::vector<std::basic_string<Ch1>>& src,
+			   RAPIDJSON_ENABLEIF((internal::AndExpr<internal::IsSame<Ch2,wchar_t>,
+					       internal::IsSame<Ch1,char>>))) {
+    for (auto it = src.begin(); it != src.end(); it++)
+      dest.push_back(convert_chars<Ch1,Ch2>(*it));
+  }
+  
   friend class Units<Ch>;
   template<typename Ch2>
   friend std::ostream & operator << (std::ostream& os, const Unit<Ch2> &x);
 };
 template<typename Ch>
 inline std::ostream & operator << (std::ostream& os, const Unit<Ch> &x) {
-  os << x.abbrs_[0];
+  RAPIDJSON_ASSERT(x.abbrs_.size() > 0);
+  os << convert_chars<Ch,char>(x.prefix_.abbr)
+     << convert_chars<Ch,char>(x.abbrs_[0]);
   if (x.has_power()) os << "**" << x.power_;
   return os;
 };
 
+//! \brief Units class.
 template<typename Ch>
 class Units {
 public:
+  //! \brief Empty constructor.
   Units() : units_() {}
+  //! \brief Initialize from an initializer list.
+  //! \param units Initializer list of units.
   Units(std::initializer_list<Unit<Ch>> units) : units_(units) {}
+  //! \brief Initialize from a vector of units.
+  //! \param units Vector of units.
   Units(const std::vector<Unit<Ch>> units) : units_(units) {}
-  Units(const std::basic_string<Ch> str) : Units(str.c_str(), str.length()) {}
-  Units(const Ch* str) : Units(str, strlen(str)) {}
-  Units(const Ch str[], const size_t len, const bool verbose=false) : units_() {
+  //! \brief Initialize from a string.
+  //! \param str Units string.
+  //! \param verbose If true, verbose information is displayed when
+  //!   parsing the units string.
+  Units(const std::basic_string<Ch> str, const bool& verbose=false) :
+    Units(str.c_str(), str.length(), verbose) {}
+  //! \brief Initialize from a string.
+  //! \tparam N Number of characters in the string.
+  //! \param str Units string.
+  //! \param verbose If true, verbose information is displayed when
+  //!   parsing the units string.
+  template<size_t N>
+  Units(const Ch str[N], const bool& verbose=false) :
+    Units(str, N, verbose) {}
+  //! \brief Initialize from a string.
+  //! \param str Units string. The length is determined by assuming str is
+  //!   null terminated.
+  //! \param verbose If true, verbose information is displayed when
+  //!   parsing the units string.
+  Units(const Ch* str, const bool& verbose=false) :
+    Units(str, internal::StrLen(str), verbose) {}
+  //! \brief Initialize from a string.
+  //! \param str Units string.
+  //! \param len Number of characters in str.
+  //! \param verbose If true, verbose information is displayed when
+  //!   parsing the units string.
+  Units(const Ch* str, const size_t len, const bool& verbose=false) : units_() {
     Units<Ch> new_units = parse_units(str, len, verbose);
     units_.insert(units_.begin(), new_units.units_.begin(), new_units.units_.end());
   }
+  //! \brief Parse a units string with a different encoding.
+  //! \tparam SourceEncoding Encoding of the units stirng.
+  //! \param str Units string.
+  //! \param len Number of characters in str.
+  //! \param verbose If true, verbose information is displayed when
+  //!   parsing the units string.
   template<typename SourceEncoding, typename DestEncoding=ASCII<char>>
   static Units parse_units(const typename SourceEncoding::Ch* str, const size_t len, const bool verbose=false) {
     GenericStringStream<SourceEncoding> src(str);
@@ -633,6 +852,20 @@ public:
     // Pass pointer to token and populate this structure instead?
     return parse_units(dst.GetString(), dst.GetLength(), verbose);
   }
+  //! \brief Parse a units string.
+  //! \param str Units string.
+  //! \param len Number of characters in str.
+  //! \param verbose If true, verbose information is displayed when
+  //!   parsing the units string.
+  static Units parse_units(const Ch* str, const size_t len,
+			   const bool verbose=false);  // Forward declaration
+  //! \brief Add a unit to the unit set from a string.
+  //! \param str Unit string.
+  void add_unit(const std::basic_string<Ch> str) {
+    units_.emplace_back(str);
+  }
+  //! \brief Display the units instance.
+  //! \param os Output stream.
   void display(std::ostream& os) const {
     size_t i = 0;
     os << "Units([";
@@ -642,17 +875,24 @@ public:
     }
     os << "])";
   }
-  static Units parse_units(const Ch* str, const size_t len,
-			   const bool verbose=false);  // Forward declaration
+  //! \brief Get the dimensions of the units.
+  //! \returns Consolidated dimensions of the units.
   Dimension dimension() const {
     Dimension out(dimensions::dimensionless);
     for (auto it = units_.begin(); it != units_.end(); it++)
       out = out * it->dimension();
     return out;
   }
+  //! \brief Determine if another set of units are compatible and share the
+  //!   same dimensions.
+  //! \param x Units for comparison.
+  //! \return true if the units are compatible, false otherwise.
   bool is_compatible(const Units& x) const {
     return (dimension() == x.dimension());
   }
+  //! \brief Determine if this set of units is identical to another.
+  //! \param x Units for comparison.
+  //! \return true if the units are identical.
   bool operator==(const Units& x) const {
     if (units_.size() != x.units_.size())
       return false;
@@ -661,7 +901,13 @@ public:
 	return false;
     return true;
   }
+  //! \brief Determine if this set of units is not identical to another.
+  //! \param x Units for comparison.
+  //! \return true if the units are not identical.
   bool operator!=(const Units& x) const { return (!(*this == x)); }
+  //! \brief Perform multiplication with another set of units.
+  //! \param x Units for multiplication.
+  //! \return Multiplied units.
   Units operator*(const Units& x) const {
     RAPIDJSON_ASSERT(!(x.has_offset() || has_offset()));
     std::vector<Unit<Ch>> new_units(units_);
@@ -671,11 +917,13 @@ public:
 	if (it2->is_same_base(new_units[i]))
 	  break;
       if (i < units_.size()) {
-	// (a1*x)**a2 * (b1*x)**b2 = (a1**a2)*(b1**b2)*(x**(a2+b2))
+	// (a1*ap*x)**a2 * (b1*bp*x)**b2
+	//     = (a1**a2)*(b1**b2)*(ap**a2)*(bp**b2)*(x**(a2+b2))
+	//     = (a1**a2)*(b1**b2)*(ap**-b2)*(bp**b2)*((ap*x)**(a2+b2))
 	double new_power = new_units[i].power_ + it2->power_;
 	new_units[i].factor_ = std::pow(std::pow(new_units[i].factor_,
 						 new_units[i].power_) *
-					std::pow(it2->factor_,
+					std::pow(it2->factor_ * it2->prefix_.factor / new_units[i].prefix_.factor,
 						 it2->power_),
 					1.0 / new_power);
 	new_units[i].power_ = new_power;
@@ -685,36 +933,42 @@ public:
     }
     return Units(new_units);
   }
+  //! \brief Perform division with another set of units.
+  //! \param x Units for division.
+  //! \return Divided units.
   Units operator/(const Units& x) const {
     return (*this) * (x.pow(-1)); }
+  //! \brief Raise these units to a power without creating a new instance.
+  //! \param x Power.
   void inplace_pow(const double x) {
     for (auto it = units_.begin(); it != units_.end(); it++)
       it->inplace_pow(x);
   }
+  //! \brief Raise these units to a power.
+  //! \param x Power.
+  //! \return Resulting units.
   Units pow(const double x) const {
     Units out(*this);
     out.inplace_pow(x);
     return out;
   }
+  //! \brief Check if there are any units in the instance.
+  //! \return true if there arn't any units, false otherwise.
+  bool is_empty() const { return (units_.size() == 0); }
+  //! \brief Check if the units have an offset.
+  //! \return true if the units have an offset, false otherwise.
   bool has_offset() const {
     for (auto it = units_.begin(); it != units_.end(); it++)
       if (it->has_offset())
 	return true;
     return false;
   }
-  // double to_base(const double x) {
-  //   if (units_.size() == 1)
-  //     return units_[0].to_base(x);
-  //   double out = x;
-  //   // V = (A^x)*(B^y)*(C^z) x ((A0/A)^x)*((B0/B)^y)*((C0/C)^z
-  //   for (auto it = units_.begin(); it != units_.end(); it++) {
-  //     RAPIDJSON_ASSERT(!(it->has_offset()));
-      
-  //   }
-  //   return out;
-  // }
-  // double from_base(const double x) {
-  //   return std::pow(x, 1.0 / power_) / factor_ + offset_; }
+  //! \brief Determine the conversion factors necessary to convert quantities
+  //!   with these units to another set of units.
+  //! \param x Units that conversion factors should convert to.
+  //! \return Array of conversion factors where the first element is the
+  //!   factor that values should be multiplied by and the second element is
+  //!   the offset between the zero points in this and x.
   std::vector<double> conversion_factor(const Units& x) const {
     if ((x.units_.size() == 1) && (units_.size() == 1))
       return units_[0].conversion_factor(x.units_[0]);
@@ -766,7 +1020,8 @@ std::vector<Unit<Ch>> get_base_units() {
   };
   return out;
 };
-static std::vector<Unit<char>> base_units = get_base_units<char>();
+STATIC_VECTORS(Unit, base_units);
+  
   
 template<typename Ch>
 std::vector<Unit<Ch>> get_prefixable_units() {
@@ -811,7 +1066,7 @@ std::vector<Unit<Ch>> get_prefixable_units() {
   out.insert(out.begin(), base.begin(), base.end());
   return out;
 };
-static std::vector<Unit<char>> prefixable_units = get_prefixable_units<char>();
+STATIC_VECTORS(Unit, prefixable_units);
 
 template<typename Ch>
 std::vector<Unit<Ch>> get_unprefixable_units() {
@@ -891,38 +1146,38 @@ std::vector<Unit<Ch>> get_unprefixable_units() {
   };
   return out;
 };
-static std::vector<Unit<char>> unprefixable_units = get_unprefixable_units<char>();
+STATIC_VECTORS(Unit, unprefixable_units);
+
+#undef STATIC_VECTORS
 
 template<typename Ch>
-const Unit<Ch>* Unit<Ch>::find_unit(const std::basic_string<Ch> str, double& prefix_factor) {
-  prefix_factor = 1.0;
+bool Unit<Ch>::from_table(const std::basic_string<Ch> str) {
   size_t idx_beg, idx_end;
-  std::basic_string<Ch> whitespace = " \t\f\v\n\r";
+  std::basic_string<Ch> whitespace = get_whitespace();
   idx_beg = str.find_first_not_of(whitespace);
   idx_end = str.find_last_not_of(whitespace);
   RAPIDJSON_ASSERT(idx_end != std::string::npos);
   std::basic_string<Ch> substr = str.substr(idx_beg, idx_end + 1);
   std::vector<const Unit<Ch>*> possibilities;
-  for (auto it = prefixable_units.begin(); it != prefixable_units.end(); it++) {
+  const std::vector<Unit<Ch>> prefix_units = prefixable_units<Ch>();
+  for (auto it = prefix_units.begin(); it != prefix_units.end(); it++) {
     if (it->matches(substr))
-      return &(*it);
+      return from_table(*it);
     it->prefix_matches(substr, possibilities);
   }
-  for (auto it = unprefixable_units.begin(); it != unprefixable_units.end(); it++)
+  const std::vector<Unit<Ch>> unprefix_units = unprefixable_units<Ch>();
+  const std::vector<UnitPrefix<Ch>> prefixes = unit_prefixes<Ch>();
+  for (auto it = unprefix_units.begin(); it != unprefix_units.end(); it++)
     if (it->matches(substr))
-      return &(*it);
-  if (possibilities.size() > 0) {
-    for (auto it = possibilities.begin(); it != possibilities.end(); it++) {
-      for (auto p = unit_prefixes.begin(); p != unit_prefixes.end(); p++) {
-	if ((*it)->matches(substr, *p)) {
-	  prefix_factor = p->factor;
-	  return *it;
-	}
-      }      
-    }
-  }
-  std::cerr << "No match found for \"" << substr << "\"" << std::endl; // GCOVR_EXCL_LINE
-  return nullptr; // GCOVR_EXCL_LINE
+      return from_table(*it);
+  if (possibilities.size() > 0)
+    for (auto it = possibilities.begin(); it != possibilities.end(); it++)
+      for (auto p = prefixes.begin(); p != prefixes.end(); p++)
+	if ((*it)->matches(substr, *p))
+	  return from_table(**it, *p);
+  std::cerr << "No match found for \"" << convert_chars<Ch,char>(substr) << "\"" << std::endl; // GCOVR_EXCL_LINE
+  RAPIDJSON_ASSERT(!sizeof("No match found")); // GCOVR_EXCL_LINE
+  return false; // GCOVR_EXCL_LINE
 };
 
 namespace parser {
@@ -1068,11 +1323,12 @@ public:
   }
   Units<Ch> finalize() override {
     if (!(this->finalized))
-      this->units = Units<Ch>({Unit<Ch>(word)});
+      this->units.add_unit(word);
+      // this->units = Units<Ch>({Unit<Ch>(word)});
     return TokenBase<Ch>::finalize();
   }
   std::ostream & display(std::ostream &os) const override {
-    os << "WordToken(" << word << ")";
+    os << "WordToken(" << convert_chars<Ch,char>(word) << ")";
     return os;
   }
   /*
@@ -1097,11 +1353,11 @@ public:
   bool is_numeric() override { return true; }
   Units<Ch> finalize() override {
     if (!(this->finalized))
-      this->value_ = atof(this->word.c_str());
+      this->value_ = char_to_double<Ch>(this->word);
     return TokenBase<Ch>::finalize();
   }
   std::ostream & display(std::ostream &os) const override {
-    os << "NumericToken(" << this->word << ")";
+    os << "NumericToken(" << convert_chars<Ch,char>(this->word) << ")";
     return os;
   }
 };
@@ -1296,7 +1552,7 @@ template<typename Ch>
 Units<Ch> Units<Ch>::parse_units(const Ch* str, const size_t len,
 				 const bool verbose) {
   if (verbose)
-    std::cout << "parse_units(\"" << str << "\")" << std::endl;
+    std::cout << "parse_units(\"" << convert_chars<Ch,char>(str) << "\")" << std::endl;
   size_t i = 0;
   parser::GroupToken<Ch> token;
   Ch c;
@@ -1352,11 +1608,30 @@ Units<Ch> Units<Ch>::parse_units(const Ch* str, const size_t len,
   return token.finalize();
 };
 
+//! Scalar quantity with units.
+//! \tparam T Type of the underlying scalar.
+//! \tparam Ch Type of character used to store the unit strings.
 template<typename T, typename Ch>
 class Quantity {
 public:
-  Quantity(const T& value, const Ch* units) : value_(value), units_(units) {}
-  Quantity(const T& value, const Units<Ch>& units) : value_(value), units_(units) {}
+  //! \brief Empty constructor.
+  Quantity() : value_(_initialize_value<T>()), units_() {}
+  //! \brief Create a quantity without units.
+  //! \param value Scalar value.
+  Quantity(const T& value) :
+    value_(value), units_() {}
+  //! \brief Constructor from units string.
+  //! \param value Scalar value.
+  //! \param units Units string.
+  Quantity(const T& value, const Ch* units) :
+    value_(value), units_(units) {}
+  //! \brief Constructor from units string.
+  //! \param value Scalar value.
+  //! \param units Units instance.
+  Quantity(const T& value, const Units<Ch>& units) :
+    value_(value), units_(units) {}
+  //! \brief Print instance information to an output stream.
+  //! \param os Output stream.
   void display(std::ostream& os) const {
     os << "Quantity(" << value_ << ", ";
     units_.display(os);
@@ -1366,67 +1641,149 @@ private:
   Quantity raw_add(const Quantity& x, double factor=1.0) const {
     // Assumes units have already been matched
     return Quantity(value_ + (factor * x.value_), units_); }
+  template<typename T1>
+  static T1 _initialize_value(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
+  { return (T1)(0); }
+  template<typename T1>
+  static T1 _initialize_value(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
+  { return T1(0.0, 0.0); }
 public:
+  //! \brief Get the quantity value without units.
+  //! \return Value.
   T value() const { return value_; };
+  //! \brief Get the units instance.
+  //! \return Units.
   Units<Ch> units() const { return units_; }
+  //! \brief Get the units string.
+  //! \return Units string.
+  std::basic_string<Ch> unitsStr() const {
+    std::basic_stringstream<Ch> ss;
+    ss << units_;
+    return ss.str();
+  }
+  //! \brief Check if two quantities are identical. The units must be
+  //!   identical, not just compatible.
+  //! \param x Quantity for comparison.
+  //! \return true if the two quantities are identical, false otherwise.
   bool operator==(const Quantity& x) const {
     if (units_ != x.units_)
       return false;
-    return compare_doubles(value_, x.value_);
+    return compare_values(value_, x.value_);
   }
+  //! \brief Check if two quantities are not identical.
+  //! \param x Quantity for comparison.
+  //! \return true if the two quantities are not identical, false otherwise.
   bool operator!=(const Quantity& x) const { return (!(*this==x)); }
+  //! \brief Multiply by another quantity.
+  //! \param x Quantity to multiply by.
+  //! \return Result of multiplication.
   Quantity operator*(const Quantity& x) const {
     return Quantity(value_ * x.value_, units_ * x.units_); }
+  //! \brief Divide by another quantity.
+  //! \param x Quantity to divide by.
+  //! \return Result of division.
   Quantity operator/(const Quantity& x) const {
     return Quantity(value_ / x.value_, units_ / x.units_); }
+  //! \brief Multiply by a scalar.
+  //! \tparam T2 Scalar type.
+  //! \param x Scalar to multiply by.
+  //! \return Result of multiplication.
   template<typename T2>
   Quantity operator*(const T2& x) const {
     return Quantity(value_ * x, units_); }
+  //! \brief Divide by a scalar.
+  //! \tparam T2 Scalar type.
+  //! \param x Scalar to divide by.
+  //! \return Result of division.
   template<typename T2>
   Quantity operator/(const T2& x) const {
     return Quantity(value_ / x, units_); }
+  //! \brief Add a quantity with compatible units.
+  //! \param x Quantity to add.
+  //! \return Result of addition.
   Quantity operator+(const Quantity& x) const {
     if (units_ != x.units_)
-      return x.as(units_);
+      return (*this + x.as(units_));
     return raw_add(x); }
+  //! \brief Subtract a quantity with compatible units.
+  //! \param x Quantity to subtract.
+  //! \return Result of subtraction.
   Quantity operator-(const Quantity& x) const {
     if (units_ != x.units_)
-      return x.as(units_);
+      return (*this - x.as(units_));
     return raw_add(x, -1.0); }
+  //! \brief Perform power operation in place.
+  //! \param x Power to raise this quantity to.
   void inplace_pow(const double& x) {
     value_ = std::pow(value_, x);
     units_.inplace_pow(x);
   }
+  //! \brief Raise this quantity to a power.
+  //! \param x Power to raise this quantity to.
+  //! \return Resulting quantity.
   Quantity pow(const double& x) const {
     Quantity out(*this);
     out.inplace_pow(x);
     return out;
   }
+  //! \brief Get the dimensions of this quantity's units.
+  //! \return The dimensions of the units.
   Dimension dimension() const { return units_.dimension(); }
+  //! \brief Check if another quantity has compatible units with the same
+  //!   dimensions.
+  //! \param x Quantity for comparison.
+  //! \return true if the units are compatible, false otherwise.
   bool is_compatible(const Quantity& x) const {
     return (dimension() == x.dimension());
   }
+  //! \brief Check if another quantity is equivalent to this one, allowing
+  //!    for the possibility that it has different, but compatible, units.
+  //! \param x Quantity for comparison.
+  //! \return true if the two quantities are equivalent, false otherwise.
   bool equivalent_to(const Quantity& x) {
     if (!(is_compatible(x)))
       return false;
     return (*this==x.as(units_));
   }
+  //! \brief Convert the quantity to a different set of units. The new units
+  //!   must be compatible with the current ones.
+  //! \param units New units.
   void convert_to(const Units<Ch>& units) {
     std::vector<double> factor = units_.conversion_factor(units);
-    value_ = factor[0] * (value_ - factor[1]);
+    value_ = do_conv<T>(value_, factor[0], factor[1]);
     units_ = Units<Ch>(units);
   }
-  Quantity as(const char* units0) {
+  //! \brief Create a new quantity by converting this one to a new set of
+  //!   compatible units.
+  //! \param units New units.
+  //! \return New quantity.
+  Quantity as(const char* units0) const {
     Units<Ch> units(units0);
     return as(units);
   }
+  //! \brief Create a new quantity by converting this one to a new set of
+  //!   compatible units.
+  //! \param units New units.
+  //! \return New quantity.
   Quantity as(const Units<Ch>& units) const {
     Quantity out(*this);
     out.convert_to(units);
     return out;
   }
 private:
-  double value_;
+  template<typename T2>
+  T2 do_conv(const T2& value, const double& factor, const double& offset,
+	     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) const {
+    return static_cast<T2>((static_cast<double>(value) - offset) * factor);
+  }
+  template<typename T2>
+  T2 do_conv(const T2& value, const double& factor, const double& offset,
+	     RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) const {
+    T2 offset2(offset, 0);
+    return (value - offset2) * factor;
+  }
+  
+  T value_;
   Units<Ch> units_;
   template<typename U, typename Ch2>
   friend std::ostream & operator << (std::ostream &os, const Quantity<U,Ch2> &x);

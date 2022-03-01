@@ -34,6 +34,7 @@
 #include "obj.h"
 #include "pyrj.h"
 #include <complex>
+#include "units.h"
 #endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_DIAG_PUSH
@@ -1564,24 +1565,37 @@ public:
 			       internal::OrExpr<internal::IsSame<T,uint16_t>,
 			       internal::OrExpr<internal::IsSame<T,int8_t>,
 			       internal::OrExpr<internal::IsSame<T,int16_t>,
-			       internal::OrExpr<internal::IsSame<T,std::complex<float>>,
-			       internal::OrExpr<internal::IsSame<T,std::complex<double>>,
 			       internal::OrExpr<internal::IsSame<T,long double>,
-			       internal::IsSame<T,std::complex<long double>> >>>>>>>),
+			       YGGDRASIL_IS_COMPLEX_TYPE(T)>>>>>),
 			       (GenericValue&))
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
     RAPIDJSON_ENABLEIF_RETURN((internal::OrExpr<internal::IsSame<T,uint8_t>,
 			       internal::OrExpr<internal::IsSame<T,uint16_t>,
 			       internal::OrExpr<internal::IsSame<T,int8_t>,
 			       internal::OrExpr<internal::IsSame<T,int16_t>,
-			       internal::OrExpr<internal::IsSame<T,std::complex<float>>,
- 			       internal::IsSame<T,std::complex<double>> >>>>>),
+			       YGGDRASIL_IS_COMPLEX_TYPE(T)>>>>),
 			       (GenericValue&))
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
     AddMember(GenericValue& name, T value, Allocator& allocator) {
       GenericValue v(value, allocator);
       return AddMember(name, v, allocator);
     }
+    template <typename T>
+    GenericValue& AddMember(GenericValue& name, units::Quantity<T,Ch> value, Allocator& allocator) {
+      GenericValue v(value);
+      return AddMember(name, v, allocator);
+    }
+    template <typename T>
+    GenericValue& AddMember(GenericValue& name, units::Quantity<T,Ch>* value, SizeType nelements, Allocator& allocator) {
+      GenericValue v(value, nelements, allocator);
+      return AddMember(name, v, allocator);
+    }
+    template <typename T>
+    GenericValue& AddMember(GenericValue& name, units::Quantity<T,Ch>* value, SizeType shape[], SizeType ndim, Allocator& allocator) {
+      GenericValue v(value, shape, ndim, allocator);
+      return AddMember(name, v, allocator);
+    }
+  
     template <typename T>
     GenericValue& AddMember(GenericValue& name, T value, const Ch* units_str, SizeType units_len, Allocator& allocator) {
       GenericValue v(value, units_str, units_len, allocator);
@@ -1616,11 +1630,9 @@ public:
 				internal::OrExpr<internal::IsSame<T,uint16_t>,
 				internal::OrExpr<internal::IsSame<T,int8_t>,
 				internal::OrExpr<internal::IsSame<T,int16_t>,
-				internal::OrExpr<internal::IsSame<T,std::complex<float>>,
-				internal::OrExpr<internal::IsSame<T,std::complex<double>>,
 				internal::OrExpr<internal::IsSame<T,long double>,
-				internal::OrExpr<internal::IsSame<T,std::complex<long double>>,
-				internal::IsGenericValue<T> >>>>>>>>>),
+				internal::OrExpr<YGGDRASIL_IS_COMPLEX_TYPE(T),
+				internal::IsGenericValue<T> >>>>>>>),
 			       (GenericValue&))
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
     RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
@@ -1628,9 +1640,8 @@ public:
 				internal::OrExpr<internal::IsSame<T,uint16_t>,
 				internal::OrExpr<internal::IsSame<T,int8_t>,
 				internal::OrExpr<internal::IsSame<T,int16_t>,
-				internal::OrExpr<internal::IsSame<T,std::complex<float>>,
-				internal::OrExpr<internal::IsSame<T,std::complex<double>>,
-				internal::IsGenericValue<T> >>>>>>>),
+				internal::OrExpr<YGGDRASIL_IS_COMPLEX_TYPE(T),
+				internal::IsGenericValue<T> >>>>>>),
 			       (GenericValue&))
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #else // RAPIDJSON_YGGDRASIL
@@ -2852,9 +2863,84 @@ public:
 	       const Ch* schema, SizeType schema_length) :
     GenericValue(s, allocator) { SetValueSchemaRaw(schema, schema_length, &allocator); }
 #endif
+  // Units
+  template <typename T>
+  explicit GenericValue(const units::Quantity<T, Ch> &x, Allocator& allocator,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT :
+    GenericValue(&x, 1, &allocator) {}
+  template <typename T>
+  explicit GenericValue(const units::Quantity<T, Ch> &x, Allocator* allocator = 0,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT :
+    GenericValue(&x, 1, allocator) {}
+  template <typename T, SizeType N>
+  explicit GenericValue(const units::Quantity<T, Ch> (&x)[N],
+			Allocator& allocator,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    GenericValue(&(x[0]), {N}, 1, &allocator) {}
+  template <typename T, SizeType N>
+  explicit GenericValue(const units::Quantity<T, Ch> (&x)[N],
+			Allocator* allocator = 0,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    GenericValue(&(x[0]), {N}, 1, allocator) {}
+  template <typename T>
+  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType nelements,
+			Allocator& allocator,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    GenericValue(x, &nelements, 1, &allocator) {}
+  template <typename T>
+  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType nelements,
+			Allocator* allocator = 0,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    GenericValue(x, &nelements, 1, allocator) {}
+  template <typename T, SizeType M, SizeType N>
+  explicit GenericValue(const units::Quantity<T, Ch> (&x)[M][N],
+			Allocator& allocator,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    GenericValue(&(x[0][0]), {M, N}, 2, &allocator) {}
+  template <typename T, SizeType M, SizeType N>
+  explicit GenericValue(const units::Quantity<T, Ch> (&x)[M][N],
+			Allocator* allocator = 0,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    GenericValue(&(x[0][0]), {M, N}, 2, allocator) {}
+  template <typename T, SizeType N>
+  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType shape[N],
+			Allocator& allocator,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    GenericValue(x, shape, N, &allocator) {}
+  template <typename T, SizeType N>
+  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType shape[N],
+			SizeType ndim = 0, Allocator* allocator = 0,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    GenericValue(x, shape, N, allocator) {}
+  template <typename T>
+  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType* shape,
+			SizeType ndim, Allocator& allocator,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    GenericValue(x, shape, ndim, &allocator) {}
+  template <typename T>
+  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType* shape,
+			SizeType ndim, Allocator* allocator = 0,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    data_() YGG_SCHEMA_INIT
+  {
+    SizeType nelements = 1;
+    for (SizeType i = 0; i < ndim; i++)
+      nelements = nelements * shape[i];
+    RAPIDJSON_ASSERT((ndim > 0) && (nelements > 0));
+    std::basic_string<Ch> units_str = x[0].unitsStr();
+    T* temp = (T*)malloc(nelements * sizeof(T));
+    RAPIDJSON_ASSERT(temp);
+    for (SizeType i = 0; i < nelements; i++)
+      temp[i] = x[i].value();
+    SetNDArrayRaw(temp, units_str.c_str(),
+		  static_cast<SizeType>(units_str.size()),
+		  shape, ndim, allocator);
+    free(temp);
+  }
+  
   template <typename T>
   explicit GenericValue(T x, const Ch* units_str, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(&x, units_str, static_cast<SizeType>(strlen(units_str)), {}, 0); }
+  { SetNDArrayRaw(&x, units_str, static_cast<SizeType>(internal::StrLen(units_str)), {}, 0); }
   template <typename T>
   explicit GenericValue(T x, const Ch* units_str, SizeType units_len, Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetNDArrayRaw(&x, units_str, units_len, {}, 0, &allocator); }
@@ -2865,29 +2951,8 @@ public:
   explicit GenericValue(T x, Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetNDArrayRaw(&x, NULL, 0, {}, 0, &allocator); }
   template <typename T>
-    explicit GenericValue(T x, 
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-    RAPIDJSON_DISABLEIF((
-    internal::OrExpr<internal::IsPointer<T>, internal::NotExpr<
-    internal::OrExpr<internal::IsSame<T,uint8_t>,
-    internal::OrExpr<internal::IsSame<T,uint16_t>,
-    internal::OrExpr<internal::IsSame<T,int8_t>,
-    internal::OrExpr<internal::IsSame<T,int16_t>,
-    internal::OrExpr<internal::IsSame<T,std::complex<float>>,
-    internal::OrExpr<internal::IsSame<T,std::complex<double>>,
-    internal::OrExpr<internal::IsSame<T,long double>,
-    internal::IsSame<T,std::complex<long double>>>>>>>>>>>))
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-    RAPIDJSON_DISABLEIF((
-    internal::OrExpr<internal::IsPointer<T>, internal::NotExpr<
-    internal::OrExpr<internal::IsSame<T,uint8_t>,
-    internal::OrExpr<internal::IsSame<T,uint16_t>,
-    internal::OrExpr<internal::IsSame<T,int8_t>,
-    internal::OrExpr<internal::IsSame<T,int16_t>,
-    internal::OrExpr<internal::IsSame<T,std::complex<float>>,
-    internal::IsSame<T,std::complex<double>>>>>>>>>))
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-    ) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+    explicit GenericValue(T x, RAPIDJSON_DISABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T)))) RAPIDJSON_NOEXCEPT :
+    data_() YGG_SCHEMA_INIT
   { SetNDArrayRaw(&x, NULL, 0, {}, 0); }
   // Explicit 1D Array
   template <typename T, SizeType N>
@@ -2903,13 +2968,13 @@ public:
 			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {N};
-    SetNDArrayRaw(&(x[0]), units_str, static_cast<SizeType>(strlen(units_str)), shape, 1, &allocator); }
+    SetNDArrayRaw(&(x[0]), units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 1, &allocator); }
   template <typename T, SizeType N>
   explicit GenericValue(T (&x)[N], const Ch* units_str,
 			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {N};
-    SetNDArrayRaw(&(x[0]), units_str, static_cast<SizeType>(strlen(units_str)), shape, 1); }
+    SetNDArrayRaw(&(x[0]), units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 1); }
   template <typename T, SizeType N>
   explicit GenericValue(T (&x)[N], Allocator& allocator, RAPIDJSON_DISABLEIF((
     internal::OrExpr<internal::IsSame<T,Ch>,
@@ -2937,13 +3002,13 @@ public:
 			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, units_str, static_cast<SizeType>(strlen(units_str)), shape, 1, &allocator); }
+    SetNDArrayRaw(x, units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 1, &allocator); }
   template <typename T>
   explicit GenericValue(T* x, SizeType nelements, const Ch* units_str,
 			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, units_str, static_cast<SizeType>(strlen(units_str)), shape, 1); }
+    SetNDArrayRaw(x, units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 1); }
   template <typename T>
   explicit GenericValue(T* x, SizeType nelements, Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
@@ -2982,13 +3047,13 @@ public:
 			Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {M, N};
-    SetNDArrayRaw(&(x[0][0]), units_str, static_cast<SizeType>(strlen(units_str)), shape, 2, &allocator); }
+    SetNDArrayRaw(&(x[0][0]), units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 2, &allocator); }
   template <typename T, SizeType M, SizeType N>
   explicit GenericValue(T (&x)[M][N],
 			const Ch* units_str) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {M, N};
-    SetNDArrayRaw(&(x[0][0]), units_str, static_cast<SizeType>(strlen(units_str)), shape, 2); }
+    SetNDArrayRaw(&(x[0][0]), units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 2); }
   template <typename T, SizeType M, SizeType N>
   explicit GenericValue(T (&x)[M][N],
 			const Ch* units_str, SizeType units_len,
@@ -3016,11 +3081,11 @@ public:
   explicit GenericValue(T* x, SizeType shape[], SizeType ndim,
 			const Ch* units_str,
 			Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, units_str, static_cast<SizeType>(strlen(units_str)), shape, ndim, &allocator); }
+  { SetNDArrayRaw(x, units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, ndim, &allocator); }
   template <typename T>
   explicit GenericValue(T* x, SizeType shape[], SizeType ndim,
 			const Ch* units_str) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, units_str, static_cast<SizeType>(strlen(units_str)), shape, ndim); }
+  { SetNDArrayRaw(x, units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, ndim); }
   template <typename T>
   explicit GenericValue(T* x, SizeType shape[], SizeType ndim,
 			const Ch* units_str, SizeType units_len,
@@ -3284,7 +3349,7 @@ public:
 
   template <typename T>
   void SetNDArrayRaw(T* data, const Ch* units_str, SizeType units_len,
-		     SizeType shape[], SizeType ndim,
+		     SizeType* shape, SizeType ndim,
 		     Allocator* allocator = 0, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
     // TODO: Set precision for bytes
     ResetSchema(allocator);
@@ -3316,7 +3381,7 @@ public:
     }
     AddSchemaMember(GetSubTypeString(), YggSubTypeString<T>());
     AddSchemaMember(GetPrecisionString(), static_cast<unsigned int>(sizeof(T)));
-    if (units_str) {
+    if ((units_str) && (units_len > 0)) {
       AddSchemaMember(GetUnitsString(), units_str, units_len);
     }
     if (ndim > 0) {
@@ -3690,115 +3755,38 @@ public:
 
   template <typename T1, typename T2>
   T2 CastPrecision(const T1& v1,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      RAPIDJSON_DISABLEIF((
-      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
-      internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
-      internal::OrExpr<internal::IsSame<std::complex<long double>, T1>,
-      internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
-      internal::IsSame<std::complex<long double>, T2>>>>>>))
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      RAPIDJSON_DISABLEIF((
-      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
-      internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-      internal::IsSame<std::complex<double>, T2>>>>))
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      ) const { return static_cast<const T2>(v1); }
+		   RAPIDJSON_DISABLEIF((internal::OrExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
+					YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) const
+  { return static_cast<const T2>(v1); }
   template <typename T1, typename T2>
   T2 CastPrecision(const T1& v1,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      RAPIDJSON_ENABLEIF((
-      internal::AndExpr<
-      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
-      internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
-      internal::IsSame<std::complex<long double>, T1>>>,
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-      internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
-      internal::IsSame<std::complex<long double>, T2>>>>))
-#else //YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      RAPIDJSON_ENABLEIF((
-      internal::AndExpr<
-      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
-      internal::IsSame<std::complex<double>, T1>>,
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-      internal::IsSame<std::complex<double>, T2>>>))
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE      
-      ) const { return T2(v1.real(), v1.imag()); }
+		   RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
+				       YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) const
+  { return T2(v1.real(), v1.imag()); }
   template <typename T1, typename T2>
   T2 CastPrecision(const T1& v1,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      RAPIDJSON_ENABLEIF((
-      internal::AndExpr<
-      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
-      internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
-      internal::IsSame<std::complex<long double>, T1>>>,
-      internal::NotExpr<
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-      internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
-      internal::IsSame<std::complex<long double>, T2>>>>>))
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      RAPIDJSON_ENABLEIF((
-      internal::AndExpr<
-      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
-      internal::IsSame<std::complex<double>, T1>>,
-      internal::NotExpr<
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-      internal::IsSame<std::complex<double>, T2>>>>))
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      ) const { return static_cast<const T2>(v1.real()); }
+		   RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
+				       internal::NotExpr<YGGDRASIL_IS_COMPLEX_TYPE(T2)>>))) const
+  { return static_cast<const T2>(v1.real()); }
   template <typename T1, typename T2>
   T2 CastPrecision(const T1& v1,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      RAPIDJSON_ENABLEIF((
-      internal::AndExpr<internal::NotExpr<
-      internal::OrExpr<internal::IsSame<long, T1>,
-      internal::OrExpr<internal::IsSame<unsigned long, T1>,
-      internal::OrExpr<internal::IsSame<long long, T1>,
-      internal::OrExpr<internal::IsSame<unsigned long long, T1>,
-      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
-      internal::OrExpr<internal::IsSame<std::complex<double>, T1>,
-      internal::IsSame<std::complex<long double>, T1>>>>>>>>,
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-      internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
-      internal::IsSame<std::complex<long double>, T2>>>>))
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      RAPIDJSON_ENABLEIF((
-      internal::AndExpr<internal::NotExpr<
-      internal::OrExpr<internal::IsSame<long, T1>,
-      internal::OrExpr<internal::IsSame<unsigned long, T1>,
-      internal::OrExpr<internal::IsSame<long long, T1>,
-      internal::OrExpr<internal::IsSame<unsigned long long, T1>,
-      internal::OrExpr<internal::IsSame<std::complex<float>, T1>,
-      internal::IsSame<std::complex<double>, T1>>>>>>>,
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-      internal::IsSame<std::complex<double>, T2>>>))
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      ) const { return T2(v1); }
+		   RAPIDJSON_ENABLEIF((internal::AndExpr<internal::NotExpr<
+		   internal::OrExpr<internal::IsSame<long, T1>,
+		   internal::OrExpr<internal::IsSame<unsigned long, T1>,
+		   internal::OrExpr<internal::IsSame<long long, T1>,
+		   internal::OrExpr<internal::IsSame<unsigned long long, T1>,
+		   YGGDRASIL_IS_COMPLEX_TYPE(T1)>>>>>,
+		   YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) const
+  { return T2(v1); }
   template <typename T1, typename T2>
   const T2 CastPrecision(const T1& v1,
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      RAPIDJSON_ENABLEIF((
-      internal::AndExpr<
-      internal::OrExpr<internal::IsSame<long, T1>,
-      internal::OrExpr<internal::IsSame<unsigned long, T1>,
-      internal::OrExpr<internal::IsSame<long long, T1>,
-      internal::IsSame<unsigned long long, T1>>>>,
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-      internal::OrExpr<internal::IsSame<std::complex<double>, T2>,
-      internal::IsSame<std::complex<long double>, T2>>>>))
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      RAPIDJSON_ENABLEIF((
-      internal::AndExpr<
-      internal::OrExpr<internal::IsSame<long, T1>,
-      internal::OrExpr<internal::IsSame<unsigned long, T1>,
-      internal::OrExpr<internal::IsSame<long long, T1>,
-      internal::IsSame<unsigned long long, T1>>>>,
-      internal::OrExpr<internal::IsSame<std::complex<float>, T2>,
-      internal::IsSame<std::complex<double>, T2>>>))
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      ) const { return T2(static_cast<const int>(v1)); }
-
+			 RAPIDJSON_ENABLEIF((internal::AndExpr<
+			 internal::OrExpr<internal::IsSame<long, T1>,
+			 internal::OrExpr<internal::IsSame<unsigned long, T1>,
+                         internal::OrExpr<internal::IsSame<long long, T1>,
+                         internal::IsSame<unsigned long long, T1> >>>,
+			 YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) const
+  { return T2(static_cast<const int>(v1)); }
 
 #define CAST_SOURCE				\
   const T1* src = reinterpret_cast<const T1*>(bytes);
@@ -3951,79 +3939,24 @@ public:
   }
   
   template <typename T>
-    T* ChangePrecision(const unsigned char* bytes, SizeType nelements,
-		       Allocator& allocator) const {
+  T* ChangePrecision(const unsigned char* bytes, SizeType nelements,
+		     Allocator& allocator) const {
     T* v2 = (T*)allocator.Malloc(nelements * sizeof(T));
     RAPIDJSON_ASSERT(v2);
     ChangePrecision(bytes, v2, nelements);
     return v2;
-//     if (GetSubType() == GetUintSubTypeString()) {
-//       switch (GetPrecision()) {
-//       case sizeof(uint8_t):  return ChangePrecision<uint8_t, T>(bytes, nelements);
-//       case sizeof(uint16_t): return ChangePrecision<uint16_t, T>(bytes, nelements);
-//       case sizeof(uint32_t): return ChangePrecision<uint32_t, T>(bytes, nelements);
-//       case sizeof(uint64_t): return ChangePrecision<uint64_t, T>(bytes, nelements);
-//       default: RAPIDJSON_ASSERT(false);
-//       }
-//     } else if (GetSubType() == GetIntSubTypeString()) {
-//       switch (GetPrecision()) {
-//       case sizeof(int8_t):  return ChangePrecision<int8_t, T>(bytes, nelements);
-//       case sizeof(int16_t): return ChangePrecision<int16_t, T>(bytes, nelements);
-//       case sizeof(int32_t): return ChangePrecision<int32_t, T>(bytes, nelements);
-//       case sizeof(int64_t): return ChangePrecision<int64_t, T>(bytes, nelements);
-//       default: RAPIDJSON_ASSERT(false);
-//       }
-//     } else if (GetSubType() == GetFloatSubTypeString()) {
-//       switch (GetPrecision()) {
-//       case sizeof(float): return ChangePrecision<float, T>(bytes, nelements);
-//       case sizeof(double): return ChangePrecision<double, T>(bytes, nelements);
-// #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-//       case sizeof(long double): return ChangePrecision<long double, T>(bytes, nelements);
-// #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-//       default: RAPIDJSON_ASSERT(false);
-//       }
-//     } else if (GetSubType() == GetComplexSubTypeString()) {
-//       switch (GetPrecision()) {
-//       case sizeof(std::complex<float>): return ChangePrecision<std::complex<float>, T>(bytes, nelements);
-//       case sizeof(std::complex<double>): return ChangePrecision<std::complex<double>, T>(bytes, nelements);
-// #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-//       case sizeof(std::complex<long double>): return ChangePrecision<std::complex<long double>, T>(bytes, nelements);
-// #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-//       default: RAPIDJSON_ASSERT(false);
-//       }
-//     }
-//     RAPIDJSON_ASSERT(false);
-//     return NULL;
   }
+  
   template <typename T>
-  void GetScalarBase(T& data) const {
+  void GetScalarValueBase(T& data) const {
     RAPIDJSON_ASSERT(YggSubTypeString<T>() == GetSubType());
     RAPIDJSON_ASSERT((GetStringLength() * sizeof(Ch)) == GetPrecision());
     ChangePrecision(reinterpret_cast<const unsigned char*>(GetString()),
 		    &data, 1);
-    // if (sizeof(T) != GetPrecision()) {
-    //   ChangePrecision(GetString(), &data, length);
-    // } else {
-    //   memcpy(&data, reinterpret_cast<unsigned char*>(GetString()), length);
-    // }
-    // unsigned char* decoded_bytes = GetDecodedString(length);
-    // std::cerr << "length = " << length << ", GetPrecision = " << GetPrecision() << std::endl;
-    // if (sizeof(T) != GetPrecision()) {
-    //   unsigned char* new_decoded_bytes = (unsigned char*)ChangePrecision<T>(decoded_bytes);
-    //   RAPIDJSON_ASSERT(new_decoded_bytes != NULL);
-    //   free(decoded_bytes);
-    //   decoded_bytes = new_decoded_bytes;
-    //   length = sizeof(T);
-    // }
-    // memcpy(&data, decoded_bytes, length);
-    // free(decoded_bytes);
-  };
-  void GetScalar(std::complex<double>& data) const {
-    GetScalarBase(data);
   }
   template <typename T>
-    void GetScalar(T& data, RAPIDJSON_DISABLEIF((
-	internal::IsSame<std::complex<double>, T>))) const {
+  void GetScalarValue(T& data,
+		      RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
     if (!IsYggdrasil()) {
       if (IsInt() && (GetYggSubType<T>() == kYggIntSubType)) {
 	data = static_cast<T>(GetInt());
@@ -4042,29 +3975,101 @@ public:
 	return;
       }
     }
-    GetScalarBase(data);
+    GetScalarValueBase(data);
   }
   template <typename T>
-  T GetScalar() const {
-    T data;
-    GetScalar(data);
+  void GetScalarValue(std::complex<T>& data) const {
+    GetScalarValueBase(data);
+  }
+  template <typename T>
+  void GetScalarQuantity(units::Quantity<T, Ch>& data, const Ch* units_str = nullptr) const {
+    T value = data.value();
+    GetScalarValueBase(value);
+    units::Units<Ch> data_units;
+    if ((units_str == nullptr) || (internal::StrLen(units_str) == 0))
+      data_units = data.units();
+    else
+      data_units = units::Units<Ch>(units_str);
+    if (HasUnits()) {
+      units::Quantity<T, Ch> prev(value, GetUnits().GetString());
+      if (data_units.is_empty())
+	data = prev;
+      else
+	data = prev.as(data_units);
+    } else {
+      data = units::Quantity<T, Ch>(value, data_units);
+    }
+  }
+  template <typename T>
+  units::Quantity<T, Ch> GetScalarQuantity(const Ch* units_str = nullptr) const {
+    units::Quantity<T, Ch> data;
+    GetScalarQuantity(data, units_str);
     return data;
   }
   
-  uint8_t GetUint8() const { return GetScalar<uint8_t>(); }
-  uint16_t GetUint16() const { return GetScalar<uint16_t>(); }
-  uint32_t GetUint32() const { return GetScalar<uint32_t>(); }
-  int8_t GetInt8() const { return GetScalar<int8_t>(); }
-  int16_t GetInt16() const { return GetScalar<int16_t>(); }
-  int32_t GetInt32() const { return GetScalar<int32_t>(); }
+  template <typename T>
+  void GetScalar(T& data, const units::Units<Ch> data_units) const {
+    units::Quantity<T, Ch> x(data, data_units);
+    GetScalarQuantity(x);
+    data = x.value();
+  }
+  template <typename T>
+  void GetScalar(T& data, const Ch* units_str) const {
+    units::Units<Ch> data_units(units_str);
+    GetScalar(data, data_units);
+  }
+  template <typename T>
+  void GetScalar(T& data) const {
+    units::Units<Ch> data_units;
+    GetScalar(data, data_units);
+  }
+  template <typename T>
+  T GetScalar(const units::Units<Ch> data_units,
+	      RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
+    T data = 0;
+    GetScalar(data, data_units);
+    return data;
+  }
+  template <typename T>
+  T GetScalar(const units::Units<Ch> data_units,
+	      RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
+    T data(0, 0);
+    GetScalar(data, data_units);
+    return data;
+  }
+  template <typename T>
+  T GetScalar(const Ch* units_str) const {
+    units::Units<Ch> data_units(units_str);
+    return GetScalar<T>(data_units);
+  }
+  template <typename T>
+  T GetScalar() const {
+    units::Units<Ch> data_units;
+    return GetScalar<T>(data_units);
+  }
+
+#define GET_SCALAR_METHOD(type, name)				\
+  type Get ## name(const Ch* units_str) const {			\
+    return GetScalar<type>(units_str); }			\
+  type Get ## name() const {					\
+    return GetScalar<type>(); }
+
+  GET_SCALAR_METHOD(uint8_t, Uint8);
+  GET_SCALAR_METHOD(uint16_t, Uint16);
+  GET_SCALAR_METHOD(uint32_t, Uint32);
+  GET_SCALAR_METHOD(int8_t, Int8);
+  GET_SCALAR_METHOD(int16_t, Int16);
+  GET_SCALAR_METHOD(int32_t, Int32);
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-  long double GetLongDouble() const { return GetScalar<long double>(); }
+  GET_SCALAR_METHOD(long double, LongDouble);
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-  std::complex<float> GetComplexFloat() const { return GetScalar<std::complex<float>>(); }
-  std::complex<double> GetComplexDouble() const { return GetScalar<std::complex<double>>(); }
+  GET_SCALAR_METHOD(std::complex<float>, ComplexFloat);
+  GET_SCALAR_METHOD(std::complex<double>, ComplexDouble);
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-  std::complex<long double> GetComplexLongDouble() const { return GetScalar<std::complex<long double>>(); }
+  GET_SCALAR_METHOD(std::complex<long double>, ComplexLongDouble);
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+
+#undef GET_SCALAR_METHOD
 
   template <typename T>
   T* Get(SizeType& nelements) const {
@@ -4259,7 +4264,7 @@ public:
   Object GetSchema() { RAPIDJSON_ASSERT(IsSchema()); return GetObject(); }
 
   template<typename T>
-  GenericValue& SetScalar(T x, const Ch* units_str=NULL,
+  GenericValue& SetScalar(T x, const Ch* units_str=nullptr,
 			  SizeType units_len=0,
 			  Allocator* allocator = 0) {
     this->~GenericValue();
@@ -4267,7 +4272,7 @@ public:
     return *this; }
   template<typename T>
   GenericValue& Set1DArray(T* x, SizeType nelements,
-			   const Ch* units_str=NULL,
+			   const Ch* units_str=nullptr,
 			   SizeType units_len=0,
 			   Allocator* allocator = 0) {
     this->~GenericValue();
@@ -4275,7 +4280,7 @@ public:
     return *this; }
   template<typename T>
   GenericValue& SetNDArray(T* x, SizeType shape[], SizeType ndim,
-			   const Ch* units_str=NULL,
+			   const Ch* units_str=nullptr,
 			   SizeType units_len=0, Allocator* allocator = 0) {
     this->~GenericValue();
     new (this) GenericValue(x, shape, ndim, units_str, units_len, allocator);
