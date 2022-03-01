@@ -199,24 +199,22 @@ template <typename T, typename VT> struct HasYggdrasilMethod
     internal::OrExpr<internal::IsSame<T,std::complex<double>>,	\
 		     internal::IsSame<T,std::complex<long double>>>>
 #define YGGDRASIL_IS_SCALAR_TYPE(T)				\
-  internal::OrExpr<internal::IsPointer<T>, internal::NotExpr<	\
-    internal::OrExpr<internal::IsSame<T,uint8_t>,		\
+  internal::OrExpr<internal::IsSame<T,uint8_t>,			\
     internal::OrExpr<internal::IsSame<T,uint16_t>,		\
     internal::OrExpr<internal::IsSame<T,int8_t>,		\
     internal::OrExpr<internal::IsSame<T,int16_t>,		\
     internal::OrExpr<internal::IsSame<T,long double>,	        \
-		     YGGDRASIL_IS_COMPLEX_TYPE(T)>>>>>>>
+		     YGGDRASIL_IS_COMPLEX_TYPE(T)>>>>>
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #define YGGDRASIL_IS_COMPLEX_TYPE(T)				\
     internal::OrExpr<internal::IsSame<T,std::complex<float>>,	\
 		     internal::IsSame<T,std::complex<double>>>
 #define YGGDRASIL_IS_SCALAR_TYPE(T)				\
-  internal::OrExpr<internal::IsPointer<T>, internal::NotExpr<	\
-    internal::OrExpr<internal::IsSame<T,uint8_t>,		\
+  internal::OrExpr<internal::IsSame<T,uint8_t>,			\
     internal::OrExpr<internal::IsSame<T,uint16_t>,		\
     internal::OrExpr<internal::IsSame<T,int8_t>,		\
     internal::OrExpr<internal::IsSame<T,int16_t>,		\
-		     YGGDRASIL_IS_COMPLEX_TYPE(T)>>>>>>
+		     YGGDRASIL_IS_COMPLEX_TYPE(T)>>>>
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #define YGGDRASIL_IS_ANY_SCALAR(T)			\
   internal::OrExpr<YGGDRASIL_IS_SCALAR_TYPE(T),		\

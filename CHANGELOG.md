@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add namespaces for ply, obj, base64?
 * Add normalization
 * Add "encoding" property for bytes
+* Remove use of standard libraries (std::basic_string, std::vector, std::map)?
 
 ### IN PROGRESS
 * Value tests with unit-ful types

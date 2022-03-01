@@ -242,6 +242,8 @@ template<typename Ch=char>
 class Units;
 template<typename T, typename Ch=char>
 class Quantity;
+template<typename T, typename Ch=char>
+class QuantityArray;
 
 class Dimension {
 public:
@@ -509,7 +511,6 @@ public:
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
   }
   //! \brief Construct from a single name/abbreviation.
-  //! \tparam Ch2 Character type of the provided name and abbreviation.
   //! \param name Name.
   //! \param abbr Abbreviation.
   //! \param dim Dimensions.
@@ -517,27 +518,13 @@ public:
   //! \param offset Offset from the zero point of the base unit system.
   //! \param power Power that will be applied to the unit during conversion.
   //! \param prefix Prefix that should be applied to the base unit.
-  template<typename Ch2>
-  Unit(const Ch2* name, const Ch2* abbr, const Dimension dim,
-       const double factor=1.0, const double offset=0.0,
-       const double power=1.0, const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>(),
-       RAPIDJSON_ENABLEIF((internal::AndExpr<internal::IsSame<Ch2, char>,
-			   internal::NotExpr<internal::IsSame<Ch2, Ch>>>))) :
-    Unit({convert_chars<Ch2,Ch>(name)}, {convert_chars<Ch2,Ch>(abbr)},
-	 dim, factor, offset, power, prefix) {}
-  //! \brief Construct from a single name/abbreviation.
-  //! \param name Name.
-  //! \param abbr Abbreviation.
-  //! \param dim Dimensions.
-  //! \param factor Scale factor from the base unit system.
-  //! \param offset Offset from the zero point of the base unit system.
-  //! \param power Power that will be applied to the unit during conversion.
-  //! \param prefix Prefix that should be applied to the base unit.
-  Unit(const Ch* name, const Ch* abbr, const Dimension dim,
+  Unit(const char* name, const char* abbr, const Dimension dim,
        const double factor=1.0, const double offset=0.0,
        const double power=1.0, const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>()) :
-    Unit({std::basic_string<Ch>(name)}, {std::basic_string<Ch>(abbr)},
-	 dim, factor, offset, power, prefix) {}
+    names_(), abbrs_(), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
+    names_.push_back(std::basic_string<Ch>(convert_chars<char,Ch>(name)));
+    abbrs_.push_back(std::basic_string<Ch>(convert_chars<char,Ch>(abbr)));
+  }
   //! \brief Construct from a single name/abbreviation.
   //! \param names Names.
   //! \param abbrs Abbreviations.
@@ -551,28 +538,8 @@ public:
        const Dimension dim, const double factor=1.0, const double offset=0.0,
        const double power=1.0, const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>()) :
     names_(), abbrs_(), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
-    RAPIDJSON_ASSERT((names.size() > 0) && (abbrs.size() > 0));
     assign_chars<Ch,char>(names_, names);
     assign_chars<Ch,char>(abbrs_, abbrs);
-    RAPIDJSON_ASSERT((names_.size() > 0) && (abbrs_.size() > 0));
-  }
-  //! \brief Construct from a single name/abbreviation.
-  //! \param names Names.
-  //! \param abbrs Abbreviations.
-  //! \param dim Dimensions.
-  //! \param factor Scale factor from the base unit system.
-  //! \param offset Offset from the zero point of the base unit system.
-  //! \param power Power that will be applied to the unit during conversion.
-  //! \param prefix Prefix that should be applied to the base unit.
-  Unit(const std::vector<std::basic_string<wchar_t>>& names,
-       const std::vector<std::basic_string<wchar_t>>& abbrs,
-       const Dimension dim, const double factor=1.0, const double offset=0.0,
-       const double power=1.0, const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>()) :
-    names_(), abbrs_(), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
-    RAPIDJSON_ASSERT((names.size() > 0) && (abbrs.size() > 0));
-    assign_chars<Ch,wchar_t>(names_, names);
-    assign_chars<Ch,wchar_t>(abbrs_, abbrs);
-    RAPIDJSON_ASSERT((names_.size() > 0) && (abbrs_.size() > 0));
   }
   //! \brief Construct a unit by looking up a string in the tables of
   //!   recognized units.
@@ -875,6 +842,13 @@ public:
     }
     os << "])";
   }
+  //! \brief Get the units as a string.
+  //! \return Units string.
+  std::basic_string<Ch> str() const {
+    std::basic_stringstream<Ch> ss;
+    ss << *this;
+    return ss.str();
+  }
   //! \brief Get the dimensions of the units.
   //! \returns Consolidated dimensions of the units.
   Dimension dimension() const {
@@ -983,6 +957,7 @@ public:
 private:
   std::vector<Unit<Ch>> units_;
   friend class Quantity<Ch>;
+  friend class QuantityArray<Ch>;
   template<typename Ch2>
   friend std::ostream & operator << (std::ostream &os, const Units<Ch2> &x);
 };
@@ -1322,6 +1297,7 @@ public:
     word.push_back(c);
   }
   Units<Ch> finalize() override {
+    RAPIDJSON_ASSERT(word.size());
     if (!(this->finalized))
       this->units.add_unit(word);
       // this->units = Units<Ch>({Unit<Ch>(word)});
@@ -1656,11 +1632,7 @@ public:
   Units<Ch> units() const { return units_; }
   //! \brief Get the units string.
   //! \return Units string.
-  std::basic_string<Ch> unitsStr() const {
-    std::basic_stringstream<Ch> ss;
-    ss << units_;
-    return ss.str();
-  }
+  std::basic_string<Ch> unitsStr() const { return units_.str(); }
   //! \brief Check if two quantities are identical. The units must be
   //!   identical, not just compatible.
   //! \param x Quantity for comparison.
@@ -1772,27 +1744,372 @@ public:
   }
 private:
   template<typename T2>
-  T2 do_conv(const T2& value, const double& factor, const double& offset,
-	     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) const {
+  static T2 do_conv(const T2& value, const double& factor, const double& offset,
+		    RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
     return static_cast<T2>((static_cast<double>(value) - offset) * factor);
   }
   template<typename T2>
-  T2 do_conv(const T2& value, const double& factor, const double& offset,
-	     RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) const {
-    T2 offset2(offset, 0);
-    return (value - offset2) * factor;
+  static T2 do_conv(const T2& value, const double& factor, const double& offset,
+		    RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
+    T2 offset2(static_cast<typename T2::value_type>(offset), 0);
+    typename T2::value_type factor2 = static_cast<typename T2::value_type>(factor);
+    return (value - offset2) * factor2;
   }
-  
+
   T value_;
   Units<Ch> units_;
   template<typename U, typename Ch2>
   friend std::ostream & operator << (std::ostream &os, const Quantity<U,Ch2> &x);
+  friend class QuantityArray<T,Ch>;
 };
 template<typename T, typename Ch=char>
 inline std::ostream & operator << (std::ostream &os, const Quantity<T, Ch> &x) {
     os << x.value_ << " " << x.units_;
     return os;
 };
+
+#define ARRAY_ARRAY_OP(op)						\
+  QuantityArray operator op(const QuantityArray& x) const {		\
+    RAPIDJSON_ASSERT(is_same_shape(x));					\
+    SizeType N = nelements();						\
+    QuantityArray out(value_, ndim_, shape_, units_ op x.units_);	\
+    for (SizeType i = 0; i < N; i++)					\
+      out.value_[i] = value_[i] op x.value_[i];				\
+    return out;								\
+  }
+#define ARRAY_SCALAR_OP(op)						\
+  template<typename T2>							\
+  QuantityArray operator op(const T2& x) const {			\
+    SizeType N = nelements();						\
+    QuantityArray out(value_, ndim_, shape_, units_ op x);		\
+    for (SizeType i = 0; i < N; i++)					\
+      out.value_[i] = value_[i] op x;					\
+    return out;								\
+  }
+  
+
+//! Array quantity with units.
+//! \tparam T Type of the underlying scalar.
+//! \tparam Ch Type of character used to store the unit strings.
+template<typename T, typename Ch>
+class QuantityArray {
+public:
+  //! \brief Empty constructor.
+  QuantityArray() : value_(nullptr), units_(), ndim_(0), shape_(nullptr) {}
+  //! \brief Create a quantity.
+  //! \param value Pointer to an array.
+  //! \param ndim Number of dimensions in the array.
+  //! \param shape Size of the array in each dimension.
+  //! \param units Units instance.
+  QuantityArray(const T* value, const SizeType& ndim, const SizeType* shape,
+		const Units<Ch>& units = Units<Ch>()) :
+    value_(nullptr), units_(units), ndim_(ndim), shape_(nullptr) {
+    RAPIDJSON_ASSERT(ndim > 0);
+    _init_shape(shape);
+    _init_value(value);
+  }
+  //! \brief Create a quantity.
+  //! \param value Pointer to an array.
+  //! \param len Number of elements in the 1D array.
+  //! \param units Units instance.
+  QuantityArray(const T* value, const SizeType& len,
+		const Units<Ch>& units = Units<Ch>()) :
+    QuantityArray(value, 1, &len, units) {}
+  //! \brief Create a quantity from units string.
+  //! \param value Pointer to an array.
+  //! \param ndim Number of dimensions in the array.
+  //! \param shape Size of the array in each dimension.
+  //! \param units Units string.
+  QuantityArray(const T* value, const SizeType& ndim, const SizeType* shape,
+		const Ch* units) :
+    QuantityArray(value, ndim, shape, Units<Ch>(units)) {}
+  
+  //! \brief Create a quantity without units.
+  //! \tparam N Number of elements in the array.
+  //! \param value 1D array.
+  //! \param units Units instance.
+  template<SizeType N>
+  QuantityArray(const T (&value)[N], const Units<Ch>& units = Units<Ch>()) :
+    QuantityArray(&(value[0]), N, units) {}
+  //! \brief Constructor from units string.
+  //! \tparam N Number of elements in the array.
+  //! \param value 1D array.
+  //! \param units Units string.
+  template<SizeType N>
+  QuantityArray(const T (&value)[N], const Ch* units) :
+    QuantityArray(value, Units<Ch>(units)) {}
+  
+  //! \brief Create a quantity without units.
+  //! \tparam N Number of elements in the array in dimension 1.
+  //! \tparam M Number of elements in the array in dimension 2.
+  //! \param value 1D array.
+  //! \param units Units instance.
+  template<SizeType N, SizeType M>
+  QuantityArray(const T (&value)[N][M], const Units<Ch>& units = Units<Ch>()) :
+    QuantityArray(&(value[0]), 2, {N, M}, units) {}
+  //! \brief Constructor from units string.
+  //! \tparam N Number of elements in the array in dimension 1.
+  //! \tparam M Number of elements in the array in dimension 2.
+  //! \param value 1D array.
+  //! \param units Units string.
+  template<SizeType N, SizeType M>
+  QuantityArray(const T (&value)[N][M], const Ch* units) :
+    QuantityArray(value, Units<Ch>(units)) {}
+  //! \brief Copy constructor.
+  //! \param other QuantityArray to copy.
+  QuantityArray(const QuantityArray<T, Ch>& other) :
+    QuantityArray() { *this = other; }
+  //! \brief Destructor.
+  ~QuantityArray() {
+    if (value_ != nullptr) free(value_);
+    if (shape_ != nullptr) free(shape_);
+    ndim_ = 0;
+  }
+  //! \brief Copy assignment.
+  //! \param other QuantityArray to copy.
+  //! \return Copy.
+  QuantityArray<T, Ch>& operator=(const QuantityArray<T, Ch>& other) {
+    if (value_ != nullptr) free(value_);
+    if (shape_ != nullptr) free(shape_);
+    ndim_ = other.ndim_;
+    units_ = other.units_;
+    _init_shape(other.shape_);
+    _init_value(other.value_);
+    return *this;
+  }
+  //! \brief Print instance information to an output stream.
+  //! \param os Output stream.
+  void display(std::ostream& os) const {
+    os << "QuantityArray(";
+    _write_array(os);
+    os << ", ";
+    units_.display(os);
+    os << ")";
+  }
+  //! \brief Get the total number of elements in the array.
+  //! \return The number of elements.
+  SizeType nelements() const {
+    SizeType out = 0;
+    if (ndim_ > 0) {
+      out = 1;
+      for (SizeType i = 0; i < ndim_; i++)
+	out = out * shape_[i];
+    }
+    return out;
+  }
+private:
+  std::vector<SizeType> _index(const SizeType idx) const {
+    RAPIDJSON_ASSERT(ndim_ > 0);
+    std::vector<SizeType> out;
+    SizeType prev = 0;
+    for (SizeType i = 0; i < (ndim_ - 1); i++) {
+      out.push_back((idx - prev) / shape_[i]);
+      prev += shape_[i] * out[i];
+    }
+    out.push_back(idx - prev);
+    return out;
+  }
+  void _init_shape(const SizeType* shape) {
+    shape_ = (SizeType*)malloc(ndim_ * sizeof(SizeType));
+    RAPIDJSON_ASSERT(shape_);
+    for (SizeType i = 0; i < ndim_; i++)
+      shape_[i] = shape[i];
+  }
+  void _init_value(const T* value) {
+    SizeType N = nelements();
+    value_ = (T*)malloc(N * sizeof(T));
+    for (SizeType i = 0; i < N; i++)
+      value_[i] = value[i];
+  }
+  void _write_array(std::ostream& os) const {
+    SizeType N = nelements();
+    std::vector<SizeType> idx;
+    for (SizeType i = 0; i < N; i++) {
+      idx = _index(i);
+      for (SizeType j = 0; j < ndim_; j++) {
+	if (idx[j] == 0) {
+	  if ((j == 0) || (idx[j - 1] == 0)) {
+	    os << "[";
+	  } else {
+	    os << "], [";
+	  }
+	}
+      }
+      if (idx[ndim_ - 1] > 0)
+	os << ", ";
+      os << value_[i];
+    }
+    for (SizeType i = 0; i < ndim_; i++)
+      os << "]";
+  }
+  QuantityArray raw_add(const QuantityArray& x, double factor=1.0) const {
+    // Assumes units have already been matched
+    RAPIDJSON_ASSERT(is_same_shape(x));
+    QuantityArray out(value_, ndim_, shape_, units_);
+    SizeType N = nelements();
+    for (SizeType i = 0; i < N; i++)
+      out.value_[i] = value_[i] + (factor * x.value_[i]);
+    return out;
+  }
+public:
+  //! \brief Get the quantity value without units.
+  //! \return Value.
+  const T* value() const { return value_; };
+  //! \brief Return the pointer to the value and then reset it.
+  //! \return Value.
+  T* pop_value() {
+    T* out = value_;
+    value_ = nullptr;
+    ndim_ = 0;
+    return out;
+  };
+  //! \brief Get the units instance.
+  //! \return Units.
+  Units<Ch> units() const { return units_; }
+  //! \brief Get the number of dimensions in the array.
+  //! \return Number of dimensions.
+  SizeType ndim() const { return ndim_; }
+  //! \brief Get the size of the array in each dimension.
+  //! \return Array shape.
+  const SizeType* shape() const { return shape_; }
+  //! \brief Get the units string.
+  //! \return Units string.
+  std::basic_string<Ch> unitsStr() const { return units_.str(); }
+  //! \brief Check if another quantity array has the same shape.
+  //! \param x QuantityArray for comparison.
+  //! \return true if the shapes are equivalent, false otherwise.
+  bool is_same_shape(const QuantityArray& x) const {
+    if (ndim_ != x.ndim_) return false;
+    for (SizeType i = 0; i < ndim_; i++)
+      if (shape_[i] != x.shape_[i]) return false;
+    return true;
+  }
+  //! \brief Check if two quantities are identical. The units must be
+  //!   identical, not just compatible.
+  //! \param x QuantityArray for comparison.
+  //! \return true if the two quantities are identical, false otherwise.
+  bool operator==(const QuantityArray& x) const {
+    if (units_ != x.units_) return false;
+    if (!is_same_shape(x)) return false;
+    for (SizeType i = 0; i < nelements(); i++)
+      if (!(compare_values(value_[i], x.value_[i]))) return false;
+    return true;
+  }
+  //! \brief Check if two quantities are not identical.
+  //! \param x QuantityArray for comparison.
+  //! \return true if the two quantities are not identical, false otherwise.
+  bool operator!=(const QuantityArray& x) const { return (!(*this==x)); }
+  //! \brief Multiply by another quantity element by element.
+  //! \param x QuantityArray to multiply by.
+  //! \return Result of multiplication.
+  ARRAY_ARRAY_OP(*);
+  //! \brief Divide by another quantity.
+  //! \param x QuantityArray to divide by.
+  //! \return Result of division.
+  ARRAY_ARRAY_OP(/);
+  //! \brief Multiply by a scalar.
+  //! \tparam T2 Scalar type.
+  //! \param x Scalar to multiply by.
+  //! \return Result of multiplication.
+  ARRAY_SCALAR_OP(*);
+  //! \brief Divide by a scalar.
+  //! \tparam T2 Scalar type.
+  //! \param x Scalar to divide by.
+  //! \return Result of division.
+  ARRAY_SCALAR_OP(/);
+  //! \brief Add a quantity with compatible units.
+  //! \param x QuantityArray to add.
+  //! \return Result of addition.
+  QuantityArray operator+(const QuantityArray& x) const {
+    if (units_ != x.units_)
+      return (*this + x.as(units_));
+    return raw_add(x); }
+  //! \brief Subtract a quantity with compatible units.
+  //! \param x QuantityArray to subtract.
+  //! \return Result of subtraction.
+  QuantityArray operator-(const QuantityArray& x) const {
+    if (units_ != x.units_)
+      return (*this - x.as(units_));
+    return raw_add(x, -1.0); }
+  //! \brief Perform power operation in place.
+  //! \param x Power to raise this quantity to.
+  void inplace_pow(const double& x) {
+    SizeType N = nelements();
+    for (SizeType i = 0; i < N; i++)
+      value_[i] = std::pow(value_[i], x);
+    units_.inplace_pow(x);
+  }
+  //! \brief Raise this quantity to a power.
+  //! \param x Power to raise this quantity to.
+  //! \return Resulting quantity.
+  QuantityArray pow(const double& x) const {
+    QuantityArray out(*this);
+    out.inplace_pow(x);
+    return out;
+  }
+  //! \brief Get the dimensions of this quantity's units.
+  //! \return The dimensions of the units.
+  Dimension dimension() const { return units_.dimension(); }
+  //! \brief Check if another quantity has compatible units with the same
+  //!   dimensions.
+  //! \param x QuantityArray for comparison.
+  //! \return true if the units are compatible, false otherwise.
+  bool is_compatible(const QuantityArray& x) const {
+    return (dimension() == x.dimension());
+  }
+  //! \brief Check if another quantity is equivalent to this one, allowing
+  //!    for the possibility that it has different, but compatible, units.
+  //! \param x QuantityArray for comparison.
+  //! \return true if the two quantities are equivalent, false otherwise.
+  bool equivalent_to(const QuantityArray& x) {
+    if (!(is_compatible(x)))
+      return false;
+    return (*this==x.as(units_));
+  }
+  //! \brief Convert the quantity to a different set of units. The new units
+  //!   must be compatible with the current ones.
+  //! \param units New units.
+  void convert_to(const Units<Ch>& units) {
+    std::vector<double> factor = units_.conversion_factor(units);
+    SizeType N = nelements();
+    for (SizeType i = 0; i < N; i++)
+      value_[i] = Quantity<T,Ch>::template do_conv<T>(value_[i], factor[0], factor[1]);
+    units_ = Units<Ch>(units);
+  }
+  //! \brief Create a new quantity by converting this one to a new set of
+  //!   compatible units.
+  //! \param units New units.
+  //! \return New quantity.
+  QuantityArray as(const char* units0) const {
+    Units<Ch> units(units0);
+    return as(units);
+  }
+  //! \brief Create a new quantity by converting this one to a new set of
+  //!   compatible units.
+  //! \param units New units.
+  //! \return New quantity.
+  QuantityArray as(const Units<Ch>& units) const {
+    QuantityArray out(*this);
+    out.convert_to(units);
+    return out;
+  }
+private:
+  T* value_;
+  Units<Ch> units_;
+  SizeType ndim_;
+  SizeType* shape_;
+  template<typename U, typename Ch2>
+  friend std::ostream & operator << (std::ostream &os, const QuantityArray<U,Ch2> &x);
+};
+template<typename T, typename Ch=char>
+inline std::ostream & operator << (std::ostream &os, const QuantityArray<T, Ch> &x) {
+  x._write_array(os);
+  os << " " << x.units_;
+  return os;
+};
+  
+#undef ARRAY_ARRAY_OP
+#undef ARRAY_SCALAR_OP
 
 } // namespace units
   

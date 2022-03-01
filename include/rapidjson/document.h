@@ -2906,10 +2906,10 @@ public:
   explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType shape[N],
 			Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
-    GenericValue(x, shape, N, &allocator) {}
+    GenericValue(x, &(shape[0]), N, &allocator) {}
   template <typename T, SizeType N>
   explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType shape[N],
-			SizeType ndim = 0, Allocator* allocator = 0,
+			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(x, shape, N, allocator) {}
   template <typename T>
@@ -2918,8 +2918,19 @@ public:
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(x, shape, ndim, &allocator) {}
   template <typename T>
-  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType* shape,
-			SizeType ndim, Allocator* allocator = 0,
+  explicit GenericValue(const units::QuantityArray<T, Ch>& x,
+			Allocator* allocator = 0,
+			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
+    GenericValue(x.value(), x.shape(), x.ndim(), nullptr, 0, allocator) {
+    std::basic_string<Ch> units_str = x.unitsStr();
+    if (units_str.size() > 0)
+      AddSchemaMember(GetUnitsString(), units_str.c_str(),
+		      static_cast<SizeType>(units_str.size()));
+  }
+  template <typename T>
+  explicit GenericValue(const units::Quantity<T, Ch>* x,
+			const SizeType* shape, const SizeType ndim,
+			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     data_() YGG_SCHEMA_INIT
   {
@@ -2932,175 +2943,165 @@ public:
     RAPIDJSON_ASSERT(temp);
     for (SizeType i = 0; i < nelements; i++)
       temp[i] = x[i].value();
-    SetNDArrayRaw(temp, units_str.c_str(),
-		  static_cast<SizeType>(units_str.size()),
-		  shape, ndim, allocator);
+    SetNDArrayRaw(temp, shape, ndim,
+		  units_str.c_str(), static_cast<SizeType>(units_str.size()),
+		  allocator);
     free(temp);
   }
+
+  // Scalars not covered by rapidjson & units
+  template <typename T>
+  explicit GenericValue(const T x,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T)))) :
+    GenericValue(&x, {}, 0, nullptr, 0) {}
+  template <typename T>
+  explicit GenericValue(const T x,
+			const Ch* units_str, const SizeType units_len=0,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(&x, {}, 0, units_str, units_len) {}
+  template <typename T>
+  explicit GenericValue(const T x, Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T)))) :
+    GenericValue(&x, {}, 0, nullptr, 0, allocator) {}
+  template <typename T>
+  explicit GenericValue(const T x,
+			const Ch* units_str, const SizeType units_len,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(&x, {}, 0, units_str, units_len, allocator) {}
   
-  template <typename T>
-  explicit GenericValue(T x, const Ch* units_str, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(&x, units_str, static_cast<SizeType>(internal::StrLen(units_str)), {}, 0); }
-  template <typename T>
-  explicit GenericValue(T x, const Ch* units_str, SizeType units_len, Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(&x, units_str, units_len, {}, 0, &allocator); }
-  template <typename T>
-  explicit GenericValue(T x, const Ch* units_str, SizeType units_len, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(&x, units_str, units_len, {}, 0); }
-  template <typename T>
-  explicit GenericValue(T x, Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(&x, NULL, 0, {}, 0, &allocator); }
-  template <typename T>
-    explicit GenericValue(T x, RAPIDJSON_DISABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T)))) RAPIDJSON_NOEXCEPT :
-    data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(&x, NULL, 0, {}, 0); }
   // Explicit 1D Array
   template <typename T, SizeType N>
-  explicit GenericValue(T (&x)[N], RAPIDJSON_DISABLEIF((
-    internal::OrExpr<internal::IsSame<T,Ch>,
-    internal::IsSame<T,const Ch>>
-    ))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {N};
-    SetNDArrayRaw(&(x[0]), NULL, 0, shape, 1); }
+  explicit GenericValue(const T (&x)[N],
+			const Ch* units_str=nullptr, const SizeType units_len=0,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(&(x[0]), N, units_str, units_len) {}
   template <typename T, SizeType N>
-  explicit GenericValue(T (&x)[N], const Ch* units_str, Allocator& allocator,
-			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {N};
-    SetNDArrayRaw(&(x[0]), units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 1, &allocator); }
+  explicit GenericValue(const T (&x)[N],
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(&(x[0]), N, nullptr, 0, allocator) {}
   template <typename T, SizeType N>
-  explicit GenericValue(T (&x)[N], const Ch* units_str,
-			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {N};
-    SetNDArrayRaw(&(x[0]), units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 1); }
+  explicit GenericValue(const T (&x)[N],
+			const Ch* units_str,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(&(x[0]), N, units_str, 0, allocator) {}
   template <typename T, SizeType N>
-  explicit GenericValue(T (&x)[N], Allocator& allocator, RAPIDJSON_DISABLEIF((
-    internal::OrExpr<internal::IsSame<T,Ch>,
-    internal::IsSame<T,const Ch>>
-    ))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {N};
-    SetNDArrayRaw(&(x[0]), NULL, 0, shape, 1, &allocator); }
-  template <typename T, SizeType N>
-  explicit GenericValue(T (&x)[N],
-			const Ch* units_str, SizeType units_len,
-			Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {N};
-    SetNDArrayRaw(&(x[0]), units_str, units_len, shape, 1, &allocator); }
+  explicit GenericValue(const T (&x)[N],
+			const Ch* units_str, const SizeType units_len,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(&(x[0]), N, units_str, units_len, allocator) {}
   // 1D Array as pointer
   template <typename T>
-  explicit GenericValue(T* x, SizeType nelements,
-			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, NULL, 0, shape, 1); }
+  explicit GenericValue(const T* x, SizeType nelements,
+			const Ch* units_str=nullptr, const SizeType units_len=0,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(x, &nelements, 1, units_str, units_len) {}
   template <typename T>
-  explicit GenericValue(T* x, SizeType nelements, const Ch* units_str, Allocator& allocator,
-			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 1, &allocator); }
+  explicit GenericValue(const T* x, SizeType nelements, Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(x, &nelements, 1, nullptr, 0, allocator) {}
   template <typename T>
-  explicit GenericValue(T* x, SizeType nelements, const Ch* units_str,
-			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 1); }
+  explicit GenericValue(const T* x, const SizeType nelements,
+			const Ch* units_str,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(x, &nelements, 1, units_str, 0, allocator) {}
   template <typename T>
-  explicit GenericValue(T* x, SizeType nelements, Allocator& allocator,
-			RAPIDJSON_DISABLEIF((internal::IsSame<T,Ch>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, NULL, 0, shape, 1, &allocator); }
-  template <typename T>
-  explicit GenericValue(T* x, SizeType nelements,
-			const Ch* units_str, SizeType units_len,
-			Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, units_str, units_len, shape, 1, &allocator); }
+  explicit GenericValue(const T* x, const SizeType nelements,
+			const Ch* units_str, const SizeType units_len,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(x, &nelements, 1, units_str, units_len, allocator) {}
   // 1D array of strings
-  explicit GenericValue(const Ch* x, SizeType precision,
-			SizeType nelements, Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
+  explicit GenericValue(const Ch* x, const SizeType precision,
+			const SizeType nelements, Allocator& allocator)
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT {
     SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, precision, NULL, 0, shape, 1, &allocator); }
+    SetNDArrayRaw(x, precision, shape, 1, nullptr, 0, &allocator);
+  }
   // Explicit 2D array
   template <typename T, SizeType M, SizeType N>
-  explicit GenericValue(T (&x)[M][N],
-			Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  explicit GenericValue(const T (&x)[M][N],
+			const Ch* units_str=nullptr, const SizeType units_len=0,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {M, N};
-    SetNDArrayRaw(&(x[0][0]), NULL, 0, shape, 2, &allocator); }
+    SetNDArrayRaw(&(x[0][0]), shape, 2, units_str, units_len);
+  }
   template <typename T, SizeType M, SizeType N>
-  explicit GenericValue(T (&x)[M][N],
-		        RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {M, N};
-    SetNDArrayRaw(&(x[0][0]), NULL, 0, shape, 2); }
+  explicit GenericValue(const T (&x)[M][N],
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(x, nullptr, 0, allocator) {}
   template <typename T, SizeType M, SizeType N>
-  explicit GenericValue(T (&x)[M][N],
+  explicit GenericValue(const T (&x)[M][N],
 			const Ch* units_str,
-			Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {M, N};
-    SetNDArrayRaw(&(x[0][0]), units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 2, &allocator); }
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(x, units_str, 0, allocator) {}
   template <typename T, SizeType M, SizeType N>
-  explicit GenericValue(T (&x)[M][N],
-			const Ch* units_str) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  explicit GenericValue(const T (&x)[M][N],
+			const Ch* units_str, const SizeType units_len,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {M, N};
-    SetNDArrayRaw(&(x[0][0]), units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, 2); }
-  template <typename T, SizeType M, SizeType N>
-  explicit GenericValue(T (&x)[M][N],
-			const Ch* units_str, SizeType units_len,
-			Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {M, N};
-    SetNDArrayRaw(&(x[0][0]), units_str, units_len, shape, 2, &allocator); }
-  template <typename T, SizeType M, SizeType N>
-  explicit GenericValue(T (&x)[M][N],
-			const Ch* units_str, SizeType units_len,
-		        RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {M, N};
-    SetNDArrayRaw(&(x[0][0]), units_str, units_len, shape, 2); }
+    SetNDArrayRaw(&(x[0][0]), shape, 2, units_str, units_len, allocator);
+  }
   // Pointer to ND array
   template <typename T>
-  explicit GenericValue(T* x, SizeType shape[], SizeType ndim,
-			Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, NULL, 0, shape, ndim, &allocator); }
+  explicit GenericValue(const T* x,
+			const SizeType shape[], const SizeType ndim,
+			const Ch* units_str=nullptr, const SizeType units_len=0,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  { SetNDArrayRaw(x, shape, ndim, units_str, units_len); }
   template <typename T>
-  explicit GenericValue(T* x, SizeType shape[], SizeType ndim,
-		        RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, NULL, 0, shape, ndim); }
+  explicit GenericValue(const T* x,
+			const SizeType shape[], const SizeType ndim,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(x, shape, ndim, nullptr, 0, allocator) {}
   template <typename T>
-  explicit GenericValue(T* x, SizeType shape[], SizeType ndim,
+  explicit GenericValue(const T* x,
+			const SizeType shape[], const SizeType ndim,
 			const Ch* units_str,
-			Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, ndim, &allocator); }
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(x, shape, ndim, units_str, 0, allocator) {}
   template <typename T>
-  explicit GenericValue(T* x, SizeType shape[], SizeType ndim,
-			const Ch* units_str) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, units_str, static_cast<SizeType>(internal::StrLen(units_str)), shape, ndim); }
-  template <typename T>
-  explicit GenericValue(T* x, SizeType shape[], SizeType ndim,
-			const Ch* units_str, SizeType units_len,
-			Allocator& allocator, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, units_str, units_len, shape, ndim, &allocator); }
-  template <typename T>
-  explicit GenericValue(T* x, SizeType shape[], SizeType ndim,
-			const Ch* units_str, SizeType units_len,
-		        RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, units_str, units_len, shape, ndim); }
+  explicit GenericValue(const T* x,
+			const SizeType shape[], const SizeType ndim,
+			const Ch* units_str, const SizeType units_len,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  { SetNDArrayRaw(x, shape, ndim, units_str, units_len, &allocator); }
+  // Get ndim from template
+  template <typename T, SizeType N>
+  explicit GenericValue(const T* x,
+			const SizeType shape[N], const SizeType ndim,
+			const Ch* units_str=nullptr, const SizeType units_len=0,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(x, &(shape[0]), ndim, units_str, units_len) {}
+  template <typename T, SizeType N>
+  explicit GenericValue(const T* x,
+			const SizeType shape[N], const SizeType ndim,
+			const Ch* units_str, const SizeType units_len,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) :
+    GenericValue(x, &(shape[0]), ndim, units_str, units_len, allocator) {}
   // ND array of strings
-  explicit GenericValue(const Ch* x, SizeType precision,
-			SizeType shape[], SizeType ndim,
+  explicit GenericValue(const Ch* x, const SizeType precision,
+			const SizeType shape[], const SizeType ndim,
 			Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, precision, NULL, 0, shape, ndim, &allocator); }
+  { SetNDArrayRaw(x, precision, shape, ndim, nullptr, 0, &allocator); }
+  // Other types with dedicated classes
   explicit GenericValue(PyObject* x) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetPythonObjectRaw(x); }
   explicit GenericValue(PyObject* x, Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
@@ -3348,8 +3349,9 @@ public:
   }
 
   template <typename T>
-  void SetNDArrayRaw(T* data, const Ch* units_str, SizeType units_len,
-		     SizeType* shape, SizeType ndim,
+  void SetNDArrayRaw(const T* data,
+		     const SizeType* shape, const SizeType& ndim,
+		     const Ch* units_str=nullptr, const SizeType units_len=0,
 		     Allocator* allocator = 0, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
     // TODO: Set precision for bytes
     ResetSchema(allocator);
@@ -3361,7 +3363,7 @@ public:
       nbytes = nbytes * shape[i];
       shape_array.PushBack(shape[i], schema_->GetAllocator());
     }
-    SetStringRaw(StringRef(reinterpret_cast<Ch*>(data), nbytes),
+    SetStringRaw(StringRef(reinterpret_cast<const Ch*>(data), nbytes),
 		 schema_->GetAllocator());
     // size_t length_siz = 0;
     // unsigned char* encoded_bytes = base64_encode(reinterpret_cast<unsigned char*>(data),
@@ -3381,18 +3383,22 @@ public:
     }
     AddSchemaMember(GetSubTypeString(), YggSubTypeString<T>());
     AddSchemaMember(GetPrecisionString(), static_cast<unsigned int>(sizeof(T)));
-    if ((units_str) && (units_len > 0)) {
-      AddSchemaMember(GetUnitsString(), units_str, units_len);
+    if (units_str) {
+      if (units_len == 0)
+	AddSchemaMember(GetUnitsString(), units_str,
+			internal::StrLen(units_str));
+      else
+	AddSchemaMember(GetUnitsString(), units_str, units_len);
     }
     if (ndim > 0) {
       AddSchemaMember(GetShapeString(), shape_array);
     }
   }
-  void SetNDArrayRaw(const Ch* data, SizeType precision,
-		     const Ch* units_str, SizeType units_len,
-		     SizeType shape[], SizeType ndim,
+  void SetNDArrayRaw(const Ch* data, const SizeType precision,
+		     const SizeType* shape, const SizeType ndim,
+		     const Ch* units_str=nullptr, const SizeType units_len=0,
 		     Allocator* allocator = 0) {
-    SetNDArrayRaw(data, units_str, units_len, shape, ndim, allocator);
+    SetNDArrayRaw(data, shape, ndim, units_str, units_len, allocator);
     schema_->FindMember(GetPrecisionString())->Set(precision);
   }
   StringRefType GetPythonObjectClassName(PyObject* x, Allocator& allocator) {
@@ -3719,8 +3725,7 @@ public:
     return static_cast<SizeType>(schema_->FindMember(GetPrecisionString())->value.GetUint());
   }
 
-  SizeType* GetShape(SizeType &ndim) const {
-    // TODO: Unclear if this should be malloc'd by allocator or not
+  SizeType* GetShape(SizeType &ndim, Allocator& allocator) const {
     RAPIDJSON_ASSERT(IsYggdrasil());
     ndim = 0;
     SizeType* out = NULL;
@@ -3728,7 +3733,7 @@ public:
     if (shape != schema_->MemberEnd()) {
       RAPIDJSON_ASSERT(shape->value.IsArray());
       ndim = static_cast<SizeType>(shape->value.Size());
-      out = static_cast<SizeType*>(schema_->GetAllocator().Malloc(ndim * sizeof(SizeType)));
+      out = static_cast<SizeType*>(allocator.Malloc(ndim * sizeof(SizeType)));
       for (SizeType i = 0; i < shape->value.Size(); i++) {
 	out[i] = static_cast<SizeType>(shape->value[i].GetUint());
       }
@@ -3762,7 +3767,8 @@ public:
   T2 CastPrecision(const T1& v1,
 		   RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
 				       YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) const
-  { return T2(v1.real(), v1.imag()); }
+  { return T2(static_cast<typename T2::value_type>(v1.real()),
+	      static_cast<typename T2::value_type>(v1.imag())); }
   template <typename T1, typename T2>
   T2 CastPrecision(const T1& v1,
 		   RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
@@ -3982,33 +3988,40 @@ public:
     GetScalarValueBase(data);
   }
   template <typename T>
-  void GetScalarQuantity(units::Quantity<T, Ch>& data, const Ch* units_str = nullptr) const {
+  void GetScalarQuantity(units::Quantity<T, Ch>& data,
+			 const units::Units<Ch> data_units = units::Units<Ch>()) const {
     T value = data.value();
     GetScalarValueBase(value);
-    units::Units<Ch> data_units;
-    if ((units_str == nullptr) || (internal::StrLen(units_str) == 0))
-      data_units = data.units();
-    else
-      data_units = units::Units<Ch>(units_str);
+    units::Units<Ch> new_units = data_units;
+    if ((new_units.is_empty()) && (!(data.units().is_empty())))
+	new_units = data.units();
     if (HasUnits()) {
       units::Quantity<T, Ch> prev(value, GetUnits().GetString());
-      if (data_units.is_empty())
+      if (new_units.is_empty())
 	data = prev;
       else
-	data = prev.as(data_units);
+	data = prev.as(new_units);
     } else {
-      data = units::Quantity<T, Ch>(value, data_units);
+      data = units::Quantity<T, Ch>(value, new_units);
     }
   }
   template <typename T>
-  units::Quantity<T, Ch> GetScalarQuantity(const Ch* units_str = nullptr) const {
+  void GetScalarQuantity(units::Quantity<T, Ch>& data,
+			 const Ch* units_str) const {
+    return GetScalarQuantity(data, units::Units<Ch>(units_str)); }
+  template <typename T>
+  units::Quantity<T, Ch> GetScalarQuantity(const units::Units<Ch> data_units = units::Units<Ch>()) const {
     units::Quantity<T, Ch> data;
-    GetScalarQuantity(data, units_str);
+    GetScalarQuantity(data, data_units);
     return data;
   }
+  template <typename T>
+  units::Quantity<T, Ch> GetScalarQuantity(const Ch* units_str) const {
+    return GetScalarQuantity<T>(units::Units<Ch>(units_str)); }
   
   template <typename T>
-  void GetScalar(T& data, const units::Units<Ch> data_units) const {
+  void GetScalar(T& data,
+		 const units::Units<Ch> data_units = units::Units<Ch>()) const {
     units::Quantity<T, Ch> x(data, data_units);
     GetScalarQuantity(x);
     data = x.value();
@@ -4019,19 +4032,14 @@ public:
     GetScalar(data, data_units);
   }
   template <typename T>
-  void GetScalar(T& data) const {
-    units::Units<Ch> data_units;
-    GetScalar(data, data_units);
-  }
-  template <typename T>
-  T GetScalar(const units::Units<Ch> data_units,
+  T GetScalar(const units::Units<Ch> data_units = units::Units<Ch>(),
 	      RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
     T data = 0;
     GetScalar(data, data_units);
     return data;
   }
   template <typename T>
-  T GetScalar(const units::Units<Ch> data_units,
+  T GetScalar(const units::Units<Ch> data_units = units::Units<Ch>(),
 	      RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
     T data(0, 0);
     GetScalar(data, data_units);
@@ -4040,11 +4048,6 @@ public:
   template <typename T>
   T GetScalar(const Ch* units_str) const {
     units::Units<Ch> data_units(units_str);
-    return GetScalar<T>(data_units);
-  }
-  template <typename T>
-  T GetScalar() const {
-    units::Units<Ch> data_units;
     return GetScalar<T>(data_units);
   }
 
@@ -4079,12 +4082,15 @@ public:
   }
 
   template <typename T>
-  void Get1DArray(T*& data, SizeType& nelements, Allocator& allocator) const {
+  void GetArrayValueBase(T*& data, SizeType& ndim, SizeType*& shape,
+			 Allocator& allocator) const {
     RAPIDJSON_ASSERT(YggSubTypeString<T>() == GetSubType());
     size_t length = 0;
     unsigned char* decoded_bytes = GetDecodedString(length, allocator);
     RAPIDJSON_ASSERT((SizeType)length == GetNBytes());
-    nelements = GetNElements();
+    shape = GetShape(ndim, allocator);
+    RAPIDJSON_ASSERT(shape);
+    SizeType nelements = GetNElements();
     if (sizeof(T) != GetPrecision()) {
       unsigned char* old_decoded_bytes = decoded_bytes;
       decoded_bytes = (unsigned char*)ChangePrecision<T>(decoded_bytes,
@@ -4093,18 +4099,114 @@ public:
       allocator.Free(old_decoded_bytes);
       length = sizeof(T) * nelements;
     }
-    if (data != NULL) {
+    if (data != nullptr)
       free(data);
-    }
-    data = static_cast<T*>(decoded_bytes);
+    data = reinterpret_cast<T*>(decoded_bytes);
   }
+  template <typename T>
+  void GetArrayQuantity(units::QuantityArray<T, Ch>& data,
+			Allocator& allocator,
+			const units::Units<Ch> data_units = units::Units<Ch>()) const {
+    T* value = nullptr;
+    SizeType ndim = 0;
+    SizeType* shape = nullptr;
+    GetArrayValueBase(value, ndim, shape, allocator);
+    units::Units<Ch> new_units = data_units;
+    if ((new_units.is_empty()) && (!(data.units().is_empty())))
+	new_units = data.units();
+    if (HasUnits()) {
+      units::QuantityArray<T, Ch> prev(value, ndim, shape, GetUnits().GetString());
+      if (new_units.is_empty())
+	data = prev;
+      else
+	data = prev.as(new_units);
+    } else {
+      data = units::QuantityArray<T, Ch>(value, ndim, shape, new_units);
+    }
+    allocator.Free(value);
+  }
+  template <typename T>
+  void GetArrayQuantity(units::QuantityArray<T, Ch>& data,
+			Allocator& allocator, const Ch* units_str) const {
+    return GetArrayQuantity(data, allocator, units::Units<Ch>(units_str)); }
+  template <typename T>
+  units::QuantityArray<T, Ch> GetArrayQuantity(Allocator& allocator,
+					       const units::Units<Ch> data_units = units::Units<Ch>()) const {
+    units::QuantityArray<T, Ch> data;
+    GetArrayQuantity(data, allocator, data_units);
+    return data;
+  }
+  template <typename T>
+  units::QuantityArray<T, Ch> GetArrayQuantity(Allocator& allocator,
+					       const Ch* units_str) const {
+    return GetArrayQuantity<T>(allocator, units::Units<Ch>(units_str)); }
+
+  // 1D array access
+  template <typename T>
+  void Get1DArray(T*& data, SizeType& nelements, Allocator& allocator,
+		  const units::Units<Ch> data_units = units::Units<Ch>()) const {
+    units::QuantityArray<T, Ch> x;
+    // TODO: Pass allocator to quantity
+    GetArrayQuantity(x, allocator, data_units);
+    nelements = x.nelements();
+    data = (T*)allocator.Malloc(nelements * sizeof(T));
+    RAPIDJSON_ASSERT(data);
+    for (SizeType i = 0; i < nelements; i++)
+      data[i] = x.value()[i];
+    // data = x.pop_value();
+  }
+  template <typename T>
+  void Get1DArray(T*& data, SizeType& nelements, Allocator& allocator,
+		  const Ch* units_str) const {
+    return Get1DArray(data, nelements, allocator, units::Units<Ch>(units_str)); }
+      
+  template <typename T>
+  T* Get1DArray(SizeType& nelements, Allocator& allocator,
+		const units::Units<Ch> data_units = units::Units<Ch>()) const {
+    T* data = nullptr;
+    Get1DArray(data, nelements, allocator, data_units);
+    return data;
+  }
+  template <typename T>
+  T* Get1DArray(SizeType& nelements, Allocator& allocator,
+		const Ch* units_str) const {
+    return Get1DArray<T>(nelements, allocator, units::Units<Ch>(units_str)); }
+  
+  // ND array access
+  template <typename T>
+  void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
+		  Allocator& allocator,
+		  const units::Units<Ch> data_units = units::Units<Ch>()) const {
+    units::QuantityArray<T, Ch> x;
+    GetArrayQuantity(x, allocator, data_units);
+    ndim = x.ndim();
+    if (shape != nullptr)
+      free(shape);
+    shape = (SizeType*)allocator.Malloc(ndim * sizeof(SizeType));
+    for (SizeType i = 0; i < ndim; i++)
+      shape[i] = x.shape()[i];
+    data = x.pop_value();
+  }
+  template <typename T>
+  void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
+		  Allocator& allocator, const Ch* units_str) const {
+    return GetNDArray(data, shape, ndim, allocator, units::Units<Ch>(units_str)); }
+      
+  template <typename T>
+  T* GetNDArray(SizeType*& shape, SizeType& ndim, Allocator& allocator,
+		const units::Units<Ch> data_units = units::Units<Ch>()) const {
+    T* data = nullptr;
+    GetNDArray(data, shape, ndim, allocator, data_units);
+    return data;
+  }
+  template <typename T>
+  T* GetNDArray(SizeType*& shape, SizeType& ndim, Allocator& allocator,
+		const Ch* units_str) const {
+    return GetNDArray<T>(shape, ndim, allocator, units::Units<Ch>(units_str)); }
   
   template <typename T>
-  T* Get(SizeType** shape, SizeType& ndim) const {
-    T* out = NULL;
-    GetNDArray(&out, shape, ndim);
-    return out;
-  }
+  T* Get(SizeType** shape, SizeType& ndim, Allocator& allocator) const {
+    return GetNDArray<T>(shape, ndim, allocator); }
 
   unsigned char* GetDecodedString(size_t &length, Allocator &allocator) const {
     length = (size_t)(GetStringLength() * sizeof(Ch));
@@ -4118,32 +4220,6 @@ public:
     // 						 &length);
     // RAPIDJSON_ASSERT(decoded_bytes != NULL);
     return decoded_bytes;
-  }
-
-  template <typename T>
-  void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
-		  Allocator& allocator) const {
-    RAPIDJSON_ASSERT(YggSubTypeString<T>() == GetSubType());
-    size_t length = 0;
-    unsigned char* decoded_bytes = GetDecodedString(length, allocator);
-    RAPIDJSON_ASSERT((SizeType)length == GetNBytes());
-    SizeType nelements = GetNElements();
-    if (sizeof(T) != GetPrecision()) {
-      unsigned char* old_decoded_bytes = decoded_bytes;
-      decoded_bytes = (unsigned char*)ChangePrecision<T>(decoded_bytes,
-							 nelements,
-							 allocator);
-      allocator.Free(old_decoded_bytes);
-      length = sizeof(T) * nelements;
-    }
-    if (data != NULL) {
-      free(data);
-    }
-    if (shape != NULL) {
-      free(shape);
-    }
-    data = static_cast<T*>(decoded_bytes);
-    shape = GetShape(ndim);
   }
 
   PyObject* GetPythonClass() const {
@@ -4265,7 +4341,7 @@ public:
 
   template<typename T>
   GenericValue& SetScalar(T x, const Ch* units_str=nullptr,
-			  SizeType units_len=0,
+			  const SizeType units_len=0,
 			  Allocator* allocator = 0) {
     this->~GenericValue();
     new (this) GenericValue(x, units_str, units_len, allocator);
@@ -4273,7 +4349,7 @@ public:
   template<typename T>
   GenericValue& Set1DArray(T* x, SizeType nelements,
 			   const Ch* units_str=nullptr,
-			   SizeType units_len=0,
+			   const SizeType units_len=0,
 			   Allocator* allocator = 0) {
     this->~GenericValue();
     new (this) GenericValue(x, nelements, units_str, units_len, allocator);
@@ -4281,7 +4357,8 @@ public:
   template<typename T>
   GenericValue& SetNDArray(T* x, SizeType shape[], SizeType ndim,
 			   const Ch* units_str=nullptr,
-			   SizeType units_len=0, Allocator* allocator = 0) {
+			   const SizeType units_len=0,
+			   Allocator* allocator = 0) {
     this->~GenericValue();
     new (this) GenericValue(x, shape, ndim, units_str, units_len, allocator);
     return *this; }

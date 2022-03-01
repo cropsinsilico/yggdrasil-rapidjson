@@ -45,6 +45,94 @@ TEST(Value, Size) {
     }
 }
 
+#ifdef RAPIDJSON_YGGDRASIL
+#define YGGDRASIL_SCALAR_UNIT_TEST(type, value)				\
+  {									\
+    units::Quantity<type, Value::Ch> q1(value, "g");			\
+    units::Quantity<type, Value::Ch> q2(1000000 * value, "ug");		\
+    EXPECT_TRUE(q1.equivalent_to(q2));					\
+    Value zq1(value, "g");						\
+    Value zq2(q2);							\
+    EXPECT_EQ(1000000 * value, zq1.template GetScalar<type>("ug"));	\
+    EXPECT_EQ(value, zq2.template GetScalar<type>("g"));		\
+    EXPECT_EQ(q1, zq1.template GetScalarQuantity<type>("g"));		\
+    EXPECT_EQ(q1, zq2.template GetScalarQuantity<type>("g"));		\
+    EXPECT_EQ(q1, zq1.template GetScalarQuantity<type>());		\
+    EXPECT_EQ(q2, zq1.template GetScalarQuantity<type>("ug"));		\
+    EXPECT_EQ(q2, zq2.template GetScalarQuantity<type>("ug"));		\
+    EXPECT_EQ(q2, zq2.template GetScalarQuantity<type>());		\
+  }
+#define YGGDRASIL_1DARRAY_EXPECT_EQ(a, a_len, v, type, units)		\
+  {									\
+    SizeType b_len = 0;							\
+    type* b = v.template Get1DArray<type>(b_len, allocator, units);	\
+    EXPECT_EQ(a_len, b_len);						\
+    for (SizeType i = 0; i < b_len; i++)				\
+      EXPECT_EQ(a[i], b[i]);						\
+  }
+#define YGGDRASIL_1DARRAY_UNIT_TEST(type, value)			\
+  {									\
+    Value::AllocatorType allocator;					\
+    type value1[] = {0 * value, value, 2 * value, 3 * value};		\
+    type value2[] = {0 * value, 1000000 * value, 2000000 * value, 3000000 * value}; \
+    units::QuantityArray<type, Value::Ch> q1(value1, "g");		\
+    units::QuantityArray<type, Value::Ch> q2(value2, "ug");		\
+    EXPECT_TRUE(q1.equivalent_to(q2));					\
+    Value zq1(value1, "g");						\
+    Value zq2(q2);							\
+    YGGDRASIL_1DARRAY_EXPECT_EQ(value2, 4, zq1, type, "ug");		\
+    YGGDRASIL_1DARRAY_EXPECT_EQ(value1, 4, zq2, type, "g");		\
+    EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator, "g"));	\
+    EXPECT_EQ(q1, zq2.template GetArrayQuantity<type>(allocator, "g"));	\
+    EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator));	\
+    EXPECT_EQ(q2, zq1.template GetArrayQuantity<type>(allocator, "ug")); \
+    EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator, "ug")); \
+    EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator));	\
+  }
+/*
+#define YGGDRASIL_NDARRAY_EXPECT_EQ(a, a_dim, a_shape, v, type, units)  \
+  {									\
+    SizeType b_dim = 0;							\
+    SizeType* b_shape = nullptr;					\
+    type* b = v.template GetNDArray<type>(b_shape, b_dim, allocator, units); \
+    EXPECT_EQ(a_dim, b_dim);						\
+    SizeType N = 1;							\
+    for (SizeType i = 0; i < b_dim; i++) {				\
+      EXPECT_EQ(a_shape[i], b_shape[i]);				\
+      N = N * a_shape[i];						\
+    }									\
+    for (SizeType i = 0; i < N; i++) {					\
+      EXPECT_EQ(a[i], b[i]);						\
+    }									\
+  }
+#define YGGDRASIL_NDARRAY_UNIT_TEST(type, value)			\
+  {									\
+    Value::AllocatorType allocator;					\
+    type value1[2][3] = {{0 * value, value, 2 * value},			\
+    {3 * value, 4 * value, 5 * value}};					\
+    type value2[2][3] = {{0 * value, 1000000* value, 2000000 * value},	\
+    {3000000 * value, 4000000 * value, 5000000 * value}};		\
+    SizeType shape1[] = {2, 3};						\
+    SizeType shape2[] = {2, 3};						\
+    units::QuantityArray<type, Value::Ch> q1(value1, "g");		\
+    units::QuantityArray<type, Value::Ch> q2(value2, "ug");		\
+    EXPECT_TRUE(q1.equivalent_to(q2));					\
+    Value zq1(value1, "g");						\
+    Value zq2(q2);							\
+    YGGDRASIL_NDARRAY_EXPECT_EQ(value2, 2, shape2, zq1, type, "ug");	\
+    YGGDRASIL_NDARRAY_EXPECT_EQ(value1, 2, shape1, zq2, type, "g");	\
+    EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator, "g"));	\
+    EXPECT_EQ(q1, zq2.template GetArrayQuantity<type>(allocator, "g"));	\
+    EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator));	\
+    EXPECT_EQ(q2, zq1.template GetArrayQuantity<type>(allocator, "ug")); \
+    EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator, "ug")); \
+    EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator));	\
+  }
+ */
+#else
+#define YGGDRASIL_SCALAR_UNIT_TEST(type, value) {}
+#endif // RAPIDJSON_YGGDRASIL
+
 TEST(Value, DefaultConstructor) {
     Value x;
     EXPECT_EQ(kNullType, x.GetType());
@@ -498,21 +586,7 @@ TEST(Value, Int) {
     EXPECT_TRUE(z.IsInt());
 #endif
 
-#ifdef RAPIDJSON_YGGDRASIL
-    units::Quantity<int,Value::Ch> q1(1234, "g");
-    units::Quantity<int,Value::Ch> q2(1234e6, "ug");
-    EXPECT_TRUE(q1.equivalent_to(q2));
-    Value zq1(1234, "g");
-    Value zq2(q2);
-    EXPECT_EQ(1234e6, zq1.template GetScalar<int>("ug"));
-    EXPECT_EQ(1234, zq2.template GetScalar<int>("g"));
-    EXPECT_EQ(q1, zq1.template GetScalarQuantity<int>("g"));
-    EXPECT_EQ(q1, zq2.template GetScalarQuantity<int>("g"));
-    EXPECT_EQ(q1, zq1.template GetScalarQuantity<int>());
-    EXPECT_EQ(q2, zq1.template GetScalarQuantity<int>("ug"));
-    EXPECT_EQ(q2, zq2.template GetScalarQuantity<int>("ug"));
-    EXPECT_EQ(q2, zq2.template GetScalarQuantity<int>());
-#endif // RAPIDJSON_YGGDRASIL
+    YGGDRASIL_SCALAR_UNIT_TEST(int, 1234);
 }
 
 TEST(Value, Uint) {
@@ -571,21 +645,7 @@ TEST(Value, Uint) {
     EXPECT_TRUE(x.IsUint());
 #endif
     
-#ifdef RAPIDJSON_YGGDRASIL
-    units::Quantity<unsigned,Value::Ch> q1(1234u, "g");
-    units::Quantity<unsigned,Value::Ch> q2(1234000000u, "ug");
-    EXPECT_TRUE(q1.equivalent_to(q2));
-    Value zq1(1234u, "g");
-    Value zq2(q2);
-    EXPECT_EQ(1234000000u, zq1.template GetScalar<unsigned>("ug"));
-    EXPECT_EQ(1234u, zq2.template GetScalar<unsigned>("g"));
-    EXPECT_EQ(q1, zq1.template GetScalarQuantity<unsigned>("g"));
-    EXPECT_EQ(q1, zq2.template GetScalarQuantity<unsigned>("g"));
-    EXPECT_EQ(q1, zq1.template GetScalarQuantity<unsigned>());
-    EXPECT_EQ(q2, zq1.template GetScalarQuantity<unsigned>("ug"));
-    EXPECT_EQ(q2, zq2.template GetScalarQuantity<unsigned>("ug"));
-    EXPECT_EQ(q2, zq2.template GetScalarQuantity<unsigned>());
-#endif // RAPIDJSON_YGGDRASIL
+    YGGDRASIL_SCALAR_UNIT_TEST(unsigned, 1234u);
 }
 
 TEST(Value, Int64) {
@@ -650,6 +710,8 @@ TEST(Value, Int64) {
     EXPECT_EQ(i - 1, z.Set(i - 1).Get<int64_t>());
     EXPECT_EQ(i - 2, z.Set<int64_t>(i - 2).Get<int64_t>());
 #endif
+    
+    YGGDRASIL_SCALAR_UNIT_TEST(int64_t, 1234);
 }
 
 TEST(Value, Uint64) {
@@ -702,6 +764,8 @@ TEST(Value, Uint64) {
     EXPECT_EQ(u, z.Get<uint64_t>());
     EXPECT_EQ(u + 1, z.Set(u + 1).Get<uint64_t>());
     EXPECT_EQ(u + 2, z.Set<uint64_t>(u + 2).Get<uint64_t>());
+    
+    YGGDRASIL_SCALAR_UNIT_TEST(uint64_t, 1234u);
 }
 
 TEST(Value, Double) {
@@ -735,21 +799,7 @@ TEST(Value, Double) {
     EXPECT_EQ(57.78, z.Set(57.78).Get<double>());
     EXPECT_EQ(58.78, z.Set<double>(58.78).Get<double>());
 
-#ifdef RAPIDJSON_YGGDRASIL
-    units::Quantity<double,Value::Ch> q1(1234.0, "g");
-    units::Quantity<double,Value::Ch> q2(1234.0e6, "ug");
-    EXPECT_TRUE(q1.equivalent_to(q2));
-    Value zq1(1234.0, "g");
-    Value zq2(q2);
-    EXPECT_EQ(1234.0e6, zq1.template GetScalar<double>("ug"));
-    EXPECT_EQ(1234.0, zq2.template GetScalar<double>("g"));
-    EXPECT_EQ(q1, zq1.template GetScalarQuantity<double>("g"));
-    EXPECT_EQ(q1, zq2.template GetScalarQuantity<double>("g"));
-    EXPECT_EQ(q1, zq1.template GetScalarQuantity<double>());
-    EXPECT_EQ(q2, zq1.template GetScalarQuantity<double>("ug"));
-    EXPECT_EQ(q2, zq2.template GetScalarQuantity<double>("ug"));
-    EXPECT_EQ(q2, zq2.template GetScalarQuantity<double>());
-#endif // RAPIDJSON_YGGDRASIL
+    YGGDRASIL_SCALAR_UNIT_TEST(double, 12.34);
 }
 
 TEST(Value, Float) {
@@ -788,21 +838,7 @@ TEST(Value, Float) {
     EXPECT_EQ(57.78f, z.Set(57.78f).Get<float>());
     EXPECT_EQ(58.78f, z.Set<float>(58.78f).Get<float>());
 
-#ifdef RAPIDJSON_YGGDRASIL
-    units::Quantity<float,Value::Ch> q1(1234.0, "g");
-    units::Quantity<float,Value::Ch> q2(1234.0e6, "ug");
-    EXPECT_TRUE(q1.equivalent_to(q2));
-    Value zq1(1234.0, "g");
-    Value zq2(q2);
-    EXPECT_EQ(1234.0e6, zq1.template GetScalar<float>("ug"));
-    EXPECT_EQ(1234.0, zq2.template GetScalar<float>("g"));
-    EXPECT_EQ(q1, zq1.template GetScalarQuantity<float>("g"));
-    EXPECT_EQ(q1, zq2.template GetScalarQuantity<float>("g"));
-    EXPECT_EQ(q1, zq1.template GetScalarQuantity<float>());
-    EXPECT_EQ(q2, zq1.template GetScalarQuantity<float>("ug"));
-    EXPECT_EQ(q2, zq2.template GetScalarQuantity<float>("ug"));
-    EXPECT_EQ(q2, zq2.template GetScalarQuantity<float>());
-#endif // RAPIDJSON_YGGDRASIL
+    YGGDRASIL_SCALAR_UNIT_TEST(float, 12.34f);
 }
 
 TEST(Value, IsLosslessDouble) {
@@ -1284,50 +1320,147 @@ TEST(Value, ScalarComplex) {
   EXPECT_FALSE(x.IsTrue());
   EXPECT_FALSE(x.IsObject());
   EXPECT_FALSE(x.IsArray());
-}
-// 1D arrays
-TEST(Value, OneDArrayUInt) {
-  Value::AllocatorType allocator;
-  uint8_t arr[] = {0, 1, 2};
-  Value u(&(arr[0]), 3);
-  Value v(&(arr[0]), 3, "umol");
-  Value w(&(arr[0]), 3, "g");
-  Value x(arr);
-  Value y(arr, "umol");
-  Value z(arr, "g");
-  EXPECT_TRUE(x.IsYggdrasil());
-  EXPECT_EQ(kStringType, x.GetType());
-  EXPECT_EQ(kYggUintSubType, x.GetSubTypeCode());
-  uint8_t* cpy = NULL;
-  SizeType len_cpy = 0;
-  x.Get1DArray(cpy, len_cpy, allocator);
-  EXPECT_EQ(3u, len_cpy);
-  for (SizeType i = 0; i < len_cpy; i++)
-    EXPECT_EQ(arr[i], cpy[i]);
-  EXPECT_EQ(u, x);
-  EXPECT_EQ(v, x);
-  EXPECT_EQ(w, x);
-  EXPECT_EQ(x, y);
-  EXPECT_EQ(x, z);
-  EXPECT_NE(y, z);
-  EXPECT_TRUE(x.IsYggdrasil());
-  EXPECT_TRUE(x.Is1DArray());
-  EXPECT_TRUE(x.IsString());
 
-  EXPECT_FALSE(x.IsNumber());
-  EXPECT_FALSE(x.IsInt());
-  EXPECT_FALSE(x.IsUint());
-  EXPECT_FALSE(x.IsInt64());
-  EXPECT_FALSE(x.IsUint64());
-  EXPECT_FALSE(x.IsDouble());
-  EXPECT_FALSE(x.IsFloat());
-  EXPECT_FALSE(x.IsNull());
-  EXPECT_FALSE(x.IsBool());
-  EXPECT_FALSE(x.IsFalse());
-  EXPECT_FALSE(x.IsTrue());
-  EXPECT_FALSE(x.IsObject());
-  EXPECT_FALSE(x.IsArray());
+  units::Quantity<std::complex<double>,Value::Ch> q1(std::complex<double>(2.2, 3.4), "g");
+  units::Quantity<std::complex<double>,Value::Ch> q2(std::complex<double>(2.2e6, 3.4e6), "ug");
+  EXPECT_TRUE(q1.equivalent_to(q2));
+  Value zq1(std::complex<double>(2.2, 3.4), "g");
+  Value zq2(q2);
+  // EXPECT_EQ failes for complex values
+  EXPECT_TRUE(units::compare_values(std::complex<double>(2.2e6, 3.4e6),
+				    zq1.template GetScalar<std::complex<double>>("ug")));
+  EXPECT_TRUE(units::compare_values(std::complex<double>(2.2, 3.4),
+				    zq2.template GetScalar<std::complex<double>>("g")));
+  EXPECT_EQ(q1, zq1.template GetScalarQuantity<std::complex<double>>("g"));
+  EXPECT_EQ(q1, zq2.template GetScalarQuantity<std::complex<double>>("g"));
+  EXPECT_EQ(q1, zq1.template GetScalarQuantity<std::complex<double>>());
+  EXPECT_EQ(q2, zq1.template GetScalarQuantity<std::complex<double>>("ug"));
+  EXPECT_EQ(q2, zq2.template GetScalarQuantity<std::complex<double>>("ug"));
+  EXPECT_EQ(q2, zq2.template GetScalarQuantity<std::complex<double>>());
 }
+
+#define YGGDRASIL_1D_ARRAY_TEST_BODY(name, precision, type, value)\
+  Value::AllocatorType allocator;				  \
+  type arr[] = {value, value, value, value};			  \
+  Value u(&(arr[0]), 4u);					  \
+  Value v(&(arr[0]), 4u, "umol");				  \
+  Value w(&(arr[0]), 4u, "g");					  \
+  Value x(arr);							  \
+  Value y(arr, "umol");						  \
+  Value z(arr, "g");						  \
+  EXPECT_TRUE(x.IsYggdrasil());					  \
+  EXPECT_EQ(kStringType, x.GetType());				  \
+  EXPECT_EQ(kYgg ## name ## SubType, x.GetSubTypeCode());	  \
+  type* cpy = NULL;						  \
+  SizeType len_cpy = 0;						  \
+  x.Get1DArray(cpy, len_cpy, allocator);			  \
+  EXPECT_EQ(4u, len_cpy);					  \
+  for (SizeType i = 0; i < len_cpy; i++)			  \
+    EXPECT_EQ(arr[i], cpy[i]);					  \
+  EXPECT_EQ(u, x);						  \
+  EXPECT_EQ(v, x);						  \
+  EXPECT_EQ(w, x);						  \
+  EXPECT_EQ(x, y);						  \
+  EXPECT_EQ(x, z);						  \
+  EXPECT_NE(y, z);						  \
+  EXPECT_TRUE(x.IsYggdrasil());					  \
+  EXPECT_TRUE(x.Is1DArray());					  \
+  EXPECT_TRUE(x.IsString());					  \
+								  \
+  EXPECT_FALSE(x.IsNumber());					  \
+  EXPECT_FALSE(x.IsInt());					  \
+  EXPECT_FALSE(x.IsUint());					  \
+  EXPECT_FALSE(x.IsInt64());					  \
+  EXPECT_FALSE(x.IsUint64());					  \
+  EXPECT_FALSE(x.IsDouble());					  \
+  EXPECT_FALSE(x.IsFloat());					  \
+  EXPECT_FALSE(x.IsNull());					  \
+  EXPECT_FALSE(x.IsBool());					  \
+  EXPECT_FALSE(x.IsFalse());					  \
+  EXPECT_FALSE(x.IsTrue());					  \
+  EXPECT_FALSE(x.IsObject());					  \
+  EXPECT_FALSE(x.IsArray());
+
+#define YGGDRASIL_1D_ARRAY_TEST_UNITS(name, precision, type, value)	\
+  TEST(Value, OneDArray ## name ## precision) {				\
+    YGGDRASIL_1D_ARRAY_TEST_BODY(name, precision, type, value);		\
+    YGGDRASIL_1DARRAY_UNIT_TEST(type, value);				\
+  }
+#define YGGDRASIL_1D_ARRAY_TEST(name, precision, type, value)	\
+  TEST(Value, OneDArray ## name ## precision) {			\
+    YGGDRASIL_1D_ARRAY_TEST_BODY(name, precision, type, value);	\
+  }
+
+/*
+#define YGGDRASIL_ND_ARRAY_TEST_BODY(name, precision, type, value)   \
+  Value::AllocatorType allocator;		       		     \
+  type arr[2][3] = {{0 * value, 1 * value, 2 * value},		     \
+  {3 * value, 4 * value, 5 * value}};				     \
+  SizeType shape[] = {2, 3};					     \
+  Value u(&(arr[0][0]), &(shape[0]), 2);			     \
+  Value v(&(arr[0][0]), &(shape[0]), 2, "umol");		     \
+  Value w(&(arr[0][0]), &(shape[0]), 2, "g");			     \
+  Value x(arr);							     \
+  Value y(arr, "umol");						     \
+  Value z(arr, "g");						     \
+  EXPECT_TRUE(x.IsYggdrasil());					     \
+  EXPECT_EQ(kStringType, x.GetType());				     \
+  EXPECT_EQ(kYgg ## name ## SubType, x.GetSubTypeCode());	     \
+  type* cpy = NULL;						     \
+  SizeType* shape_cpy = NULL;					     \
+  SizeType ndim_cpy = 0;					     \
+  x.GetNDArray(cpy, shape_cpy, ndim_cpy, allocator);		     \
+  EXPECT_EQ(2u, ndim_cpy);					     \
+  for (SizeType i = 0; i < ndim_cpy; i++)			     \
+  EXPECT_EQ(shape[i], shape_cpy[i]);				     \
+  for (SizeType i = 0; i < shape[0]; i++) {			     \
+  for (SizeType j = 0; j < shape[1]; j++)			     \
+  EXPECT_EQ(arr[i][j], cpy[i*shape[1] + j]);			     \
+  }								     \
+  EXPECT_EQ(u, x);						     \
+  EXPECT_EQ(v, x);						     \
+  EXPECT_EQ(w, x);						     \
+  EXPECT_EQ(x, y);						     \
+  EXPECT_EQ(x, z);						     \
+  EXPECT_NE(y, z);						     \
+  EXPECT_TRUE(x.IsYggdrasil());					     \
+  EXPECT_TRUE(x.IsNDArray());					     \
+  EXPECT_TRUE(x.IsString());					     \
+								     \
+  EXPECT_FALSE(x.IsScalar());				       	     \
+  EXPECT_FALSE(x.Is1DArray());					     \
+  EXPECT_FALSE(x.IsNumber());						\
+  EXPECT_FALSE(x.IsInt());						\
+  EXPECT_FALSE(x.IsUint());						\
+  EXPECT_FALSE(x.IsInt64());						\
+  EXPECT_FALSE(x.IsUint64());						\
+  EXPECT_FALSE(x.IsDouble());						\
+  EXPECT_FALSE(x.IsFloat());						\
+  EXPECT_FALSE(x.IsNull());						\
+  EXPECT_FALSE(x.IsBool());						\
+  EXPECT_FALSE(x.IsFalse());						\
+  EXPECT_FALSE(x.IsTrue());						\
+  EXPECT_FALSE(x.IsObject());						\
+  EXPECT_FALSE(x.IsArray());
+
+#define YGGDRASIL_ND_ARRAY_TEST(name, precision, type, value)	\
+  TEST(Value, NDArray ## name ## precision) {			\
+    YGGDRASIL_ND_ARRAY_TEST_BODY(name, precision, type, value);	\
+  }
+#define YGGDRASIL_ND_ARRAY_TEST_UNITS(name, precision, type, value)	\
+  TEST(Value, NDArray ## name ## precision) {				\
+    YGGDRASIL_ND_ARRAY_TEST_BODY(name, precision, type, value);		\
+  }
+*/
+
+
+// 1D arrays
+YGGDRASIL_1D_ARRAY_TEST(Uint, 1, uint8_t, 84u);
+YGGDRASIL_1D_ARRAY_TEST_UNITS(Float, 4, float, 12.34f);
+YGGDRASIL_1D_ARRAY_TEST_UNITS(Int, 8, int64_t, 12u);
+YGGDRASIL_1D_ARRAY_TEST(Complex, 8, std::complex<float>,
+			std::complex<float>(2.2f, 3.4f));
+
 // ND arrays
 TEST(Value, NDArrayUInt) {
   Value::AllocatorType allocator;
