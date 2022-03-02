@@ -72,7 +72,6 @@ TEST(Value, Size) {
   }
 #define YGGDRASIL_1DARRAY_UNIT_TEST(type, value)			\
   {									\
-    Value::AllocatorType allocator;					\
     type value1[] = {0 * value, value, 2 * value, 3 * value};		\
     type value2[] = {0 * value, 1000000 * value, 2000000 * value, 3000000 * value}; \
     units::QuantityArray<type, Value::Ch> q1(value1, "g");		\
@@ -89,7 +88,6 @@ TEST(Value, Size) {
     EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator, "ug")); \
     EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator));	\
   }
-/*
 #define YGGDRASIL_NDARRAY_EXPECT_EQ(a, a_dim, a_shape, v, type, units)  \
   {									\
     SizeType b_dim = 0;							\
@@ -102,16 +100,15 @@ TEST(Value, Size) {
       N = N * a_shape[i];						\
     }									\
     for (SizeType i = 0; i < N; i++) {					\
-      EXPECT_EQ(a[i], b[i]);						\
+      EXPECT_EQ((&(a[0][0]))[i], b[i]);					\
     }									\
   }
 #define YGGDRASIL_NDARRAY_UNIT_TEST(type, value)			\
   {									\
-    Value::AllocatorType allocator;					\
     type value1[2][3] = {{0 * value, value, 2 * value},			\
-    {3 * value, 4 * value, 5 * value}};					\
+			 {3 * value, 4 * value, 5 * value}};		\
     type value2[2][3] = {{0 * value, 1000000* value, 2000000 * value},	\
-    {3000000 * value, 4000000 * value, 5000000 * value}};		\
+			 {3000000 * value, 4000000 * value, 5000000 * value}}; \
     SizeType shape1[] = {2, 3};						\
     SizeType shape2[] = {2, 3};						\
     units::QuantityArray<type, Value::Ch> q1(value1, "g");		\
@@ -119,6 +116,9 @@ TEST(Value, Size) {
     EXPECT_TRUE(q1.equivalent_to(q2));					\
     Value zq1(value1, "g");						\
     Value zq2(q2);							\
+    std::cout << "q1 = " << q1 << ", display(q2) = ";			\
+    q2.display(std::cout);						\
+    std::cout << std::endl;						\
     YGGDRASIL_NDARRAY_EXPECT_EQ(value2, 2, shape2, zq1, type, "ug");	\
     YGGDRASIL_NDARRAY_EXPECT_EQ(value1, 2, shape1, zq2, type, "g");	\
     EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator, "g"));	\
@@ -128,7 +128,6 @@ TEST(Value, Size) {
     EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator, "ug")); \
     EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator));	\
   }
- */
 #else
 #define YGGDRASIL_SCALAR_UNIT_TEST(type, value) {}
 #endif // RAPIDJSON_YGGDRASIL
@@ -1391,11 +1390,10 @@ TEST(Value, ScalarComplex) {
     YGGDRASIL_1D_ARRAY_TEST_BODY(name, precision, type, value);	\
   }
 
-/*
 #define YGGDRASIL_ND_ARRAY_TEST_BODY(name, precision, type, value)   \
   Value::AllocatorType allocator;		       		     \
-  type arr[2][3] = {{0 * value, 1 * value, 2 * value},		     \
-  {3 * value, 4 * value, 5 * value}};				     \
+  type arr[2][3] = {{value, value, value},			     \
+		    {value, value, value}};			     \
   SizeType shape[] = {2, 3};					     \
   Value u(&(arr[0][0]), &(shape[0]), 2);			     \
   Value v(&(arr[0][0]), &(shape[0]), 2, "umol");		     \
@@ -1412,10 +1410,10 @@ TEST(Value, ScalarComplex) {
   x.GetNDArray(cpy, shape_cpy, ndim_cpy, allocator);		     \
   EXPECT_EQ(2u, ndim_cpy);					     \
   for (SizeType i = 0; i < ndim_cpy; i++)			     \
-  EXPECT_EQ(shape[i], shape_cpy[i]);				     \
+    EXPECT_EQ(shape[i], shape_cpy[i]);				     \
   for (SizeType i = 0; i < shape[0]; i++) {			     \
-  for (SizeType j = 0; j < shape[1]; j++)			     \
-  EXPECT_EQ(arr[i][j], cpy[i*shape[1] + j]);			     \
+    for (SizeType j = 0; j < shape[1]; j++)			     \
+      EXPECT_EQ(arr[i][j], cpy[i*shape[1] + j]);		     \
   }								     \
   EXPECT_EQ(u, x);						     \
   EXPECT_EQ(v, x);						     \
@@ -1426,9 +1424,9 @@ TEST(Value, ScalarComplex) {
   EXPECT_TRUE(x.IsYggdrasil());					     \
   EXPECT_TRUE(x.IsNDArray());					     \
   EXPECT_TRUE(x.IsString());					     \
-								     \
-  EXPECT_FALSE(x.IsScalar());				       	     \
-  EXPECT_FALSE(x.Is1DArray());					     \
+  								     \
+  EXPECT_FALSE(x.IsScalar());						\
+  EXPECT_FALSE(x.Is1DArray());						\
   EXPECT_FALSE(x.IsNumber());						\
   EXPECT_FALSE(x.IsInt());						\
   EXPECT_FALSE(x.IsUint());						\
@@ -1450,9 +1448,8 @@ TEST(Value, ScalarComplex) {
 #define YGGDRASIL_ND_ARRAY_TEST_UNITS(name, precision, type, value)	\
   TEST(Value, NDArray ## name ## precision) {				\
     YGGDRASIL_ND_ARRAY_TEST_BODY(name, precision, type, value);		\
+    YGGDRASIL_NDARRAY_UNIT_TEST(type, value);				\
   }
-*/
-
 
 // 1D arrays
 YGGDRASIL_1D_ARRAY_TEST(Uint, 1, uint8_t, 84u);
@@ -1462,57 +1459,12 @@ YGGDRASIL_1D_ARRAY_TEST(Complex, 8, std::complex<float>,
 			std::complex<float>(2.2f, 3.4f));
 
 // ND arrays
-TEST(Value, NDArrayUInt) {
-  Value::AllocatorType allocator;
-  uint8_t arr[2][3] = {{0, 1, 2},
-		       {3, 4, 5}};
-  SizeType shape[] = {2, 3};
-  Value u(&(arr[0][0]), &(shape[0]), 2);
-  Value v(&(arr[0][0]), &(shape[0]), 2, "umol");
-  Value w(&(arr[0][0]), &(shape[0]), 2, "g");
-  Value x(arr);
-  Value y(arr, "umol");
-  Value z(arr, "g");
-  EXPECT_TRUE(x.IsYggdrasil());
-  EXPECT_EQ(kStringType, x.GetType());
-  EXPECT_EQ(kYggUintSubType, x.GetSubTypeCode());
-  uint8_t* cpy = NULL;
-  SizeType* shape_cpy = NULL;
-  SizeType ndim_cpy = 0;
-  x.GetNDArray(cpy, shape_cpy, ndim_cpy, allocator);
-  EXPECT_EQ(2u, ndim_cpy);
-  for (SizeType i = 0; i < ndim_cpy; i++)
-    EXPECT_EQ(shape[i], shape_cpy[i]);
-  for (SizeType i = 0; i < shape[0]; i++) {
-    for (SizeType j = 0; j < shape[1]; j++)
-      EXPECT_EQ(arr[i][j], cpy[i*shape[1] + j]);
-  }
-  EXPECT_EQ(u, x);
-  EXPECT_EQ(v, x);
-  EXPECT_EQ(w, x);
-  EXPECT_EQ(x, y);
-  EXPECT_EQ(x, z);
-  EXPECT_NE(y, z);
-  EXPECT_TRUE(x.IsYggdrasil());
-  EXPECT_TRUE(x.IsNDArray());
-  EXPECT_TRUE(x.IsString());
+YGGDRASIL_ND_ARRAY_TEST(Uint, 1, uint8_t, 12u);
+YGGDRASIL_ND_ARRAY_TEST_UNITS(Float, 4, float, 12.34f);
+YGGDRASIL_ND_ARRAY_TEST_UNITS(Int, 8, int64_t, 12u);
+YGGDRASIL_ND_ARRAY_TEST(Complex, 8, std::complex<float>,
+			std::complex<float>(2.2f, 3.4f));
 
-  EXPECT_FALSE(x.IsScalar());
-  EXPECT_FALSE(x.Is1DArray());
-  EXPECT_FALSE(x.IsNumber());
-  EXPECT_FALSE(x.IsInt());
-  EXPECT_FALSE(x.IsUint());
-  EXPECT_FALSE(x.IsInt64());
-  EXPECT_FALSE(x.IsUint64());
-  EXPECT_FALSE(x.IsDouble());
-  EXPECT_FALSE(x.IsFloat());
-  EXPECT_FALSE(x.IsNull());
-  EXPECT_FALSE(x.IsBool());
-  EXPECT_FALSE(x.IsFalse());
-  EXPECT_FALSE(x.IsTrue());
-  EXPECT_FALSE(x.IsObject());
-  EXPECT_FALSE(x.IsArray());
-}
 #define ARRAYS_3D(zero)						\
   double vertices_ ## zero[8][3] =				\
     {{0.0, 0.0, 0.0},						\

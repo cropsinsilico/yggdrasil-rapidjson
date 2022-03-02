@@ -402,7 +402,7 @@ const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
 							      internal::IsSame<T1,char>,
 							      internal::IsSame<T2,wchar_t>>))) {
   std::basic_string<wchar_t> wx;
-  size_t N = x.size() + 1;
+  size_t N = 4 * x.size();
   wx.resize(N + 1);
   size_t M = std::mbstowcs(&wx[0], x.data(), N);
   RAPIDJSON_ASSERT(M < N);
@@ -416,7 +416,7 @@ const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
 							      internal::IsSame<T2,char>>))) {
   std::basic_string<char> wx;
   size_t N = 4 * x.size();
-  wx.resize(N);
+  wx.resize(N + 1);
   size_t M = std::wcstombs(&wx[0], x.data(), N);
   RAPIDJSON_ASSERT(M < N);
   wx.resize(M);
@@ -1846,7 +1846,11 @@ public:
   //! \param units Units instance.
   template<SizeType N, SizeType M>
   QuantityArray(const T (&value)[N][M], const Units<Ch>& units = Units<Ch>()) :
-    QuantityArray(&(value[0]), 2, {N, M}, units) {}
+    value_(nullptr), units_(units), ndim_(2), shape_(nullptr) {
+    SizeType shape[] = {N, M};
+    _init_shape(&(shape[0]));
+    _init_value(&(value[0][0]));
+  }
   //! \brief Constructor from units string.
   //! \tparam N Number of elements in the array in dimension 1.
   //! \tparam M Number of elements in the array in dimension 2.
