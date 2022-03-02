@@ -405,6 +405,10 @@ const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
   size_t N = 4 * x.size();
   wx.resize(N + 1);
   size_t M = std::mbstowcs(&wx[0], x.data(), N);
+  if (M >= N) {
+    std::cerr << "M = " << M << ", N = " << N << ", old = " << x << ", new = ";
+    std::wcerr << wx << std::endl;
+  }
   RAPIDJSON_ASSERT(M < N);
   wx.resize(M);
   return wx;

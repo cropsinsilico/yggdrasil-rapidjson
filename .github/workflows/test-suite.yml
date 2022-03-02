@@ -28,9 +28,9 @@ jobs:
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
         run: |
-          # sudo apt-get install -y valgrind
-          sudo apt-get install -y libc6-dbg gdb valgrind
-          sudo apt upgrade --fix-missing
+          sudo apt-get update
+          sudo apt-get install -y libc6-dbg gdb valgrind --fix-missing
+          # sudo apt upgrade --fix-missing
           # sudo apt autoremove -y
           # apt autoclean -y
       - name: Setup Python

@@ -79,8 +79,8 @@ TEST(Value, Size) {
     EXPECT_TRUE(q1.equivalent_to(q2));					\
     Value zq1(value1, "g");						\
     Value zq2(q2);							\
-    YGGDRASIL_1DARRAY_EXPECT_EQ(value2, 4, zq1, type, "ug");		\
-    YGGDRASIL_1DARRAY_EXPECT_EQ(value1, 4, zq2, type, "g");		\
+    YGGDRASIL_1DARRAY_EXPECT_EQ(value2, 4u, zq1, type, "ug");		\
+    YGGDRASIL_1DARRAY_EXPECT_EQ(value1, 4u, zq2, type, "g");		\
     EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator, "g"));	\
     EXPECT_EQ(q1, zq2.template GetArrayQuantity<type>(allocator, "g"));	\
     EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator));	\
@@ -109,8 +109,8 @@ TEST(Value, Size) {
 			 {3 * value, 4 * value, 5 * value}};		\
     type value2[2][3] = {{0 * value, 1000000* value, 2000000 * value},	\
 			 {3000000 * value, 4000000 * value, 5000000 * value}}; \
-    SizeType shape1[] = {2, 3};						\
-    SizeType shape2[] = {2, 3};						\
+    SizeType shape1[] = {2u, 3u};					\
+    SizeType shape2[] = {2u, 3u};					\
     units::QuantityArray<type, Value::Ch> q1(value1, "g");		\
     units::QuantityArray<type, Value::Ch> q2(value2, "ug");		\
     EXPECT_TRUE(q1.equivalent_to(q2));					\
@@ -119,8 +119,8 @@ TEST(Value, Size) {
     std::cout << "q1 = " << q1 << ", display(q2) = ";			\
     q2.display(std::cout);						\
     std::cout << std::endl;						\
-    YGGDRASIL_NDARRAY_EXPECT_EQ(value2, 2, shape2, zq1, type, "ug");	\
-    YGGDRASIL_NDARRAY_EXPECT_EQ(value1, 2, shape1, zq2, type, "g");	\
+    YGGDRASIL_NDARRAY_EXPECT_EQ(value2, 2u, shape2, zq1, type, "ug");	\
+    YGGDRASIL_NDARRAY_EXPECT_EQ(value1, 2u, shape1, zq2, type, "g");	\
     EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator, "g"));	\
     EXPECT_EQ(q1, zq2.template GetArrayQuantity<type>(allocator, "g"));	\
     EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator));	\
