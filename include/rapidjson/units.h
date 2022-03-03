@@ -240,7 +240,7 @@ namespace units {
   template<typename T>
   class CachedLUT {
   public:
-    CachedLUT(std::vector<T> base, std::vector<T> add={}) :
+    CachedLUT(const std::vector<T> base, const std::vector<T> add={}) :
       base_(base), cache_() {
       base_.insert(base_.begin(), add.begin(), add.end());
     }
@@ -249,28 +249,23 @@ namespace units {
         free(it->second);
     }
     template<typename T2>
-    const std::vector<T2>& get(RAPIDJSON_ENABLEIF((internal::IsSame<T, T2>)))
-    { return base_; }
-    // TODO: Return ref
+    const std::vector<T2>* get(RAPIDJSON_ENABLEIF((internal::IsSame<T, T2>)))
+    { return &base_; }
     template<typename T2>
-    const std::vector<T2> get(RAPIDJSON_DISABLEIF((internal::IsSame<T, T2>))) {
-      std::vector<T2> out;
-      for (auto it = base_.begin(); it != base_.end(); it++)
-	out.push_back(it->template transcode<typename T2::EncodingType>());
-      return out;
-      // std::type_index idx = std::type_index(typeid(typename T2::EncodingType));
-      // std::map<std::type_index, void*>::iterator match = cache_.find(idx);
-      // if (match == cache_.end()) {
-      //   std::vector<T2>* new_entry = (std::vector<T2>*)malloc(sizeof(std::vector<T2>));
-      // 	RAPIDJSON_ASSERT(new_entry);
-      // 	new_entry[0] = std::vector<T2>();
-      //   for (auto it = base_.begin(); it != base_.end(); it++)
-      //     new_entry->push_back(it->template transcode<typename T2::EncodingType>());
-      // 	cache_.insert({idx, (void*)(new_entry)});
-      //   return *new_entry;
-      // } else {
-      //   return *((std::vector<T2>*)(match->second));
-      // }
+    const std::vector<T2>* get(RAPIDJSON_DISABLEIF((internal::IsSame<T, T2>))) {
+      std::type_index idx = std::type_index(typeid(typename T2::EncodingType));
+      std::map<std::type_index, void*>::iterator match = cache_.find(idx);
+      if (match == cache_.end()) {
+        std::vector<T2>* new_entry = (std::vector<T2>*)malloc(sizeof(std::vector<T2>));
+	RAPIDJSON_ASSERT(new_entry);
+	new_entry[0] = std::vector<T2>();
+        for (auto it = base_.begin(); it != base_.end(); it++)
+          new_entry->push_back(it->template transcode<typename T2::EncodingType>());
+	cache_.insert({idx, (void*)(new_entry)});
+        return new_entry;
+      } else {
+	return (std::vector<T2>*)(match->second);
+      }
     };
   private:
     std::vector<T> base_;
@@ -1008,7 +1003,7 @@ Units<Encoding> operator/(const Unit<Encoding>& a, const Unit<Encoding>& b) {
       Unit<UTF8<char>>("radian", "rad", dimensions::angle),
     });
   
-  static CachedLUT<Unit<UTF8<char>>> _prefixable_units (_base_units.template get<Unit<UTF8<char>>>(), {
+  static CachedLUT<Unit<UTF8<char>>> _prefixable_units (_base_units.template get<Unit<UTF8<char>>>()[0], {
       // cgs
       Unit<UTF8<char>>("dyne", "dyn", dimensions::force, 1.0e-5),
       Unit<UTF8<char>>("erg", "erg", dimensions::energy, 1.0e-7),
@@ -1130,20 +1125,20 @@ bool Unit<Encoding>::from_table(const std::basic_string<typename Encoding::Ch> s
   RAPIDJSON_ASSERT(idx_end != std::string::npos);
   std::basic_string<Ch> substr = str.substr(idx_beg, idx_end + 1);
   std::vector<const Unit<Encoding>*> possibilities;
-  const std::vector<Unit<Encoding>> prefix_units = _prefixable_units.template get<Unit<Encoding>>();
-  for (auto it = prefix_units.begin(); it != prefix_units.end(); it++) {
+  const std::vector<Unit<Encoding>>* prefix_units = _prefixable_units.template get<Unit<Encoding>>();
+  for (auto it = prefix_units->begin(); it != prefix_units->end(); it++) {
     if (it->matches(substr))
       return from_table(*it);
     it->prefix_matches(substr, possibilities);
   }
-  const std::vector<Unit<Encoding>> unprefix_units = _unprefixable_units.template get<Unit<Encoding>>();
-  for (auto it = unprefix_units.begin(); it != unprefix_units.end(); it++)
+  const std::vector<Unit<Encoding>>* unprefix_units = _unprefixable_units.template get<Unit<Encoding>>();
+  for (auto it = unprefix_units->begin(); it != unprefix_units->end(); it++)
     if (it->matches(substr))
       return from_table(*it);
   if (possibilities.size() > 0) {
-    const std::vector<UnitPrefix<Encoding>> prefixes = _unit_prefixes.template get<UnitPrefix<Encoding>>();
+    const std::vector<UnitPrefix<Encoding>>* prefixes = _unit_prefixes.template get<UnitPrefix<Encoding>>();
     for (auto it = possibilities.begin(); it != possibilities.end(); it++)
-      for (auto p = prefixes.begin(); p != prefixes.end(); p++)
+      for (auto p = prefixes->begin(); p != prefixes->end(); p++)
 	if ((*it)->matches(substr, *p))
 	  return from_table(**it, *p);
   }
