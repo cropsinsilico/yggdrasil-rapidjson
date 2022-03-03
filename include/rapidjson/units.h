@@ -20,6 +20,7 @@
 #include "stringbuffer.h"
 #include "internal/meta.h"
 #include <wchar.h>
+#include <locale.h>
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -406,6 +407,9 @@ const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
   wx.resize(N + 1);
   size_t M = std::mbstowcs(&wx[0], x.data(), N);
   if (M >= N) {
+    setlocale(LC_ALL, "");
+    std::cout << "LC_ALL: " << setlocale(LC_ALL, NULL) << std::endl;
+    std::cout << "LC_CTYPE: " << setlocale(LC_CTYPE, NULL) << std::endl;
     std::cerr << "M = " << M << ", N = " << N << ", old = " << x << ", new = ";
     std::wcerr << wx << std::endl;
   }
