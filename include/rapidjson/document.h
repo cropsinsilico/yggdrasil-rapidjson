@@ -1581,17 +1581,24 @@ public:
       return AddMember(name, v, allocator);
     }
     template <typename T>
-    GenericValue& AddMember(GenericValue& name, units::Quantity<T,Ch> value, Allocator& allocator) {
+    GenericValue& AddMember(GenericValue& name,
+			    units::Quantity<T, Encoding> value,
+			    Allocator& allocator) {
       GenericValue v(value);
       return AddMember(name, v, allocator);
     }
     template <typename T>
-    GenericValue& AddMember(GenericValue& name, units::Quantity<T,Ch>* value, SizeType nelements, Allocator& allocator) {
+    GenericValue& AddMember(GenericValue& name,
+			    units::Quantity<T, Encoding>* value,
+			    SizeType nelements, Allocator& allocator) {
       GenericValue v(value, nelements, allocator);
       return AddMember(name, v, allocator);
     }
     template <typename T>
-    GenericValue& AddMember(GenericValue& name, units::Quantity<T,Ch>* value, SizeType shape[], SizeType ndim, Allocator& allocator) {
+    GenericValue& AddMember(GenericValue& name,
+			    units::Quantity<T, Encoding>* value,
+			    SizeType shape[], SizeType ndim,
+			    Allocator& allocator) {
       GenericValue v(value, shape, ndim, allocator);
       return AddMember(name, v, allocator);
     }
@@ -2865,60 +2872,67 @@ public:
 #endif
   // Units
   template <typename T>
-  explicit GenericValue(const units::Quantity<T, Ch> &x, Allocator& allocator,
+  explicit GenericValue(const units::Quantity<T, Encoding> &x,
+			Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT :
     GenericValue(&x, 1, &allocator) {}
   template <typename T>
-  explicit GenericValue(const units::Quantity<T, Ch> &x, Allocator* allocator = 0,
+  explicit GenericValue(const units::Quantity<T, Encoding> &x,
+			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) RAPIDJSON_NOEXCEPT :
     GenericValue(&x, 1, allocator) {}
   template <typename T, SizeType N>
-  explicit GenericValue(const units::Quantity<T, Ch> (&x)[N],
+  explicit GenericValue(const units::Quantity<T, Encoding> (&x)[N],
 			Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(&(x[0]), {N}, 1, &allocator) {}
   template <typename T, SizeType N>
-  explicit GenericValue(const units::Quantity<T, Ch> (&x)[N],
+  explicit GenericValue(const units::Quantity<T, Encoding> (&x)[N],
 			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(&(x[0]), {N}, 1, allocator) {}
   template <typename T>
-  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType nelements,
+  explicit GenericValue(const units::Quantity<T, Encoding>* x,
+			SizeType nelements,
 			Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(x, &nelements, 1, &allocator) {}
   template <typename T>
-  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType nelements,
+  explicit GenericValue(const units::Quantity<T, Encoding>* x,
+			SizeType nelements,
 			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(x, &nelements, 1, allocator) {}
   template <typename T, SizeType M, SizeType N>
-  explicit GenericValue(const units::Quantity<T, Ch> (&x)[M][N],
+  explicit GenericValue(const units::Quantity<T, Encoding> (&x)[M][N],
 			Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(&(x[0][0]), {M, N}, 2, &allocator) {}
   template <typename T, SizeType M, SizeType N>
-  explicit GenericValue(const units::Quantity<T, Ch> (&x)[M][N],
+  explicit GenericValue(const units::Quantity<T, Encoding> (&x)[M][N],
 			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(&(x[0][0]), {M, N}, 2, allocator) {}
   template <typename T, SizeType N>
-  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType shape[N],
+  explicit GenericValue(const units::Quantity<T, Encoding>* x,
+			SizeType shape[N],
 			Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(x, &(shape[0]), N, &allocator) {}
   template <typename T, SizeType N>
-  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType shape[N],
+  explicit GenericValue(const units::Quantity<T, Encoding>* x,
+			SizeType shape[N],
 			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(x, shape, N, allocator) {}
   template <typename T>
-  explicit GenericValue(const units::Quantity<T, Ch>* x, SizeType* shape,
+  explicit GenericValue(const units::Quantity<T, Encoding>* x,
+			SizeType* shape,
 			SizeType ndim, Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(x, shape, ndim, &allocator) {}
   template <typename T>
-  explicit GenericValue(const units::QuantityArray<T, Ch>& x,
+  explicit GenericValue(const units::QuantityArray<T, Encoding>& x,
 			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
     GenericValue(x.value(), x.shape(), x.ndim(), nullptr, 0, allocator) {
@@ -2928,7 +2942,7 @@ public:
 		      static_cast<SizeType>(units_str.size()));
   }
   template <typename T>
-  explicit GenericValue(const units::Quantity<T, Ch>* x,
+  explicit GenericValue(const units::Quantity<T, Encoding>* x,
 			const SizeType* shape, const SizeType ndim,
 			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) :
@@ -3988,58 +4002,58 @@ public:
     GetScalarValueBase(data);
   }
   template <typename T>
-  void GetScalarQuantity(units::Quantity<T, Ch>& data,
-			 const units::Units<Ch> data_units = units::Units<Ch>()) const {
+  void GetScalarQuantity(units::Quantity<T, Encoding>& data,
+			 const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
     T value = data.value();
     GetScalarValueBase(value);
-    units::Units<Ch> new_units = data_units;
+    units::Units<Encoding> new_units = data_units;
     if ((new_units.is_empty()) && (!(data.units().is_empty())))
 	new_units = data.units();
     if (HasUnits()) {
-      units::Quantity<T, Ch> prev(value, GetUnits().GetString());
+      units::Quantity<T, Encoding> prev(value, GetUnits().GetString());
       if (new_units.is_empty())
 	data = prev;
       else
 	data = prev.as(new_units);
     } else {
-      data = units::Quantity<T, Ch>(value, new_units);
+      data = units::Quantity<T, Encoding>(value, new_units);
     }
   }
   template <typename T>
-  void GetScalarQuantity(units::Quantity<T, Ch>& data,
+  void GetScalarQuantity(units::Quantity<T, Encoding>& data,
 			 const Ch* units_str) const {
-    return GetScalarQuantity(data, units::Units<Ch>(units_str)); }
+    return GetScalarQuantity(data, units::Units<Encoding>(units_str)); }
   template <typename T>
-  units::Quantity<T, Ch> GetScalarQuantity(const units::Units<Ch> data_units = units::Units<Ch>()) const {
-    units::Quantity<T, Ch> data;
+  units::Quantity<T, Encoding> GetScalarQuantity(const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
+    units::Quantity<T, Encoding> data;
     GetScalarQuantity(data, data_units);
     return data;
   }
   template <typename T>
-  units::Quantity<T, Ch> GetScalarQuantity(const Ch* units_str) const {
-    return GetScalarQuantity<T>(units::Units<Ch>(units_str)); }
+  units::Quantity<T, Encoding> GetScalarQuantity(const Ch* units_str) const {
+    return GetScalarQuantity<T>(units::Units<Encoding>(units_str)); }
   
   template <typename T>
   void GetScalar(T& data,
-		 const units::Units<Ch> data_units = units::Units<Ch>()) const {
-    units::Quantity<T, Ch> x(data, data_units);
+		 const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
+    units::Quantity<T, Encoding> x(data, data_units);
     GetScalarQuantity(x);
     data = x.value();
   }
   template <typename T>
   void GetScalar(T& data, const Ch* units_str) const {
-    units::Units<Ch> data_units(units_str);
+    units::Units<Encoding> data_units(units_str);
     GetScalar(data, data_units);
   }
   template <typename T>
-  T GetScalar(const units::Units<Ch> data_units = units::Units<Ch>(),
+  T GetScalar(const units::Units<Encoding> data_units = units::Units<Encoding>(),
 	      RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
     T data = 0;
     GetScalar(data, data_units);
     return data;
   }
   template <typename T>
-  T GetScalar(const units::Units<Ch> data_units = units::Units<Ch>(),
+  T GetScalar(const units::Units<Encoding> data_units = units::Units<Encoding>(),
 	      RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
     T data(0, 0);
     GetScalar(data, data_units);
@@ -4047,7 +4061,7 @@ public:
   }
   template <typename T>
   T GetScalar(const Ch* units_str) const {
-    units::Units<Ch> data_units(units_str);
+    units::Units<Encoding> data_units(units_str);
     return GetScalar<T>(data_units);
   }
 
@@ -4104,48 +4118,48 @@ public:
     data = reinterpret_cast<T*>(decoded_bytes);
   }
   template <typename T>
-  void GetArrayQuantity(units::QuantityArray<T, Ch>& data,
+  void GetArrayQuantity(units::QuantityArray<T, Encoding>& data,
 			Allocator& allocator,
-			const units::Units<Ch> data_units = units::Units<Ch>()) const {
+			const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
     T* value = nullptr;
     SizeType ndim = 0;
     SizeType* shape = nullptr;
     GetArrayValueBase(value, ndim, shape, allocator);
-    units::Units<Ch> new_units = data_units;
+    units::Units<Encoding> new_units = data_units;
     if ((new_units.is_empty()) && (!(data.units().is_empty())))
 	new_units = data.units();
     if (HasUnits()) {
-      units::QuantityArray<T, Ch> prev(value, ndim, shape, GetUnits().GetString());
+      units::QuantityArray<T, Encoding> prev(value, ndim, shape, GetUnits().GetString());
       if (new_units.is_empty())
 	data = prev;
       else
 	data = prev.as(new_units);
     } else {
-      data = units::QuantityArray<T, Ch>(value, ndim, shape, new_units);
+      data = units::QuantityArray<T, Encoding>(value, ndim, shape, new_units);
     }
     allocator.Free(value);
   }
   template <typename T>
-  void GetArrayQuantity(units::QuantityArray<T, Ch>& data,
+  void GetArrayQuantity(units::QuantityArray<T, Encoding>& data,
 			Allocator& allocator, const Ch* units_str) const {
-    return GetArrayQuantity(data, allocator, units::Units<Ch>(units_str)); }
+    return GetArrayQuantity(data, allocator, units::Units<Encoding>(units_str)); }
   template <typename T>
-  units::QuantityArray<T, Ch> GetArrayQuantity(Allocator& allocator,
-					       const units::Units<Ch> data_units = units::Units<Ch>()) const {
-    units::QuantityArray<T, Ch> data;
+  units::QuantityArray<T, Encoding> GetArrayQuantity(Allocator& allocator,
+						     const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
+    units::QuantityArray<T, Encoding> data;
     GetArrayQuantity(data, allocator, data_units);
     return data;
   }
   template <typename T>
-  units::QuantityArray<T, Ch> GetArrayQuantity(Allocator& allocator,
-					       const Ch* units_str) const {
-    return GetArrayQuantity<T>(allocator, units::Units<Ch>(units_str)); }
+  units::QuantityArray<T, Encoding> GetArrayQuantity(Allocator& allocator,
+						     const Ch* units_str) const {
+    return GetArrayQuantity<T>(allocator, units::Units<Encoding>(units_str)); }
 
   // 1D array access
   template <typename T>
   void Get1DArray(T*& data, SizeType& nelements, Allocator& allocator,
-		  const units::Units<Ch> data_units = units::Units<Ch>()) const {
-    units::QuantityArray<T, Ch> x;
+		  const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
+    units::QuantityArray<T, Encoding> x;
     // TODO: Pass allocator to quantity
     GetArrayQuantity(x, allocator, data_units);
     nelements = x.nelements();
@@ -4158,11 +4172,11 @@ public:
   template <typename T>
   void Get1DArray(T*& data, SizeType& nelements, Allocator& allocator,
 		  const Ch* units_str) const {
-    return Get1DArray(data, nelements, allocator, units::Units<Ch>(units_str)); }
+    return Get1DArray(data, nelements, allocator, units::Units<Encoding>(units_str)); }
       
   template <typename T>
   T* Get1DArray(SizeType& nelements, Allocator& allocator,
-		const units::Units<Ch> data_units = units::Units<Ch>()) const {
+		const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
     T* data = nullptr;
     Get1DArray(data, nelements, allocator, data_units);
     return data;
@@ -4170,14 +4184,14 @@ public:
   template <typename T>
   T* Get1DArray(SizeType& nelements, Allocator& allocator,
 		const Ch* units_str) const {
-    return Get1DArray<T>(nelements, allocator, units::Units<Ch>(units_str)); }
+    return Get1DArray<T>(nelements, allocator, units::Units<Encoding>(units_str)); }
   
   // ND array access
   template <typename T>
   void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
 		  Allocator& allocator,
-		  const units::Units<Ch> data_units = units::Units<Ch>()) const {
-    units::QuantityArray<T, Ch> x;
+		  const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
+    units::QuantityArray<T, Encoding> x;
     GetArrayQuantity(x, allocator, data_units);
     ndim = x.ndim();
     if (shape != nullptr)
@@ -4190,11 +4204,11 @@ public:
   template <typename T>
   void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
 		  Allocator& allocator, const Ch* units_str) const {
-    return GetNDArray(data, shape, ndim, allocator, units::Units<Ch>(units_str)); }
+    return GetNDArray(data, shape, ndim, allocator, units::Units<Encoding>(units_str)); }
       
   template <typename T>
   T* GetNDArray(SizeType*& shape, SizeType& ndim, Allocator& allocator,
-		const units::Units<Ch> data_units = units::Units<Ch>()) const {
+		const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
     T* data = nullptr;
     GetNDArray(data, shape, ndim, allocator, data_units);
     return data;
@@ -4202,7 +4216,7 @@ public:
   template <typename T>
   T* GetNDArray(SizeType*& shape, SizeType& ndim, Allocator& allocator,
 		const Ch* units_str) const {
-    return GetNDArray<T>(shape, ndim, allocator, units::Units<Ch>(units_str)); }
+    return GetNDArray<T>(shape, ndim, allocator, units::Units<Encoding>(units_str)); }
   
   template <typename T>
   T* Get(SizeType** shape, SizeType& ndim, Allocator& allocator) const {

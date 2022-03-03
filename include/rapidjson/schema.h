@@ -1812,8 +1812,12 @@ protected:
   bool CheckUnits(Context& context, const ValueType* actual, const bool&) const {
     if (units_.IsNull())
       return true;
-    units::Units<char> expected_units = units::Units<char>::parse_units<EncodingType>(units_.GetString(), units_.GetStringLength());
-    units::Units<char> actual_units = units::Units<char>::parse_units<EncodingType>(actual->GetString(), actual->GetStringLength());
+    units::Units<EncodingType> expected_units(units_.GetString(),
+					      units_.GetStringLength(),
+					      false);
+    units::Units<EncodingType> actual_units(actual->GetString(),
+					    actual->GetStringLength(),
+					    false);
     if (!(actual_units.is_compatible(expected_units))) {
       context.error_handler.IncorrectUnits(*actual, units_);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValdiateErrorUnits);

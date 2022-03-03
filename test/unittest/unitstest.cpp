@@ -18,6 +18,7 @@
 #include "unittest.h"
 #include "rapidjson/schema.h"
 #include "rapidjson/units.h"
+#include "rapidjson/encodings.h"
 #include "rapidjson/error/error.h"
 #include "rapidjson/error/en.h"
 
@@ -56,8 +57,8 @@ using namespace rapidjson;
 
 #define COMPARE_UNITS(av, au, bv, bu, expected, direct)			\
   {									\
-    units::Quantity<double, char> a(av, au);				\
-    units::Quantity<double, char> b(bv, bu);				\
+    units::Quantity<double, UTF8<char>> a(av, au);			\
+    units::Quantity<double, UTF8<char>> b(bv, bu);			\
     CHECK_QUANTITY_EQUIVALENCE(a, b, expected);				\
     CHECK_QUANTITY_EQUIVALENCE(b, a, expected);				\
     CHECK_QUANTITY_DIRECT_EQUALITY(a, b, direct);			\
@@ -69,7 +70,7 @@ using namespace rapidjson;
   }
 
 TEST(Unit, Base) {
-  units::Quantity<double, char> x(1.0, "kg");
+  units::Quantity<double, UTF8<char>> x(1.0, "kg");
   std::cout << "x = " << x << ", dim = " << x.units().dimension() << std::endl;
   COMPARE_UNITS(1.0, "g", 0.001, "kg", true, false);
   COMPARE_UNITS(1.0, "gram", 0.001, "kilogram", true, false);
@@ -90,17 +91,17 @@ TEST(Unit, Base) {
   COMPARE_UNITS(1.0, "g**(1*2)", 1.0, "g^2", true, true);
   COMPARE_UNITS(1.0, "(km**2)(s**-1)", 1.0, "km**2/s", true, true);
   COMPARE_UNITS(1.0, "(km*A)**2/((s**2)(g**3))", 1.0, "(km^2)*(A^2)*(s^-2)*(g^-3)", true, true);
-  const char test_units[] = "(km*A)**2/((s**2)(g**3))";
-  units::Units<char>(test_units, strlen(test_units), true);
+  const UTF8<char>::Ch test_units[] = "(km*A)**2/((s**2)(g**3))";
+  units::Units<UTF8<char>>(test_units, strlen(test_units), true);
 };
 
-#define UNIT_OPERATOR(au, op, bu, cu)				\
-  {								\
-    units::Quantity<double, char> a(1.0, #au);			\
-    units::Quantity<double, char> b(1.0, #bu);			\
-    units::Quantity<double, char> c(1.0, #cu);			\
-    units::Quantity<double, char> d = a op b;			\
-    CHECK_QUANTITY_EQUIVALENCE(c, d, true);			\
+#define UNIT_OPERATOR(au, op, bu, cu)					\
+  {									\
+    units::Quantity<double, UTF8<char>> a(1.0, #au);			\
+    units::Quantity<double, UTF8<char>> b(1.0, #bu);			\
+    units::Quantity<double, UTF8<char>> c(1.0, #cu);			\
+    units::Quantity<double, UTF8<char>> d = a op b;			\
+    CHECK_QUANTITY_EQUIVALENCE(c, d, true);				\
   }
 
 TEST(Unit, MultDiv) {
@@ -113,10 +114,10 @@ TEST(Unit, MultDiv) {
 };
 
 TEST(Unit, Exponent) {
-  units::Quantity<double, char> a(1.0, "kg");
-  units::Quantity<double, char> b(1.0, "kg**2");
-  units::Quantity<double, char> c(1.0, "kg^2");
-  units::Quantity<double, char> d = a.pow(2);
+  units::Quantity<double, UTF8<char>> a(1.0, "kg");
+  units::Quantity<double, UTF8<char>> b(1.0, "kg**2");
+  units::Quantity<double, UTF8<char>> c(1.0, "kg^2");
+  units::Quantity<double, UTF8<char>> d = a.pow(2);
   CHECK_QUANTITY_EQUIVALENCE(d, b, true);
   CHECK_QUANTITY_EQUIVALENCE(d, c, true);
 };

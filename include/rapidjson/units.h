@@ -224,26 +224,53 @@ namespace units {
     // static double neper_per_bel = log(10) / 2;
   }
 
-enum BaseDimension {
-  kLengthUnit = 0,
-  kMassUnit = 1,
-  kTimeUnit = 2,
-  kElectricCurrentUnit = 3,
-  kTemperatureUnit = 4,
-  kNumberUnit = 5,
-  kLuminousIntensityUnit = 6,
-  kAngleUnit = 7,
-  kDimensionlessUnit = 8
-};
+  enum BaseDimension {
+    kLengthUnit = 0,
+    kMassUnit = 1,
+    kTimeUnit = 2,
+    kElectricCurrentUnit = 3,
+    kTemperatureUnit = 4,
+    kNumberUnit = 5,
+    kLuminousIntensityUnit = 6,
+    kAngleUnit = 7,
+    kDimensionlessUnit = 8
+  };
+
+  // template<typename T>
+  // class CachedLUT {
+  // public:
+  //   CachedLUT(std::vector<T> base) : base_(base), cache_() {}
+  //   ~CachedLUT() {
+  //     for (auto it = cache_.begin(); it != cache_.end(); it++)
+  //       free(it->second);
+  //   }
+  //   template<typename T2>
+  //   const std::vector<T2>& get_table() {
+  //     std::type_index idx = std::type_index(typeid(T2));
+  //     std::map<std::type_index, void*>::iterator match = cache_.find(idx);
+  //     if (match == cache_.end()) {
+  //       std::vector<T>* new_entry = new std::vector<T>();
+  //       for (auto it = base_.begin(); it != base_.end(); it++)
+  //         new_entry->push_back(it->transcode<typename T2::EncodingType>());
+  //       cache_[idx] = (void*)(new_entry);
+  //       return *new_entry;
+  //     } else {
+  //       return *((std::vector<T2>*)(match->second));
+  //     }
+  //   }
+  // private:
+  //   std::vector<T> base_;
+  //   std::map<std::type_index, void*> cache_;
+  // };
 
 // Forward declarations
-template<typename Ch=char>
+template<typename Encoding>
 class Unit;
-template<typename Ch=char>
+template<typename Encoding>
 class Units;
-template<typename T, typename Ch=char>
+template<typename T, typename Encoding>
 class Quantity;
-template<typename T, typename Ch=char>
+template<typename T, typename Encoding>
 class QuantityArray;
 
 class Dimension {
@@ -392,44 +419,57 @@ double char_to_double(const std::basic_string<T1>& x,
 		      RAPIDJSON_ENABLEIF((internal::IsSame<T1,wchar_t>))) {
   return wcstod(x.c_str(), NULL);
 }
-template<typename T1, typename T2>
-const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
-					  RAPIDJSON_ENABLEIF((internal::IsSame<T1,T2>))) {
-  return x;
-}
-template<typename T1, typename T2>
-const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
-					  RAPIDJSON_ENABLEIF((internal::AndExpr<
-							      internal::IsSame<T1,char>,
-							      internal::IsSame<T2,wchar_t>>))) {
-  std::basic_string<wchar_t> wx;
-  size_t N = 4 * x.size();
-  wx.resize(N + 1);
-  size_t M = std::mbstowcs(&wx[0], x.data(), N);
-  if (M >= N) {
-    setlocale(LC_ALL, "");
-    std::cout << "LC_ALL: " << setlocale(LC_ALL, NULL) << std::endl;
-    std::cout << "LC_CTYPE: " << setlocale(LC_CTYPE, NULL) << std::endl;
-    std::cerr << "M = " << M << ", N = " << N << ", old = " << x << ", new = ";
-    std::wcerr << wx << std::endl;
+template<typename SourceEncoding, typename DestEncoding>
+const std::basic_string<typename DestEncoding::Ch> convert_chars(const std::basic_string<typename SourceEncoding::Ch>& x) {
+  GenericStringStream<SourceEncoding> src(x.c_str());
+  GenericStringBuffer<DestEncoding> dst;
+  PutReserve(src, x.size());
+  while (RAPIDJSON_LIKELY(src.Tell() < x.size())) {
+    RAPIDJSON_ASSERT(src.Peek() != '\0');
+    Transcoder<SourceEncoding, DestEncoding>::Transcode(src, dst);
   }
-  RAPIDJSON_ASSERT(M < N);
-  wx.resize(M);
-  return wx;
+  std::basic_string<typename DestEncoding::Ch> out(dst.GetString(), dst.GetLength());
+  return out;
 };
-template<typename T1, typename T2>
-const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
-					  RAPIDJSON_ENABLEIF((internal::AndExpr<
-							      internal::IsSame<T1,wchar_t>,
-							      internal::IsSame<T2,char>>))) {
-  std::basic_string<char> wx;
-  size_t N = 4 * x.size();
-  wx.resize(N + 1);
-  size_t M = std::wcstombs(&wx[0], x.data(), N);
-  RAPIDJSON_ASSERT(M < N);
-  wx.resize(M);
-  return wx;
-};
+								 
+// template<typename T1, typename T2>
+// const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
+// 					  RAPIDJSON_ENABLEIF((internal::IsSame<T1,T2>))) {
+//   return x;
+// }
+// template<typename T1, typename T2>
+// const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
+// 					  RAPIDJSON_ENABLEIF((internal::AndExpr<
+// 							      internal::IsSame<T1,char>,
+// 							      internal::IsSame<T2,wchar_t>>))) {
+//   std::basic_string<wchar_t> wx;
+//   size_t N = 4 * x.size();
+//   wx.resize(N + 1);
+//   size_t M = std::mbstowcs(&wx[0], x.data(), N);
+//   if (M >= N) {
+//     setlocale(LC_ALL, "");
+//     std::cout << "LC_ALL: " << setlocale(LC_ALL, NULL) << std::endl;
+//     std::cout << "LC_CTYPE: " << setlocale(LC_CTYPE, NULL) << std::endl;
+//     std::cerr << "M = " << M << ", N = " << N << ", old = " << x << ", new = ";
+//     std::wcerr << wx << std::endl;
+//   }
+//   RAPIDJSON_ASSERT(M < N);
+//   wx.resize(M);
+//   return wx;
+// };
+// template<typename T1, typename T2>
+// const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
+// 					  RAPIDJSON_ENABLEIF((internal::AndExpr<
+// 							      internal::IsSame<T1,wchar_t>,
+// 							      internal::IsSame<T2,char>>))) {
+//   std::basic_string<char> wx;
+//   size_t N = 4 * x.size();
+//   wx.resize(N + 1);
+//   size_t M = std::wcstombs(&wx[0], x.data(), N);
+//   RAPIDJSON_ASSERT(M < N);
+//   wx.resize(M);
+//   return wx;
+// };
   
 #define STATIC_VECTORS(type, name)					\
   static std::vector<type<char>> name ## _char = get_ ## name<char>();	\
@@ -444,13 +484,16 @@ const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
   { return name ## _wchar_t; }
 
 //! Unit prefix.
-template<typename Ch>
+template<typename Encoding>
 class UnitPrefix {
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
   UnitPrefix() : abbr(), factor(1.0), name() {}
-  UnitPrefix(const char* abbr0, const double& factor0, const char* name0) :
-    abbr(convert_chars<char,Ch>(abbr0)), factor(factor0),
-    name(convert_chars<char,Ch>(name0)) {}
+  UnitPrefix(const Ch* abbr0, const double& factor0, const Ch* name0) :
+    abbr(abbr0), factor(factor0), name(name0) {}
+  UnitPrefix(const std::basic_string<Ch> abbr0, const double& factor0,
+	     const std::basic_string<Ch> name0) :
+    abbr(abbr0), factor(factor0), name(name0) {}
   //! Abbreviation associated with the prefix.
   std::basic_string<Ch> abbr;
   //! Factor that the prefix implies.
@@ -469,54 +512,69 @@ public:
   //! \param x Unit prefix for comparison.
   //! \return true if the unit prefixes are not identical.
   bool operator!=(const UnitPrefix& x) const { return (!(*this == x)); }
+
+  //! \brief Create a copy of the prefix with a different encoding.
+  //! \tparam DestEncoding Encoding that the copy should use.
+  //! \return Copy w/ DestEncoding.
+  template<typename DestEncoding>
+  UnitPrefix<DestEncoding> transcode() const {
+    return UnitPrefix<DestEncoding>(convert_chars<Encoding, DestEncoding>(abbr),
+				    factor,
+				    convert_chars<Encoding, DestEncoding>(name));
+  }
   
-  friend class Unit<Ch>;
+  friend class Unit<Encoding>;
 };
 
-// This dictionary formatting from magnitude package (secondarily via unyt), credit to Juan Reyero.
-template<typename Ch>
-std::vector<UnitPrefix<Ch>> get_unit_prefixes() {
-  std::vector<UnitPrefix<Ch>> out {
-    UnitPrefix<Ch>("Y", 1e24, "yotta"),
-    UnitPrefix<Ch>("Z", 1e21, "zetta"),
-    UnitPrefix<Ch>("E", 1e18, "exa"),
-    UnitPrefix<Ch>("P", 1e15, "peta"),
-    UnitPrefix<Ch>("T", 1e12, "tera"),
-    UnitPrefix<Ch>("G", 1e9, "giga"),
-    UnitPrefix<Ch>("M", 1e6, "mega"),
-    UnitPrefix<Ch>("k", 1e3, "kilo"),
-    UnitPrefix<Ch>("h", 1e2, "hecto"),
-    UnitPrefix<Ch>("da", 1e1, "deca"),
-    UnitPrefix<Ch>("d", 1e-1, "deci"),
-    UnitPrefix<Ch>("c", 1e-2, "centi"),
-    UnitPrefix<Ch>("m", 1e-3, "mili"),
-    // UnitPrefix<Ch>("µ", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
-    UnitPrefix<Ch>(u8"\u00b5", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
-    UnitPrefix<Ch>("u", 1e-6, "micro"),
-    // UnitPrefix<Ch>("μ", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
-    UnitPrefix<Ch>(u8"\u03bc", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
-    UnitPrefix<Ch>("n", 1e-9, "nano"),
-    UnitPrefix<Ch>("p", 1e-12, "pico"),
-    UnitPrefix<Ch>("f", 1e-15, "femto"),
-    UnitPrefix<Ch>("a", 1e-18, "atto"),
-    UnitPrefix<Ch>("z", 1e-21, "zepto"),
-    UnitPrefix<Ch>("y", 1e-24, "yocto")
+  static std::vector<UnitPrefix<UTF8<char>>> _unit_prefixes {
+    UnitPrefix<UTF8<char>>("Y", 1e24, "yotta"),
+    UnitPrefix<UTF8<char>>("Z", 1e21, "zetta"),
+    UnitPrefix<UTF8<char>>("E", 1e18, "exa"),
+    UnitPrefix<UTF8<char>>("P", 1e15, "peta"),
+    UnitPrefix<UTF8<char>>("T", 1e12, "tera"),
+    UnitPrefix<UTF8<char>>("G", 1e9, "giga"),
+    UnitPrefix<UTF8<char>>("M", 1e6, "mega"),
+    UnitPrefix<UTF8<char>>("k", 1e3, "kilo"),
+    UnitPrefix<UTF8<char>>("h", 1e2, "hecto"),
+    UnitPrefix<UTF8<char>>("da", 1e1, "deca"),
+    UnitPrefix<UTF8<char>>("d", 1e-1, "deci"),
+    UnitPrefix<UTF8<char>>("c", 1e-2, "centi"),
+    UnitPrefix<UTF8<char>>("m", 1e-3, "mili"),
+    // UnitPrefix<UTF8<char>>("µ", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
+    UnitPrefix<UTF8<char>>(u8"\u00b5", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
+    UnitPrefix<UTF8<char>>("u", 1e-6, "micro"),
+    // UnitPrefix<UTF8<char>>("μ", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
+    UnitPrefix<UTF8<char>>(u8"\u03bc", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
+    UnitPrefix<UTF8<char>>("n", 1e-9, "nano"),
+    UnitPrefix<UTF8<char>>("p", 1e-12, "pico"),
+    UnitPrefix<UTF8<char>>("f", 1e-15, "femto"),
+    UnitPrefix<UTF8<char>>("a", 1e-18, "atto"),
+    UnitPrefix<UTF8<char>>("z", 1e-21, "zepto"),
+    UnitPrefix<UTF8<char>>("y", 1e-24, "yocto")
   };
+
+// This dictionary formatting from magnitude package (secondarily via unyt), credit to Juan Reyero.
+template<typename Encoding>
+std::vector<UnitPrefix<Encoding>> get_unit_prefixes() {
+  std::vector<UnitPrefix<Encoding>> out;
+  for (auto it = _unit_prefixes.begin(); it != _unit_prefixes.end(); it++)
+    out.push_back(it->transcode<Encoding>());
   return out;
 };
 
-STATIC_VECTORS(UnitPrefix, unit_prefixes);
+  // STATIC_VECTORS(UnitPrefix, unit_prefixes);
 
 //! Unit.
-template<typename Ch>
+template<typename Encoding>
 class Unit {
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
   //! \brief Empty constructor.
   Unit() : names_(), abbrs_(), dim_(), factor_(1.0), offset_(0.0), power_(1.0), prefix_() {}
   //! \brief Constructor from a look-up table.
   //! \param x Base unit.
   //! \param prefix Prefix that should be applied to the base unit.
-  Unit(const Unit& x, const UnitPrefix<Ch>& prefix) : Unit(x) {
+  Unit(const Unit& x, const UnitPrefix<Encoding>& prefix) : Unit(x) {
     prefix_ = prefix;
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
   }
@@ -528,12 +586,14 @@ public:
   //! \param offset Offset from the zero point of the base unit system.
   //! \param power Power that will be applied to the unit during conversion.
   //! \param prefix Prefix that should be applied to the base unit.
-  Unit(const char* name, const char* abbr, const Dimension dim,
+  Unit(const Ch* name, const Ch* abbr, const Dimension dim,
        const double factor=1.0, const double offset=0.0,
-       const double power=1.0, const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>()) :
+       const double power=1.0,
+       const UnitPrefix<Encoding>& prefix=UnitPrefix<Encoding>()) :
     names_(), abbrs_(), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
-    names_.push_back(std::basic_string<Ch>(convert_chars<char,Ch>(name)));
-    abbrs_.push_back(std::basic_string<Ch>(convert_chars<char,Ch>(abbr)));
+    names_.push_back(std::basic_string<Ch>(name));
+    abbrs_.push_back(std::basic_string<Ch>(abbr));
+    _add_plural();
   }
   //! \brief Construct from a single name/abbreviation.
   //! \param names Names.
@@ -543,14 +603,15 @@ public:
   //! \param offset Offset from the zero point of the base unit system.
   //! \param power Power that will be applied to the unit during conversion.
   //! \param prefix Prefix that should be applied to the base unit.
-  Unit(const std::vector<std::basic_string<char>>& names,
-       const std::vector<std::basic_string<char>>& abbrs,
+  //! \param no_plural If true, the plural versions of the names will not be
+  //!   added.
+  Unit(const std::vector<std::basic_string<Ch>>& names,
+       const std::vector<std::basic_string<Ch>>& abbrs,
        const Dimension dim, const double factor=1.0, const double offset=0.0,
-       const double power=1.0, const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>()) :
-    names_(), abbrs_(), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
-    assign_chars<Ch,char>(names_, names);
-    assign_chars<Ch,char>(abbrs_, abbrs);
-  }
+       const double power=1.0,
+       const UnitPrefix<Encoding>& prefix=UnitPrefix<Encoding>(),
+       const bool& no_plural=false) :
+    names_(names), abbrs_(abbrs), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) { if (!no_plural) _add_plural(); }
   //! \brief Construct a unit by looking up a string in the tables of
   //!   recognized units.
   //! \param str Unit string.
@@ -566,8 +627,8 @@ public:
   //! \param found Table entry.
   //! \param prefix Prefix that should be applied to the base unit.
   //! \return true if the unit could be initialized, false otherwise.
-  bool from_table(const Unit<Ch>& found,
-		  const UnitPrefix<Ch>& prefix=UnitPrefix<Ch>()) {
+  bool from_table(const Unit<Encoding>& found,
+		  const UnitPrefix<Encoding>& prefix=UnitPrefix<Encoding>()) {
     RAPIDJSON_ASSERT((found.names_.size() > 0) && (found.abbrs_.size() > 0));
     names_.insert(names_.begin(), found.names_.begin(), found.names_.end());
     abbrs_.insert(abbrs_.begin(), found.abbrs_.begin(), found.abbrs_.end());
@@ -582,8 +643,8 @@ public:
   //! \param os Output stream.
   void display(std::ostream& os) const {
     RAPIDJSON_ASSERT(names_.size() > 0);
-    os << "Unit(\"" << convert_chars<Ch,char>(prefix_.name)
-       << convert_chars<Ch,char>(names_[0]) << "\", " << dim_ << ", "
+    os << "Unit(\"" << convert_chars<Encoding,UTF8<char>>(prefix_.name)
+       << convert_chars<Encoding,UTF8<char>>(names_[0]) << "\", " << dim_ << ", "
        << factor_ << ", " << offset_ << ")**" << power_;
   }
   //! \brief Get the dimensions of the unit, including the power.
@@ -606,6 +667,19 @@ public:
   //! \param x Unit to check against.
   //! \return true if this unit is not equal to x.
   bool operator!=(const Unit& x) const { return (!(*this == x)); }
+  //! \brief Create a copy of the unit with a different encoding.
+  //! \tparam DestEncoding Encoding that the copy should use.
+  //! \return Copy w/ DestEncoding.
+  template<typename DestEncoding>
+  Unit<DestEncoding> transcode() const {
+    std::vector<std::basic_string<typename DestEncoding::Ch>> names, abbrs;
+    for (auto it = names_.begin(); it != names_.end(); it++)
+      names.push_back(convert_chars<Encoding, DestEncoding>(*it));
+    for (auto it = abbrs_.begin(); it != abbrs_.end(); it++)
+      abbrs.push_back(convert_chars<Encoding, DestEncoding>(*it));
+    return Unit<DestEncoding>(names, abbrs, dim_, factor_, offset_, power_,
+			      prefix_.template transcode<DestEncoding>());
+  }
   //! \brief Perform power operation in place.
   //! \param x Power to raise this unit to.
   void inplace_pow(const double x) {
@@ -636,8 +710,6 @@ public:
     for (auto n = names_.begin(); n != names_.end(); n++) {
       if (str.compare(*n) == 0)
 	return true;
-      if (str.compare(*n + convert_chars<char,Ch>("s")) == 0)
-	return true;
     }
     for (auto n = abbrs_.begin(); n != abbrs_.end(); n++) {
       if (n->compare(str) == 0)
@@ -650,11 +722,10 @@ public:
   //! \param str String to check.
   //! \param prefix Prefix to add when checking against the provided string.
   //! \return true if str matches this unit.
-  bool matches(const std::basic_string<Ch> str, const UnitPrefix<Ch>& prefix) const {
+  bool matches(const std::basic_string<Ch> str,
+	       const UnitPrefix<Encoding>& prefix) const {
     for (auto n = names_.begin(); n != names_.end(); n++) {
       if (str.compare(prefix.name + (*n)) == 0)
-	return true;
-      if (str.compare(prefix.name + (*n) + convert_chars<char,Ch>("s")) == 0)
 	return true;
     }
     for (auto n = abbrs_.begin(); n != abbrs_.end(); n++)
@@ -674,9 +745,6 @@ public:
     for (auto n = names_.begin(); n != names_.end(); n++) {
       if ((str.length() > n->length()) &&
 	  (str.compare(str.length() - n->length(), n->length(), *n) == 0))
-	possibilities.push_back(this);
-      if ((str.length() > n->length()) &&
-	  (str.compare(str.length() - (n->length() + 1), n->length() + 1, *n + convert_chars<char,Ch>("s")) == 0))
 	possibilities.push_back(this);
     }
     for (auto n = abbrs_.begin(); n != abbrs_.end(); n++) {
@@ -736,51 +804,61 @@ private:
   double factor_;
   double offset_;
   double power_;
-  UnitPrefix<Ch> prefix_;
+  UnitPrefix<Encoding> prefix_;
 
+  void _add_plural() {
+    size_t N = names_.size();
+    std::basic_string<Ch> iname;
+    for (size_t i = 0; i < N; i++) {
+      iname = names_[i];
+      iname.push_back('s');
+      names_.push_back(iname);
+    }
+  }
   static const std::basic_string<Ch> get_whitespace() {
     static const Ch s[] = {' ', '\t', '\f', '\v', '\n', '\r', '\0'};
     return std::basic_string<Ch>(s);
   }
-  template<typename Ch2, typename Ch1>
-  static void assign_chars(std::vector<std::basic_string<Ch2>>& dest,
-			   const std::vector<std::basic_string<Ch1>>& src,
-			   RAPIDJSON_ENABLEIF((internal::IsSame<Ch2,Ch1>))) {
-    dest.insert(dest.begin(), src.begin(), src.end()); }
-  template<typename Ch2, typename Ch1>
-  static void assign_chars(std::vector<std::basic_string<Ch2>>& dest,
-			   const std::vector<std::basic_string<Ch1>>& src,
-			   RAPIDJSON_ENABLEIF((internal::AndExpr<internal::IsSame<Ch2,wchar_t>,
-					       internal::IsSame<Ch1,char>>))) {
-    for (auto it = src.begin(); it != src.end(); it++)
-      dest.push_back(convert_chars<Ch1,Ch2>(*it));
-  }
+  // template<typename Ch2, typename Ch1>
+  // static void assign_chars(std::vector<std::basic_string<Ch2>>& dest,
+  // 			   const std::vector<std::basic_string<Ch1>>& src,
+  // 			   RAPIDJSON_ENABLEIF((internal::IsSame<Ch2,Ch1>))) {
+  //   dest.insert(dest.begin(), src.begin(), src.end()); }
+  // template<typename Ch2, typename Ch1>
+  // static void assign_chars(std::vector<std::basic_string<Ch2>>& dest,
+  // 			   const std::vector<std::basic_string<Ch1>>& src,
+  // 			   RAPIDJSON_ENABLEIF((internal::AndExpr<internal::IsSame<Ch2,wchar_t>,
+  // 					       internal::IsSame<Ch1,char>>))) {
+  //   for (auto it = src.begin(); it != src.end(); it++)
+  //     dest.push_back(convert_chars<Ch1,Ch2>(*it));
+  // }
   
-  friend class Units<Ch>;
+  friend class Units<Encoding>;
   template<typename Ch2>
   friend std::ostream & operator << (std::ostream& os, const Unit<Ch2> &x);
 };
-template<typename Ch>
-inline std::ostream & operator << (std::ostream& os, const Unit<Ch> &x) {
+template<typename Encoding>
+inline std::ostream & operator << (std::ostream& os, const Unit<Encoding> &x) {
   RAPIDJSON_ASSERT(x.abbrs_.size() > 0);
-  os << convert_chars<Ch,char>(x.prefix_.abbr)
-     << convert_chars<Ch,char>(x.abbrs_[0]);
+  os << convert_chars<Encoding,UTF8<char>>(x.prefix_.abbr)
+     << convert_chars<Encoding,UTF8<char>>(x.abbrs_[0]);
   if (x.has_power()) os << "**" << x.power_;
   return os;
 };
 
 //! \brief Units class.
-template<typename Ch>
+template<typename Encoding>
 class Units {
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
   //! \brief Empty constructor.
   Units() : units_() {}
   //! \brief Initialize from an initializer list.
   //! \param units Initializer list of units.
-  Units(std::initializer_list<Unit<Ch>> units) : units_(units) {}
+  Units(std::initializer_list<Unit<Encoding>> units) : units_(units) {}
   //! \brief Initialize from a vector of units.
   //! \param units Vector of units.
-  Units(const std::vector<Unit<Ch>> units) : units_(units) {}
+  Units(const std::vector<Unit<Encoding>> units) : units_(units) {}
   //! \brief Initialize from a string.
   //! \param str Units string.
   //! \param verbose If true, verbose information is displayed when
@@ -808,27 +886,27 @@ public:
   //! \param verbose If true, verbose information is displayed when
   //!   parsing the units string.
   Units(const Ch* str, const size_t len, const bool& verbose=false) : units_() {
-    Units<Ch> new_units = parse_units(str, len, verbose);
+    Units<Encoding> new_units = parse_units(str, len, verbose);
     units_.insert(units_.begin(), new_units.units_.begin(), new_units.units_.end());
   }
-  //! \brief Parse a units string with a different encoding.
-  //! \tparam SourceEncoding Encoding of the units stirng.
-  //! \param str Units string.
-  //! \param len Number of characters in str.
-  //! \param verbose If true, verbose information is displayed when
-  //!   parsing the units string.
-  template<typename SourceEncoding, typename DestEncoding=ASCII<char>>
-  static Units parse_units(const typename SourceEncoding::Ch* str, const size_t len, const bool verbose=false) {
-    GenericStringStream<SourceEncoding> src(str);
-    GenericStringBuffer<DestEncoding> dst;
-    PutReserve(src, len);
-    while (RAPIDJSON_LIKELY(src.Tell() < len)) {
-      RAPIDJSON_ASSERT(src.Peek() != '\0');
-      Transcoder<SourceEncoding, DestEncoding>::Transcode(src, dst);
-    }
-    // Pass pointer to token and populate this structure instead?
-    return parse_units(dst.GetString(), dst.GetLength(), verbose);
-  }
+  // //! \brief Parse a units string with a different encoding.
+  // //! \tparam SourceEncoding Encoding of the units stirng.
+  // //! \param str Units string.
+  // //! \param len Number of characters in str.
+  // //! \param verbose If true, verbose information is displayed when
+  // //!   parsing the units string.
+  // template<typename SourceEncoding, typename DestEncoding=ASCII<char>>
+  // static Units parse_units(const typename SourceEncoding::Ch* str, const size_t len, const bool verbose=false) {
+  //   GenericStringStream<SourceEncoding> src(str);
+  //   GenericStringBuffer<DestEncoding> dst;
+  //   PutReserve(src, len);
+  //   while (RAPIDJSON_LIKELY(src.Tell() < len)) {
+  //     RAPIDJSON_ASSERT(src.Peek() != '\0');
+  //     Transcoder<SourceEncoding, DestEncoding>::Transcode(src, dst);
+  //   }
+  //   // Pass pointer to token and populate this structure instead?
+  //   return parse_units(dst.GetString(), dst.GetLength(), verbose);
+  // }
   //! \brief Parse a units string.
   //! \param str Units string.
   //! \param len Number of characters in str.
@@ -894,7 +972,7 @@ public:
   //! \return Multiplied units.
   Units operator*(const Units& x) const {
     RAPIDJSON_ASSERT(!(x.has_offset() || has_offset()));
-    std::vector<Unit<Ch>> new_units(units_);
+    std::vector<Unit<Encoding>> new_units(units_);
     for (auto it2 = x.units_.begin(); it2 != x.units_.end(); it2++) {
       size_t i = 0;
       for (i = 0; i < units_.size(); i++)
@@ -965,14 +1043,14 @@ public:
     return out;
   }
 private:
-  std::vector<Unit<Ch>> units_;
-  friend class Quantity<Ch>;
-  friend class QuantityArray<Ch>;
-  template<typename Ch2>
-  friend std::ostream & operator << (std::ostream &os, const Units<Ch2> &x);
+  std::vector<Unit<Encoding>> units_;
+  // friend class Quantity<T, Encoding>;
+  // friend class QuantityArray<T, Encoding>;
+  template<typename Enc2>
+  friend std::ostream & operator << (std::ostream &os, const Units<Enc2> &x);
 };
-template<typename Ch>
-inline std::ostream & operator << (std::ostream &os, const Units<Ch> &x) {
+template<typename Encoding>
+inline std::ostream & operator << (std::ostream &os, const Units<Encoding> &x) {
     size_t i = 0;
     for (auto it = x.units_.begin(); it != x.units_.end(); it++, i++) {
       if (i != 0) os << "*";
@@ -981,186 +1059,196 @@ inline std::ostream & operator << (std::ostream &os, const Units<Ch> &x) {
     return os;
 };
 
-template<typename Ch>
-Units<Ch> operator*(const Unit<Ch>& a, const Unit<Ch>& b) {
+template<typename Encoding>
+Units<Encoding> operator*(const Unit<Encoding>& a, const Unit<Encoding>& b) {
   RAPIDJSON_ASSERT(!(a.has_offset() || b.has_offset()));
-  return Units<Ch>({a, b}); }
-template<typename Ch>
-Units<Ch> operator/(const Unit<Ch>& a, const Unit<Ch>& b) {
+  return Units<Encoding>({a, b}); }
+template<typename Encoding>
+Units<Encoding> operator/(const Unit<Encoding>& a, const Unit<Encoding>& b) {
   return a * b.pow(-1); }
 
 
-// MKS as base, units that can have SI prefixes
-template<typename Ch>
-std::vector<Unit<Ch>> get_base_units() {
-  std::vector<Unit<Ch>> out {
-    Unit<Ch>({"meter", "metre"}, {"m"}, dimensions::length),
-    Unit<Ch>({"gram", "gramme"}, {"g"}, dimensions::mass, 1.0e-3),
-    Unit<Ch>("second", "s", dimensions::time),
-    Unit<Ch>({"ampere", "amp", "Amp"}, {"A"}, dimensions::current),
-    Unit<Ch>({"kelvin", "degree_kelvin"}, {"K", "degK"}, dimensions::temperature),
-    Unit<Ch>("mole", "mol", dimensions::number, 1.0 / constants::amu_grams),
-    Unit<Ch>("candela", "cd", dimensions::luminous_intensity),
-    Unit<Ch>("radian", "rad", dimensions::angle),
+  // MKS as base, units that can have SI prefixes
+  static std::vector<Unit<UTF8<char>>> _base_units {
+    Unit<UTF8<char>>({"meter", "metre"}, {"m"}, dimensions::length),
+    Unit<UTF8<char>>({"gram", "gramme"}, {"g"}, dimensions::mass, 1.0e-3),
+    Unit<UTF8<char>>("second", "s", dimensions::time),
+    Unit<UTF8<char>>({"ampere", "amp", "Amp"}, {"A"}, dimensions::current),
+    Unit<UTF8<char>>({"kelvin", "degree_kelvin"}, {"K", "degK"}, dimensions::temperature),
+    Unit<UTF8<char>>("mole", "mol", dimensions::number, 1.0 / constants::amu_grams),
+    Unit<UTF8<char>>("candela", "cd", dimensions::luminous_intensity),
+    Unit<UTF8<char>>("radian", "rad", dimensions::angle),
   };
-  return out;
-};
-STATIC_VECTORS(Unit, base_units);
   
-  
-template<typename Ch>
-std::vector<Unit<Ch>> get_prefixable_units() {
-  std::vector<Unit<Ch>> base = get_base_units<Ch>();
-  std::vector<Unit<Ch>> out {
-    // cgs
-    Unit<Ch>("dyne", "dyn", dimensions::force, 1.0e-5),
-    Unit<Ch>("erg", "erg", dimensions::energy, 1.0e-7),
-    Unit<Ch>("barye", "Ba", dimensions::pressure, 0.1),
-    Unit<Ch>("gauss", "G", dimensions::magnetic_field_cgs, pow(0.1, 0.5)),
-    Unit<Ch>({"statcoulomb", "esu", "ESU", "electrostatic_unit"}, {"statC"}, dimensions::charge_cgs, pow(1.0e-3, 1.5)),
-    Unit<Ch>("statampere", "statA", dimensions::current_cgs, pow(1.0e-3, 1.5)),
-    Unit<Ch>("statvolt", "statV", dimensions::electric_potential_cgs, 0.1 * pow(1.0e-3, 1.5)),
-    Unit<Ch>("statohm", "statohm", dimensions::resistance_cgs, 100.0),
-    Unit<Ch>("maxwell", "Mx", dimensions::magnetic_flux_cgs, pow(1.0e-3, 1.5)),
-    // SI
-    Unit<Ch>("joule", "J", dimensions::energy),
-    Unit<Ch>("watt", "W", dimensions::power),
-    Unit<Ch>("hertz", "Hz", dimensions::rate),
-    Unit<Ch>("newton", "N", dimensions::force),
-    Unit<Ch>("coulomb", "C", dimensions::charge),
-    Unit<Ch>("tesla", "T", dimensions::magnetic_field),
-    Unit<Ch>("pascal", "Pa", dimensions::pressure),
-    Unit<Ch>("bar", "bar", dimensions::pressure, 1.0e5),
-    Unit<Ch>("volt", "V", dimensions::electric_potential),
-    Unit<Ch>("farad", "F", dimensions::capacitance),
-    Unit<Ch>("henry", "H", dimensions::inductance),
-    Unit<Ch>({"ohm", "Ohm"}, {"Ω"}, dimensions::resistance),
-    Unit<Ch>("weber", "Wb", dimensions::magnetic_flux),
-    Unit<Ch>("lumen", "lm", dimensions::luminous_flux),
-    Unit<Ch>("lux", "lx", dimensions::luminous_flux / dimensions::area),
-    Unit<Ch>({"celcius", "degree_celsius", "degree_Celsius", "celsius"}, {"degC", "°C"}, dimensions::temperature, 1.0, constants::celcius_zero_kelvin),
-    // other
-    Unit<Ch>("calorie", "cal", dimensions::energy, 4.184),
-    Unit<Ch>("year", "yr", dimensions::time, constants::sec_per_year),
-    Unit<Ch>("parsec", "pc", dimensions::length, constants::m_per_pc),
-    Unit<Ch>("electronvolt", "eV", dimensions::energy, constants::J_per_eV),
-    Unit<Ch>("jansky", "J", dimensions::specific_flux, constants::jansky_mks),
-    Unit<Ch>("sievert", "Sv", dimensions::specific_energy),
-    Unit<Ch>("molar", "M", dimensions::number_density, 100.0 / constants::amu_grams),
+  template<typename Encoding>
+  std::vector<Unit<Encoding>> get_base_units() {
+    std::vector<Unit<Encoding>> out;
+    for (auto it = _base_units.begin(); it != _base_units.end(); it++)
+      out.push_back(it->transcode<Encoding>());
+    return out;
   };
-  out.insert(out.begin(), base.begin(), base.end());
-  return out;
-};
-STATIC_VECTORS(Unit, prefixable_units);
+  // STATIC_VECTORS(Unit, base_units);
 
-template<typename Ch>
-std::vector<Unit<Ch>> get_unprefixable_units() {
-  std::vector<Unit<Ch>> out {
-    // Imperial units
-    Unit<Ch>({"mil", "thou", "thousandth"}, {"mil"}, dimensions::length, 1.0e-3 * constants::m_per_inch),
-    Unit<Ch>("incl", "incl", dimensions::length, constants::m_per_inch),
-    Unit<Ch>("feet", "ft", dimensions::length, constants::m_per_ft),
-    Unit<Ch>("yard", "yd", dimensions::length, 0.9144),
-    Unit<Ch>("mile", "mi", dimensions::length, 1609.344),
-    Unit<Ch>("furlong", "fur", dimensions::length, constants::m_per_ft * 660.0),
-    Unit<Ch>({"farenheit", "degree_fahrenheit", "degree_Fahrenheit"}, {"degF", "°F"}, dimensions::temperature, constants::kelvin_per_rankine, constants::farenheit_zero_kelvin),
-    Unit<Ch>({"rankine", "degree_rankine"}, {"degR"}, dimensions::temperature, constants::kelvin_per_rankine),
-    Unit<Ch>("pound_force", "lbf", dimensions::force, constants::kg_per_pound * constants::standard_gravity_m_per_s2),
-    Unit<Ch>({"pound", "pound_mass"}, {"lb", "lbm"}, dimensions::mass, constants::kg_per_pound),
-    Unit<Ch>("atmosphere", "atm", dimensions::pressure, constants::pascal_per_atm),
-    Unit<Ch>("horsepower", "hp", dimensions::power, constants::watt_per_horsepower),
-    Unit<Ch>("ounce", "oz", dimensions::mass, constants::kg_per_pound / 16.0),
-    Unit<Ch>("ton", "ton", dimensions::mass, constants::kg_per_pound * 2000.0),
-    Unit<Ch>("slug", "slug", dimensions::mass, constants::kg_per_pound * constants::standard_gravity_m_per_s2 / constants::m_per_ft),
-    Unit<Ch>({"BTU", "british_thermal_unit"}, {"BTU"}, dimensions::energy, 1055.0559),
-    Unit<Ch>("pounds_per_square_inch", "psi", dimensions::pressure, constants::kg_per_pound * constants::standard_gravity_m_per_s2 / pow(constants::m_per_inch, 2)),
-    Unit<Ch>("smoot", "smoot", dimensions::length, 1.7018),
-    Unit<Ch>("percent", "%", dimensions::dimensionless, 0.01),
-    Unit<Ch>("minute", "min", dimensions::time, constants::sec_per_min),
-    Unit<Ch>("hour", "hr", dimensions::time, constants::sec_per_hr),
-    Unit<Ch>("day", "day", dimensions::time, constants::sec_per_day),
-    // Astronomy units
-    Unit<Ch>("c", "c", dimensions::velocity, constants::speed_of_light_m_per_s),
-    Unit<Ch>({"solar_mass", "solMass", "mass_sun"}, {"Msun", "Msol", "msun", "m_sun", "M_sun", "m_Sun"}, dimensions::mass, constants::mass_sun_kg),
-    Unit<Ch>({"solar_radius", "solRadius"}, {"Rsun", "Rsol", "rsun", "r_sun", "R_sun", "r_Sun"}, dimensions::length, constants::m_per_rsun),
-    Unit<Ch>({"solar_luminosity", "solLumin"}, {"Lsun", "Lsol", "lsun", "l_sun", "L_sun", "l_Sun"}, dimensions::power, constants::luminosity_sun_watts),
-    Unit<Ch>({"solar_temperature", "solTemperature"}, {"Tsun", "Tsol", "tsun", "t_sun", "T_sun", "t_Sun"}, dimensions::temperature, constants::temp_sun_kelvin),
-    Unit<Ch>({"solar_metallicity", "solMetallicity"}, {"Zsun", "Zsol", "zsun", "z_sun", "Z_sun", "z_Sun"}, dimensions::dimensionless, constants::metallicity_sun),
-    Unit<Ch>({"jupiter_mass"}, {"Mjup", "m_jup"}, dimensions::mass, constants::mass_jupiter_kg),
-    Unit<Ch>({"jupiter_radius"}, {"Rjup", "r_jup"}, dimensions::length, constants::m_per_rjup),
-    Unit<Ch>({"earth_mass"}, {"Mearth", "m_earth"}, dimensions::mass, constants::mass_earth_kg),
-    Unit<Ch>({"earth_radius"}, {"Rearth", "r_earth"}, dimensions::length, constants::m_per_rearth),
-    Unit<Ch>({"astronomical_unit"}, {"AU", "au"}, dimensions::length, constants::m_per_au),
-    Unit<Ch>("light_year", "ly", dimensions::length, constants::m_per_ly),
-    Unit<Ch>("degree", "deg", dimensions::angle, M_PI / 180.0),
-    Unit<Ch>("arcmin", "arcmin", dimensions::angle, M_PI / 10800.0),
-    Unit<Ch>("arcsec", "arcsec", dimensions::angle, M_PI / 648000.0),
-    Unit<Ch>("miliarcsec", "mas", dimensions::angle, M_PI / 648000000.0),
-    Unit<Ch>("hourangle", "hourangle", dimensions::angle, M_PI / 12.0),
-    Unit<Ch>("steradian", "sr", dimensions::solid_angle),
-    Unit<Ch>({"latitude", "degree_latitude"}, {"lat"}, dimensions::angle, -M_PI / 180.0, 90.0),
-    Unit<Ch>({"longitude", "degree_longitude"}, {"long"}, dimensions::angle, M_PI / 180.0, -180.0),
-    // Physics
-    Unit<Ch>("amu", "amu", dimensions::mass, constants::amu_kg),
-    Unit<Ch>("angstrom", "Å", dimensions::length, constants::m_per_ang),
-    Unit<Ch>("counts", "counts", dimensions::number),
-    Unit<Ch>("photons", "photons", dimensions::number),
-    Unit<Ch>("me", "me", dimensions::mass, constants::mass_electron_kg),
-    Unit<Ch>("mp", "mp", dimensions::mass, constants::mass_hydrogen_kg),
-    Unit<Ch>("rayleigh", "rayleigh", dimensions::count_intensity, 2.5e9 / M_PI),
-    Unit<Ch>("lambert", "lambert", dimensions::luminance, 1.0e4 / M_PI),
-    Unit<Ch>("nit", "nt", dimensions::luminance),
-    // Planck
-    Unit<Ch>("m_pl", "m_pl", dimensions::mass, constants::planck_mass_kg),
-    Unit<Ch>("l_pl", "l_pl", dimensions::length, constants::planck_length_m),
-    Unit<Ch>("t_pl", "t_pl", dimensions::time, constants::planck_time_s),
-    Unit<Ch>("T_pl", "T_pl", dimensions::temperature, constants::planck_temperature_K),
-    Unit<Ch>("q_pl", "q_pl", dimensions::charge, constants::planck_charge_C),
-    Unit<Ch>("E_pl", "E_pl", dimensions::energy, constants::planck_energy_J),
-    // Geometrized
-    Unit<Ch>("m_geom", "m_geom", dimensions::mass, constants::mass_sun_kg),
-    Unit<Ch>("l_geom", "l_geom", dimensions::length, constants::newton_mks * constants::mass_sun_kg / pow(constants::speed_of_light_m_per_s, 2)),
-    Unit<Ch>("t_geom", "t_geom", dimensions::time, constants::newton_mks * constants::mass_sun_kg / pow(constants::speed_of_light_m_per_s, 3)),
-    // Logarithmic
-    // Unit<Ch>("bel", "B", dimensions::logarithmic, neper_per_bel),
-    // Unit<Ch>("neper", "Np", dimensions::logarithmic),
-    // misc
-    Unit<Ch>("acre", "ac", dimensions::area, 4046.86),
-    Unit<Ch>("are", "a", dimensions::area, 100.0),
-    Unit<Ch>("hectare", "ha", dimensions::area, 10000.0),
+  static std::vector<Unit<UTF8<char>>> _prefixable_units {
+    // cgs
+    Unit<UTF8<char>>("dyne", "dyn", dimensions::force, 1.0e-5),
+    Unit<UTF8<char>>("erg", "erg", dimensions::energy, 1.0e-7),
+    Unit<UTF8<char>>("barye", "Ba", dimensions::pressure, 0.1),
+    Unit<UTF8<char>>("gauss", "G", dimensions::magnetic_field_cgs, pow(0.1, 0.5)),
+    Unit<UTF8<char>>({"statcoulomb", "esu", "ESU", "electrostatic_unit"}, {"statC"}, dimensions::charge_cgs, pow(1.0e-3, 1.5)),
+    Unit<UTF8<char>>("statampere", "statA", dimensions::current_cgs, pow(1.0e-3, 1.5)),
+    Unit<UTF8<char>>("statvolt", "statV", dimensions::electric_potential_cgs, 0.1 * pow(1.0e-3, 1.5)),
+    Unit<UTF8<char>>("statohm", "statohm", dimensions::resistance_cgs, 100.0),
+    Unit<UTF8<char>>("maxwell", "Mx", dimensions::magnetic_flux_cgs, pow(1.0e-3, 1.5)),
+    // SI
+    Unit<UTF8<char>>("joule", "J", dimensions::energy),
+    Unit<UTF8<char>>("watt", "W", dimensions::power),
+    Unit<UTF8<char>>("hertz", "Hz", dimensions::rate),
+    Unit<UTF8<char>>("newton", "N", dimensions::force),
+    Unit<UTF8<char>>("coulomb", "C", dimensions::charge),
+    Unit<UTF8<char>>("tesla", "T", dimensions::magnetic_field),
+    Unit<UTF8<char>>("pascal", "Pa", dimensions::pressure),
+    Unit<UTF8<char>>("bar", "bar", dimensions::pressure, 1.0e5),
+    Unit<UTF8<char>>("volt", "V", dimensions::electric_potential),
+    Unit<UTF8<char>>("farad", "F", dimensions::capacitance),
+    Unit<UTF8<char>>("henry", "H", dimensions::inductance),
+    Unit<UTF8<char>>({"ohm", "Ohm"}, {"Ω"}, dimensions::resistance),
+    Unit<UTF8<char>>("weber", "Wb", dimensions::magnetic_flux),
+    Unit<UTF8<char>>("lumen", "lm", dimensions::luminous_flux),
+    Unit<UTF8<char>>("lux", "lx", dimensions::luminous_flux / dimensions::area),
+    Unit<UTF8<char>>({"celcius", "degree_celsius", "degree_Celsius", "celsius"}, {"degC", "°C"}, dimensions::temperature, 1.0, constants::celcius_zero_kelvin),
+    // other
+    Unit<UTF8<char>>("calorie", "cal", dimensions::energy, 4.184),
+    Unit<UTF8<char>>("year", "yr", dimensions::time, constants::sec_per_year),
+    Unit<UTF8<char>>("parsec", "pc", dimensions::length, constants::m_per_pc),
+    Unit<UTF8<char>>("electronvolt", "eV", dimensions::energy, constants::J_per_eV),
+    Unit<UTF8<char>>("jansky", "J", dimensions::specific_flux, constants::jansky_mks),
+    Unit<UTF8<char>>("sievert", "Sv", dimensions::specific_energy),
+    Unit<UTF8<char>>("molar", "M", dimensions::number_density, 100.0 / constants::amu_grams),
   };
-  return out;
-};
-STATIC_VECTORS(Unit, unprefixable_units);
+  
+  template<typename Encoding>
+  std::vector<Unit<Encoding>> get_prefixable_units() {
+    std::vector<Unit<Encoding>> out = get_base_units<Encoding>();
+    for (auto it = _prefixable_units.begin(); it != _prefixable_units.end(); it++)
+      out.push_back(it->transcode<Encoding>());
+    return out;
+  };
+  // STATIC_VECTORS(Unit, prefixable_units);
+
+  static std::vector<Unit<UTF8<char>>> _unprefixable_units {
+    // Imperial units
+    Unit<UTF8<char>>({"mil", "thou", "thousandth"}, {"mil"}, dimensions::length, 1.0e-3 * constants::m_per_inch),
+    Unit<UTF8<char>>("incl", "incl", dimensions::length, constants::m_per_inch),
+    Unit<UTF8<char>>("feet", "ft", dimensions::length, constants::m_per_ft),
+    Unit<UTF8<char>>("yard", "yd", dimensions::length, 0.9144),
+    Unit<UTF8<char>>("mile", "mi", dimensions::length, 1609.344),
+    Unit<UTF8<char>>("furlong", "fur", dimensions::length, constants::m_per_ft * 660.0),
+    Unit<UTF8<char>>({"farenheit", "degree_fahrenheit", "degree_Fahrenheit"}, {"degF", "°F"}, dimensions::temperature, constants::kelvin_per_rankine, constants::farenheit_zero_kelvin),
+    Unit<UTF8<char>>({"rankine", "degree_rankine"}, {"degR"}, dimensions::temperature, constants::kelvin_per_rankine),
+    Unit<UTF8<char>>("pound_force", "lbf", dimensions::force, constants::kg_per_pound * constants::standard_gravity_m_per_s2),
+    Unit<UTF8<char>>({"pound", "pound_mass"}, {"lb", "lbm"}, dimensions::mass, constants::kg_per_pound),
+    Unit<UTF8<char>>("atmosphere", "atm", dimensions::pressure, constants::pascal_per_atm),
+    Unit<UTF8<char>>("horsepower", "hp", dimensions::power, constants::watt_per_horsepower),
+    Unit<UTF8<char>>("ounce", "oz", dimensions::mass, constants::kg_per_pound / 16.0),
+    Unit<UTF8<char>>("ton", "ton", dimensions::mass, constants::kg_per_pound * 2000.0),
+    Unit<UTF8<char>>("slug", "slug", dimensions::mass, constants::kg_per_pound * constants::standard_gravity_m_per_s2 / constants::m_per_ft),
+    Unit<UTF8<char>>({"BTU", "british_thermal_unit"}, {"BTU"}, dimensions::energy, 1055.0559),
+    Unit<UTF8<char>>("pounds_per_square_inch", "psi", dimensions::pressure, constants::kg_per_pound * constants::standard_gravity_m_per_s2 / pow(constants::m_per_inch, 2)),
+    Unit<UTF8<char>>("smoot", "smoot", dimensions::length, 1.7018),
+    Unit<UTF8<char>>("percent", "%", dimensions::dimensionless, 0.01),
+    Unit<UTF8<char>>("minute", "min", dimensions::time, constants::sec_per_min),
+    Unit<UTF8<char>>("hour", "hr", dimensions::time, constants::sec_per_hr),
+    Unit<UTF8<char>>("day", "day", dimensions::time, constants::sec_per_day),
+    // Astronomy units
+    Unit<UTF8<char>>("c", "c", dimensions::velocity, constants::speed_of_light_m_per_s),
+    Unit<UTF8<char>>({"solar_mass", "solMass", "mass_sun"}, {"Msun", "Msol", "msun", "m_sun", "M_sun", "m_Sun"}, dimensions::mass, constants::mass_sun_kg),
+    Unit<UTF8<char>>({"solar_radius", "solRadius"}, {"Rsun", "Rsol", "rsun", "r_sun", "R_sun", "r_Sun"}, dimensions::length, constants::m_per_rsun),
+    Unit<UTF8<char>>({"solar_luminosity", "solLumin"}, {"Lsun", "Lsol", "lsun", "l_sun", "L_sun", "l_Sun"}, dimensions::power, constants::luminosity_sun_watts),
+    Unit<UTF8<char>>({"solar_temperature", "solTemperature"}, {"Tsun", "Tsol", "tsun", "t_sun", "T_sun", "t_Sun"}, dimensions::temperature, constants::temp_sun_kelvin),
+    Unit<UTF8<char>>({"solar_metallicity", "solMetallicity"}, {"Zsun", "Zsol", "zsun", "z_sun", "Z_sun", "z_Sun"}, dimensions::dimensionless, constants::metallicity_sun),
+    Unit<UTF8<char>>({"jupiter_mass"}, {"Mjup", "m_jup"}, dimensions::mass, constants::mass_jupiter_kg),
+    Unit<UTF8<char>>({"jupiter_radius"}, {"Rjup", "r_jup"}, dimensions::length, constants::m_per_rjup),
+    Unit<UTF8<char>>({"earth_mass"}, {"Mearth", "m_earth"}, dimensions::mass, constants::mass_earth_kg),
+    Unit<UTF8<char>>({"earth_radius"}, {"Rearth", "r_earth"}, dimensions::length, constants::m_per_rearth),
+    Unit<UTF8<char>>({"astronomical_unit"}, {"AU", "au"}, dimensions::length, constants::m_per_au),
+    Unit<UTF8<char>>("light_year", "ly", dimensions::length, constants::m_per_ly),
+    Unit<UTF8<char>>("degree", "deg", dimensions::angle, M_PI / 180.0),
+    Unit<UTF8<char>>("arcmin", "arcmin", dimensions::angle, M_PI / 10800.0),
+    Unit<UTF8<char>>("arcsec", "arcsec", dimensions::angle, M_PI / 648000.0),
+    Unit<UTF8<char>>("miliarcsec", "mas", dimensions::angle, M_PI / 648000000.0),
+    Unit<UTF8<char>>("hourangle", "hourangle", dimensions::angle, M_PI / 12.0),
+    Unit<UTF8<char>>("steradian", "sr", dimensions::solid_angle),
+    Unit<UTF8<char>>({"latitude", "degree_latitude"}, {"lat"}, dimensions::angle, -M_PI / 180.0, 90.0),
+    Unit<UTF8<char>>({"longitude", "degree_longitude"}, {"long"}, dimensions::angle, M_PI / 180.0, -180.0),
+    // Physics
+    Unit<UTF8<char>>("amu", "amu", dimensions::mass, constants::amu_kg),
+    Unit<UTF8<char>>("angstrom", "Å", dimensions::length, constants::m_per_ang),
+    Unit<UTF8<char>>("counts", "counts", dimensions::number),
+    Unit<UTF8<char>>("photons", "photons", dimensions::number),
+    Unit<UTF8<char>>("me", "me", dimensions::mass, constants::mass_electron_kg),
+    Unit<UTF8<char>>("mp", "mp", dimensions::mass, constants::mass_hydrogen_kg),
+    Unit<UTF8<char>>("rayleigh", "rayleigh", dimensions::count_intensity, 2.5e9 / M_PI),
+    Unit<UTF8<char>>("lambert", "lambert", dimensions::luminance, 1.0e4 / M_PI),
+    Unit<UTF8<char>>("nit", "nt", dimensions::luminance),
+    // Planck
+    Unit<UTF8<char>>("m_pl", "m_pl", dimensions::mass, constants::planck_mass_kg),
+    Unit<UTF8<char>>("l_pl", "l_pl", dimensions::length, constants::planck_length_m),
+    Unit<UTF8<char>>("t_pl", "t_pl", dimensions::time, constants::planck_time_s),
+    Unit<UTF8<char>>("T_pl", "T_pl", dimensions::temperature, constants::planck_temperature_K),
+    Unit<UTF8<char>>("q_pl", "q_pl", dimensions::charge, constants::planck_charge_C),
+    Unit<UTF8<char>>("E_pl", "E_pl", dimensions::energy, constants::planck_energy_J),
+    // Geometrized
+    Unit<UTF8<char>>("m_geom", "m_geom", dimensions::mass, constants::mass_sun_kg),
+    Unit<UTF8<char>>("l_geom", "l_geom", dimensions::length, constants::newton_mks * constants::mass_sun_kg / pow(constants::speed_of_light_m_per_s, 2)),
+    Unit<UTF8<char>>("t_geom", "t_geom", dimensions::time, constants::newton_mks * constants::mass_sun_kg / pow(constants::speed_of_light_m_per_s, 3)),
+    // Logarithmic
+    // Unit<UTF8<char>>("bel", "B", dimensions::logarithmic, neper_per_bel),
+    // Unit<UTF8<char>>("neper", "Np", dimensions::logarithmic),
+    // misc
+    Unit<UTF8<char>>("acre", "ac", dimensions::area, 4046.86),
+    Unit<UTF8<char>>("are", "a", dimensions::area, 100.0),
+    Unit<UTF8<char>>("hectare", "ha", dimensions::area, 10000.0),
+  };
+
+  template<typename Encoding>
+  std::vector<Unit<Encoding>> get_unprefixable_units() {
+    std::vector<Unit<Encoding>> out;
+    for (auto it = _unprefixable_units.begin(); it != _unprefixable_units.end(); it++)
+      out.push_back(it->transcode<Encoding>());
+    return out;
+  };
+  // STATIC_VECTORS(Unit, unprefixable_units);
 
 #undef STATIC_VECTORS
 
-template<typename Ch>
-bool Unit<Ch>::from_table(const std::basic_string<Ch> str) {
+template<typename Encoding>
+bool Unit<Encoding>::from_table(const std::basic_string<typename Encoding::Ch> str) {
   size_t idx_beg, idx_end;
-  std::basic_string<Ch> whitespace = get_whitespace();
+  std::basic_string<typename Encoding::Ch> whitespace = get_whitespace();
   idx_beg = str.find_first_not_of(whitespace);
   idx_end = str.find_last_not_of(whitespace);
   RAPIDJSON_ASSERT(idx_end != std::string::npos);
-  std::basic_string<Ch> substr = str.substr(idx_beg, idx_end + 1);
-  std::vector<const Unit<Ch>*> possibilities;
-  const std::vector<Unit<Ch>> prefix_units = prefixable_units<Ch>();
+  std::basic_string<typename Encoding::Ch> substr = str.substr(idx_beg, idx_end + 1);
+  std::vector<const Unit<Encoding>*> possibilities;
+  const std::vector<Unit<Encoding>> prefix_units = get_prefixable_units<Encoding>();
   for (auto it = prefix_units.begin(); it != prefix_units.end(); it++) {
     if (it->matches(substr))
       return from_table(*it);
     it->prefix_matches(substr, possibilities);
   }
-  const std::vector<Unit<Ch>> unprefix_units = unprefixable_units<Ch>();
-  const std::vector<UnitPrefix<Ch>> prefixes = unit_prefixes<Ch>();
+  const std::vector<Unit<Encoding>> unprefix_units = get_unprefixable_units<Encoding>();
   for (auto it = unprefix_units.begin(); it != unprefix_units.end(); it++)
     if (it->matches(substr))
       return from_table(*it);
-  if (possibilities.size() > 0)
+  if (possibilities.size() > 0) {
+    const std::vector<UnitPrefix<Encoding>> prefixes = get_unit_prefixes<Encoding>();
     for (auto it = possibilities.begin(); it != possibilities.end(); it++)
       for (auto p = prefixes.begin(); p != prefixes.end(); p++)
 	if ((*it)->matches(substr, *p))
 	  return from_table(**it, *p);
-  std::cerr << "No match found for \"" << convert_chars<Ch,char>(substr) << "\"" << std::endl; // GCOVR_EXCL_LINE
+  }
+  std::cerr << "No match found for \"" << convert_chars<Encoding,UTF8<char>>(substr) << "\"" << std::endl; // GCOVR_EXCL_LINE
   RAPIDJSON_ASSERT(!sizeof("No match found")); // GCOVR_EXCL_LINE
   return false; // GCOVR_EXCL_LINE
 };
@@ -1174,26 +1262,27 @@ enum TokenType {
   kGroupToken = 3
 };
 
-template<typename Ch>
+template<typename Encoding>
 class GroupToken; // Forward declaration
 
 
 /*
   #define TOKEN_COPY(cls)			\
-  TokenBase<Ch>* copy() const override {				\
-  return static_cast<TokenBase<Ch>*>(new cls<Ch>(static_cast<cls<Ch>*>(this))); \
+  TokenBase<Encoding>* copy() const override {				\
+  return static_cast<TokenBase<Encoding>*>(new cls<Encoding>(static_cast<cls<Encoding>*>(this))); \
   }
 */
 
-template<typename Ch>
+template<typename Encoding>
 class TokenBase {
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 private:
-  TokenBase(const TokenBase<Ch>& rhs); // : t(rhs.t), parent(rhs.parent), units(rhs.units), finalized(rhs.finalized) {}
+  TokenBase(const TokenBase<Encoding>& rhs); // : t(rhs.t), parent(rhs.parent), units(rhs.units), finalized(rhs.finalized) {}
 public:
   TokenBase(const TokenType t0, TokenBase *parent0=nullptr) : t(t0), units(), finalized(false), parent(parent0), value_(0.0) {}
   virtual ~TokenBase() {}
-  virtual TokenBase<Ch>* current_token() { return this; }
-  virtual Units<Ch> finalize() {
+  virtual TokenBase<Encoding>* current_token() { return this; }
+  virtual Units<Encoding> finalize() {
     finalized = true;
     return units;
   }
@@ -1205,37 +1294,38 @@ public:
   virtual bool is_numeric() { return false; }
   virtual void append(const Ch) = 0;
   virtual std::ostream & display(std::ostream &os) const = 0;
-  // virtual TokenBase<Ch>* copy() const { return new TokenBase<Ch>(*this); }
-  TokenBase<Ch>& operator=(const TokenBase<Ch>& other); /* {
+  // virtual TokenBase<Encoding>* copy() const { return new TokenBase<Encoding>(*this); }
+  TokenBase<Encoding>& operator=(const TokenBase<Encoding>& other); /* {
     if (this != &other) {
       RAPIDJSON_ASSERT(t == other.t);
       parent = other.parent;
-      units = Units<Ch>(other.units);
+      units = Units<Encoding>(other.units);
       finalized = other.finalized;
     }
     return *this;
   }
   */
   TokenType t;
-  Units<Ch> units;
+  Units<Encoding> units;
   bool finalized;
-  TokenBase<Ch> *parent;
+  TokenBase<Encoding> *parent;
   double value_;
-  template<typename Ch2>
-  friend std::ostream & operator << (std::ostream &os, const TokenBase<Ch2>* x);
+  template<typename Encoding2>
+  friend std::ostream & operator << (std::ostream &os, const TokenBase<Encoding2>* x);
 };
-template<typename Ch2>
-inline std::ostream & operator << (std::ostream &os, const TokenBase<Ch2>* x) {
+template<typename Encoding2>
+inline std::ostream & operator << (std::ostream &os, const TokenBase<Encoding2>* x) {
   return x->display(os);
 };
   
-template<typename Ch>
-class OperatorToken : public TokenBase<Ch> {
+template<typename Encoding>
+class OperatorToken : public TokenBase<Encoding> {
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
-  OperatorToken(const Ch op0, TokenBase<Ch> *parent0=nullptr) : TokenBase<Ch>(kOperatorToken, parent0), op(op0) { this->finalize(); }
-  // OperatorToken(const OperatorToken<Ch>& rhs) : TokenBase(rhs), op(rhs.op) {}
+  OperatorToken(const Ch op0, TokenBase<Encoding> *parent0=nullptr) : TokenBase<Encoding>(kOperatorToken, parent0), op(op0) { this->finalize(); }
+  // OperatorToken(const OperatorToken<Encoding>& rhs) : TokenBase(rhs), op(rhs.op) {}
   void append(const Ch c) override { RAPIDJSON_ASSERT(!c); } // GCOVR_EXCL_LINE
-  Units<Ch> operate(const Units<Ch>& a, const Units<Ch>& b) {
+  Units<Encoding> operate(const Units<Encoding>& a, const Units<Encoding>& b) {
     switch (op) {
     case '*':
       return a * b;
@@ -1246,7 +1336,7 @@ public:
     }
     return this->units; // GCOVR_EXCL_LINE
   }
-  Units<Ch> operate(const Units<Ch>& a, const double& b) {
+  Units<Encoding> operate(const Units<Encoding>& a, const double& b) {
     RAPIDJSON_ASSERT(op == '^');
     return a.pow(b);
   }
@@ -1282,9 +1372,9 @@ public:
   }
   /*
   TOKEN_COPY(OperatorToken);
-  TokenBase<Ch>& operator=(const TokenBase<Ch>& other) {
-    TokenBase<Ch>::operator=(other);
-    const OperatorToken<Ch>* otherT = static_cast<OperatorToken<Ch>*>(&other);
+  TokenBase<Encoding>& operator=(const TokenBase<Encoding>& other) {
+    TokenBase<Encoding>::operator=(other);
+    const OperatorToken<Encoding>* otherT = static_cast<OperatorToken<Encoding>*>(&other);
     if (this != otherT)
       op = otherT->op;
     return *this;
@@ -1293,67 +1383,70 @@ public:
   Ch op;
 };
 
-template<typename Ch>
+template<typename Encoding>
 class NumberToken; // Forward declaration
   
-template<typename Ch>
-class WordToken : public TokenBase<Ch> {
+template<typename Encoding>
+class WordToken : public TokenBase<Encoding> {
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
-  WordToken(const Ch c, TokenBase<Ch> *parent0=nullptr) : TokenBase<Ch>(kWordToken, parent0), word() {
+  WordToken(const Ch c, TokenBase<Encoding> *parent0=nullptr) : TokenBase<Encoding>(kWordToken, parent0), word() {
     word.push_back(c);
   }
-  // WordToken(const WordToken<Ch>& rhs) : TokenBase(rhs), word(rhs.word) {}
+  // WordToken(const WordToken<Encoding>& rhs) : TokenBase(rhs), word(rhs.word) {}
   void append(const Ch c) override {
     word.push_back(c);
   }
-  Units<Ch> finalize() override {
+  Units<Encoding> finalize() override {
     RAPIDJSON_ASSERT(word.size());
     if (!(this->finalized))
       this->units.add_unit(word);
-      // this->units = Units<Ch>({Unit<Ch>(word)});
-    return TokenBase<Ch>::finalize();
+      // this->units = Units<Encoding>({Unit<Encoding>(word)});
+    return TokenBase<Encoding>::finalize();
   }
   std::ostream & display(std::ostream &os) const override {
-    os << "WordToken(" << convert_chars<Ch,char>(word) << ")";
+    os << "WordToken(" << convert_chars<Encoding,UTF8<char>>(word) << ")";
     return os;
   }
   /*
   TOKEN_COPY(WordToken);
-  TokenBase<Ch>& operator=(const TokenBase<Ch>& other) {
-    TokenBase<Ch>::operator=(other);
-    const WordToken<Ch>* otherT = static_cast<WordToken<Ch>*>(&other);
+  TokenBase<Encoding>& operator=(const TokenBase<Encoding>& other) {
+    TokenBase<Encoding>::operator=(other);
+    const WordToken<Encoding>* otherT = static_cast<WordToken<Encoding>*>(&other);
     if (this != otherT)
       word = otherT->word;
     return *this;
   }
   */
   std::basic_string<Ch> word;
-  friend NumberToken<Ch>;
+  friend NumberToken<Encoding>;
 };
 
-template<typename Ch>
-class NumberToken : public WordToken<Ch> {
+template<typename Encoding>
+class NumberToken : public WordToken<Encoding> {
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
-  NumberToken(const Ch c, TokenBase<Ch> *parent0=nullptr) : WordToken<Ch>(c, parent0) {}
-  // NumberToken(const NumberToken<Ch>& rhs) : WordToken(rhs) {}
+  NumberToken(const Ch c, TokenBase<Encoding> *parent0=nullptr) : WordToken<Encoding>(c, parent0) {}
+  // NumberToken(const NumberToken<Encoding>& rhs) : WordToken(rhs) {}
   bool is_numeric() override { return true; }
-  Units<Ch> finalize() override {
+  Units<Encoding> finalize() override {
     if (!(this->finalized))
       this->value_ = char_to_double<Ch>(this->word);
-    return TokenBase<Ch>::finalize();
+    return TokenBase<Encoding>::finalize();
   }
   std::ostream & display(std::ostream &os) const override {
-    os << "NumericToken(" << convert_chars<Ch,char>(this->word) << ")";
+    os << "NumericToken(" << convert_chars<Encoding,UTF8<char>>(this->word) << ")";
     return os;
   }
 };
 
-template<typename Ch>
-class GroupToken : public TokenBase<Ch> {
+template<typename Encoding>
+class GroupToken : public TokenBase<Encoding> {
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
-  GroupToken(TokenBase<Ch> *parent0=nullptr) : TokenBase<Ch>(kGroupToken, parent0), tokens() {}
+  GroupToken(TokenBase<Encoding> *parent0=nullptr) : TokenBase<Encoding>(kGroupToken, parent0), tokens() {}
   /*
-  GroupToken(const GroupToken<Ch>& rhs) : TokenBase<Ch>(rhs), tokens() {
+  GroupToken(const GroupToken<Encoding>& rhs) : TokenBase<Encoding>(rhs), tokens() {
     for (auto it = rhs.tokens.begin(); it != rhs.tokens.end(); it++)
       tokens.push_back((*it)->copy());
   }
@@ -1363,27 +1456,27 @@ public:
       delete tokens[i];
     tokens.clear();
   }
-  TokenBase<Ch>* current_token() override {
+  TokenBase<Encoding>* current_token() override {
     if (tokens.size() == 0)
-      return TokenBase<Ch>::current_token();
+      return TokenBase<Encoding>::current_token();
     return tokens[tokens.size() - 1]->current_token();
   }
-  GroupToken<Ch>* current_group() {
+  GroupToken<Encoding>* current_group() {
     int idx = (int)(tokens.size()) - 1;
     if ((idx >= 0) && (tokens[(size_t)idx]->t == kGroupToken)
 	&& (!(tokens[(size_t)idx]->finalized))) {
-      GroupToken<Ch>* grp = static_cast<GroupToken<Ch>*>(tokens[(size_t)idx]);
+      GroupToken<Encoding>* grp = static_cast<GroupToken<Encoding>*>(tokens[(size_t)idx]);
       return grp->current_group();
     }
     return this;
   }
-  OperatorToken<Ch>* append_op(const Ch c, bool dont_descend=false) {
-    OperatorToken<Ch>* op = new OperatorToken<Ch>(c, this);
+  OperatorToken<Encoding>* append_op(const Ch c, bool dont_descend=false) {
+    OperatorToken<Encoding>* op = new OperatorToken<Encoding>(c, this);
     append(op, dont_descend);
     return op;
   }
   void append(const Ch c) override {
-    TokenBase<Ch>* curr = current_token();
+    TokenBase<Encoding>* curr = current_token();
     if ((curr->t == kGroupToken) || (curr->finalized)) {
       switch (c) {
       case '-':
@@ -1398,10 +1491,10 @@ public:
       case '7':
       case '8':
       case '9':
-	curr = append(new NumberToken<Ch>(c, (TokenBase<Ch>*)(this)));
+	curr = append(new NumberToken<Encoding>(c, (TokenBase<Encoding>*)(this)));
 	break;
       default:
-	curr = append(new WordToken<Ch>(c, (TokenBase<Ch>*)(this)));
+	curr = append(new WordToken<Encoding>(c, (TokenBase<Encoding>*)(this)));
       }
       return;
     } else if ((c == '-') || (c == '+')) {
@@ -1409,17 +1502,17 @@ public:
       return;
     }
     RAPIDJSON_ASSERT(curr->t == kWordToken);
-    WordToken<Ch>* word = static_cast<WordToken<Ch>*>(curr);
+    WordToken<Encoding>* word = static_cast<WordToken<Encoding>*>(curr);
     word->append(c);
   }
-  TokenBase<Ch>* append(TokenBase<Ch>* x, bool dont_descend=false) {
-    GroupToken<Ch>* curr;
+  TokenBase<Encoding>* append(TokenBase<Encoding>* x, bool dont_descend=false) {
+    GroupToken<Encoding>* curr;
     if (dont_descend)
       curr = this;
     else {
       curr = current_group();
       if (curr->tokens.size() > 0) {
-	TokenBase<Ch>* prev = curr->current_token();
+	TokenBase<Encoding>* prev = curr->current_token();
 	if (!(prev->finalized))
 	  prev->finalize();
 	if ((x->t != kOperatorToken) && (prev->t != kOperatorToken))
@@ -1441,16 +1534,16 @@ public:
     std::vector<size_t> exponents;
     for (size_t i = 1; i < tokens.size(); i++) {
       if (tokens[i]->t == kOperatorToken) {
-	OperatorToken<Ch> *op = static_cast<OperatorToken<Ch>*>(tokens[i]);
+	OperatorToken<Encoding> *op = static_cast<OperatorToken<Encoding>*>(tokens[i]);
 	if (op->matches(ops)) {
 	  RAPIDJSON_ASSERT((i + 1) < tokens.size());
-	  GroupToken<Ch>* new_group = new GroupToken<Ch>(this);
+	  GroupToken<Encoding>* new_group = new GroupToken<Encoding>(this);
 	  for (size_t ii = i - 1; ii <= (i + 1); ii++) {
 	    tokens[ii]->parent = new_group;
 	    new_group->append(tokens[ii]);
 	    tokens[ii] = nullptr;
 	  }
-	  tokens[i + 1] = (TokenBase<Ch>*)(new_group);
+	  tokens[i + 1] = (TokenBase<Encoding>*)(new_group);
 	  new_group->finalize();
 	  exponents.push_back(i - 1);
 	  exponents.push_back(i);
@@ -1461,7 +1554,7 @@ public:
     for (auto it = exponents.rbegin(); it != exponents.rend(); it++)
       tokens.erase(tokens.begin() + (int)(*it));
   }
-  Units<Ch> finalize() override {
+  Units<Encoding> finalize() override {
     if ((tokens.size() == 0) || (this->finalized))
       return this->units;
     // Group operators first in order of operations
@@ -1471,20 +1564,20 @@ public:
       group_operators({'+', '-'});
     }
     // Complete operations from left to right
-    Units<Ch> out = tokens[0]->finalize();
+    Units<Encoding> out = tokens[0]->finalize();
     if (is_numeric()) {
       this->value_ = tokens[0]->value();
       for (size_t i = 1; i < tokens.size(); i = i+2) {
 	RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
 	RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
-	OperatorToken<Ch> *op = static_cast<OperatorToken<Ch>*>(tokens[i]);
+	OperatorToken<Encoding> *op = static_cast<OperatorToken<Encoding>*>(tokens[i]);
 	this->value_ = op->operate(this->value_, tokens[i + 1]->value());
       }
     } else {
       for (size_t i = 1; i < tokens.size(); i = i+2) {
 	RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
 	RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
-	OperatorToken<Ch> *op = static_cast<OperatorToken<Ch>*>(tokens[i]);
+	OperatorToken<Encoding> *op = static_cast<OperatorToken<Encoding>*>(tokens[i]);
 	if (tokens[i + 1]->is_numeric()) {
 	  out = op->operate(out, tokens[i + 1]->value());
 	} else {
@@ -1493,7 +1586,7 @@ public:
       }
     }
     this->units = out;
-    return TokenBase<Ch>::finalize();
+    return TokenBase<Encoding>::finalize();
   }
   bool is_numeric() override {
     for (auto it = tokens.begin(); it != tokens.end(); it++) {
@@ -1514,9 +1607,9 @@ public:
   }
   /*
   TOKEN_COPY(GroupToken);
-  TokenBase<Ch>& operator=(const TokenBase<Ch>& other) {
-    TokenBase<Ch>::operator=(other);
-    const GroupToken<Ch>* otherT = static_cast<GroupToken<Ch>*>(&other);
+  TokenBase<Encoding>& operator=(const TokenBase<Encoding>& other) {
+    TokenBase<Encoding>::operator=(other);
+    const GroupToken<Encoding>* otherT = static_cast<GroupToken<Encoding>*>(&other);
     if (this != otherT) {
       for (size_t i = 0; i < tokens.size(); i++)
 	delete tokens[i];
@@ -1528,27 +1621,28 @@ public:
     return *this;
   }
   */
-  std::vector<TokenBase<Ch>*> tokens;
+  std::vector<TokenBase<Encoding>*> tokens;
 };
 
 } // namespace parser
 
 
-template<typename Ch>
-Units<Ch> Units<Ch>::parse_units(const Ch* str, const size_t len,
-				 const bool verbose) {
+template<typename Encoding>
+Units<Encoding> Units<Encoding>::parse_units(const typename Encoding::Ch* str,
+					     const size_t len,
+					     const bool verbose) {
   if (verbose)
-    std::cout << "parse_units(\"" << convert_chars<Ch,char>(str) << "\")" << std::endl;
+    std::cout << "parse_units(\"" << convert_chars<Encoding,UTF8<char>>(str) << "\")" << std::endl;
   size_t i = 0;
-  parser::GroupToken<Ch> token;
-  Ch c;
+  parser::GroupToken<Encoding> token;
+  typename Encoding::Ch c;
   for (i = 0; i < len; i++) {
     c = str[i];
     switch (c) {
     case '(':
     case '[': // TODO: Concentration?
     case '{': {
-      token.append(new parser::GroupToken<Ch>());
+      token.append(new parser::GroupToken<Encoding>());
       break;
     }
     case ')':
@@ -1577,7 +1671,7 @@ Units<Ch> Units<Ch>::parse_units(const Ch* str, const size_t len,
     case '\v':
     case '\f':
     case '\r': {
-      parser::TokenBase<Ch>* word = token.current_token();
+      parser::TokenBase<Encoding>* word = token.current_token();
       if (word->t == parser::kWordToken)
 	word->finalize();
       break;
@@ -1596,9 +1690,10 @@ Units<Ch> Units<Ch>::parse_units(const Ch* str, const size_t len,
 
 //! Scalar quantity with units.
 //! \tparam T Type of the underlying scalar.
-//! \tparam Ch Type of character used to store the unit strings.
-template<typename T, typename Ch>
+//! \tparam Encoding Encoding used to store the unit strings.
+template<typename T, typename Encoding>
 class Quantity {
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
   //! \brief Empty constructor.
   Quantity() : value_(_initialize_value<T>()), units_() {}
@@ -1614,7 +1709,7 @@ public:
   //! \brief Constructor from units string.
   //! \param value Scalar value.
   //! \param units Units instance.
-  Quantity(const T& value, const Units<Ch>& units) :
+  Quantity(const T& value, const Units<Encoding>& units) :
     value_(value), units_(units) {}
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
@@ -1639,7 +1734,7 @@ public:
   T value() const { return value_; };
   //! \brief Get the units instance.
   //! \return Units.
-  Units<Ch> units() const { return units_; }
+  Units<Encoding> units() const { return units_; }
   //! \brief Get the units string.
   //! \return Units string.
   std::basic_string<Ch> unitsStr() const { return units_.str(); }
@@ -1730,24 +1825,24 @@ public:
   //! \brief Convert the quantity to a different set of units. The new units
   //!   must be compatible with the current ones.
   //! \param units New units.
-  void convert_to(const Units<Ch>& units) {
+  void convert_to(const Units<Encoding>& units) {
     std::vector<double> factor = units_.conversion_factor(units);
     value_ = do_conv<T>(value_, factor[0], factor[1]);
-    units_ = Units<Ch>(units);
+    units_ = Units<Encoding>(units);
   }
   //! \brief Create a new quantity by converting this one to a new set of
   //!   compatible units.
   //! \param units New units.
   //! \return New quantity.
   Quantity as(const char* units0) const {
-    Units<Ch> units(units0);
+    Units<Encoding> units(units0);
     return as(units);
   }
   //! \brief Create a new quantity by converting this one to a new set of
   //!   compatible units.
   //! \param units New units.
   //! \return New quantity.
-  Quantity as(const Units<Ch>& units) const {
+  Quantity as(const Units<Encoding>& units) const {
     Quantity out(*this);
     out.convert_to(units);
     return out;
@@ -1767,13 +1862,13 @@ private:
   }
 
   T value_;
-  Units<Ch> units_;
-  template<typename U, typename Ch2>
-  friend std::ostream & operator << (std::ostream &os, const Quantity<U,Ch2> &x);
-  friend class QuantityArray<T,Ch>;
+  Units<Encoding> units_;
+  template<typename U, typename Encoding2>
+  friend std::ostream & operator << (std::ostream &os, const Quantity<U,Encoding2> &x);
+  friend class QuantityArray<T,Encoding>;
 };
-template<typename T, typename Ch=char>
-inline std::ostream & operator << (std::ostream &os, const Quantity<T, Ch> &x) {
+template<typename T, typename Encoding>
+inline std::ostream & operator << (std::ostream &os, const Quantity<T, Encoding> &x) {
     os << x.value_ << " " << x.units_;
     return os;
 };
@@ -1800,9 +1895,10 @@ inline std::ostream & operator << (std::ostream &os, const Quantity<T, Ch> &x) {
 
 //! Array quantity with units.
 //! \tparam T Type of the underlying scalar.
-//! \tparam Ch Type of character used to store the unit strings.
-template<typename T, typename Ch>
+//! \tparam Encoding Encoding used to store the unit strings.
+template<typename T, typename Encoding>
 class QuantityArray {
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
   //! \brief Empty constructor.
   QuantityArray() : value_(nullptr), units_(), ndim_(0), shape_(nullptr) {}
@@ -1812,7 +1908,7 @@ public:
   //! \param shape Size of the array in each dimension.
   //! \param units Units instance.
   QuantityArray(const T* value, const SizeType& ndim, const SizeType* shape,
-		const Units<Ch>& units = Units<Ch>()) :
+		const Units<Encoding>& units = Units<Encoding>()) :
     value_(nullptr), units_(units), ndim_(ndim), shape_(nullptr) {
     RAPIDJSON_ASSERT(ndim > 0);
     _init_shape(shape);
@@ -1823,7 +1919,7 @@ public:
   //! \param len Number of elements in the 1D array.
   //! \param units Units instance.
   QuantityArray(const T* value, const SizeType& len,
-		const Units<Ch>& units = Units<Ch>()) :
+		const Units<Encoding>& units = Units<Encoding>()) :
     QuantityArray(value, 1, &len, units) {}
   //! \brief Create a quantity from units string.
   //! \param value Pointer to an array.
@@ -1832,14 +1928,14 @@ public:
   //! \param units Units string.
   QuantityArray(const T* value, const SizeType& ndim, const SizeType* shape,
 		const Ch* units) :
-    QuantityArray(value, ndim, shape, Units<Ch>(units)) {}
+    QuantityArray(value, ndim, shape, Units<Encoding>(units)) {}
   
   //! \brief Create a quantity without units.
   //! \tparam N Number of elements in the array.
   //! \param value 1D array.
   //! \param units Units instance.
   template<SizeType N>
-  QuantityArray(const T (&value)[N], const Units<Ch>& units = Units<Ch>()) :
+  QuantityArray(const T (&value)[N], const Units<Encoding>& units = Units<Encoding>()) :
     QuantityArray(&(value[0]), N, units) {}
   //! \brief Constructor from units string.
   //! \tparam N Number of elements in the array.
@@ -1847,7 +1943,7 @@ public:
   //! \param units Units string.
   template<SizeType N>
   QuantityArray(const T (&value)[N], const Ch* units) :
-    QuantityArray(value, Units<Ch>(units)) {}
+    QuantityArray(value, Units<Encoding>(units)) {}
   
   //! \brief Create a quantity without units.
   //! \tparam N Number of elements in the array in dimension 1.
@@ -1855,7 +1951,7 @@ public:
   //! \param value 1D array.
   //! \param units Units instance.
   template<SizeType N, SizeType M>
-  QuantityArray(const T (&value)[N][M], const Units<Ch>& units = Units<Ch>()) :
+  QuantityArray(const T (&value)[N][M], const Units<Encoding>& units = Units<Encoding>()) :
     value_(nullptr), units_(units), ndim_(2), shape_(nullptr) {
     SizeType shape[] = {N, M};
     _init_shape(&(shape[0]));
@@ -1868,10 +1964,10 @@ public:
   //! \param units Units string.
   template<SizeType N, SizeType M>
   QuantityArray(const T (&value)[N][M], const Ch* units) :
-    QuantityArray(value, Units<Ch>(units)) {}
+    QuantityArray(value, Units<Encoding>(units)) {}
   //! \brief Copy constructor.
   //! \param other QuantityArray to copy.
-  QuantityArray(const QuantityArray<T, Ch>& other) :
+  QuantityArray(const QuantityArray<T, Encoding>& other) :
     QuantityArray() { *this = other; }
   //! \brief Destructor.
   ~QuantityArray() {
@@ -1882,7 +1978,7 @@ public:
   //! \brief Copy assignment.
   //! \param other QuantityArray to copy.
   //! \return Copy.
-  QuantityArray<T, Ch>& operator=(const QuantityArray<T, Ch>& other) {
+  QuantityArray<T, Encoding>& operator=(const QuantityArray<T, Encoding>& other) {
     if (value_ != nullptr) free(value_);
     if (shape_ != nullptr) free(shape_);
     ndim_ = other.ndim_;
@@ -1979,7 +2075,7 @@ public:
   };
   //! \brief Get the units instance.
   //! \return Units.
-  Units<Ch> units() const { return units_; }
+  Units<Encoding> units() const { return units_; }
   //! \brief Get the number of dimensions in the array.
   //! \return Number of dimensions.
   SizeType ndim() const { return ndim_; }
@@ -2083,40 +2179,40 @@ public:
   //! \brief Convert the quantity to a different set of units. The new units
   //!   must be compatible with the current ones.
   //! \param units New units.
-  void convert_to(const Units<Ch>& units) {
+  void convert_to(const Units<Encoding>& units) {
     std::vector<double> factor = units_.conversion_factor(units);
     SizeType N = nelements();
     for (SizeType i = 0; i < N; i++)
-      value_[i] = Quantity<T,Ch>::template do_conv<T>(value_[i], factor[0], factor[1]);
-    units_ = Units<Ch>(units);
+      value_[i] = Quantity<T,Encoding>::template do_conv<T>(value_[i], factor[0], factor[1]);
+    units_ = Units<Encoding>(units);
   }
   //! \brief Create a new quantity by converting this one to a new set of
   //!   compatible units.
   //! \param units New units.
   //! \return New quantity.
   QuantityArray as(const char* units0) const {
-    Units<Ch> units(units0);
+    Units<Encoding> units(units0);
     return as(units);
   }
   //! \brief Create a new quantity by converting this one to a new set of
   //!   compatible units.
   //! \param units New units.
   //! \return New quantity.
-  QuantityArray as(const Units<Ch>& units) const {
+  QuantityArray as(const Units<Encoding>& units) const {
     QuantityArray out(*this);
     out.convert_to(units);
     return out;
   }
 private:
   T* value_;
-  Units<Ch> units_;
+  Units<Encoding> units_;
   SizeType ndim_;
   SizeType* shape_;
-  template<typename U, typename Ch2>
-  friend std::ostream & operator << (std::ostream &os, const QuantityArray<U,Ch2> &x);
+  template<typename U, typename Encoding2>
+  friend std::ostream & operator << (std::ostream &os, const QuantityArray<U,Encoding2> &x);
 };
-template<typename T, typename Ch=char>
-inline std::ostream & operator << (std::ostream &os, const QuantityArray<T, Ch> &x) {
+template<typename T, typename Encoding>
+inline std::ostream & operator << (std::ostream &os, const QuantityArray<T, Encoding> &x) {
   x._write_array(os);
   os << " " << x.units_;
   return os;
