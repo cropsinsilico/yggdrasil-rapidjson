@@ -4118,7 +4118,7 @@ public:
     data = reinterpret_cast<T*>(decoded_bytes);
   }
   template <typename T>
-  void GetArrayQuantity(units::QuantityArray<T, Encoding>& data,
+  void GetArrayQuantity(units::QuantityArray<T, Encoding>* data,
 			Allocator& allocator,
 			const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
     T* value = nullptr;
@@ -4126,28 +4126,34 @@ public:
     SizeType* shape = nullptr;
     GetArrayValueBase(value, ndim, shape, allocator);
     units::Units<Encoding> new_units = data_units;
-    if ((new_units.is_empty()) && (!(data.units().is_empty())))
-	new_units = data.units();
+    if ((new_units.is_empty()) && (!(data->units().is_empty())))
+	new_units = data->units();
+    data->~QuantityArray();
+    // TODO: Pass allocator to quantity
     if (HasUnits()) {
-      units::QuantityArray<T, Encoding> prev(value, ndim, shape, GetUnits().GetString());
-      if (new_units.is_empty())
-	data = prev;
-      else
-	data = prev.as(new_units);
+      new (data) units::QuantityArray<T, Encoding>(value, ndim, shape,
+						   GetUnits().GetString());
+      // data = units::QuantityArray<T, Encoding>(value, ndim, shape,
+      // 					       GetUnits().GetString());
+      if (!new_units.is_empty())
+	data->convert_to(new_units);
     } else {
-      data = units::QuantityArray<T, Encoding>(value, ndim, shape, new_units);
+      new (data) units::QuantityArray<T, Encoding>(value, ndim, shape,
+						   new_units);
+      // data = units::QuantityArray<T, Encoding>(value, ndim, shape, new_units);
     }
     allocator.Free(value);
+    allocator.Free(shape);
   }
   template <typename T>
-  void GetArrayQuantity(units::QuantityArray<T, Encoding>& data,
+  void GetArrayQuantity(units::QuantityArray<T, Encoding>* data,
 			Allocator& allocator, const Ch* units_str) const {
     return GetArrayQuantity(data, allocator, units::Units<Encoding>(units_str)); }
   template <typename T>
   units::QuantityArray<T, Encoding> GetArrayQuantity(Allocator& allocator,
 						     const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
     units::QuantityArray<T, Encoding> data;
-    GetArrayQuantity(data, allocator, data_units);
+    GetArrayQuantity(&data, allocator, data_units);
     return data;
   }
   template <typename T>
@@ -4160,8 +4166,7 @@ public:
   void Get1DArray(T*& data, SizeType& nelements, Allocator& allocator,
 		  const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
     units::QuantityArray<T, Encoding> x;
-    // TODO: Pass allocator to quantity
-    GetArrayQuantity(x, allocator, data_units);
+    GetArrayQuantity(&x, allocator, data_units);
     nelements = x.nelements();
     data = (T*)allocator.Malloc(nelements * sizeof(T));
     RAPIDJSON_ASSERT(data);
@@ -4191,15 +4196,26 @@ public:
   void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
 		  Allocator& allocator,
 		  const units::Units<Encoding> data_units = units::Units<Encoding>()) const {
+    SizeType nelements = 1;
     units::QuantityArray<T, Encoding> x;
-    GetArrayQuantity(x, allocator, data_units);
+    GetArrayQuantity(&x, allocator, data_units);
     ndim = x.ndim();
     if (shape != nullptr)
       free(shape);
     shape = (SizeType*)allocator.Malloc(ndim * sizeof(SizeType));
-    for (SizeType i = 0; i < ndim; i++)
+    RAPIDJSON_ASSERT(shape);
+    for (SizeType i = 0; i < ndim; i++) {
       shape[i] = x.shape()[i];
-    data = x.pop_value();
+      nelements = nelements * shape[i];
+    }
+    if (data != nullptr)
+      free(data);
+    data = (T*)allocator.Malloc(nelements * sizeof(T));
+    RAPIDJSON_ASSERT(data);
+    for (SizeType i = 0; i < nelements; i++)
+      data[i] = x.value()[i];
+    // shape = x.pop_shape();
+    // data = x.pop_value();
   }
   template <typename T>
   void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
