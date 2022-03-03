@@ -487,8 +487,10 @@ std::vector<UnitPrefix<Ch>> get_unit_prefixes() {
     UnitPrefix<Ch>("c", 1e-2, "centi"),
     UnitPrefix<Ch>("m", 1e-3, "mili"),
     // UnitPrefix<Ch>("µ", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
+    UnitPrefix<Ch>("\u00b5", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
     UnitPrefix<Ch>("u", 1e-6, "micro"),
-    UnitPrefix<Ch>("μ", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
+    // UnitPrefix<Ch>("μ", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
+    UnitPrefix<Ch>("\u03bc", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
     UnitPrefix<Ch>("n", 1e-9, "nano"),
     UnitPrefix<Ch>("p", 1e-12, "pico"),
     UnitPrefix<Ch>("f", 1e-15, "femto"),
