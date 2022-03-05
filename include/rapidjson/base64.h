@@ -6,8 +6,14 @@
  * See README for more details.
  */
 
+#include "rapidjson.h"
+
 #ifndef BASE64_H_
 #define BASE64_H_
+
+#include "encodings.h"
+
+RAPIDJSON_NAMESPACE_BEGIN
 
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 extern "C" {
@@ -340,6 +346,10 @@ public:
     //   std::cerr << buffer_[i];
     // std::cerr << std::endl;
   }
+  
+  //! \brief Wrapper for stream
+  UTFType GetType() const { return stream_.GetType(); }
+  
 private:
   StreamType &stream_;
   unsigned char buffer_[3];
@@ -455,7 +465,10 @@ public:
   }
   //! \brief Dummy yggdrasil method.
   template <typename SchemaValueType>
-  bool Yggdrasil() { return false; }
+  bool YggdrasilString() { return false; }
+
+  //! \brief Wrapper for stream
+  UTFType GetType() const { return stream_.GetType(); }
   
 private:
   StreamType &stream_;
@@ -466,5 +479,7 @@ private:
   size_t buffer_pos_;
   
 };
+
+RAPIDJSON_NAMESPACE_END
 
 #endif // BASE64_H_

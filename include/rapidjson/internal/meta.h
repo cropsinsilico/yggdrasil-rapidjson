@@ -179,9 +179,7 @@ class HasYggdrasilMethodImpl
   typedef char Yes;
   typedef long No;
   template <typename T, typename VT>
-  static Yes HasYggdrasil(decltype(&T::template Yggdrasil<VT>));
-  template <typename T, typename VT>
-  static Yes HasYggdrasil(decltype(&T::Yggdrasil));
+  static Yes HasYggdrasil(decltype(&T::template YggdrasilString<VT>));
   template <typename T, typename VT>
   static No  HasYggdrasil(...);
 public:

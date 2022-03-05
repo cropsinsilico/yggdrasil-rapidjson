@@ -7,12 +7,17 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### TODO
 * Add docstrings to new methods
 * Add namespaces for ply, obj, base64?
-* Add normalization
 * Add "encoding" property for bytes
 * Remove use of standard libraries (std::basic_string, std::vector, std::map)?
+* Use explicit allocator for QuantityArray?
 
 ### IN PROGRESS
-* Value tests with unit-ful types
+* Add normalization
+	- default property value
+	- units
+	- type (int -> double)
+	- property alias
+	- allow singular (put non-array value in an array)
 
 ### COMPLETE
 * Added schema to document class

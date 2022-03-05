@@ -2817,10 +2817,20 @@ public:
   template <typename Handler>
   bool AcceptYggdrasil(Handler& handler, RAPIDJSON_ENABLEIF((internal::HasYggdrasilMethod<Handler,SchemaValueType>))) const {
     switch(GetType()) {
-    case kObjectType:
-      return handler.Yggdrasil(GetObject(), *schema_);
+    case kObjectType: {
+      if (RAPIDJSON_UNLIKELY(!handler.YggdrasilStartObject(*schema_)))
+	return false;
+      for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
+	RAPIDJSON_ASSERT(m->name.IsString()); // User may change the type of name by MemberIterator.
+	if (RAPIDJSON_UNLIKELY(!handler.Key(m->name.GetString(), m->name.GetStringLength(), (m->name.data_.f.flags & kCopyFlag) != 0)))
+	  return false;
+	if (RAPIDJSON_UNLIKELY(!m->value.Accept(handler)))
+	  return false;
+      }
+      return handler.YggdrasilEndObject(data_.o.size);
+    }
     case kStringType:
-      return handler.Yggdrasil(GetString(), GetStringLength(), (data_.f.flags & kCopyFlag) != 0, *schema_);
+      return handler.YggdrasilString(GetString(), GetStringLength(), (data_.f.flags & kCopyFlag) != 0, *schema_);
     default:
       return false;
     }
@@ -4772,7 +4782,7 @@ public:
         return true;
     }
 #ifdef RAPIDJSON_YGGDRASIL
-  bool YggdrasilString(const Ch* str, SizeType length, bool) {
+  bool FromYggdrasilString(const Ch* str, SizeType length, bool) {
     const Ch ygg[5] = {'-', 'Y', 'G', 'G', '-'};
     SizeType len_ygg = 5;
     if ((memcmp(ygg, str, sizeof(ygg)) != 0)
@@ -4846,7 +4856,7 @@ public:
 
     bool String(const Ch* str, SizeType length, bool copy) {
 #ifdef RAPIDJSON_YGGDRASIL
-      if (YggdrasilString(str, length, copy)) return true;
+      if (FromYggdrasilString(str, length, copy)) return true;
 #endif // RAPIDJSON_YGGDRASIL
         if (copy) 
             new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator());
@@ -4905,18 +4915,19 @@ public:
     this->AddSchema(schema);
     return out;
   }
-  bool Yggdrasil(const Ch* str, SizeType length, bool copy, ValueType& schema) { 
+  bool YggdrasilString(const Ch* str, SizeType length, bool copy, ValueType& schema) { 
     if (copy) 
       new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator(), schema);
     else
       new (stack_.template Push<ValueType>()) ValueType(str, length, schema);
     return true;
   }
-  bool Yggdrasil(const GenericObject<false, ValueType>& o,
-		 ValueType& schema) {
-    new (stack_.template Push<ValueType>()) ValueType(o.value_, GetAllocator(), schema);
+  bool YggdrasilStartObject(ValueType& schema) {
+    new (stack_.template Push<ValueType>()) ValueType(kObjectType, schema);
     return true;
   }
+  bool YggdrasilEndObject(SizeType memberCount) { return EndObject(memberCount); }
+    
 
 #endif // RAPIDJSON_YGGDRASIL
 

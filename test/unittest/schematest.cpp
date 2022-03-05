@@ -1806,12 +1806,28 @@ TEST(SchemaValidator, PythonInstance) { // 31
     SchemaDocument s(sd);
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", true);
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImludmFsaWQiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
-	       "", "class", "",
-	       "{ \"class\" : {"
-	       "    \"errorCode\": 31,"
+	       "", "schema", "",
+	       "{ \"schema\": {"
+	       "    \"errorCode\": 32,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"disallowed\": \"invalid\""
-	       "}}");
+	       "    \"errors\": {"
+	       "        \"anyOf\": {"
+	       "            \"errorCode\": 24,"
+	       "            \"instanceRef\": \"#/class\","
+	       "            \"schemaRef\": \"#/properties/class\","
+	       "            \"errors\": ["
+	       "                { \"class\" : {"
+	       "                  \"errorCode\": 31,"
+	       "                  \"instanceRef\": \"#\", "
+	       "                  \"schemaRef\": \"#/properties/class/anyOf/0\","
+	       "                  \"disallowed\": \"invalid\"}}, "
+	       "                { \"type\" : {"
+	       "                  \"expected\": [ \"array\" ],"
+	       "                  \"actual\": \"string\","
+	       "                  \"errorCode\": 20,"
+	       "                  \"instanceRef\": \"#/class\", "
+	       "                  \"schemaRef\": \"#/properties/class/anyOf/1\"}}]"
+	       "}}}}");
     // No kwargs
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6e319-YGG-\"", true);
     // No args
@@ -1831,12 +1847,16 @@ TEST(SchemaValidator, Schema) { // 32
 	     "{ \"schema\": {"
 	     "    \"errorCode\": 32,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	     "    \"errors\": "
-	     "        ["
-	     "            {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
-	     "            {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
-	     "        ]"
-	     "}}");
+	     "    \"errors\": {"
+	     "        \"anyOf\": {"
+	     "            \"errorCode\": 24,"
+	     "            \"instanceRef\": \"#/type\","
+	     "            \"schemaRef\": \"#/properties/type\","
+	     "            \"errors\": ["
+	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
+	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
+	     "            ]"
+	     "}}}}");
 }
 
 #endif // RAPIDJSON_YGGDRASIL
