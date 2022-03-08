@@ -463,7 +463,11 @@ public:
     typedef GenericUri<ValueType, AllocatorType> UriType;
     friend class GenericSchemaDocument<ValueType, AllocatorType>;
 
-    Schema(SchemaDocumentType* schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document, AllocatorType* allocator, const UriType& id = UriType()) :
+    Schema(SchemaDocumentType* schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document, AllocatorType* allocator, const UriType& id = UriType()
+#ifdef RAPIDJSON_YGGDRASIL
+	   , const bool isMetaschema = false
+#endif // RAPIDJSON_YGGDRASIL
+	   ) :
         allocator_(allocator),
         uri_(schemaDocument->GetURI(), *allocator),
         id_(id),
@@ -508,7 +512,7 @@ public:
 	shape_(),
 	args_(),
 	kwargs_(),
-	isMetaschema_(false),
+	isMetaschema_(isMetaschema),
 	metaschema_(),
 	metaschemaValidatorIndex_()
 #endif // RAPIDJSON_YGGDRASIL
@@ -2219,8 +2223,11 @@ private:
             }
             else if (!HandleRefSchema(pointer, schema, v, document, id)) {
                 // The new schema constructor adds itself and its $ref(s) to schemaMap_
-                SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id);
-		s->isMetaschema_ = isMetaschema_;
+	        SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id
+#ifdef RAPIDJSON_YGGDRASIL
+		, isMetaschema_
+#endif // RAPIDJSON_YGGDRASIL
+		);
                 if (schema)
                     *schema = s;
                 return s->GetId();
