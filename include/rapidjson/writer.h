@@ -307,8 +307,8 @@ public:
 #undef RAPIDJSON_WRAP_BASE64_
 
 #ifdef RAPIDJSON_YGGDRASIL
-  Base64OutputStreamWrapper<OutputStream>* s64_;
   Base64Writer<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags>* w64_;
+  Base64OutputStreamWrapper<OutputStream>* s64_;
 
 private:
 
