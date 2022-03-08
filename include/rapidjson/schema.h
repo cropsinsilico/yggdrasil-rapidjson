@@ -246,7 +246,7 @@ public:
   virtual void IncorrectSubType(const typename SchemaType::ValueType& actual, const typename SchemaType::ValueType& expected) = 0;
   virtual void IncorrectPrecision(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
   virtual void IncorrectUnits(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
-  virtual void IncorrectShape(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
+  virtual void IncorrectShape(const SValue& actual, const SValue& expected) = 0;
   virtual void InvalidPythonImport(const Ch* str, SizeType len) = 0;
   virtual void InvalidSchema(ValidateErrorCode code, ISchemaValidator* subvalidator) = 0;
 #endif // RAPIDJSON_YGGDRASIL
@@ -1048,8 +1048,9 @@ public:
   bool YggdrasilString(Context& context, const Ch* str, SizeType length, bool, YggSchemaValueType& schema) const {
     if (!CheckRequiredSchemaProperty(context, schema, GetTypeString()))
       return false;
-    const ValueType* v = GetMember(schema, GetTypeString());
-    if ((*v == GetScalarString()) &&
+    typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetTypeString());
+    const ValueType v(vs->value.GetString(), vs->value.GetStringLength());
+    if ((v == GetScalarString()) &&
 	(yggtype_ & (1 << kYggScalarSchemaType))) {
       if (!CheckSubType(context, schema))
 	return false;
@@ -1057,7 +1058,7 @@ public:
 	return false;
       if (!CheckUnits(context, schema))
 	return false;
-    } else if (((*v == Get1DArrayString()) || (*v == GetNDArrayString())) &&
+    } else if (((v == Get1DArrayString()) || (v == GetNDArrayString())) &&
 	       (yggtype_ & (1 << kYggNDArraySchemaType))) {
       if (!CheckSubType(context, schema))
 	return false;
@@ -1067,13 +1068,13 @@ public:
 	return false;
       if (!CheckShape(context, schema))
 	return false;
-    } else if (((*v == GetPythonClassString()) ||
-		(*v == GetPythonFunctionString())) &&
+    } else if (((v == GetPythonClassString()) ||
+		(v == GetPythonFunctionString())) &&
 	       (yggtype_ & (1 << kYggPythonImportSchemaType))) {
       if (!CheckPythonImport(context, str, length))
 	return false;
     } else {
-      DisallowedType(context, *v);
+      DisallowedType(context, v);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
     return true;
@@ -1371,7 +1372,7 @@ public:
     RAPIDJSON_STRING_(Args, 'a', 'r', 'g', 's')
     RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
     // Subtypes
-    RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'h')
+    RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'g')
     RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
     RAPIDJSON_STRING_(UintSubType, 'u', 'i', 'n', 't')
     RAPIDJSON_STRING_(FloatSubType, 'f', 'l', 'o', 'a', 't')
@@ -1834,9 +1835,9 @@ protected:
   bool CheckSubType(Context& context, const YggSchemaValueType& schema) const {
     if (!CheckRequiredSchemaProperty(context, schema, GetSubTypeString()))
       return false;
-    const typename YggSchemaValueType::ValueType* actual0 = GetMember(schema, GetSubTypeString());
-    ValueType actual(actual0->GetString(),
-		     actual0->GetStringLength());
+    typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetSubTypeString());
+    ValueType actual(vs->value.GetString(),
+		     vs->value.GetStringLength());
     return CheckSubType(context, &actual, true);
   }
   bool CheckPrecision(Context& context, const ValueType* actual, const bool&) const {
@@ -1852,8 +1853,8 @@ protected:
   bool CheckPrecision(Context& context, const YggSchemaValueType& schema) const {
     if (!CheckRequiredSchemaProperty(context, schema, GetPrecisionString()))
       return false;
-    const typename YggSchemaValueType::ValueType* actual0 = GetMember(schema, GetPrecisionString());
-    ValueType actual(actual0->GetUint());
+    typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetPrecisionString());
+    ValueType actual(vs->value.GetUint());
     return CheckPrecision(context, &actual, true);
   }
   bool CheckUnits(Context& context, const ValueType* actual, const bool&) const {
@@ -1875,8 +1876,8 @@ protected:
   bool CheckUnits(Context& context, const YggSchemaValueType& schema) const {
     if (!CheckRequiredSchemaProperty(context, schema, GetUnitsString()))
       return false;
-    const typename YggSchemaValueType::ValueType* actual0 = GetMember(schema, GetUnitsString());
-    ValueType actual(actual0->GetString(), actual0->GetStringLength());
+    typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetUnitsString());
+    ValueType actual(vs->value.GetString(), vs->value.GetStringLength());
     return CheckUnits(context, &actual, true);
   }
   template <typename YggSchemaValueType>
@@ -1885,11 +1886,10 @@ protected:
       return false;
     if (shape_.IsNull())
       return true;
-    ValueType actual(kArrayType);
-    const typename YggSchemaValueType::ValueType* array = GetMember(schema, GetShapeString());
-    typename YggSchemaValueType::AllocatorType allocator;
-    for (auto v = array->Begin(); v != array->End(); ++v)
-      actual.PushBack(static_cast<SizeType>(v->GetUint()), allocator);
+    SValue actual(kArrayType);
+    typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetShapeString());
+    for (auto v = vs->value.Begin(); v != vs->value.End(); ++v)
+      actual.PushBack(static_cast<SizeType>(v->GetUint()), *allocator_);
     if (!shape_.IsNull() && (shape_ != actual)) {
       context.error_handler.IncorrectShape(actual, shape_);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorShape);
@@ -2831,7 +2831,7 @@ public:
 			    GetStateAllocator());
     AddCurrentError(kValdiateErrorUnits, true);
   }
-  void IncorrectShape(const typename SchemaType::ValueType& actual, const SValue& expected) {
+  void IncorrectShape(const SValue& actual, const SValue& expected) {
     currentError_.SetObject();
     currentError_.AddMember(GetExpectedString(),
 			    ValueType(expected, GetStateAllocator()).Move(),

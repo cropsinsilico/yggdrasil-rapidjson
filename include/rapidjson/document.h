@@ -3135,18 +3135,17 @@ public:
   explicit GenericValue(Ply x, Allocator* allocator = 0) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetPlyRaw(x, allocator); }
   // Explicit schema provided
-  // template <typename SourceAllocator>
-  // explicit GenericValue(const Ch* s, SizeType length,
-  // 			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length)); SetValueSchema(schema); }
   template <typename SourceAllocator>
   explicit GenericValue(const Ch* s, SizeType length, Allocator& allocator,
 			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length), allocator); SetValueSchema(schema, &allocator); }
   template <typename SourceAllocator>
   explicit GenericValue(const Ch* s, SizeType length,
 			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length)); SetValueSchema(schema); }
-  // template <typename SourceAllocator>
-  // explicit GenericValue(const Object& o, Allocator& allocator,
-  // 			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetObject(); SetValueSchema(schema, &allocator); CopyFrom(o.value_, allocator, true); }
+  template <typename SourceAllocator>
+  explicit GenericValue(Type type,
+			const GenericValue<Encoding,SourceAllocator>& schema) : GenericValue(type) {
+    SetValueSchema(schema); 
+  }
 
   // TODO: Pass stack allocator?
   void InitSchema(Allocator* allocator = 0) {
@@ -4915,14 +4914,16 @@ public:
     this->AddSchema(schema);
     return out;
   }
-  bool YggdrasilString(const Ch* str, SizeType length, bool copy, ValueType& schema) { 
+  template <typename YggSchemaValueType>
+  bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema) { 
     if (copy) 
       new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator(), schema);
     else
       new (stack_.template Push<ValueType>()) ValueType(str, length, schema);
     return true;
   }
-  bool YggdrasilStartObject(ValueType& schema) {
+  template <typename YggSchemaValueType>
+  bool YggdrasilStartObject(YggSchemaValueType& schema) {
     new (stack_.template Push<ValueType>()) ValueType(kObjectType, schema);
     return true;
   }
