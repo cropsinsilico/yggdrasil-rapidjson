@@ -581,7 +581,7 @@ public:
 
 #ifdef RAPIDJSON_YGGDRASIL
 	    if (yggtype_ & ((1 << kYggSchemaSchemaType) | (1 << kYggPythonInstanceSchemaType))) {
-	      schemaDocument->CreateMetaSchema(&metaschema_, p.Append(GetTypeString(), allocator_), document, id_, (yggtype_ & (1 << kYggPythonInstanceSchemaType)));
+	      schemaDocument->CreateMetaSchema(&metaschema_, (yggtype_ & (1 << kYggPythonInstanceSchemaType)));
 	      metaschemaValidatorIndex_ = validatorCount_;
 	      validatorCount_++;
 	    }
@@ -2242,7 +2242,7 @@ private:
     }
 
 #ifdef RAPIDJSON_YGGDRASIL
-  const UriType& CreateMetaSchema(const SchemaType** schema, const PointerType& pointer, const ValueType& document, const UriType& id, const bool isInstance) {
+  const UriType& CreateMetaSchema(const SchemaType** schema, const bool isInstance) {
       if (!metaschema_) {
 	if (isMetaschema_) {
 	  metaschema_ = this;
