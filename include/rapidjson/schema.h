@@ -633,7 +633,7 @@ public:
     BEGIN_NORMALIZE_(StartObject, (), (kObjectType));
     return CurrentValue()->IsObject();
   }
-  bool Key(Context& context, const SchemaType&, const Ch* str, SizeType len, bool copy) {
+  bool Key(Context&, const SchemaType&, const Ch* str, SizeType len, bool copy) {
     NORMALIZE_(Key, (str, len, copy));
     PushKey(str, len);
     return true;
