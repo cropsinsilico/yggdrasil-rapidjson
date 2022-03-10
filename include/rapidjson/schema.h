@@ -479,11 +479,21 @@ class GenericNormalizedDocument {
 public:
   GenericNormalizedDocument(size_t stackCapacity = kDefaultStackCapacity,
 			    StackAllocator* stackAllocator = 0) :
-    document_(0, stackCapacity, stackAllocator), valueStack_(stackAllocator, stackCapacity), keyStack_(stackAllocator, stackCapacity), childStack_(stackAllocator, stackCapacity), modified_(false), extending_(false), extending_new_(false), extend_context_(nullptr), extend_schema_(nullptr), index_(0) {}
+    document_(0, stackCapacity, stackAllocator), index_(0),
+    modified_(false), extending_(false), extending_new_(false),
+    extend_context_(nullptr), extend_schema_(nullptr),
+    keyStack_(stackAllocator, stackCapacity),
+    valueStack_(stackAllocator, stackCapacity),
+    childStack_(stackAllocator, stackCapacity) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent, unsigned& index,
 			    size_t stackCapacity = kDefaultStackCapacity,
 			    StackAllocator* stackAllocator = 0) :
-    document_(0, stackCapacity, stackAllocator), valueStack_(stackAllocator, stackCapacity), keyStack_(stackAllocator, stackCapacity), childStack_(stackAllocator, stackCapacity), modified_(false), extending_(false), extending_new_(false), extend_context_(nullptr), extend_schema_(nullptr), index_(index) {
+    document_(0, stackCapacity, stackAllocator), index_(index),
+    modified_(false), extending_(false), extending_new_(false),
+    extend_context_(nullptr), extend_schema_(nullptr),
+    keyStack_(stackAllocator, stackCapacity),
+    valueStack_(stackAllocator, stackCapacity),
+    childStack_(stackAllocator, stackCapacity) {
     parent->AddChild(this);
   }
 
@@ -742,14 +752,14 @@ private:
 
   static const size_t kDefaultStackCapacity = 1024;
   DocumentType document_;
-  internal::Stack<AllocatorType> keyStack_;
-  internal::Stack<AllocatorType> valueStack_;
+  unsigned index_;
   bool modified_;
   bool extending_;
   bool extending_new_;
   Context* extend_context_;
   const SchemaType* extend_schema_;
-  unsigned index_;
+  internal::Stack<AllocatorType> keyStack_;
+  internal::Stack<AllocatorType> valueStack_;
   internal::Stack<AllocatorType> childStack_;
 };
 
@@ -3354,13 +3364,15 @@ RAPIDJSON_MULTILINEMACRO_END
     bool String(const Ch* str, SizeType length, bool copy)
                                     { RAPIDJSON_SCHEMA_HANDLE_VALUE_(String, (CurrentContext(), str, length, copy), (str, length, copy)); }
 
+  /*
+  if (internal::HasYggdrasilMethodImpl<OutputHandler,ValueType>::Value) {
+    RAPIDJSON_SCHEMA_HANDLE_END_(Yggdrasil ## method, arg1);		
+  } else {								
+  */
+
 #ifdef RAPIDJSON_YGGDRASIL
 #define RAPIDJSON_SCHEMA_HANDLE_END_YGG_(method, arg1, arg2)		\
-  if (internal::HasYggdrasilMethodImpl<OutputHandler,ValueType>::Value) { \
-    RAPIDJSON_SCHEMA_HANDLE_END_(Yggdrasil ## method, arg1);		\
-  } else {								\
-    RAPIDJSON_SCHEMA_HANDLE_END_(method, arg2);				\
-  }									\
+  RAPIDJSON_SCHEMA_HANDLE_END_(method, arg2);				\
   return valid_;
   
   template <typename YggSchemaValueType>
@@ -3374,10 +3386,10 @@ RAPIDJSON_MULTILINEMACRO_END
   bool YggdrasilStartObject(YggSchemaValueType& schema) {
     RAPIDJSON_SCHEMA_HANDLE_BEGIN_(YggdrasilStartObject, (CurrentContext(), schema));
     RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(YggdrasilStartObject, (schema));
-    if (internal::HasYggdrasilMethodImpl<OutputHandler,ValueType>::Value)
-      return valid_ = !outputHandler_ || outputHandler_->YggdrasilStartObject(schema);
-    else
-      return valid_ = !outputHandler_ || outputHandler_->StartObject();
+    // if (internal::HasYggdrasilMethodImpl<OutputHandler,ValueType>::Value)
+    //   return valid_ = !outputHandler_ || outputHandler_->YggdrasilStartObject(schema);
+    // else
+    return valid_ = !outputHandler_ || outputHandler_->StartObject();
   }
   bool YggdrasilEndObject(SizeType memberCount) {
     if (!valid_) return false;
