@@ -585,31 +585,31 @@ public:
   if (value != CurrentValue()->Get ## method()) return false;	\
   return EndValue(context)
 
-  bool Null(Context& context, const SchemaType& schema) {
+  bool Null(Context& context, const SchemaType&) {
     BEGIN_NORMALIZE_(Null, (), ());
     if (!CurrentValue()->IsNull()) return false;
     return EndValue(context);
   }
-  bool Bool(Context& context, const SchemaType& schema, bool b)       { NORMALIZE_VALUE_(Bool,   b); }
-  bool Int(Context& context, const SchemaType& schema, int i)         { NORMALIZE_VALUE_(Int,    i); }
-  bool Uint(Context& context, const SchemaType& schema, unsigned u)   { NORMALIZE_VALUE_(Uint,   u); }
-  bool Int64(Context& context, const SchemaType& schema, int64_t i)   { NORMALIZE_VALUE_(Int64,  i); }
-  bool Uint64(Context& context, const SchemaType& schema, uint64_t u) { NORMALIZE_VALUE_(Uint64, u); }
-  bool Double(Context& context, const SchemaType& schema, double d)   {
+  bool Bool(Context& context, const SchemaType&, bool b)       { NORMALIZE_VALUE_(Bool,   b); }
+  bool Int(Context& context, const SchemaType&, int i)         { NORMALIZE_VALUE_(Int,    i); }
+  bool Uint(Context& context, const SchemaType&, unsigned u)   { NORMALIZE_VALUE_(Uint,   u); }
+  bool Int64(Context& context, const SchemaType&, int64_t i)   { NORMALIZE_VALUE_(Int64,  i); }
+  bool Uint64(Context& context, const SchemaType&, uint64_t u) { NORMALIZE_VALUE_(Uint64, u); }
+  bool Double(Context& context, const SchemaType&, double d)   {
     BEGIN_NORMALIZE_(Double, (d), (d));
     if (!CurrentValue()->IsDouble()) return false;
     double b = CurrentValue()->GetDouble();
     if (!(d >= b && d <= b)) return false;
     return EndValue(context);
   }
-  bool String(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy) {
+  bool String(Context& context, const SchemaType&, const Ch* str, SizeType length, bool copy) {
     BEGIN_NORMALIZE_(String, (str, length, copy), (str, length, document_.GetAllocator()));
     if (!CurrentValue()->IsString()) return false;
     if (internal::StrCmp(str, CurrentValue()->GetString()) != 0) return false;
     return EndValue(context);
   }
   template <typename YggSchemaValueType>
-  bool YggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
+  bool YggdrasilString(Context& context, const SchemaType&, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
     BEGIN_NORMALIZE_(YggdrasilString, (str, length, copy, valueSchema),
 		     (str, length, valueSchema));
     if (!CurrentValue()->IsYggdrasil()) return false;
@@ -619,21 +619,21 @@ public:
     return EndValue(context);
   }
   template <typename YggSchemaValueType>
-  bool YggdrasilStartObject(Context& context, const SchemaType& schema, YggSchemaValueType& valueSchema) {
+  bool YggdrasilStartObject(Context& context, const SchemaType&, YggSchemaValueType& valueSchema) {
     BEGIN_NORMALIZE_(YggdrasilStartObject, (valueSchema), (kObjectType, valueSchema));
     if (!CurrentValue()->IsYggdrasil()) return false;
     if (CurrentValue()->GetValueSchema() != valueSchema) return false;
     return CurrentValue()->IsObject();
   }
-  bool YggdrasilEndObject(Context& context, const SchemaType& schema, SizeType memberCount) {
+  bool YggdrasilEndObject(Context& context, const SchemaType&, SizeType memberCount) {
     NORMALIZE_(YggdrasilEndObject, (memberCount));
     return EndValue(context);
   }
-  bool StartObject(Context& context, const SchemaType& schema) {
+  bool StartObject(Context& context, const SchemaType&) {
     BEGIN_NORMALIZE_(StartObject, (), (kObjectType));
     return CurrentValue()->IsObject();
   }
-  bool Key(Context& context, const SchemaType& schema, const Ch* str, SizeType len, bool copy) {
+  bool Key(Context& context, const SchemaType&, const Ch* str, SizeType len, bool copy) {
     NORMALIZE_(Key, (str, len, copy));
     PushKey(str, len);
     return true;
@@ -662,11 +662,11 @@ public:
     NORMALIZE_(EndObject, (memberCount));
     return EndValue(context);
   }
-  bool StartArray(Context& context, const SchemaType& schema) {
+  bool StartArray(Context& context, const SchemaType&) {
     BEGIN_NORMALIZE_(StartArray, (), (kArrayType));
     return CurrentValue()->IsArray();
   }
-  bool EndArray(Context& context, const SchemaType& schema, SizeType elementCount) {
+  bool EndArray(Context& context, const SchemaType&, SizeType elementCount) {
     NORMALIZE_(EndArray, (elementCount));
     return EndValue(context);
   }
@@ -1354,6 +1354,7 @@ public:
     }
 
     bool Bool(Context& context, bool b) const {
+        (void)b;
         RAPIDJSON_NORMALIZER_(Bool, b);
         if (!(type_ & (1 << kBooleanSchemaType))) {
             DisallowedType(context, GetBooleanString());
@@ -1417,6 +1418,7 @@ public:
 
     bool String(Context& context, const Ch* str, SizeType length, bool copy) const {
         RAPIDJSON_NORMALIZER_(String, str, length, copy);
+	(void)copy;
         if (!(type_ & (1 << kStringSchemaType))) {
             DisallowedType(context, GetStringString());
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
@@ -1538,6 +1540,7 @@ public:
 
     bool Key(Context& context, const Ch* str, SizeType len, bool copy) const {
         RAPIDJSON_NORMALIZER_(Key, str, len, copy);
+	(void)copy;
         if (patternProperties_) {
             context.patternPropertiesSchemaCount = 0;
             for (SizeType i = 0; i < patternPropertyCount_; i++)
