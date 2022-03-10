@@ -4851,6 +4851,14 @@ public:
     }
     return true;
   }
+  bool WasFinalized() const { return (stack_.GetSize() == 0); }
+  void FinalizeFromStack() {
+    if (stack_.GetSize() > 0) {
+      RAPIDJSON_ASSERT(stack_.GetSize() == sizeof(ValueType)); // Got one and only one root object
+      ValueType::operator=(*stack_.template Pop<ValueType>(1));// Move value from stack to document
+    }
+  }
+  ValueType* StackTop() { return stack_.template Top<ValueType>(); }
 #endif // RAPIDJSON_YGGDRASIL
 
     bool String(const Ch* str, SizeType length, bool copy) {

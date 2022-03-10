@@ -160,6 +160,11 @@ namespace internal {
 template <typename SchemaDocumentType>
 class Schema;
 
+#ifdef RAPIDJSON_YGGDRASIL
+template <typename SchemaDocumentType, typename StackAllocator>
+class GenericNormalizedDocument;
+#endif // RAPIDJSON_YGGDRASIL
+
 ///////////////////////////////////////////////////////////////////////////////
 // ISchemaValidator
 
@@ -169,6 +174,9 @@ public:
     virtual bool IsValid() const = 0;
     virtual void SetValidateFlags(unsigned flags) = 0;
     virtual unsigned GetValidateFlags() const = 0;
+#ifdef RAPIDJSON_YGGDRASIL
+    virtual unsigned GetValidatorID() const { return 0; }
+#endif // RAPIDJSON_YGGDRASIL
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -371,6 +379,11 @@ struct SchemaValidationContext {
     typedef IValidationErrorHandler<SchemaType> ErrorHandlerType;
     typedef typename SchemaType::ValueType ValueType;
     typedef typename ValueType::Ch Ch;
+#ifdef RAPIDJSON_YGGDRASIL
+    typedef typename SchemaType::EncodingType EncodingType;
+    typedef typename SchemaType::AllocatorType AllocatorType;
+    typedef GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
+#endif //RAPIDJSON_YGGDRASIL
 
     enum PatternValidatorType {
         kPatternValidatorOnly,
@@ -398,6 +411,9 @@ struct SchemaValidationContext {
         inArray(false),
         valueUniqueness(false),
         arrayUniqueness(false)
+#ifdef RAPIDJSON_YGGDRASIL
+	, normalized()
+#endif //RAPIDJSON_YGGDRASIL
     {
     }
 
@@ -441,12 +457,306 @@ struct SchemaValidationContext {
     bool inArray;
     bool valueUniqueness;
     bool arrayUniqueness;
+#ifdef RAPIDJSON_YGGDRASIL
+    NormalizedDocumentType* normalized;
+#endif //RAPIDJSON_YGGDRASIL
 };
+
+#ifdef RAPIDJSON_YGGDRASIL
+
+///////////////////////////////////////////////////////////////////////////////
+// GenericNormalizedDocument
+  
+template <typename SchemaDocumentType, typename StackAllocator = RAPIDJSON_DEFAULT_STACK_ALLOCATOR>
+class GenericNormalizedDocument {
+  typedef Schema<SchemaDocumentType> SchemaType;
+  typedef typename SchemaType::EncodingType EncodingType;
+  typedef typename SchemaType::AllocatorType AllocatorType;
+  typedef GenericValue<EncodingType, AllocatorType> ValueType;
+  typedef GenericDocument<EncodingType, AllocatorType> DocumentType;
+  typedef SchemaValidationContext<SchemaDocumentType> Context;
+  typedef typename EncodingType::Ch Ch;
+public:
+  GenericNormalizedDocument(size_t stackCapacity = kDefaultStackCapacity,
+			    StackAllocator* stackAllocator = 0) :
+    document_(0, stackCapacity, stackAllocator), valueStack_(stackAllocator, stackCapacity), keyStack_(stackAllocator, stackCapacity), childStack_(stackAllocator, stackCapacity), modified_(false), extending_(false), extending_new_(false), extend_context_(nullptr), extend_schema_(nullptr), index_(0) {}
+  GenericNormalizedDocument(GenericNormalizedDocument* parent, unsigned& index,
+			    size_t stackCapacity = kDefaultStackCapacity,
+			    StackAllocator* stackAllocator = 0) :
+    document_(0, stackCapacity, stackAllocator), valueStack_(stackAllocator, stackCapacity), keyStack_(stackAllocator, stackCapacity), childStack_(stackAllocator, stackCapacity), modified_(false), extending_(false), extending_new_(false), extend_context_(nullptr), extend_schema_(nullptr), index_(index) {
+    parent->AddChild(this);
+  }
+
+  void AddChild(GenericNormalizedDocument* child) {
+    GenericNormalizedDocument** ref = childStack_.template Push<GenericNormalizedDocument*>();
+    ref[0] = child;
+  }
+  GenericNormalizedDocument* FindChild(unsigned index) {
+    GenericNormalizedDocument** ref = childStack_.template Bottom<GenericNormalizedDocument*>();
+    while (true) {
+      if ((*ref)->index_ == index) return *ref;
+      if (ref == childStack_.template Top<GenericNormalizedDocument*>())
+	break;
+      ref++;
+    }
+    return nullptr;
+  }
+
+  //! Get the current normalized document.
+  const DocumentType& GetDocument() const { return document_; }
+  //! Determine if the document was modified.
+  bool WasModified() const { return modified_; }
+  //! Finalize the document from elements added to the stack.
+  void FinalizeFromStack() { document_.FinalizeFromStack(); }
+  //! Determine if the document was finalized.
+  bool WasFinalized() const { return document_.WasFinalized(); }
+
+  bool ExtendChild(Context& context, const SchemaType& schema, unsigned index) {
+    GenericNormalizedDocument* child = FindChild(index);
+    RAPIDJSON_ASSERT(child);
+    if (!child->modified_) return true;
+    child->FinalizeFromStack();
+    // RAPIDJSON_ASSERT(child->WasFinalized());
+    modified_ = true;
+    return Extend(context, schema, child->document_);
+  }
+
+  bool Append(Context& context, const SchemaType& schema, const ValueType& document) {
+    extending_new_ = true;
+    bool out = Extend(context, schema, document);
+    extending_new_ = false;
+    return out;
+  }
+
+  bool Extend(Context& context, const SchemaType& schema, const ValueType& document) {
+    RAPIDJSON_ASSERT(!extending_);
+    RAPIDJSON_ASSERT(!extend_context_);
+    RAPIDJSON_ASSERT(!extend_schema_);
+    RAPIDJSON_ASSERT(!document_.WasFinalized());
+    PushValue(*document_.StackTop());
+    extending_ = true;
+    extend_context_ = &context;
+    extend_schema_ = &schema;
+    bool out = document.Accept(*this);
+    extending_ = false;
+    extend_context_ = nullptr;
+    extend_schema_ = nullptr;
+    PopValue();
+    return out;
+  }
+
+  bool BeginValue(Context& context) {
+    if (context.inArray)
+      PushValue(CurrentValue()[context.arrayElementIndex]);
+    if (CurrentKey())
+      PushValue((*CurrentValue())[*CurrentKey()]);
+    PushKey();
+    return true;
+  }
+  bool EndValue(Context& context) {
+    PopKey();
+    if (context.inArray)
+      PopValue();
+    if (CurrentKey()) {
+      PopValue();
+      PopKey();
+    }
+    return true;
+  }
+  
+#define NORMALIZE_(method, arg)			\
+  if ((!extending_) || extending_new_)		\
+    return document_.method arg;
+
+#define BEGIN_NORMALIZE_(method, arg1, arg2)				\
+  NORMALIZE_(method, arg1);						\
+  if (CurrentKey() && !CurrentValue()->HasMember(CurrentKey()->GetString())) { \
+    ValueType tmp(CurrentKey()->GetString(),				\
+		  CurrentKey()->GetStringLength(),			\
+		  document_.GetAllocator());				\
+    CurrentValue()->AddMember(tmp, ValueType arg2,			\
+			      document_.GetAllocator());		\
+  }									\
+  if (!BeginValue(context)) return false;				\
+  
+#define NORMALIZE_VALUE_(method, value)				\
+  BEGIN_NORMALIZE_(method, (value), (value));			\
+  if (!CurrentValue()->Is ## method()) return false;		\
+  if (value != CurrentValue()->Get ## method()) return false;	\
+  return EndValue(context)
+
+  bool Null(Context& context, const SchemaType& schema) {
+    BEGIN_NORMALIZE_(Null, (), ());
+    if (!CurrentValue()->IsNull()) return false;
+    return EndValue(context);
+  }
+  bool Bool(Context& context, const SchemaType& schema, bool b)       { NORMALIZE_VALUE_(Bool,   b); }
+  bool Int(Context& context, const SchemaType& schema, int i)         { NORMALIZE_VALUE_(Int,    i); }
+  bool Uint(Context& context, const SchemaType& schema, unsigned u)   { NORMALIZE_VALUE_(Uint,   u); }
+  bool Int64(Context& context, const SchemaType& schema, int64_t i)   { NORMALIZE_VALUE_(Int64,  i); }
+  bool Uint64(Context& context, const SchemaType& schema, uint64_t u) { NORMALIZE_VALUE_(Uint64, u); }
+  bool Double(Context& context, const SchemaType& schema, double d)   {
+    BEGIN_NORMALIZE_(Double, (d), (d));
+    if (!CurrentValue()->IsDouble()) return false;
+    double b = CurrentValue()->GetDouble();
+    if (!(d >= b && d <= b)) return false;
+    return EndValue(context);
+  }
+  bool String(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy) {
+    BEGIN_NORMALIZE_(String, (str, length, copy), (str, length, document_.GetAllocator()));
+    if (!CurrentValue()->IsString()) return false;
+    if (internal::StrCmp(str, CurrentValue()->GetString()) != 0) return false;
+    return EndValue(context);
+  }
+  template <typename YggSchemaValueType>
+  bool YggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
+    BEGIN_NORMALIZE_(YggdrasilString, (str, length, copy, valueSchema),
+		     (str, length, valueSchema));
+    if (!CurrentValue()->IsYggdrasil()) return false;
+    if (CurrentValue()->GetValueSchema() != valueSchema) return false;
+    if (!CurrentValue()->IsString()) return false;
+    if (internal::StrCmp(str, CurrentValue()->GetString()) != 0) return false;
+    return EndValue(context);
+  }
+  template <typename YggSchemaValueType>
+  bool YggdrasilStartObject(Context& context, const SchemaType& schema, YggSchemaValueType& valueSchema) {
+    BEGIN_NORMALIZE_(YggdrasilStartObject, (valueSchema), (kObjectType, valueSchema));
+    if (!CurrentValue()->IsYggdrasil()) return false;
+    if (CurrentValue()->GetValueSchema() != valueSchema) return false;
+    return CurrentValue()->IsObject();
+  }
+  bool YggdrasilEndObject(Context& context, const SchemaType& schema, SizeType memberCount) {
+    NORMALIZE_(YggdrasilEndObject, (memberCount));
+    return EndValue(context);
+  }
+  bool StartObject(Context& context, const SchemaType& schema) {
+    BEGIN_NORMALIZE_(StartObject, (), (kObjectType));
+    return CurrentValue()->IsObject();
+  }
+  bool Key(Context& context, const SchemaType& schema, const Ch* str, SizeType len, bool copy) {
+    NORMALIZE_(Key, (str, len, copy));
+    PushKey(str, len);
+    return true;
+  }
+  bool EndObject(Context& context, const SchemaType& schema, SizeType memberCount) {
+    // Default
+    // TODO: Normalize default_?
+    // TODO: Handle failure during partial
+    if ((!extending_) && (schema.hasRequired_)) {
+      for (SizeType index = 0; index < schema.propertyCount_; index++) {
+	if (schema.properties_[index].required && !context.propertyExist[index]
+	    && !schema.properties_[index].schema->default_.IsNull()) {
+	  if (!Key(context, schema,
+		   schema.properties_[index].name.GetString(),
+		   schema.properties_[index].name.GetStringLength(),
+		   true))
+	    return false;
+	  if (!Append(context, schema, schema.properties_[index].schema->default_))
+	    return false;
+	  memberCount++;
+	  modified_ = true;
+	}
+      }
+    }
+    // Do EndObject
+    NORMALIZE_(EndObject, (memberCount));
+    return EndValue(context);
+  }
+  bool StartArray(Context& context, const SchemaType& schema) {
+    BEGIN_NORMALIZE_(StartArray, (), (kArrayType));
+    return CurrentValue()->IsArray();
+  }
+  bool EndArray(Context& context, const SchemaType& schema, SizeType elementCount) {
+    NORMALIZE_(EndArray, (elementCount));
+    return EndValue(context);
+  }
+
+#undef NORMALIZE_
+#undef BEGIN_NORMALIZE_
+#undef NORMALIZE_VALUE_
+
+#define NORMALIZE_HANDLER_(method, ...)					\
+  RAPIDJSON_ASSERT(extending_);						\
+  return method(*extend_context_, *extend_schema_, __VA_ARGS__);
+
+#define NORMALIZE_HANDLER_NOARGS_(method)		\
+  RAPIDJSON_ASSERT(extending_);				\
+  return method(*extend_context_, *extend_schema_);
+
+  bool Null()             { NORMALIZE_HANDLER_NOARGS_(Null); }
+  bool Bool(bool b)       { NORMALIZE_HANDLER_(Bool, b); }
+  bool Int(int i)         { NORMALIZE_HANDLER_(Int,  i); }
+  bool Uint(unsigned u)   { NORMALIZE_HANDLER_(Uint, u); }
+  bool Int64(int64_t i)   { NORMALIZE_HANDLER_(Int64, i); }
+  bool Uint64(uint64_t u) { NORMALIZE_HANDLER_(Uint64, u); }
+  bool Double(double d)   { NORMALIZE_HANDLER_(Double , d); }
+  bool String(const Ch* str, SizeType length, bool copy)
+  { NORMALIZE_HANDLER_(String, str, length, copy); }
+  template <typename YggSchemaValueType>
+  bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema)
+  { NORMALIZE_HANDLER_(YggdrasilString, str, length, copy, schema); }
+  template <typename YggSchemaValueType>
+  bool YggdrasilStartObject(YggSchemaValueType& schema)
+  { NORMALIZE_HANDLER_(YggdrasilStartObject, schema); }
+  bool StartObject() { NORMALIZE_HANDLER_NOARGS_(StartObject); }
+  bool Key(const Ch* str, SizeType len, bool copy)
+  { NORMALIZE_HANDLER_(Key, str, len, copy); }
+  bool EndObject(SizeType memberCount)
+  { NORMALIZE_HANDLER_(EndObject, memberCount); }
+  bool StartArray() { NORMALIZE_HANDLER_NOARGS_(StartArray); }
+  bool EndArray(SizeType elementCount)
+  { NORMALIZE_HANDLER_(EndArray, elementCount); }
+
+#undef NORMALIZE_HANDLER_
+      
+private:
+
+  ValueType* CurrentValue() {
+    RAPIDJSON_ASSERT(!valueStack_.Empty());
+    return *valueStack_.template Top<ValueType*>();
+  }
+  void PushValue(ValueType& value) {
+    ValueType** ref = valueStack_.template Push<ValueType*>();
+    ref[0] = &value;
+  }
+  void PopValue() { valueStack_.template Pop<ValueType*>(1); }
+  ValueType* CurrentKey() {
+    if (keyStack_.Empty())
+      return nullptr;
+    else
+      return *keyStack_.template Top<ValueType*>();
+  }
+  void PushKey(const Ch* str, SizeType len) {
+    ValueType** ref = keyStack_.template Push<ValueType*>();
+    ref[0] = new ValueType(str, len, document_.GetAllocator());
+  }
+  void PushKey() {
+    ValueType** ref = keyStack_.template Push<ValueType*>();
+    ref[0] = nullptr;
+  }
+  void PopKey() {
+    ValueType** ref = keyStack_.template Pop<ValueType*>(1);
+    if (*ref)
+      delete *ref;
+  }
+
+  static const size_t kDefaultStackCapacity = 1024;
+  DocumentType document_;
+  internal::Stack<AllocatorType> keyStack_;
+  internal::Stack<AllocatorType> valueStack_;
+  bool modified_;
+  bool extending_;
+  bool extending_new_;
+  Context* extend_context_;
+  const SchemaType* extend_schema_;
+  unsigned index_;
+  internal::Stack<AllocatorType> childStack_;
+};
+
+#endif // RAPIDJSON_YGGDRASIL
 
 ///////////////////////////////////////////////////////////////////////////////
 // Schema
-
-  
 
 template <typename SchemaDocumentType>
 class Schema {
@@ -462,6 +772,9 @@ public:
     typedef IValidationErrorHandler<Schema> ErrorHandler;
     typedef GenericUri<ValueType, AllocatorType> UriType;
     friend class GenericSchemaDocument<ValueType, AllocatorType>;
+#ifdef RAPIDJSON_YGGDRASIL
+    friend class GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR>;
+#endif // RAPIDJSON_YGGDRASIL
 
     Schema(SchemaDocumentType* schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document, AllocatorType* allocator, const UriType& id = UriType()
 #ifdef RAPIDJSON_YGGDRASIL
@@ -743,8 +1056,15 @@ public:
 
         // Default
         if (const ValueType* v = GetMember(value, GetDefaultValueString()))
+#ifdef RAPIDJSON_YGGDRASIL
+	  {
+	    default_.CopyFrom(*v, *allocator_);
+#endif // RAPIDJSON_YGGDRASIL
             if (v->IsString())
                 defaultValueLength_ = v->GetStringLength();
+#ifdef RAPIDJSON_YGGDRASIL
+	  }
+#endif // RAPIDJSON_YGGDRASIL
 
 #ifdef RAPIDJSON_YGGDRASIL
 	// Yggdrasil properties
@@ -942,6 +1262,46 @@ public:
 	      context.error_handler.InvalidSchema(code, context.validators[metaschemaValidatorIndex_]);
 	      RAPIDJSON_INVALID_KEYWORD_RETURN(code);
 	    }
+
+	    if (context.normalized) {
+	      for (SizeType i = 0; i < context.validatorCount; i++) {
+		if (context.validators[i]->IsValid()) {
+		  context.normalized->ExtendChild(context, *this,
+						  context.validators[i]->GetValidatorID());
+		  break;
+		}
+	      }
+	      
+	      if (allOf_.schemas)
+                for (SizeType i = allOf_.begin; i < allOf_.begin + allOf_.count; i++)
+		  context.normalized->ExtendChild(context, *this,
+						  context.validators[i]->GetValidatorID());
+
+	      if (anyOf_.schemas) {
+                for (SizeType i = anyOf_.begin; i < anyOf_.begin + anyOf_.count; i++) {
+		  if (context.validators[i]->IsValid()) {
+		    context.normalized->ExtendChild(context, *this,
+						    context.validators[i]->GetValidatorID());
+		    break;
+		  }
+		}
+	      }
+
+	      if (oneOf_.schemas) {
+                for (SizeType i = oneOf_.begin; i < oneOf_.begin + oneOf_.count; i++) {
+		  if (context.validators[i]->IsValid()) {
+		    context.normalized->ExtendChild(context, *this,
+						    context.validators[i]->GetValidatorID());
+		    break;
+		  }
+		}
+	      }
+	      
+	      if (metaschema_)
+		context.normalized->ExtendChild(context, *this,
+						context.validators[metaschemaValidatorIndex_]->GetValidatorID());
+
+	    }
 #endif // RAPIDJSON_YGGDRASIL
 	    
         }
@@ -949,7 +1309,43 @@ public:
         return true;
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+  // parallel validators?
+  /*
+#define RAPIDJSON_NORMALIZER_(method, arg1, arg2)			\
+  if (context.normalized) {						\
+  
+    if (Normalize ## method arg1) {					\
+      context.wasNormalized = true;					\
+      return true;							\
+    }									\
+    if (!context.normalized->method arg2)				\
+      return false;							\
+  }
+  */
+#define RAPIDJSON_NORMALIZER_(method, ...)				\
+  if (context.normalized) {						\
+    if (!context.normalized->method(context, *this, __VA_ARGS__))	\
+      return false;							\
+    if (context.normalized->WasModified())				\
+      return true;							\
+  }
+#define RAPIDJSON_NORMALIZER_NOARG_(method)				\
+  if (context.normalized) {						\
+    if (!context.normalized->method(context, *this))			\
+      return false;							\
+    if (context.normalized->WasModified())				\
+      return true;							\
+  }
+#else
+#define RAPIDJSON_NORMALIZER_(method, ...)       \
+  {}
+#define RAPIDJSON_NORMALIZER_NOARG_(method)	\
+  {}
+#endif // RAPIDJSON_YGGDRASIL  
+
     bool Null(Context& context) const {
+        RAPIDJSON_NORMALIZER_NOARG_(Null);
         if (!(type_ & (1 << kNullSchemaType))) {
             DisallowedType(context, GetNullString());
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
@@ -957,7 +1353,8 @@ public:
         return CreateParallelValidator(context);
     }
 
-    bool Bool(Context& context, bool) const {
+    bool Bool(Context& context, bool b) const {
+        RAPIDJSON_NORMALIZER_(Bool, b);
         if (!(type_ & (1 << kBooleanSchemaType))) {
             DisallowedType(context, GetBooleanString());
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
@@ -966,30 +1363,35 @@ public:
     }
 
     bool Int(Context& context, int i) const {
+        RAPIDJSON_NORMALIZER_(Int, i);
         if (!CheckInt(context, i))
             return false;
         return CreateParallelValidator(context);
     }
 
     bool Uint(Context& context, unsigned u) const {
+        RAPIDJSON_NORMALIZER_(Uint, u);
         if (!CheckUint(context, u))
             return false;
         return CreateParallelValidator(context);
     }
 
     bool Int64(Context& context, int64_t i) const {
+        RAPIDJSON_NORMALIZER_(Int64, i);
         if (!CheckInt(context, i))
             return false;
         return CreateParallelValidator(context);
     }
 
     bool Uint64(Context& context, uint64_t u) const {
+        RAPIDJSON_NORMALIZER_(Uint64, u);
         if (!CheckUint(context, u))
             return false;
         return CreateParallelValidator(context);
     }
 
     bool Double(Context& context, double d) const {
+        RAPIDJSON_NORMALIZER_(Double, d);
 #ifdef RAPIDJSON_YGGDRASIL
       if ((yggtype_ & (1 << kYggScalarSchemaType))) {
 	if (!(CheckScalar(context, GetFloatSubTypeString(), ValueType(8), ValueType())))
@@ -1013,7 +1415,8 @@ public:
         return CreateParallelValidator(context);
     }
 
-    bool String(Context& context, const Ch* str, SizeType length, bool) const {
+    bool String(Context& context, const Ch* str, SizeType length, bool copy) const {
+        RAPIDJSON_NORMALIZER_(String, str, length, copy);
         if (!(type_ & (1 << kStringSchemaType))) {
             DisallowedType(context, GetStringString());
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
@@ -1049,7 +1452,8 @@ public:
 
 #ifdef RAPIDJSON_YGGDRASIL
   template <typename YggSchemaValueType>
-  bool YggdrasilString(Context& context, const Ch* str, SizeType length, bool, YggSchemaValueType& schema) const {
+  bool YggdrasilString(Context& context, const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema) const {
+    RAPIDJSON_NORMALIZER_(YggdrasilString, str, length, copy, schema);
     if (!CheckRequiredSchemaProperty(context, schema, GetTypeString()))
       return false;
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetTypeString());
@@ -1085,6 +1489,7 @@ public:
   }
   template <typename YggSchemaValueType>
   bool YggdrasilStartObject(Context& context, YggSchemaValueType& schema) const {
+    RAPIDJSON_NORMALIZER_(YggdrasilStartObject, schema);
     if (!CheckRequiredSchemaProperty(context, schema, GetTypeString()))
       return false;
     const typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetTypeString());
@@ -1104,11 +1509,13 @@ public:
     return StartObject(context);
   }
   bool YggdrasilEndObject(Context& context, SizeType memberCount) const {
+    RAPIDJSON_NORMALIZER_(YggdrasilEndObject, memberCount);
     return EndObject(context, memberCount);
   }
 #endif // RAPIDJSON_YGGDRASIL
 
     bool StartObject(Context& context) const {
+        RAPIDJSON_NORMALIZER_NOARG_(StartObject);
         if (!(type_ & (1 << kObjectSchemaType))) {
             DisallowedType(context, GetObjectString());
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
@@ -1129,7 +1536,8 @@ public:
         return CreateParallelValidator(context);
     }
 
-    bool Key(Context& context, const Ch* str, SizeType len, bool) const {
+    bool Key(Context& context, const Ch* str, SizeType len, bool copy) const {
+        RAPIDJSON_NORMALIZER_(Key, str, len, copy);
         if (patternProperties_) {
             context.patternPropertiesSchemaCount = 0;
             for (SizeType i = 0; i < patternPropertyCount_; i++)
@@ -1181,6 +1589,7 @@ public:
     }
 
     bool EndObject(Context& context, SizeType memberCount) const {
+        RAPIDJSON_NORMALIZER_(EndObject, memberCount);
         if (hasRequired_) {
             context.error_handler.StartMissingProperties();
             for (SizeType index = 0; index < propertyCount_; index++)
@@ -1228,6 +1637,7 @@ public:
     }
 
     bool StartArray(Context& context) const {
+        RAPIDJSON_NORMALIZER_NOARG_(StartArray);
         context.arrayElementIndex = 0;
         context.inArray = true;  // Ensure we note that we are in an array
 
@@ -1240,6 +1650,7 @@ public:
     }
 
     bool EndArray(Context& context, SizeType elementCount) const {
+        RAPIDJSON_NORMALIZER_(EndArray, elementCount);
         context.inArray = false;
 
         if (elementCount < minItems_) {
@@ -1254,6 +1665,8 @@ public:
 
         return true;
     }
+
+#undef RAPIDJSON_NORMALIZER_
 
     static const ValueType& GetValidateErrorKeyword(ValidateErrorCode validateErrorCode) {
         switch (validateErrorCode) {
@@ -1998,6 +2411,7 @@ protected:
     bool isMetaschema_;
     const SchemaType* metaschema_;
     SizeType metaschemaValidatorIndex_;
+    SValue default_;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -2490,6 +2904,10 @@ public:
     typedef typename EncodingType::Ch Ch;
     typedef GenericStringRef<Ch> StringRefType;
     typedef GenericValue<EncodingType, StateAllocator> ValueType;
+#ifdef RAPIDJSON_YGGDRASIL
+    template <typename, typename, typename>
+    friend class GenericSchemaNormalizer;
+#endif // RAPIDJSON_YGGDRASIL
 
     //! Constructor without output handler.
     /*!
@@ -3091,7 +3509,10 @@ private:
     bool GetContinueOnErrors() const {
         return flags_ & kValidateContinueOnErrorFlag;
     }
-
+  
+#ifdef RAPIDJSON_YGGDRASIL
+    virtual
+#endif // RAPIDJSON_YGGDRASIL
     bool BeginValue() {
         if (schemaStack_.Empty())
             PushSchema(root_);
@@ -3123,6 +3544,9 @@ private:
         return true;
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+    virtual
+#endif // RAPIDJSON_YGGDRASIL
     bool EndValue() {
         if (!CurrentSchema().EndValue(CurrentContext()) && !GetContinueOnErrors())
             return false;
@@ -3371,6 +3795,143 @@ private:
     ValueType error_;
     bool isValid_;
 };
+
+#ifdef RAPIDJSON_YGGDRASIL
+
+template <
+  typename SchemaDocumentType,
+  typename OutputHandler = BaseReaderHandler<typename SchemaDocumentType::SchemaType::EncodingType>,
+  typename StateAllocator = CrtAllocator>
+class GenericSchemaNormalizer : public GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator> {
+  typedef typename internal::ISchemaValidator ISchemaValidator;
+public:
+  typedef typename SchemaDocumentType::SchemaType SchemaType;
+  typedef typename SchemaDocumentType::PointerType PointerType;
+  typedef typename SchemaType::EncodingType EncodingType;
+  typedef typename SchemaType::SValue SValue;
+  typedef typename EncodingType::Ch Ch;
+  typedef GenericStringRef<Ch> StringRefType;
+  typedef GenericValue<EncodingType, StateAllocator> ValueType;
+  typedef internal::GenericNormalizedDocument<SchemaDocumentType> NormalizedDocumentType;
+
+  GenericSchemaNormalizer(
+        const SchemaDocumentType& schemaDocument,
+        StateAllocator* allocator = 0, 
+        size_t schemaStackCapacity = kDefaultSchemaStackCapacity,
+        size_t documentStackCapacity = kDefaultDocumentStackCapacity) :
+    GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>
+    (schemaDocument,
+     allocator,
+     schemaStackCapacity,
+     documentStackCapacity),
+    wasNormalized_(false), normalized_(), normalization_depth_(0), validator_index_(0), child_validators_(0) {}
+  GenericSchemaNormalizer(
+        const SchemaDocumentType& schemaDocument,
+        OutputHandler& outputHandler,
+        StateAllocator* allocator = 0, 
+        size_t schemaStackCapacity = kDefaultSchemaStackCapacity,
+        size_t documentStackCapacity = kDefaultDocumentStackCapacity) :
+    GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>
+    (schemaDocument,
+     outputHandler,
+     allocator,
+     schemaStackCapacity,
+     documentStackCapacity),
+    wasNormalized_(false), normalized_(), normalization_depth_(0), validator_index_(0), child_validators_(0) {}
+
+private:
+  typedef typename SchemaType::Context Context;
+  typedef GenericValue<UTF8<>, StateAllocator> HashCodeArray;
+  typedef internal::Hasher<EncodingType, StateAllocator> HasherType;
+  
+  GenericSchemaNormalizer(
+        const SchemaDocumentType& schemaDocument,
+        const SchemaType& root,
+        const char* basePath, size_t basePathSize,
+#if RAPIDJSON_SCHEMA_VERBOSE
+        unsigned depth,
+#endif
+	unsigned normalization_depth,
+	NormalizedDocumentType& normalized,
+	unsigned validator_index,
+        StateAllocator* allocator = 0,
+        size_t schemaStackCapacity = kDefaultSchemaStackCapacity,
+        size_t documentStackCapacity = kDefaultDocumentStackCapacity) :
+    GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>
+    (schemaDocument,
+     root,
+     basePath, basePathSize,
+#if RAPIDJSON_SCHEMA_VERBOSE
+     depth,
+#endif
+     allocator,
+     schemaStackCapacity,
+     documentStackCapacity),
+    wasNormalized_(false), normalized_(&normalized, validator_index), normalization_depth_(normalization_depth), validator_index_(validator_index), child_validators_(0) {}
+  
+  static const size_t kDefaultSchemaStackCapacity = 1024;
+  static const size_t kDefaultDocumentStackCapacity = 256;
+  bool wasNormalized_;
+  NormalizedDocumentType normalized_;
+  unsigned normalization_depth_;
+  unsigned validator_index_;
+  unsigned child_validators_;
+
+public:
+
+  //! Get the normalized version of the parsed document.
+  const ValueType& GetNormalized() const { return normalized_.GetDocument(); }
+
+  //! Check if the document was normalized.
+  bool WasNormalized() const { return wasNormalized_; }
+
+  bool BeginValue() override {
+    if (!GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::BeginValue())
+      return false;
+    normalization_depth_++;
+    this->CurrentContext().normalized = &normalized_;
+    return true;
+  }
+
+  bool EndValue() override {
+    wasNormalized_ = (wasNormalized_ || this->CurrentContext().normalized->WasModified());
+    if (!GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::EndValue())
+      return false;
+    // TODO: Check parallel validators
+    normalization_depth_--;
+    if (normalization_depth_ == 0)
+      normalized_.FinalizeFromStack();
+    return true;
+  }
+  
+  //! Implementation of ISchemaValidator
+  unsigned GetValidatorID() const override { return validator_index_; }
+  
+  //! Implementation of ISchemaStateFactory<SchemaType>
+  ISchemaValidator* CreateSchemaValidator(const SchemaType& root, const bool inheritContinueOnErrors) override {
+    ISchemaValidator* sv = new (this->GetStateAllocator().Malloc(sizeof(GenericSchemaNormalizer))) GenericSchemaNormalizer(*this->schemaDocument_, root, this->documentStack_.template Bottom<char>(), this->documentStack_.GetSize(),
+#if RAPIDJSON_SCHEMA_VERBOSE
+        depth_ + 1,
+#endif
+        normalization_depth_ + 1,
+        normalized_,
+        child_validators_++,
+        &this->GetStateAllocator());
+    sv->SetValidateFlags(inheritContinueOnErrors ? this->GetValidateFlags() : this->GetValidateFlags() & ~(unsigned)kValidateContinueOnErrorFlag);
+    return sv;
+  }
+
+  void DestroySchemaValidator(ISchemaValidator* validator) override {
+    GenericSchemaNormalizer* v = static_cast<GenericSchemaNormalizer*>(validator);
+    v->~GenericSchemaNormalizer();
+    StateAllocator::Free(v);
+  }
+
+};
+
+typedef GenericSchemaNormalizer<SchemaDocument> SchemaNormalizer;
+
+#endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_NAMESPACE_END
 RAPIDJSON_DIAG_POP
