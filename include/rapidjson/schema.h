@@ -3364,47 +3364,39 @@ RAPIDJSON_MULTILINEMACRO_END
     bool String(const Ch* str, SizeType length, bool copy)
                                     { RAPIDJSON_SCHEMA_HANDLE_VALUE_(String, (CurrentContext(), str, length, copy), (str, length, copy)); }
 
-  /*
-  if (internal::HasYggdrasilMethodImpl<OutputHandler,ValueType>::Value) {
-    RAPIDJSON_SCHEMA_HANDLE_END_(Yggdrasil ## method, arg1);		
-  } else {								
-  */
-
 #ifdef RAPIDJSON_YGGDRASIL
-  /*
 #define RAPIDJSON_SCHEMA_HANDLE_END_YGG_(method, arg1, arg2)		\
-  RAPIDJSON_SCHEMA_HANDLE_END_(method, arg2);				\
-  return valid_;
-  */
+    if (internal::HasYggdrasilMethodImpl<OutputHandler,ValueType>::Value) { \
+      RAPIDJSON_SCHEMA_HANDLE_END_(Yggdrasil ## method, arg1);		\
+    } else {								\
+      RAPIDJSON_SCHEMA_HANDLE_END_(method, arg2);			\
+    }
   
   template <typename YggSchemaValueType>
   bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema)
   {
     RAPIDJSON_SCHEMA_HANDLE_BEGIN_(YggdrasilString, (CurrentContext(), str, length, copy, schema));
     RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(YggdrasilString, (str, length, copy, schema));
-    // RAPIDJSON_SCHEMA_HANDLE_END_YGG_(String, (str, length, copy, schema), (str, length, copy));
-    RAPIDJSON_SCHEMA_HANDLE_END_(String, (str, length, copy));
+    RAPIDJSON_SCHEMA_HANDLE_END_YGG_(String, (str, length, copy, schema), (str, length, copy));
   }
   template <typename YggSchemaValueType>
   bool YggdrasilStartObject(YggSchemaValueType& schema) {
     RAPIDJSON_SCHEMA_HANDLE_BEGIN_(YggdrasilStartObject, (CurrentContext(), schema));
     RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(YggdrasilStartObject, (schema));
-    // if (internal::HasYggdrasilMethodImpl<OutputHandler,ValueType>::Value)
-    //   return valid_ = !outputHandler_ || outputHandler_->YggdrasilStartObject(schema);
-    // else
-    return valid_ = !outputHandler_ || outputHandler_->StartObject();
+    if (internal::HasYggdrasilMethodImpl<OutputHandler,ValueType>::Value)
+      return valid_ = !outputHandler_ || outputHandler_->YggdrasilStartObject(schema);
+    else
+      return valid_ = !outputHandler_ || outputHandler_->StartObject();
   }
   bool YggdrasilEndObject(SizeType memberCount) {
     if (!valid_) return false;
     RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(YggdrasilEndObject, (memberCount));
     if (!CurrentSchema().YggdrasilEndObject(CurrentContext(), memberCount) && !GetContinueOnErrors()) return valid_ = false;
-    // RAPIDJSON_SCHEMA_HANDLE_END_YGG_(EndObject, (memberCount), (memberCount));
-    RAPIDJSON_SCHEMA_HANDLE_END_(EndObject, (memberCount));
-    return valid_;
+    RAPIDJSON_SCHEMA_HANDLE_END_YGG_(EndObject, (memberCount), (memberCount));
   }
 
  
-  // #undef RAPIDJSON_SCHEMA_HANDLE_END_YGG_
+#undef RAPIDJSON_SCHEMA_HANDLE_END_YGG_
 #endif // RAPIDJSON_YGGDRASIL
 
     bool StartObject() {
