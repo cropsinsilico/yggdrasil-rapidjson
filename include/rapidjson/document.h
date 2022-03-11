@@ -4858,7 +4858,17 @@ public:
       ValueType::operator=(*stack_.template Pop<ValueType>(1));// Move value from stack to document
     }
   }
-  ValueType* StackTop() { return stack_.template Top<ValueType>(); }
+  ValueType* StackTop() {
+    RAPIDJSON_ASSERT(!stack_.Empty());
+    return stack_.template Top<ValueType>();
+  }
+  ValueType* StackBottom() {
+    RAPIDJSON_ASSERT(!stack_.Empty());
+    return stack_.template Bottom<ValueType>();
+  }
+  size_t StackSize() {
+    return stack_.GetSize() / sizeof(ValueType);
+  }
 #endif // RAPIDJSON_YGGDRASIL
 
     bool String(const Ch* str, SizeType length, bool copy) {

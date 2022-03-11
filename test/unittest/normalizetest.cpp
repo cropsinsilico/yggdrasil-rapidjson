@@ -146,6 +146,80 @@ TEST(SchemaNormalizer, DefaultNested) {
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"default_state\", \"type\": \"residential\"} }");
 }
 
+TEST(SchemaNormalizer, Alias) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"billing_address\": { \"$ref\": \"#/definitions/address\" },"
+        "    \"shipping_address\": {"
+        "      \"type\": \"object\","
+        "      \"properties\": {"
+        "        \"street_address\": { \"type\": \"string\","
+	"                              \"default\": \"default_address\","
+	"                              \"aliases\": [\"street\"]},"
+        "        \"city\":           { \"type\": \"string\","
+	"                              \"default\": \"default_city\"},"
+        "        \"state\":          { \"type\": \"string\","
+	"                              \"default\": \"default_state\"},"
+        "        \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
+	"                              \"default\": \"residential\" }"
+        "      },"
+        "      \"required\": [\"street_address\", \"city\", \"state\", \"type\"]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "{\"shipping_address\": {\"street\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }",
+	      true,
+	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }");
+}
+
+TEST(SchemaNormalizer, AliasNested) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"$schema\": \"http://json-schema.org/draft-04/schema#\","
+        ""
+        "  \"definitions\": {"
+        "    \"address\": {"
+        "      \"type\": \"object\","
+        "      \"properties\": {"
+        "        \"street_address\": { \"type\": \"string\","
+	"                              \"default\": \"default_address\","
+	"                              \"aliases\": [\"street\"]},"
+        "        \"city\":           { \"type\": \"string\","
+	"                              \"default\": \"default_city\"},"
+        "        \"state\":          { \"type\": \"string\","
+	"                              \"default\": \"default_state\"}"
+        "      },"
+        "      \"required\": [\"street_address\", \"city\", \"state\"]"
+        "    }"
+        "  },"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"billing_address\": { \"$ref\": \"#/definitions/address\" },"
+        "    \"shipping_address\": {"
+        "      \"allOf\": ["
+        "        { \"$ref\": \"#/definitions/address\" },"
+        "        { \"properties\":"
+        "          { \"type\": { \"enum\": [ \"residential\", \"business\" ],"
+	"                        \"default\": \"residential\" } },"
+        "          \"required\": [\"type\"]"
+        "        }"
+        "      ]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "{\"shipping_address\": {\"street\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }",
+	      true,
+	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }");
+}
+
 #if defined(_MSC_VER) || defined(__clang__)
 RAPIDJSON_DIAG_POP
 #endif

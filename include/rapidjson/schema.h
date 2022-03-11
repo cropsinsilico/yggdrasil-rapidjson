@@ -472,6 +472,8 @@ class GenericNormalizedDocument {
   typedef Schema<SchemaDocumentType> SchemaType;
   typedef typename SchemaType::EncodingType EncodingType;
   typedef typename SchemaType::AllocatorType AllocatorType;
+  typedef typename SchemaType::SValue SValue;
+  typedef typename SchemaType::PointerType PointerType;
   typedef GenericValue<EncodingType, AllocatorType> ValueType;
   typedef GenericDocument<EncodingType, AllocatorType> DocumentType;
   typedef SchemaValidationContext<SchemaDocumentType> Context;
@@ -480,20 +482,24 @@ public:
   GenericNormalizedDocument(size_t stackCapacity = kDefaultStackCapacity,
 			    StackAllocator* stackAllocator = 0) :
     document_(0, stackCapacity, stackAllocator), index_(0),
-    modified_(false), extending_(false), extending_new_(false),
+    modified_(false), extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
     valueStack_(stackAllocator, stackCapacity),
-    childStack_(stackAllocator, stackCapacity) {}
+    childStack_(stackAllocator, stackCapacity),
+    documentStack_(nullptr),
+    aliases_(kObjectType) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent, unsigned& index,
 			    size_t stackCapacity = kDefaultStackCapacity,
 			    StackAllocator* stackAllocator = 0) :
     document_(0, stackCapacity, stackAllocator), index_(index),
-    modified_(false), extending_(false), extending_new_(false),
+    modified_(false), extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
     valueStack_(stackAllocator, stackCapacity),
-    childStack_(stackAllocator, stackCapacity) {
+    childStack_(stackAllocator, stackCapacity),
+    documentStack_(nullptr),
+    aliases_(kObjectType) {
     parent->AddChild(this);
   }
 
@@ -524,17 +530,18 @@ public:
   bool ExtendChild(Context& context, const SchemaType& schema, unsigned index) {
     GenericNormalizedDocument* child = FindChild(index);
     RAPIDJSON_ASSERT(child);
-    if (!child->modified_) return true;
     child->FinalizeFromStack();
-    // RAPIDJSON_ASSERT(child->WasFinalized());
+    child->ExtendAliases(aliases_);
+    if (!(ExtendAliases(child->aliases_) || child->modified_))
+      return true;
     modified_ = true;
     return Extend(context, schema, child->document_);
   }
 
   bool Append(Context& context, const SchemaType& schema, const ValueType& document) {
-    extending_new_ = true;
+    appending_ = true;
     bool out = Extend(context, schema, document);
-    extending_new_ = false;
+    appending_ = false;
     return out;
   }
 
@@ -575,7 +582,7 @@ public:
   }
   
 #define NORMALIZE_(method, arg)			\
-  if ((!extending_) || extending_new_)		\
+  if ((!extending_) || appending_)		\
     return document_.method arg;
 
 #define BEGIN_NORMALIZE_(method, arg1, arg2)				\
@@ -643,12 +650,22 @@ public:
     BEGIN_NORMALIZE_(StartObject, (), (kObjectType));
     return CurrentValue()->IsObject();
   }
-  bool Key(Context&, const SchemaType&, const Ch* str, SizeType len, bool copy) {
+  bool Key(Context& context, const SchemaType& schema, const Ch*& str, SizeType& len, bool copy, bool dont_check_aliases=false) {
+    if (!dont_check_aliases) {
+      const ValueType& aliases = AddAliases(context, schema);
+      if (aliases.HasMember(str)) {
+	modified_ = true;
+	typename ValueType::ConstMemberIterator primary = aliases.FindMember(
+	    ValueType(str, len, document_.GetAllocator()));
+	str = primary->value.GetString();
+	len = primary->value.GetStringLength();
+      }
+    }
     NORMALIZE_(Key, (str, len, copy));
     PushKey(str, len);
     return true;
   }
-  bool EndObject(Context& context, const SchemaType& schema, SizeType memberCount) {
+  bool EndObject(Context& context, const SchemaType& schema, SizeType& memberCount) {
     // Default
     // TODO: Normalize default_?
     // TODO: Handle failure during partial
@@ -656,15 +673,16 @@ public:
       for (SizeType index = 0; index < schema.propertyCount_; index++) {
 	if (schema.properties_[index].required && !context.propertyExist[index]
 	    && !schema.properties_[index].schema->default_.IsNull()) {
-	  if (!Key(context, schema,
-		   schema.properties_[index].name.GetString(),
-		   schema.properties_[index].name.GetStringLength(),
-		   true))
+	  modified_ = true;
+	  const Ch* str = schema.properties_[index].name.GetString();
+	  SizeType len = schema.properties_[index].name.GetStringLength();
+	  if (!Key(context, schema, str, len, true))
 	    return false;
 	  if (!Append(context, schema, schema.properties_[index].schema->default_))
 	    return false;
+	  if (context.propertyExist)
+	    context.propertyExist[index] = true;
 	  memberCount++;
-	  modified_ = true;
 	}
       }
     }
@@ -718,6 +736,10 @@ public:
   { NORMALIZE_HANDLER_(EndArray, elementCount); }
 
 #undef NORMALIZE_HANDLER_
+
+  void SetDocumentStack(internal::Stack<AllocatorType>* stack) {
+    documentStack_ = stack;
+  }
       
 private:
 
@@ -746,8 +768,114 @@ private:
   }
   void PopKey() {
     ValueType** ref = keyStack_.template Pop<ValueType*>(1);
-    if (*ref)
-      delete *ref;
+    if (ref[0])
+      delete ref[0];
+  }
+  ValueType GetAddress(bool parent=true) {
+    RAPIDJSON_ASSERT(documentStack_);
+    GenericStringBuffer<EncodingType> sb;
+    PointerType instancePointer;
+    if (documentStack_->Empty()) {
+      instancePointer = PointerType();
+    } else {
+      instancePointer = PointerType(documentStack_->template Bottom<Ch>(), documentStack_->GetSize() / sizeof(Ch));
+    }
+    ((parent && (instancePointer.GetTokenCount() > 0))
+     ? PointerType(instancePointer.GetTokens(), instancePointer.GetTokenCount() - 1)
+     : instancePointer).StringifyUriFragment(sb);
+    // instancePointer.StringifyUriFragment(sb);
+    ValueType instanceRef(sb.GetString(), static_cast<SizeType>(sb.GetSize() / sizeof(Ch)),
+			  document_.GetAllocator());
+    return instanceRef;
+  }
+  ValueType* Address2Value(const ValueType& address, ValueType* base = nullptr, size_t unfinalized=0) {
+    if (!base) base = CurrentValue();
+    size_t idx = 0;
+    ValueType* out = nullptr;
+    GenericPointer<ValueType> ptr;
+    if (unfinalized) {
+      ValueType current = GetAddress(false);
+      ptr = GenericPointer<ValueType>(address.GetString() + current.GetStringLength(),
+				      address.GetStringLength() - current.GetStringLength());
+    } else {
+      ptr = GenericPointer<ValueType>(address.GetString(), address.GetStringLength());
+    }
+    return ptr.Get(*base, &idx);
+  }
+  // void PrintAliases() {
+  //   for (typename ValueType::ConstMemberIterator it = aliases_.MemberBegin(); it != aliases_.MemberEnd(); ++it) {
+  //     std::cerr << it->name.GetString() << ":" << std::endl;
+  //     for (typename ValueType::ConstMemberIterator v = it->value.MemberBegin(); v != it->value.MemberEnd(); ++v) {
+  // 	std::cerr << "    " << v->name.GetString() << "->" << v->value.GetString() << std::endl;
+  //     }
+  //   }
+  // }
+  //! Add new aliases and check if the document contains any of them.
+  bool ExtendAliases(ValueType& aliases) {
+    bool replaced = false;
+    for (typename ValueType::ConstMemberIterator it = aliases.MemberBegin(); it != aliases.MemberEnd(); ++it) {
+      if (!aliases_.HasMember(it->name)) {
+	ValueType tmp(it->name.GetString(), it->name.GetStringLength(),
+		      document_.GetAllocator());
+	aliases_.AddMember(tmp, kObjectType, document_.GetAllocator());
+      }
+      for (typename ValueType::ConstMemberIterator v = it->value.MemberBegin(); v != it->value.MemberEnd(); ++v) {
+	if (!aliases_[it->name].HasMember(v->name)) {
+	  ValueType key(v->name.GetString(), v->name.GetStringLength(),
+			document_.GetAllocator());
+	  ValueType val;
+	  val.CopyFrom(v->value, document_.GetAllocator());
+	  aliases_[it->name].AddMember(key, val, document_.GetAllocator());
+	  // Check if previous parallel schema normalizaiton included any of
+	  // the aliased properties
+	  ValueType* root;
+	  size_t unfinalized = 0;
+	  if (document_.WasFinalized()) {
+	    root = &document_;
+	  } else {
+	    unfinalized = 1;
+	    root = document_.StackTop();
+	  }
+	  ValueType* base = Address2Value(it->name, root, unfinalized);
+	  if (!base) continue;
+	  RAPIDJSON_ASSERT(base->IsObject());
+	  if (base->HasMember(v->name)) {
+	    replaced = true;
+	    RAPIDJSON_ASSERT(!base->HasMember(v->value));
+	    typename ValueType::MemberIterator old = base->FindMember(v->name);
+	    ValueType new_val;
+	    new_val.CopyFrom(old->value, document_.GetAllocator());
+	    base->AddMember(ValueType(v->value.GetString(),
+				      v->value.GetStringLength(),
+				      document_.GetAllocator()),
+			    new_val,
+			    document_.GetAllocator());
+	    base->RemoveMember(v->name);
+	  }
+	}
+      }
+    }
+    if (replaced) modified_ = true;
+    return replaced;
+  }
+  const ValueType& AddAliases(Context& context, const SchemaType& schema) {
+    const ValueType address = GetAddress();
+    if (!aliases_.HasMember(address)) {
+      ValueType tmp(address.GetString(), address.GetStringLength(), document_.GetAllocator());
+      aliases_.AddMember(tmp, kObjectType, document_.GetAllocator());
+    }
+    if (schema.child_aliases_.MemberCount() == 0)
+      return aliases_[address];
+    for (typename SValue::ConstMemberIterator it = schema.child_aliases_.MemberBegin(); it != schema.child_aliases_.MemberEnd(); ++it) {
+      if (!aliases_[address].HasMember(it->name.GetString())) {
+	ValueType key1(it->name.GetString(), it->name.GetStringLength(),
+		       document_.GetAllocator());
+	ValueType key2(it->value.GetString(), it->value.GetStringLength(),
+		       document_.GetAllocator());
+	aliases_[address].AddMember(key1, key2, document_.GetAllocator());
+      }
+    }
+    return aliases_[address];
   }
 
   static const size_t kDefaultStackCapacity = 1024;
@@ -755,12 +883,14 @@ private:
   unsigned index_;
   bool modified_;
   bool extending_;
-  bool extending_new_;
+  bool appending_;
   Context* extend_context_;
   const SchemaType* extend_schema_;
   internal::Stack<AllocatorType> keyStack_;
   internal::Stack<AllocatorType> valueStack_;
   internal::Stack<AllocatorType> childStack_;
+  internal::Stack<AllocatorType>* documentStack_;
+  ValueType aliases_;
 };
 
 #endif // RAPIDJSON_YGGDRASIL
@@ -837,7 +967,8 @@ public:
 	kwargs_(),
 	isMetaschema_(isMetaschema),
 	metaschema_(),
-	metaschemaValidatorIndex_()
+	metaschemaValidatorIndex_(),
+	aliases_(kArrayType), child_aliases_(kObjectType)
 #endif // RAPIDJSON_YGGDRASIL
     {
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
@@ -949,12 +1080,36 @@ public:
             }
         }
 
+#ifdef RAPIDJSON_YGGDRASIL
+	if (const ValueType* v = GetMember(value, GetAliasesString())) {
+	  if (v->IsArray())
+	    aliases_.CopyFrom(*v, *allocator_);
+	}
+#endif // RAPIDJSON_YGGDRASIL
+
         if (properties && properties->IsObject()) {
             PointerType q = p.Append(GetPropertiesString(), allocator_);
             for (ConstMemberIterator itr = properties->MemberBegin(); itr != properties->MemberEnd(); ++itr) {
                 SizeType index;
                 if (FindPropertyIndex(itr->name, &index))
+#ifdef RAPIDJSON_YGGDRASIL
+		  {
+#endif // RAPIDJSON_YGGDRASIL
                     schemaDocument->CreateSchema(&properties_[index].schema, q.Append(itr->name, allocator_), itr->value, document, id_);
+#ifdef RAPIDJSON_YGGDRASIL
+		    if (properties_[index].schema->aliases_.Size() > 0) {
+		      child_aliases_.SetObject();
+		      for (typename SValue::ConstValueIterator itv = properties_[index].schema->aliases_.Begin(); itv != properties_[index].schema->aliases_.End(); ++itv)
+			child_aliases_.AddMember(SValue(itv->GetString(),
+							itv->GetStringLength(),
+							*allocator_),
+						 SValue(itr->name.GetString(),
+							itr->name.GetStringLength(),
+							*allocator_),
+						 *allocator_);
+		    }
+		  }
+#endif // RAPIDJSON_YGGDRASIL
             }
         }
 
@@ -1318,39 +1473,24 @@ public:
 
         return true;
     }
-
-#ifdef RAPIDJSON_YGGDRASIL
-  // parallel validators?
-  /*
-#define RAPIDJSON_NORMALIZER_(method, arg1, arg2)			\
-  if (context.normalized) {						\
   
-    if (Normalize ## method arg1) {					\
-      context.wasNormalized = true;					\
-      return true;							\
-    }									\
-    if (!context.normalized->method arg2)				\
-      return false;							\
-  }
-  */
-#define RAPIDJSON_NORMALIZER_(method, ...)				\
+#ifdef RAPIDJSON_YGGDRASIL
+  // TODO: Error about normalization
+#define RAPIDJSON_NORMALIZER_BASE_(method, arg)				\
   if (context.normalized) {						\
-    if (!context.normalized->method(context, *this, __VA_ARGS__))	\
+    if (!context.normalized->method arg)				\
       return false;							\
-    if (context.normalized->WasModified())				\
-      return true;							\
   }
 #define RAPIDJSON_NORMALIZER_NOARG_(method)				\
-  if (context.normalized) {						\
-    if (!context.normalized->method(context, *this))			\
-      return false;							\
-    if (context.normalized->WasModified())				\
-      return true;							\
-  }
+  RAPIDJSON_NORMALIZER_BASE_(method, (context, *this))
+#define RAPIDJSON_NORMALIZER_(method, ...)				\
+  RAPIDJSON_NORMALIZER_BASE_(method, (context, *this, __VA_ARGS__))
 #else
-#define RAPIDJSON_NORMALIZER_(method, ...)       \
+#define RAPIDJSON_NORMALIZER_BASE_(method, arg)	 \
   {}
 #define RAPIDJSON_NORMALIZER_NOARG_(method)	\
+  {}
+#define RAPIDJSON_NORMALIZER_(method, ...)       \
   {}
 #endif // RAPIDJSON_YGGDRASIL  
 
@@ -1680,6 +1820,8 @@ public:
     }
 
 #undef RAPIDJSON_NORMALIZER_
+#undef RAPIDJSON_NORMALIZER_NOARG_
+#undef RAPIDJSON_NORMALIZER_BASE_
 
     static const ValueType& GetValidateErrorKeyword(ValidateErrorCode validateErrorCode) {
         switch (validateErrorCode) {
@@ -1801,6 +1943,7 @@ public:
     RAPIDJSON_STRING_(Shape, 's', 'h', 'a', 'p', 'e')
     RAPIDJSON_STRING_(Args, 'a', 'r', 'g', 's')
     RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
+    RAPIDJSON_STRING_(Aliases, 'a', 'l', 'i', 'a', 's', 'e', 's')
     // Subtypes
     RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'g')
     RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
@@ -2056,6 +2199,12 @@ protected:
     bool FindPropertyIndex(const ValueType& name, SizeType* outIndex) const {
         SizeType len = name.GetStringLength();
         const Ch* str = name.GetString();
+	if (child_aliases_.HasMember(str)) {
+	  typename SValue::ConstMemberIterator primary = child_aliases_.FindMember(
+	      SValue(str, len, *allocator_));
+	  str = primary->value.GetString();
+	  len = primary->value.GetStringLength();
+	}
         for (SizeType index = 0; index < propertyCount_; index++)
             if (properties_[index].name.GetStringLength() == len &&
                 (std::memcmp(properties_[index].name.GetString(), str, sizeof(Ch) * len) == 0))
@@ -2425,6 +2574,8 @@ protected:
     const SchemaType* metaschema_;
     SizeType metaschemaValidatorIndex_;
     SValue default_;
+    SValue aliases_;
+    SValue child_aliases_;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -3837,7 +3988,9 @@ public:
      allocator,
      schemaStackCapacity,
      documentStackCapacity),
-    wasNormalized_(false), normalized_(), normalization_depth_(0), validator_index_(0), child_validators_(0) {}
+    normalized_(), normalization_depth_(0), validator_index_(0), child_validators_(0) {
+    normalized_.SetDocumentStack(&this->documentStack_);
+  }
   GenericSchemaNormalizer(
         const SchemaDocumentType& schemaDocument,
         OutputHandler& outputHandler,
@@ -3850,7 +4003,9 @@ public:
      allocator,
      schemaStackCapacity,
      documentStackCapacity),
-    wasNormalized_(false), normalized_(), normalization_depth_(0), validator_index_(0), child_validators_(0) {}
+    normalized_(), normalization_depth_(0), validator_index_(0), child_validators_(0) {
+    normalized_.SetDocumentStack(&this->documentStack_);
+  }
 
 private:
   typedef typename SchemaType::Context Context;
@@ -3880,11 +4035,12 @@ private:
      allocator,
      schemaStackCapacity,
      documentStackCapacity),
-    wasNormalized_(false), normalized_(&normalized, validator_index), normalization_depth_(normalization_depth), validator_index_(validator_index), child_validators_(0) {}
+    normalized_(&normalized, validator_index), normalization_depth_(normalization_depth), validator_index_(validator_index), child_validators_(0) {
+    normalized_.SetDocumentStack(&this->documentStack_);
+  }
   
   static const size_t kDefaultSchemaStackCapacity = 1024;
   static const size_t kDefaultDocumentStackCapacity = 256;
-  bool wasNormalized_;
   NormalizedDocumentType normalized_;
   unsigned normalization_depth_;
   unsigned validator_index_;
@@ -3896,7 +4052,7 @@ public:
   const ValueType& GetNormalized() const { return normalized_.GetDocument(); }
 
   //! Check if the document was normalized.
-  bool WasNormalized() const { return wasNormalized_; }
+  bool WasNormalized() const { return normalized_.WasModified(); }
 
   bool BeginValue() override {
     if (!GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::BeginValue())
@@ -3907,7 +4063,6 @@ public:
   }
 
   bool EndValue() override {
-    wasNormalized_ = (wasNormalized_ || this->CurrentContext().normalized->WasModified());
     if (!GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::EndValue())
       return false;
     // TODO: Check parallel validators
