@@ -710,7 +710,7 @@ public:
   }
   bool Key(Context& context, const SchemaType& schema, const Ch*& str, SizeType& len, bool copy, bool dont_check_aliases=false) {
     if (!dont_check_aliases) {
-      const ValueType& aliases = AddAliases(context, schema);
+      const ValueType& aliases = AddAliases(schema);
       ValueType orig(str, len, document_.GetAllocator());
       ConstMemberIterator match = aliases.MemberEnd();
       ValueType primary;
@@ -894,7 +894,6 @@ private:
   ValueType* Address2Value(const ValueType& address, ValueType* base = nullptr, size_t unfinalized=0) {
     if (!base) base = CurrentValue();
     size_t idx = 0;
-    ValueType* out = nullptr;
     GenericPointer<ValueType> ptr;
     if (unfinalized) {
       ValueType current = GetAddress(false);
@@ -990,7 +989,7 @@ private:
     }
     return aliases_[address];
   }
-  const ValueType& AddAliases(Context& context, const SchemaType& schema) {
+  const ValueType& AddAliases(const SchemaType& schema) {
     ValueType& aliases = GetAliases();
     if (schema.child_aliases_.MemberCount() == 0)
       return aliases;
