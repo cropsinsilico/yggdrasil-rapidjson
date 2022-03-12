@@ -36,7 +36,6 @@ using namespace rapidjson;
 {\
     SchemaNormalizer normalizer(schema);\
     Document d;\
-    /*printf("\n%s\n", json);*/\
     d.Parse(json);\
     EXPECT_FALSE(d.HasParseError());\
     EXPECT_TRUE(expected == d.Accept(normalizer));	\
@@ -70,6 +69,50 @@ using namespace rapidjson;
         Writer<StringBuffer> w(sb);\
         normalizer.GetNormalized().Accept(w);\
         printf("GetNormalized() Expected: %s Actual: %s\n", normalized, sb.GetString());\
+        ADD_FAILURE();\
+    }\
+}
+
+#define FAILED_NORMALIZE(schema, json, invalidSchemaPointer, invalidSchemaKeyword, invalidDocumentPointer, error) \
+{\
+    FAILED_NORMALIZE_(schema, json, invalidSchemaPointer, invalidSchemaKeyword, invalidDocumentPointer, error, SchemaNormalizer, Pointer) \
+}
+#define FAILED_NORMALIZE_(schema, json, invalidSchemaPointer, invalidSchemaKeyword, invalidDocumentPointer, error, \
+    SchemaNormalizerType, PointerType) \
+{\
+    SchemaNormalizerType normalizer(schema);\
+    Document d;\
+    d.Parse(json);\
+    EXPECT_FALSE(d.HasParseError());\
+    d.Accept(normalizer);\
+    EXPECT_FALSE(normalizer.IsValid());\
+    ValidateErrorCode code = normalizer.GetInvalidSchemaCode();\
+    ASSERT_TRUE(code != kValidateErrorNone);\
+    ASSERT_TRUE(strcmp(GetValidateError_En(code), "Unknown error.") != 0);\
+    if (normalizer.GetInvalidSchemaPointer() != PointerType(invalidSchemaPointer)) {\
+        StringBuffer sb;\
+        normalizer.GetInvalidSchemaPointer().Stringify(sb);\
+        printf("GetInvalidSchemaPointer() Expected: %s Actual: %s\n", invalidSchemaPointer, sb.GetString());\
+        ADD_FAILURE();\
+    }\
+    ASSERT_TRUE(normalizer.GetInvalidSchemaKeyword() != 0);\
+    if (strcmp(normalizer.GetInvalidSchemaKeyword(), invalidSchemaKeyword) != 0) {\
+        printf("GetInvalidSchemaKeyword() Expected: %s Actual %s\n", invalidSchemaKeyword, normalizer.GetInvalidSchemaKeyword());\
+        ADD_FAILURE();\
+    }\
+    if (normalizer.GetInvalidDocumentPointer() != PointerType(invalidDocumentPointer)) {\
+        StringBuffer sb;\
+        normalizer.GetInvalidDocumentPointer().Stringify(sb);\
+        printf("GetInvalidDocumentPointer() Expected: %s Actual: %s\n", invalidDocumentPointer, sb.GetString());\
+        ADD_FAILURE();\
+    }\
+    Document e;\
+    e.Parse(error);\
+    if (normalizer.GetError() != e) {\
+        StringBuffer sb;\
+        Writer<StringBuffer> w(sb);\
+        normalizer.GetError().Accept(w);\
+        printf("GetError() Expected: %s Actual: %s\n", error, sb.GetString());\
         ADD_FAILURE();\
     }\
 }
@@ -175,6 +218,98 @@ TEST(SchemaNormalizer, Alias) {
 	      "{\"shipping_address\": {\"street\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }",
 	      true,
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }");
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street\": \"1600 Pennsylvania Avenue NW\", \"street_address\": \"1700 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }",
+		     "/properties/shipping_address", "aliases",
+		     "/shipping_address/street_address",
+		     "{ \"aliases\": {"
+		     "    \"errorCode\": 33,"
+		     "    \"instanceRef\": \"#/shipping_address\","
+		     "    \"schemaRef\": \"#/properties/shipping_address\","
+		     "    \"duplicates\": [\"street\", \"street_address\"]"
+		     "}}");
+}
+
+TEST(SchemaNormalizer, AliasCircular) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"billing_address\": { \"$ref\": \"#/definitions/address\" },"
+        "    \"shipping_address\": {"
+        "      \"type\": \"object\","
+        "      \"properties\": {"
+        "        \"street_address\": { \"type\": \"string\","
+	"                              \"default\": \"default_address\","
+	"                              \"aliases\": [\"street\"]},"
+        "        \"street\":         { \"type\": \"string\","
+	"                              \"default\": \"default_address\","
+	"                              \"aliases\": [\"street_address\"]},"
+        "        \"city\":           { \"type\": \"string\","
+	"                              \"default\": \"default_city\"},"
+        "        \"state\":          { \"type\": \"string\","
+	"                              \"default\": \"default_state\"},"
+        "        \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
+	"                              \"default\": \"residential\" }"
+        "      },"
+        "      \"required\": [\"street_address\", \"city\", \"state\", \"type\"]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }",
+		     "/properties/shipping_address", "aliases",
+		     "/shipping_address/street",
+		     "{ \"aliases\": {"
+		     "    \"errorCode\": 34,"
+		     "    \"instanceRef\": \"#/shipping_address\","
+		     "    \"schemaRef\": \"#/properties/shipping_address\","
+		     "    \"circular\": [\"street\", \"street_address\"]"
+		     "}}");
+}
+
+TEST(SchemaNormalizer, AliasConflicting) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"billing_address\": { \"$ref\": \"#/definitions/address\" },"
+        "    \"shipping_address\": {"
+        "      \"type\": \"object\","
+        "      \"properties\": {"
+        "        \"street_address\": { \"type\": \"string\","
+	"                              \"default\": \"default_address\","
+	"                              \"aliases\": [\"street\"]},"
+        "        \"address\":        { \"type\": \"string\","
+	"                              \"default\": \"default_address\","
+	"                              \"aliases\": [\"street\"]},"
+        "        \"city\":           { \"type\": \"string\","
+	"                              \"default\": \"default_city\"},"
+        "        \"state\":          { \"type\": \"string\","
+	"                              \"default\": \"default_state\"},"
+        "        \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
+	"                              \"default\": \"residential\" }"
+        "      },"
+        "      \"required\": [\"street_address\", \"city\", \"state\", \"type\"]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }",
+		     "/properties/shipping_address", "aliases",
+		     "/shipping_address/street",
+		     "{ \"aliases\": {"
+		     "    \"errorCode\": 35,"
+		     "    \"instanceRef\": \"#/shipping_address\","
+		     "    \"schemaRef\": \"#/properties/shipping_address\","
+		     "    \"conflicting\": \"street\","
+		     "    \"expected\": \"street_address\","
+		     "    \"actual\": \"address\""
+		     "}}");
 }
 
 TEST(SchemaNormalizer, AliasNested) {
@@ -218,6 +353,129 @@ TEST(SchemaNormalizer, AliasNested) {
 	      "{\"shipping_address\": {\"street\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }",
 	      true,
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }");
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street\": \"1600 Pennsylvania Avenue NW\", \"street_address\": \"1700 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }",
+		     "/properties/shipping_address", "allOf",
+		     "/shipping_address",
+		     "{ \"allOf\": {"
+		     "    \"errors\": ["
+		     "       { \"aliases\": {"
+		     "           \"errorCode\": 33,"
+		     "           \"instanceRef\": \"#/shipping_address\","
+		     "           \"schemaRef\": \"#/definitions/address\","
+		     "           \"duplicates\": [\"street\", \"street_address\"]"
+		     "       }},"
+		     "       {}],"
+		     "    \"errorCode\": 23,"
+		     "    \"instanceRef\": \"#/shipping_address\","
+		     "    \"schemaRef\": \"#/properties/shipping_address\""
+		     "}}");
+}
+
+TEST(SchemaNormalizer, AliasNestedCircular) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"$schema\": \"http://json-schema.org/draft-04/schema#\","
+        ""
+        "  \"definitions\": {"
+        "    \"address\": {"
+        "      \"type\": \"object\","
+        "      \"properties\": {"
+        "        \"street_address\": { \"type\": \"string\","
+	"                              \"default\": \"default_address\","
+	"                              \"aliases\": [\"street\"]},"
+        "        \"city\":           { \"type\": \"string\","
+	"                              \"default\": \"default_city\"},"
+        "        \"state\":          { \"type\": \"string\","
+	"                              \"default\": \"default_state\"}"
+        "      },"
+        "      \"required\": [\"street_address\", \"city\", \"state\"]"
+        "    }"
+        "  },"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"billing_address\": { \"$ref\": \"#/definitions/address\" },"
+        "    \"shipping_address\": {"
+        "      \"allOf\": ["
+        "        { \"$ref\": \"#/definitions/address\" },"
+        "        { \"properties\":"
+        "          { \"type\":   { \"enum\": [ \"residential\", \"business\" ],"
+	"                          \"default\": \"residential\" },"
+        "            \"street\": { \"type\": \"string\","
+	"                          \"default\": \"default_address\","
+	"                          \"aliases\": [\"street_address\"] }},"
+        "          \"required\": [\"type\"]"
+        "        }"
+        "      ]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }",
+		     "/properties/shipping_address", "aliases",
+		     "/shipping_address",
+		     "{ \"aliases\": {"
+		     "    \"errorCode\": 34,"
+		     "    \"instanceRef\": \"#\","
+		     "    \"schemaRef\": \"#/properties/shipping_address\","
+		     "    \"circular\": [\"street\", \"street_address\"]"
+		     "}}");
+}
+
+TEST(SchemaNormalizer, AliasNestedConflicting) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"$schema\": \"http://json-schema.org/draft-04/schema#\","
+        ""
+        "  \"definitions\": {"
+        "    \"address\": {"
+        "      \"type\": \"object\","
+        "      \"properties\": {"
+        "        \"street_address\": { \"type\": \"string\","
+	"                              \"default\": \"default_address\","
+	"                              \"aliases\": [\"street\"]},"
+        "        \"city\":           { \"type\": \"string\","
+	"                              \"default\": \"default_city\"},"
+        "        \"state\":          { \"type\": \"string\","
+	"                              \"default\": \"default_state\"}"
+        "      },"
+        "      \"required\": [\"street_address\", \"city\", \"state\"]"
+        "    }"
+        "  },"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"billing_address\": { \"$ref\": \"#/definitions/address\" },"
+        "    \"shipping_address\": {"
+        "      \"allOf\": ["
+        "        { \"$ref\": \"#/definitions/address\" },"
+        "        { \"properties\":"
+        "          { \"type\":    { \"enum\": [ \"residential\", \"business\" ],"
+	"                           \"default\": \"residential\" },"
+        "            \"address\": { \"type\": \"string\","
+	"                           \"default\": \"default_address\","
+	"                           \"aliases\": [\"street\"] }},"
+        "          \"required\": [\"type\"]"
+        "        }"
+        "      ]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }",
+		     "/properties/shipping_address", "aliases",
+		     "/shipping_address",
+		     "{ \"aliases\": {"
+		     "    \"errorCode\": 35,"
+		     "    \"instanceRef\": \"#\","
+		     "    \"schemaRef\": \"#/properties/shipping_address\","
+		     "  \"conflicting\": \"street\","
+		     "  \"expected\": \"address\","
+		     "  \"actual\": \"street_address\""
+		     "}}");
 }
 
 #if defined(_MSC_VER) || defined(__clang__)

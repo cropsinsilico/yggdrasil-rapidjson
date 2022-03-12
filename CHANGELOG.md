@@ -13,10 +13,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### IN PROGRESS
 * Add normalization
-	- default property value
 	- units
 	- type (int -> double)
-	- property alias
 	- allow singular (put non-array value in an array)
 
 ### COMPLETE
@@ -31,6 +29,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Unit-full type
 * Schema type
 * Continuous integration
+* Validation of circular & conflicting aliases
+* Normalization of default & aliases w/ error handling
 
 ## [Unreleased]
 

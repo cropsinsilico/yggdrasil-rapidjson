@@ -1859,6 +1859,68 @@ TEST(SchemaValidator, Schema) { // 32
 	     "}}}}");
 }
 
+TEST(SchemaValidator, Alias) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"street_address\": { \"type\": \"string\","
+	"                           \"aliases\": [\"street\"] }},"
+	"  \"required\": [\"street_address\"]"
+        "}");
+  SchemaDocument s(sd);
+  VALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true);
+}
+
+TEST(SchemaValidator, CircularAliases) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"street_address\": { \"type\": \"string\","
+	"                           \"aliases\": [\"street\"] },"
+	"     \"street\":         { \"type\": \"string\","
+	"                           \"aliases\": [\"street_address\"] }},"
+	"  \"required\": [\"street_address\"]"
+        "}");
+  SchemaDocument s(sd);
+  INVALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }",
+	     "", "aliases", "/street",
+	     "{ \"aliases\": {"
+	     "    \"errorCode\": 34,"
+	     "    \"instanceRef\": \"#\","
+	     "    \"schemaRef\": \"#\","
+	     "    \"circular\": [\"street\", \"street_address\"]"
+	     "}}");
+}
+
+TEST(SchemaValidator, ConflictingAliases) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"street_address\": { \"type\": \"string\","
+	"                           \"aliases\": [\"street\"] },"
+	"     \"address\":        { \"type\": \"string\","
+	"                           \"aliases\": [\"street\"] }},"
+	"  \"required\": [\"street_address\"]"
+        "}");
+  SchemaDocument s(sd);
+  INVALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }",
+	     "", "aliases", "/street",
+	     "{ \"aliases\": {"
+	     "    \"errorCode\": 35,"
+	     "    \"instanceRef\": \"#\","
+	     "    \"schemaRef\": \"#\","
+	     "    \"conflicting\": \"street\","
+	     "    \"expected\": \"street_address\","
+	     "    \"actual\": \"address\""
+	     "}}");
+}
+
 #endif // RAPIDJSON_YGGDRASIL
 
 // Additional tests

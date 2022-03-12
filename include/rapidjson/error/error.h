@@ -201,6 +201,9 @@ enum ValidateErrorCode {
     kValidateErrorShape,                       //!< Property has a shape that does not match the schema.
     kValidateErrorPythonImport,                //!< Property is not an importable Python object.
     kValidateErrorInvalidSchema,               //!< Property is not a valid JSON schema.
+    kNormalizeErrorAliasDuplicate,             //!< Aliased property already exists in the normalized document.
+    kNormalizeErrorCircularAlias,              //!< Property has circular aliases.
+    kNormalizeErrorConflictingAliases,         //!< Property has conflicting aliases.
 #endif // RAPIDJSON_YGGDRASIL
 };
 

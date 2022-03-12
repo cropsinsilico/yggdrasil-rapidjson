@@ -257,6 +257,10 @@ public:
   virtual void IncorrectShape(const SValue& actual, const SValue& expected) = 0;
   virtual void InvalidPythonImport(const Ch* str, SizeType len) = 0;
   virtual void InvalidSchema(ValidateErrorCode code, ISchemaValidator* subvalidator) = 0;
+  // Normalization errors
+  virtual void DuplicateAlias(const SValue& base, const SValue& alias) = 0;
+  virtual void CircularAlias(const SValue& alias) = 0;
+  virtual void ConflictingAliases(const SValue& alias, const SValue& base1, const SValue& base2) = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -464,6 +468,48 @@ struct SchemaValidationContext {
 
 #ifdef RAPIDJSON_YGGDRASIL
 
+// template<typename ValueType>
+// void printAliases_(const ValueType& aliases) {
+//   RAPIDJSON_ASSERT(aliases.IsObject());
+//   for (typename ValueType::ConstMemberIterator it = aliases.MemberBegin(); it != aliases.MemberEnd(); ++it) {
+//     std::cerr << it->name.GetString() << ":";
+//     if (it->value.IsObject()) {
+//       std::cerr << std::endl;
+//       for (typename ValueType::ConstMemberIterator v = it->value.MemberBegin(); v != it->value.MemberEnd(); ++v) {
+// 	std::cerr << "    " << v->name.GetString() << "->" << v->value.GetString() << std::endl;
+//       }
+//     } else if (it->value.IsString()) {
+//       std::cerr << it->value.GetString() << std::endl;
+//     }
+//   }
+// };
+template<typename ValueType, typename AllocatorType>
+bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
+		     ValueType* dest, AllocatorType& allocator) {
+  typename ValueType::ConstMemberIterator primary = aliases.FindMember(orig);
+  if (primary == aliases.MemberEnd()) {
+    dest->CopyFrom(orig, allocator);
+    return true;
+  }
+  ValueType path(kArrayType);
+  RAPIDJSON_ASSERT(orig.IsString());
+  path.PushBack(ValueType(orig, allocator), allocator);
+  RAPIDJSON_ASSERT(primary->value.IsString());
+  while (aliases.HasMember(primary->value)) {
+    for (typename ValueType::ConstValueIterator it = path.Begin(); it != path.End(); ++it) {
+      if (primary->value == *it) {
+	dest->CopyFrom(path, allocator);
+	return false;
+      }
+    }
+    path.PushBack(ValueType(primary->value, allocator), allocator);
+    primary = aliases.FindMember(primary->value);
+    RAPIDJSON_ASSERT(primary->value.IsString());
+  }
+  dest->CopyFrom(primary->value, allocator);
+  return true;
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // GenericNormalizedDocument
   
@@ -478,6 +524,8 @@ class GenericNormalizedDocument {
   typedef GenericDocument<EncodingType, AllocatorType> DocumentType;
   typedef SchemaValidationContext<SchemaDocumentType> Context;
   typedef typename EncodingType::Ch Ch;
+  typedef typename ValueType::MemberIterator MemberIterator;
+  typedef typename ValueType::ConstMemberIterator ConstMemberIterator;
 public:
   GenericNormalizedDocument(size_t stackCapacity = kDefaultStackCapacity,
 			    StackAllocator* stackAllocator = 0) :
@@ -531,8 +579,10 @@ public:
     GenericNormalizedDocument* child = FindChild(index);
     RAPIDJSON_ASSERT(child);
     child->FinalizeFromStack();
-    child->ExtendAliases(aliases_);
-    if (!(ExtendAliases(child->aliases_) || child->modified_))
+    bool replaced = false;
+    if (!child->ExtendAliases(context, aliases_, &replaced)) return false;
+    if (!ExtendAliases(context, child->aliases_, &replaced)) return false;
+    if (!(replaced || child->modified_))
       return true;
     modified_ = true;
     return Extend(context, schema, child->document_);
@@ -650,15 +700,37 @@ public:
     BEGIN_NORMALIZE_(StartObject, (), (kObjectType));
     return CurrentValue()->IsObject();
   }
+  bool GetFinalAlias(Context& context, const ValueType& aliases,
+		     const ValueType& orig, ValueType* dest) {
+    if (!follow_aliases_(aliases, orig, dest, document_.GetAllocator())) {
+      context.error_handler.CircularAlias(*dest);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
+    }
+    return true;
+  }
   bool Key(Context& context, const SchemaType& schema, const Ch*& str, SizeType& len, bool copy, bool dont_check_aliases=false) {
     if (!dont_check_aliases) {
       const ValueType& aliases = AddAliases(context, schema);
-      if (aliases.HasMember(str)) {
+      ValueType orig(str, len, document_.GetAllocator());
+      ConstMemberIterator match = aliases.MemberEnd();
+      ValueType primary;
+      if (FindAliasName(aliases, orig, match)) {
+	if (!GetFinalAlias(context, aliases, orig, &primary))
+	  return false;
 	modified_ = true;
-	typename ValueType::ConstMemberIterator primary = aliases.FindMember(
-	    ValueType(str, len, document_.GetAllocator()));
-	str = primary->value.GetString();
-	len = primary->value.GetStringLength();
+	str = primary.GetString();
+	len = primary.GetStringLength();
+      } else if (FindAliasValue(aliases, orig, match)) {
+	primary.CopyFrom(orig, document_.GetAllocator());
+	orig.CopyFrom(match->name, document_.GetAllocator());
+      }
+      // Check previous keys for alias target
+      if (match != aliases.MemberEnd()) {
+	if (HasMember(primary)) {
+	  // TODO: Check equivalence when the value is added?
+	  context.error_handler.DuplicateAlias(orig, primary);
+	  RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
+	}
       }
     }
     NORMALIZE_(Key, (str, len, copy));
@@ -668,7 +740,6 @@ public:
   bool EndObject(Context& context, const SchemaType& schema, SizeType& memberCount) {
     // Default
     // TODO: Normalize default_?
-    // TODO: Handle failure during partial
     if ((!extending_) && (schema.hasRequired_)) {
       for (SizeType index = 0; index < schema.propertyCount_; index++) {
 	if (schema.properties_[index].required && !context.propertyExist[index]
@@ -744,8 +815,12 @@ public:
 private:
 
   ValueType* CurrentValue() {
-    RAPIDJSON_ASSERT(!valueStack_.Empty());
-    return *valueStack_.template Top<ValueType*>();
+    if (extending_ && !appending_) {
+      RAPIDJSON_ASSERT(!valueStack_.Empty());
+      return *valueStack_.template Top<ValueType*>();
+    } else {
+      return document_.StackTop();
+    }
   }
   void PushValue(ValueType& value) {
     ValueType** ref = valueStack_.template Push<ValueType*>();
@@ -788,6 +863,34 @@ private:
 			  document_.GetAllocator());
     return instanceRef;
   }
+  bool HasMember(ValueType& key, ValueType* val=nullptr) {
+    if (extending_ && !appending_) {
+      if (CurrentValue()->HasMember(key)) {
+	if (val)
+	  val->CopyFrom(CurrentValue()->FindMember(key)->value,
+			document_.GetAllocator());
+	return true;
+      }
+      return false;
+    }
+    ValueType* base = document_.StackTop();
+    if (base->IsObject())
+      return false;
+    while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
+    RAPIDJSON_ASSERT(base->IsObject());
+    base++;
+    while (base != document_.StackTop()) {
+      RAPIDJSON_ASSERT(base->IsString());
+      if (*base == key) {
+	if (val && ((base + 1) != document_.StackTop()))
+	  val->CopyFrom(*(base + 1),
+			document_.GetAllocator());
+	return true;
+      }
+      base += 2;
+    }
+    return false;
+  }
   ValueType* Address2Value(const ValueType& address, ValueType* base = nullptr, size_t unfinalized=0) {
     if (!base) base = CurrentValue();
     size_t idx = 0;
@@ -802,17 +905,9 @@ private:
     }
     return ptr.Get(*base, &idx);
   }
-  // void PrintAliases() {
-  //   for (typename ValueType::ConstMemberIterator it = aliases_.MemberBegin(); it != aliases_.MemberEnd(); ++it) {
-  //     std::cerr << it->name.GetString() << ":" << std::endl;
-  //     for (typename ValueType::ConstMemberIterator v = it->value.MemberBegin(); v != it->value.MemberEnd(); ++v) {
-  // 	std::cerr << "    " << v->name.GetString() << "->" << v->value.GetString() << std::endl;
-  //     }
-  //   }
-  // }
   //! Add new aliases and check if the document contains any of them.
-  bool ExtendAliases(ValueType& aliases) {
-    bool replaced = false;
+  bool ExtendAliases(Context& context, ValueType& aliases, bool* replaced) {
+    *replaced = false;
     for (typename ValueType::ConstMemberIterator it = aliases.MemberBegin(); it != aliases.MemberEnd(); ++it) {
       if (!aliases_.HasMember(it->name)) {
 	ValueType tmp(it->name.GetString(), it->name.GetStringLength(),
@@ -820,12 +915,21 @@ private:
 	aliases_.AddMember(tmp, kObjectType, document_.GetAllocator());
       }
       for (typename ValueType::ConstMemberIterator v = it->value.MemberBegin(); v != it->value.MemberEnd(); ++v) {
-	if (!aliases_[it->name].HasMember(v->name)) {
+	if (aliases_[it->name].HasMember(v->name)) {
+	  typename ValueType::ConstMemberIterator existing = aliases_[it->name].FindMember(v->name);
+	  if (existing->value != v->value) {
+	    context.error_handler.ConflictingAliases(v->name, existing->value, v->value);
+	    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorConflictingAliases);
+	  }
+	} else {
 	  ValueType key(v->name.GetString(), v->name.GetStringLength(),
 			document_.GetAllocator());
-	  ValueType val;
-	  val.CopyFrom(v->value, document_.GetAllocator());
+	  ValueType val(v->value.GetString(), v->value.GetStringLength(),
+			document_.GetAllocator());
 	  aliases_[it->name].AddMember(key, val, document_.GetAllocator());
+	  ValueType primary;
+	  if (!GetFinalAlias(context, aliases_[it->name], v->name, &primary))
+	    return false;
 	  // Check if previous parallel schema normalizaiton included any of
 	  // the aliased properties
 	  ValueType* root;
@@ -840,42 +944,66 @@ private:
 	  if (!base) continue;
 	  RAPIDJSON_ASSERT(base->IsObject());
 	  if (base->HasMember(v->name)) {
-	    replaced = true;
-	    RAPIDJSON_ASSERT(!base->HasMember(v->value));
 	    typename ValueType::MemberIterator old = base->FindMember(v->name);
-	    ValueType new_val;
-	    new_val.CopyFrom(old->value, document_.GetAllocator());
-	    base->AddMember(ValueType(v->value.GetString(),
-				      v->value.GetStringLength(),
-				      document_.GetAllocator()),
-			    new_val,
-			    document_.GetAllocator());
-	    base->RemoveMember(v->name);
+	    if (base->HasMember(primary)) {
+	      typename ValueType::MemberIterator alt = base->FindMember(primary);
+	      if (alt->value != old->value) {
+		context.error_handler.DuplicateAlias(v->value, v->name);
+		RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
+	      }
+	    } else {
+	      *replaced = true;
+	      ValueType new_val;
+	      new_val.CopyFrom(old->value, document_.GetAllocator());
+	      base->AddMember(ValueType(v->value.GetString(),
+					v->value.GetStringLength(),
+					document_.GetAllocator()),
+			      new_val,
+			      document_.GetAllocator());
+	      base->RemoveMember(v->name);
+	    }
 	  }
 	}
       }
     }
-    if (replaced) modified_ = true;
-    return replaced;
+    if (*replaced) modified_ = true;
+    return true;
   }
-  const ValueType& AddAliases(Context& context, const SchemaType& schema) {
+  bool FindAliasName(const ValueType& aliases, ValueType& name,
+		     ConstMemberIterator& match) {
+    match = aliases.FindMember(name);
+    return (match != aliases.MemberEnd());
+  }
+  bool FindAliasValue(const ValueType& aliases, ValueType& name,
+		      ConstMemberIterator& match) {
+    match = aliases.MemberBegin();
+    for ( ; match != aliases.MemberEnd(); ++match)
+      if (name == match->value)
+	break;
+    return (match != aliases.MemberEnd());
+  }
+  ValueType& GetAliases() {
     const ValueType address = GetAddress();
     if (!aliases_.HasMember(address)) {
       ValueType tmp(address.GetString(), address.GetStringLength(), document_.GetAllocator());
       aliases_.AddMember(tmp, kObjectType, document_.GetAllocator());
     }
+    return aliases_[address];
+  }
+  const ValueType& AddAliases(Context& context, const SchemaType& schema) {
+    ValueType& aliases = GetAliases();
     if (schema.child_aliases_.MemberCount() == 0)
-      return aliases_[address];
+      return aliases;
     for (typename SValue::ConstMemberIterator it = schema.child_aliases_.MemberBegin(); it != schema.child_aliases_.MemberEnd(); ++it) {
-      if (!aliases_[address].HasMember(it->name.GetString())) {
+      if (!aliases.HasMember(it->name.GetString())) {
 	ValueType key1(it->name.GetString(), it->name.GetStringLength(),
 		       document_.GetAllocator());
 	ValueType key2(it->value.GetString(), it->value.GetStringLength(),
 		       document_.GetAllocator());
-	aliases_[address].AddMember(key1, key2, document_.GetAllocator());
+	aliases.AddMember(key1, key2, document_.GetAllocator());
       }
     }
-    return aliases_[address];
+    return aliases;
   }
 
   static const size_t kDefaultStackCapacity = 1024;
@@ -968,7 +1096,7 @@ public:
 	isMetaschema_(isMetaschema),
 	metaschema_(),
 	metaschemaValidatorIndex_(),
-	aliases_(kArrayType), child_aliases_(kObjectType)
+	aliases_(kArrayType), child_aliases_(kObjectType), hasAliases_(false)
 #endif // RAPIDJSON_YGGDRASIL
     {
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
@@ -1089,6 +1217,7 @@ public:
 
         if (properties && properties->IsObject()) {
             PointerType q = p.Append(GetPropertiesString(), allocator_);
+	    SValue child_aliases(kObjectType);
             for (ConstMemberIterator itr = properties->MemberBegin(); itr != properties->MemberEnd(); ++itr) {
                 SizeType index;
                 if (FindPropertyIndex(itr->name, &index))
@@ -1098,20 +1227,23 @@ public:
                     schemaDocument->CreateSchema(&properties_[index].schema, q.Append(itr->name, allocator_), itr->value, document, id_);
 #ifdef RAPIDJSON_YGGDRASIL
 		    if (properties_[index].schema->aliases_.Size() > 0) {
-		      child_aliases_.SetObject();
+		      hasAliases_ = true;
 		      for (typename SValue::ConstValueIterator itv = properties_[index].schema->aliases_.Begin(); itv != properties_[index].schema->aliases_.End(); ++itv)
-			child_aliases_.AddMember(SValue(itv->GetString(),
-							itv->GetStringLength(),
-							*allocator_),
-						 SValue(itr->name.GetString(),
-							itr->name.GetStringLength(),
-							*allocator_),
-						 *allocator_);
+			child_aliases.AddMember(SValue(itv->GetString(),
+						       itv->GetStringLength(),
+						       *allocator_),
+						SValue(itr->name.GetString(),
+						       itr->name.GetStringLength(),
+						       *allocator_),
+						*allocator_);
 		    }
 		  }
 #endif // RAPIDJSON_YGGDRASIL
             }
-        }
+#ifdef RAPIDJSON_YGGDRASIL
+	    child_aliases_.CopyFrom(child_aliases, *allocator_);
+#endif // RAPIDJSON_YGGDRASIL	    
+	}
 
         if (const ValueType* v = GetMember(value, GetPatternPropertiesString())) {
             PointerType q = p.Append(GetPatternPropertiesString(), allocator_);
@@ -1331,6 +1463,18 @@ public:
 
             context.arrayElementIndex++;
         }
+#ifdef RAPIDJSON_YGGDRASIL
+	if (hasAliases_) {
+	  for (typename SValue::ConstMemberIterator a = child_aliases_.MemberBegin(); a != child_aliases_.MemberEnd(); a++) {
+	    for (typename SValue::ConstMemberIterator b = a + 1; b != child_aliases_.MemberEnd(); b++) {
+	      if ((a->name == b->name) && (a->value != b->value)) {
+		context.error_handler.ConflictingAliases(a->name, a->value, b->value);
+		RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorConflictingAliases);
+	      }
+	    }
+	  }
+	}
+#endif // RAPIDJSON_YGGDRASIL
         return true;
     }
 
@@ -1431,22 +1575,25 @@ public:
 	    if (context.normalized) {
 	      for (SizeType i = 0; i < context.validatorCount; i++) {
 		if (context.validators[i]->IsValid()) {
-		  context.normalized->ExtendChild(context, *this,
-						  context.validators[i]->GetValidatorID());
+		  if (!context.normalized->ExtendChild(context, *this,
+						       context.validators[i]->GetValidatorID()))
+		    return false;
 		  break;
 		}
 	      }
 	      
 	      if (allOf_.schemas)
                 for (SizeType i = allOf_.begin; i < allOf_.begin + allOf_.count; i++)
-		  context.normalized->ExtendChild(context, *this,
-						  context.validators[i]->GetValidatorID());
+		  if (!context.normalized->ExtendChild(context, *this,
+						       context.validators[i]->GetValidatorID()))
+		    return false;
 
 	      if (anyOf_.schemas) {
                 for (SizeType i = anyOf_.begin; i < anyOf_.begin + anyOf_.count; i++) {
 		  if (context.validators[i]->IsValid()) {
-		    context.normalized->ExtendChild(context, *this,
-						    context.validators[i]->GetValidatorID());
+		    if (!context.normalized->ExtendChild(context, *this,
+							 context.validators[i]->GetValidatorID()))
+		      return false;
 		    break;
 		  }
 		}
@@ -1455,16 +1602,18 @@ public:
 	      if (oneOf_.schemas) {
                 for (SizeType i = oneOf_.begin; i < oneOf_.begin + oneOf_.count; i++) {
 		  if (context.validators[i]->IsValid()) {
-		    context.normalized->ExtendChild(context, *this,
-						    context.validators[i]->GetValidatorID());
+		    if (!context.normalized->ExtendChild(context, *this,
+							 context.validators[i]->GetValidatorID()))
+		      return false;
 		    break;
 		  }
 		}
 	      }
 	      
 	      if (metaschema_)
-		context.normalized->ExtendChild(context, *this,
-						context.validators[metaschemaValidatorIndex_]->GetValidatorID());
+		if (!context.normalized->ExtendChild(context, *this,
+						     context.validators[metaschemaValidatorIndex_]->GetValidatorID()))
+		  return false;
 
 	    }
 #endif // RAPIDJSON_YGGDRASIL
@@ -1691,6 +1840,20 @@ public:
     bool Key(Context& context, const Ch* str, SizeType len, bool copy) const {
         RAPIDJSON_NORMALIZER_(Key, str, len, copy);
 	(void)copy;
+#ifdef RAPIDJSON_YGGDRASIL
+	if (child_aliases_.HasMember(str)) {
+	  SValue orig(str, len, *allocator_);
+	  SValue dest;
+	  if (!follow_aliases_(child_aliases_, orig, &dest, *allocator_)) {
+	    context.error_handler.CircularAlias(dest);
+	    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
+	    return false;
+	  }
+	  str = dest.GetString();
+	  len = dest.GetStringLength();
+	  copy = true;
+	}
+#endif // RAPIDJSON_YGGDRASIL
         if (patternProperties_) {
             context.patternPropertiesSchemaCount = 0;
             for (SizeType i = 0; i < patternPropertyCount_; i++)
@@ -1864,6 +2027,9 @@ public:
 	    case kValidateErrorShape:                   return GetShapeString();
 	    case kValidateErrorPythonImport:            return GetPythonClassString();
 	    case kValidateErrorInvalidSchema:           return GetSchemaString();
+	    case kNormalizeErrorAliasDuplicate:         return GetAliasesString();
+	    case kNormalizeErrorCircularAlias:          return GetAliasesString();
+	    case kNormalizeErrorConflictingAliases:     return GetAliasesString();
 #endif // RAPIDJSON_YGGDRASIL
 
             default:                                    return GetNullString();
@@ -1950,6 +2116,8 @@ public:
     RAPIDJSON_STRING_(UintSubType, 'u', 'i', 'n', 't')
     RAPIDJSON_STRING_(FloatSubType, 'f', 'l', 'o', 'a', 't')
     RAPIDJSON_STRING_(ComplexSubType, 'c', 'o', 'm', 'p', 'l', 'e', 'x')
+    // Normalization
+    RAPIDJSON_STRING_(Normalization, 'n', 'o', 'r', 'm', 'a', 'l', 'i', 'z', 'a', 't', 'i', 'o', 'n')
 #endif // RAPIDJSON_YGGDRASIL
 
 #undef RAPIDJSON_STRING_
@@ -2199,12 +2367,16 @@ protected:
     bool FindPropertyIndex(const ValueType& name, SizeType* outIndex) const {
         SizeType len = name.GetStringLength();
         const Ch* str = name.GetString();
+#ifdef RAPIDJSON_YGGDRASIL
 	if (child_aliases_.HasMember(str)) {
-	  typename SValue::ConstMemberIterator primary = child_aliases_.FindMember(
-	      SValue(str, len, *allocator_));
-	  str = primary->value.GetString();
-	  len = primary->value.GetStringLength();
+	  SValue orig(str, len, *allocator_);
+	  SValue dest;
+	  if (follow_aliases_(child_aliases_, orig, &dest, *allocator_)) {
+	    str = dest.GetString();
+	    len = dest.GetStringLength();
+	  }
 	}
+#endif // RAPIDJSON_YGGDRASIL
         for (SizeType index = 0; index < propertyCount_; index++)
             if (properties_[index].name.GetStringLength() == len &&
                 (std::memcmp(properties_[index].name.GetString(), str, sizeof(Ch) * len) == 0))
@@ -2576,6 +2748,7 @@ protected:
     SValue default_;
     SValue aliases_;
     SValue child_aliases_;
+    bool hasAliases_;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -3442,6 +3615,41 @@ public:
 			   GetStateAllocator());
     AddCurrentError(code, true);
   }
+  void DuplicateAlias(const SValue& base, const SValue& alias) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetDuplicatesString(),
+			    ValueType(kArrayType),
+			    GetStateAllocator());
+    ValueType dup(GetDuplicatesString(), GetStateAllocator());
+    currentError_[dup].PushBack(ValueType(base, GetStateAllocator()).Move(),
+				GetStateAllocator());
+    currentError_[dup].PushBack(ValueType(alias, GetStateAllocator()).Move(),
+				GetStateAllocator());
+    AddCurrentError(kNormalizeErrorAliasDuplicate, true);
+  }
+  void CircularAlias(const SValue& alias) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetCircularString(),
+			    ValueType(alias, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    AddCurrentError(kNormalizeErrorCircularAlias, true);
+  }
+  void ConflictingAliases(const SValue& alias,
+			  const SValue& base1,
+			  const SValue& base2) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetConflictingString(),
+			    ValueType(alias, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    currentError_.AddMember(GetExpectedString(),
+			    ValueType(base1, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    currentError_.AddMember(GetActualString(),
+			    ValueType(base2, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    AddCurrentError(kNormalizeErrorConflictingAliases, true);
+  }
+
 #endif // RAPIDJSON_YGGDRASIL
   
 
@@ -3462,6 +3670,10 @@ public:
     RAPIDJSON_STRING_(ErrorCode, 'e', 'r', 'r', 'o', 'r', 'C', 'o', 'd', 'e')
     RAPIDJSON_STRING_(ErrorMessage, 'e', 'r', 'r', 'o', 'r', 'M', 'e', 's', 's', 'a', 'g', 'e')
     RAPIDJSON_STRING_(Duplicates, 'd', 'u', 'p', 'l', 'i', 'c', 'a', 't', 'e', 's')
+#ifdef RAPIDJSON_YGGDRASIL
+    RAPIDJSON_STRING_(Circular, 'c', 'i', 'r', 'c', 'u', 'l', 'a', 'r')
+    RAPIDJSON_STRING_(Conflicting, 'c', 'o', 'n', 'f', 'l', 'i', 'c', 't', 'i', 'n', 'g')
+#endif //RAPIDJSON_YGGDRASIL
 #undef RAPIDJSON_STRING_
 
 #if RAPIDJSON_SCHEMA_VERBOSE
