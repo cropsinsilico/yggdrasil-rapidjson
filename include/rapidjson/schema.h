@@ -878,8 +878,10 @@ private:
       return false;
     while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
     RAPIDJSON_ASSERT(base->IsObject());
+    std::cerr << "HasMember type: " << base->GetType() << std::endl;
     base++;
     while (base != document_.StackTop()) {
+      std::cerr << "HasMember type: " << base->GetType() << std::endl;
       RAPIDJSON_ASSERT(base->IsString());
       if (*base == key) {
 	if (val && ((base + 1) != document_.StackTop()))
