@@ -889,7 +889,9 @@ private:
 			document_.GetAllocator());
 	return true;
       }
-      base += 2;
+      base++;
+      if (base == document_.StackTop()) break;
+      base++;
     }
     return false;
   }
