@@ -1848,9 +1848,9 @@ public:
         RAPIDJSON_NORMALIZER_(Key, str, len, copy);
 	(void)copy;
 #ifdef RAPIDJSON_YGGDRASIL
+	SValue dest;
 	if (child_aliases_.HasMember(str)) {
 	  SValue orig(str, len, *allocator_);
-	  SValue dest;
 	  if (!follow_aliases_(child_aliases_, orig, &dest, *allocator_)) {
 	    context.error_handler.CircularAlias(dest);
 	    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
