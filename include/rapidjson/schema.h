@@ -718,8 +718,12 @@ public:
 	if (!GetFinalAlias(context, aliases, orig, &primary))
 	  return false;
 	modified_ = true;
-	str = primary.GetString();
 	len = primary.GetStringLength();
+	Ch* str0 = 0;
+	str0 = static_cast<Ch *>(document_.GetAllocator().Malloc((len + 1) * sizeof(Ch)));
+	std::memcpy(str0, primary.GetString(), len * sizeof(Ch));
+	str0[len] = '\0';
+	str = str0;
       } else if (FindAliasValue(aliases, orig, match)) {
 	primary.CopyFrom(orig, document_.GetAllocator());
 	orig.CopyFrom(match->name, document_.GetAllocator());
