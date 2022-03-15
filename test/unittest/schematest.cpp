@@ -1841,7 +1841,23 @@ TEST(SchemaValidator, Schema) { // 32
         "  \"type\": \"schema\""
         "}");
   SchemaDocument s(sd);
+  VALIDATE(s, "{\"type\": \"string\"}", true);
   VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"", true);
+  INVALIDATE(s, "{\"type\": \"invalid\"}",
+	     "", "schema", "",
+	     "{ \"schema\": {"
+	     "    \"errorCode\": 32,"
+	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	     "    \"errors\": {"
+	     "        \"anyOf\": {"
+	     "            \"errorCode\": 24,"
+	     "            \"instanceRef\": \"#/type\","
+	     "            \"schemaRef\": \"#/properties/type\","
+	     "            \"errors\": ["
+	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
+	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
+	     "            ]"
+	     "}}}}");
   INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW52YWxpZCJ9-YGG-\"",
 	     "", "schema", "",
 	     "{ \"schema\": {"
@@ -1871,6 +1887,67 @@ TEST(SchemaValidator, Alias) {
         "}");
   SchemaDocument s(sd);
   VALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true);
+}
+
+TEST(SchemaValidator, SingularAlias) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"streets\": { \"type\": \"array\","
+	"                    \"items\": {\"type\": \"string\"},"
+	"                    \"allowSingular\": true,"
+	"                    \"aliases\": [\"street\"] }},"
+	"  \"required\": [\"streets\"]"
+        "}");
+  SchemaDocument s(sd);
+  VALIDATE(s, "{ \"streets\": \"1600 Pennsylvania Ave.\" }", true);
+  VALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true);
+}
+
+TEST(SchemaValidator, SingularAliasError) {
+  Document sd;
+  sd.Parse("{"
+	   "  \"type\": \"array\","
+	   "  \"allowSingular\": true,"
+	   "  \"items\": [{\"type\": \"string\"}]"
+	   "}");
+  SchemaDocument s(sd);
+  INVALIDATE(s, "{\"Not\": \"an array\"}", "", "type", "",
+	     "{ \"type\": {"
+	     "    \"errorCode\": 20,"
+	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	     "    \"expected\": [\"array\"], \"actual\": \"object\""
+	     "}}");
+  VALIDATE(s, "\"string\"", true);
+}
+
+TEST(SchemaValidator, SingularAliasSchema) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"array\","
+        "  \"allowSingular\": true,"
+        "  \"items\": {\"type\": \"schema\"}"
+        "}");
+  SchemaDocument s(sd);
+  VALIDATE(s, "{\"type\": \"string\"}", true);
+  INVALIDATE(s, "{\"type\": \"invalid\"}",
+	     "", "schema", "",
+	     "{ \"schema\": {"
+	     "    \"errorCode\": 32,"
+	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#/items\","
+	     "    \"errors\": {"
+	     "        \"anyOf\": {"
+	     "            \"errorCode\": 24,"
+	     "            \"instanceRef\": \"#/type\","
+	     "            \"schemaRef\": \"#/properties/type\","
+	     "            \"errors\": ["
+	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
+	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
+	     "            ]"
+	     "}}}}");
 }
 
 TEST(SchemaValidator, CircularAliases) {

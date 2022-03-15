@@ -261,6 +261,7 @@ public:
   virtual void DuplicateAlias(const SValue& base, const SValue& alias) = 0;
   virtual void CircularAlias(const SValue& alias) = 0;
   virtual void ConflictingAliases(const SValue& alias, const SValue& base1, const SValue& base2) = 0;
+  virtual ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -1051,7 +1052,7 @@ public:
 
     Schema(SchemaDocumentType* schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document, AllocatorType* allocator, const UriType& id = UriType()
 #ifdef RAPIDJSON_YGGDRASIL
-	   , const bool isMetaschema = false
+	   , const bool isMetaschema = false, const bool singular = false
 #endif // RAPIDJSON_YGGDRASIL
 	   ) :
         allocator_(allocator),
@@ -1101,7 +1102,8 @@ public:
 	isMetaschema_(isMetaschema),
 	metaschema_(),
 	metaschemaValidatorIndex_(),
-	aliases_(kArrayType), child_aliases_(kObjectType), hasAliases_(false)
+	aliases_(kArrayType), child_aliases_(kObjectType), hasAliases_(false),
+	allowSingular_(false)
 #endif // RAPIDJSON_YGGDRASIL
     {
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
@@ -1129,6 +1131,23 @@ public:
             }
         }
 
+#ifdef RAPIDJSON_YGGDRASIL
+	if (const ValueType* v = GetMember(value, GetAliasesString())) {
+	  if (v->IsArray())
+	    aliases_.CopyFrom(*v, *allocator_);
+	}
+	if (schemaDocument && !singular) {
+	  AssignSingularIfExist(*schemaDocument, p, value, GetAllowSingularString(), document);
+	  if ((allowSingular_) && (!allowSingularSchema_.schemas))
+	    AssignSingularIfExist(*schemaDocument, p, value, GetItemsString(), document);
+	  if (allowSingularSchema_.schemas) {
+	    schemaDocument->CreateSchema(&allowSingularSchema_.schemas[0], p, value, document, id_, true);
+	    RAPIDJSON_ASSERT(!allowSingularSchema_.schemas[0]->allowSingularSchema_.schemas);
+	    return;
+	  }
+	}
+#endif // RAPIDJSON_YGGDRASIL
+	
         if (const ValueType* v = GetMember(value, GetTypeString())) {
             type_ = 0;
 #ifdef RAPIDJSON_YGGDRASIL
@@ -1212,13 +1231,6 @@ public:
                 }
             }
         }
-
-#ifdef RAPIDJSON_YGGDRASIL
-	if (const ValueType* v = GetMember(value, GetAliasesString())) {
-	  if (v->IsArray())
-	    aliases_.CopyFrom(*v, *allocator_);
-	}
-#endif // RAPIDJSON_YGGDRASIL
 
         if (properties && properties->IsObject()) {
             PointerType q = p.Append(GetPropertiesString(), allocator_);
@@ -1577,6 +1589,14 @@ public:
 	      RAPIDJSON_INVALID_KEYWORD_RETURN(code);
 	    }
 
+	    if (allowSingularSchema_.schemas) {
+	      if (!((context.validators[allowSingularSchema_.begin]->IsValid()) ||
+		    (context.validators[allowSingularSchema_.begin + 1]->IsValid()))) {
+		ValidateErrorCode code = context.error_handler.NotSingularItem(&context.validators[allowSingularSchema_.begin]);
+		RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+	      }
+	    }
+
 	    if (context.normalized) {
 	      for (SizeType i = 0; i < context.validatorCount; i++) {
 		if (context.validators[i]->IsValid()) {
@@ -1606,6 +1626,17 @@ public:
 
 	      if (oneOf_.schemas) {
                 for (SizeType i = oneOf_.begin; i < oneOf_.begin + oneOf_.count; i++) {
+		  if (context.validators[i]->IsValid()) {
+		    if (!context.normalized->ExtendChild(context, *this,
+							 context.validators[i]->GetValidatorID()))
+		      return false;
+		    break;
+		  }
+		}
+	      }
+	      
+	      if (allowSingularSchema_.schemas) {
+                for (SizeType i = allowSingularSchema_.begin; i < allowSingularSchema_.begin + allowSingularSchema_.count; i++) {
 		  if (context.validators[i]->IsValid()) {
 		    if (!context.normalized->ExtendChild(context, *this,
 							 context.validators[i]->GetValidatorID()))
@@ -2115,6 +2146,7 @@ public:
     RAPIDJSON_STRING_(Args, 'a', 'r', 'g', 's')
     RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
     RAPIDJSON_STRING_(Aliases, 'a', 'l', 'i', 'a', 's', 'e', 's')
+    RAPIDJSON_STRING_(AllowSingular, 'a', 'l', 'l', 'o', 'w', 'S', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
     // Subtypes
     RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'g')
     RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
@@ -2191,6 +2223,33 @@ protected:
         typename ValueType::ConstMemberIterator itr = value.FindMember(name);
         return itr != value.MemberEnd() ? &(itr->value) : 0;
     }
+
+#ifdef RAPIDJSON_YGGDRASIL
+  void AssignSingularIfExist(SchemaDocumentType& schemaDocument, const PointerType& p, const ValueType& value, const ValueType& name, const ValueType& document) {
+    if (const ValueType* v = GetMember(value, name)) {
+      if (v->IsBool()) {
+	allowSingular_ = v->GetBool();
+	return;
+      }
+      const ValueType* v0 = nullptr;
+      PointerType q = p.Append(name, allocator_);
+      if (v->IsObject()) {
+	v0 = v;
+      } else if (v->IsArray() && (v->Size() == 1)) {
+	v0 = &((*v)[0]);
+	q = q.Append(0, allocator_);
+      }
+      if (v0) {
+	allowSingularSchema_.count = 2;
+	allowSingularSchema_.schemas = static_cast<const Schema**>(allocator_->Malloc(allowSingularSchema_.count * sizeof(const Schema*)));
+	memset(allowSingularSchema_.schemas, 0, sizeof(Schema*)* allowSingularSchema_.count);
+	schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_);
+	allowSingularSchema_.begin = validatorCount_;
+	validatorCount_ += allowSingularSchema_.count;
+      }
+    }
+  }
+#endif // RAPIDJSON_YGGDRASIL
 
     static void AssignIfExist(bool& out, const ValueType& value, const ValueType& name) {
         if (const ValueType* v = GetMember(value, name))
@@ -2353,9 +2412,11 @@ protected:
             }
 	    
 #ifdef RAPIDJSON_YGGDRASIL
-	    if (metaschema_) {
+	    if (metaschema_)
 	      context.validators[metaschemaValidatorIndex_] = context.factory.CreateSchemaValidator(*metaschema_, false);
-	    }
+	    
+	    if (allowSingularSchema_.schemas)
+	      CreateSchemaValidators(context, allowSingularSchema_, false);
 #endif // RAPIDJSON_YGGDRASIL
 	    
         }
@@ -2662,8 +2723,6 @@ protected:
     Py_DECREF(pyobj);
     return true;
   }
-  // template <typename ObjectType>
-  bool CheckSchema(Context& context, const typename ValueType::ConstObject& o) const;
 
 #endif // RAPIDJSON_YGGDRASIL
 
@@ -2754,6 +2813,8 @@ protected:
     SValue aliases_;
     SValue child_aliases_;
     bool hasAliases_;
+    SchemaArray allowSingularSchema_;
+    bool allowSingular_;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -2969,7 +3030,19 @@ private:
     }
 
     // Changed by PR #1393
-    const UriType& CreateSchema(const SchemaType** schema, const PointerType& pointer, const ValueType& v, const ValueType& document, const UriType& id) {
+    const UriType& CreateSchema(const SchemaType** schema, const PointerType& pointer, const ValueType& v, const ValueType& document, const UriType& id
+#ifdef RAPIDJSON_YGGDRASIL
+		, bool singular=false
+#endif // RAPIDJSON_YGGDRASIL
+				) {
+#ifdef RAPIDJSON_YGGDRASIL
+        if (singular && v.IsObject() && (!HandleRefSchema(pointer, schema, v, document, id))) {
+	  SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id, isMetaschema_, singular);
+	  if (schema)
+	    *schema = s;
+	  return s->GetId();
+	}
+#endif // RAPIDJSON_YGGDRASIL
         RAPIDJSON_ASSERT(pointer.IsValid());
         if (v.IsObject()) {
             if (const SchemaType* sc = GetSchema(pointer)) {
@@ -2981,7 +3054,7 @@ private:
                 // The new schema constructor adds itself and its $ref(s) to schemaMap_
 	        SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id
 #ifdef RAPIDJSON_YGGDRASIL
-		, isMetaschema_
+		, isMetaschema_, singular
 #endif // RAPIDJSON_YGGDRASIL
 		);
                 if (schema)
@@ -3654,7 +3727,17 @@ public:
 			    GetStateAllocator());
     AddCurrentError(kNormalizeErrorConflictingAliases, true);
   }
-
+  ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) {
+    ISchemaValidator* subv = subvalidator[0];
+    if (static_cast<GenericSchemaValidator*>(subvalidator[1])->GetError().MemberBegin()->name != GetTypeString())
+      subv = subvalidator[1];
+    error_.CopyFrom(static_cast<GenericSchemaValidator*>(subv)->GetError(), GetStateAllocator());
+    RAPIDJSON_ASSERT(error_.IsObject() && (error_.MemberCount() == 1));
+    typename ValueType::ConstMemberIterator m = error_.MemberBegin();
+    typename ValueType::ConstMemberIterator vcode = m->value.FindMember(GetErrorCodeString());
+    RAPIDJSON_ASSERT(vcode != m->value.MemberEnd());
+    return static_cast<ValidateErrorCode>(vcode->value.GetUint());
+  }
 #endif // RAPIDJSON_YGGDRASIL
   
 
@@ -3678,6 +3761,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
     RAPIDJSON_STRING_(Circular, 'c', 'i', 'r', 'c', 'u', 'l', 'a', 'r')
     RAPIDJSON_STRING_(Conflicting, 'c', 'o', 'n', 'f', 'l', 'i', 'c', 't', 'i', 'n', 'g')
+    RAPIDJSON_STRING_(Type, 't', 'y', 'p', 'e')
 #endif //RAPIDJSON_YGGDRASIL
 #undef RAPIDJSON_STRING_
 

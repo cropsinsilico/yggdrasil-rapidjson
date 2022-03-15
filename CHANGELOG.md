@@ -29,7 +29,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Unit-full type
 * Schema type
 * Continuous integration
-* Validation of circular & conflicting aliases
+* Validation of circular, conflicting, & singular aliases
 * Normalization of default & aliases w/ error handling
 
 ## [Unreleased]
