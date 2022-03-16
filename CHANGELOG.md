@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add normalization
 	- units
 	- type (int -> double)
-	- allow singular (put non-array value in an array)
+	- test for error on conflicting aliases
 
 ### COMPLETE
 * Added schema to document class
@@ -30,7 +30,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Schema type
 * Continuous integration
 * Validation of circular, conflicting, & singular aliases
-* Normalization of default & aliases w/ error handling
+* Normalization of default, aliases, & allowSingular w/ error handling
 
 ## [Unreleased]
 

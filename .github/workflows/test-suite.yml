@@ -29,8 +29,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libc6-dbg gdb valgrind --fix-missing
-          # sudo apt upgrade --fix-missing
+          sudo apt-get install -y libc6-dbg gdb valgrind
+          sudo apt upgrade --fix-missing
           # sudo apt autoremove -y
           # sudo apt autoclean -y
       - name: Setup Python

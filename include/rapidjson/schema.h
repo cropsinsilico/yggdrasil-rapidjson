@@ -262,6 +262,7 @@ public:
   virtual void CircularAlias(const SValue& alias) = 0;
   virtual void ConflictingAliases(const SValue& alias, const SValue& base1, const SValue& base2) = 0;
   virtual ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) = 0;
+  virtual void NormalizationMergeConflict(const SValue& cond) = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -469,6 +470,12 @@ struct SchemaValidationContext {
 
 #ifdef RAPIDJSON_YGGDRASIL
 
+enum SingularFlag {
+  kSingularNoFlags = 0,
+  kSingularArray = 1,
+  kSingularItem = 2
+};
+
 // template<typename ValueType>
 // void printAliases_(const ValueType& aliases) {
 //   RAPIDJSON_ASSERT(aliases.IsObject());
@@ -537,7 +544,7 @@ public:
     valueStack_(stackAllocator, stackCapacity),
     childStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
-    aliases_(kObjectType) {}
+    aliases_(kObjectType), inSingular_(false) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent, unsigned& index,
 			    size_t stackCapacity = kDefaultStackCapacity,
 			    StackAllocator* stackAllocator = 0) :
@@ -548,7 +555,7 @@ public:
     valueStack_(stackAllocator, stackCapacity),
     childStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
-    aliases_(kObjectType) {
+    aliases_(kObjectType), inSingular_(false) {
     parent->AddChild(this);
   }
 
@@ -613,7 +620,8 @@ public:
     return out;
   }
 
-  bool BeginValue(Context& context) {
+  bool BeginValue(Context& context, const SchemaType& schema) {
+    if (!BeginValueDirect(context, schema)) return false;
     if (context.inArray)
       PushValue(CurrentValue()[context.arrayElementIndex]);
     if (CurrentKey())
@@ -621,7 +629,7 @@ public:
     PushKey();
     return true;
   }
-  bool EndValue(Context& context) {
+  bool EndValue(Context& context, const SchemaType& schema) {
     PopKey();
     if (context.inArray)
       PopValue();
@@ -629,15 +637,45 @@ public:
       PopValue();
       PopKey();
     }
+    return EndValueDirect(context, schema);
+  }
+  bool BeginValueDirect(Context& context, const SchemaType& schema) {
+    if ((schema.isSingular_ == kSingularItem) && (ToggleSingular())) {
+      modified_ = true;
+      return StartArray(context, schema);
+    }
+    return true;
+  }
+  bool EndValueDirect(Context& context, const SchemaType& schema) {
+    if ((schema.isSingular_ == kSingularItem) && (ToggleSingular()))
+      return EndArray(context, schema, 1);
     return true;
   }
   
-#define NORMALIZE_(method, arg)			\
-  if ((!extending_) || appending_)		\
+#define NORMALIZE_NONE_(method, arg)			\
+  if ((!extending_) || appending_)			\
     return document_.method arg;
 
-#define BEGIN_NORMALIZE_(method, arg1, arg2)				\
-  NORMALIZE_(method, arg1);						\
+#define NORMALIZE_START_(method, arg)				\
+  if ((!extending_) || appending_) {				\
+    if (!BeginValueDirect(context, schema)) return false;	\
+    return document_.method arg;				\
+  }
+  
+#define NORMALIZE_END_(method, arg)			\
+  if ((!extending_) || appending_) {			\
+    if (!document_.method arg) return false;		\
+    return EndValueDirect(context, schema);		\
+  }
+  
+#define NORMALIZE_FULL_(method, arg)				\
+  if ((!extending_) || appending_) {				\
+    if (!BeginValueDirect(context, schema)) return false;	\
+    if (!document_.method arg) return false;			\
+    return EndValueDirect(context, schema);			\
+  }
+
+#define NORMALIZE_MISSING_KEY_(arg2)					\
   if (CurrentKey() && !CurrentValue()->HasMember(CurrentKey()->GetString())) { \
     ValueType tmp(CurrentKey()->GetString(),				\
 		  CurrentKey()->GetStringLength(),			\
@@ -645,68 +683,78 @@ public:
     CurrentValue()->AddMember(tmp, ValueType arg2,			\
 			      document_.GetAllocator());		\
   }									\
-  if (!BeginValue(context)) return false;				\
-  
-#define NORMALIZE_VALUE_(method, value)				\
-  BEGIN_NORMALIZE_(method, (value), (value));			\
-  if (!CurrentValue()->Is ## method()) return false;		\
-  if (value != CurrentValue()->Get ## method()) return false;	\
-  return EndValue(context)
 
-  bool Null(Context& context, const SchemaType&) {
+#define BEGIN_NORMALIZE_(method, arg1, arg2)				\
+  NORMALIZE_FULL_(method, arg1);					\
+  NORMALIZE_MISSING_KEY_(arg2);						\
+  if (!BeginValue(context, schema)) return false;
+  
+#define BEGIN_NORMALIZE_START_(method, arg1, arg2)			\
+  NORMALIZE_START_(method, arg1);					\
+  NORMALIZE_MISSING_KEY_(arg2);						\
+  if (!BeginValue(context, schema)) return false;
+  
+#define REQUIRED_PROPERTY_(method, cond)				\
+  if (!(cond)) {							\
+    ValueType vcond(SchemaType::Get ## method ## String(), document_.GetAllocator()); \
+    context.error_handler.NormalizationMergeConflict(vcond);		\
+    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
+  }
+
+#define NORMALIZE_VALUE_(method, value)					\
+  BEGIN_NORMALIZE_(method, (value), (value));				\
+  REQUIRED_PROPERTY_(method, (CurrentValue()->Is ## method()));		\
+  REQUIRED_PROPERTY_(method, (value == CurrentValue()->Get ## method())); \
+  return EndValue(context, schema)
+
+  bool Null(Context& context, const SchemaType& schema) {
     BEGIN_NORMALIZE_(Null, (), ());
-    if (!CurrentValue()->IsNull()) return false;
-    return EndValue(context);
+    REQUIRED_PROPERTY_(Null, CurrentValue()->IsNull());
+    return EndValue(context, schema);
   }
-  bool Bool(Context& context, const SchemaType&, bool b)       { NORMALIZE_VALUE_(Bool,   b); }
-  bool Int(Context& context, const SchemaType&, int i)         { NORMALIZE_VALUE_(Int,    i); }
-  bool Uint(Context& context, const SchemaType&, unsigned u)   { NORMALIZE_VALUE_(Uint,   u); }
-  bool Int64(Context& context, const SchemaType&, int64_t i)   { NORMALIZE_VALUE_(Int64,  i); }
-  bool Uint64(Context& context, const SchemaType&, uint64_t u) { NORMALIZE_VALUE_(Uint64, u); }
-  bool Double(Context& context, const SchemaType&, double d)   {
+  bool Bool(Context& context, const SchemaType& schema, bool b)       { NORMALIZE_VALUE_(Bool,   b); }
+  bool Int(Context& context, const SchemaType& schema, int i)         { NORMALIZE_VALUE_(Int,    i); }
+  bool Uint(Context& context, const SchemaType& schema, unsigned u)   { NORMALIZE_VALUE_(Uint,   u); }
+  bool Int64(Context& context, const SchemaType& schema, int64_t i)   { NORMALIZE_VALUE_(Int64,  i); }
+  bool Uint64(Context& context, const SchemaType& schema, uint64_t u) { NORMALIZE_VALUE_(Uint64, u); }
+  bool Double(Context& context, const SchemaType& schema, double d)   {
     BEGIN_NORMALIZE_(Double, (d), (d));
-    if (!CurrentValue()->IsDouble()) return false;
+    REQUIRED_PROPERTY_(Double, CurrentValue()->IsDouble());
     double b = CurrentValue()->GetDouble();
-    if (!(d >= b && d <= b)) return false;
-    return EndValue(context);
+    REQUIRED_PROPERTY_(Double, (d >= b && d <= b));
+    return EndValue(context, schema);
   }
-  bool String(Context& context, const SchemaType&, const Ch* str, SizeType length, bool copy) {
+  bool String(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy) {
     BEGIN_NORMALIZE_(String, (str, length, copy), (str, length, document_.GetAllocator()));
-    if (!CurrentValue()->IsString()) return false;
-    if (internal::StrCmp(str, CurrentValue()->GetString()) != 0) return false;
-    return EndValue(context);
+    REQUIRED_PROPERTY_(String, CurrentValue()->IsString());
+    REQUIRED_PROPERTY_(String, (internal::StrCmp(str, CurrentValue()->GetString()) == 0));
+    return EndValue(context, schema);
   }
   template <typename YggSchemaValueType>
-  bool YggdrasilString(Context& context, const SchemaType&, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
+  bool YggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
     BEGIN_NORMALIZE_(YggdrasilString, (str, length, copy, valueSchema),
 		     (str, length, valueSchema));
-    if (!CurrentValue()->IsYggdrasil()) return false;
-    if (CurrentValue()->GetValueSchema() != valueSchema) return false;
-    if (!CurrentValue()->IsString()) return false;
-    if (internal::StrCmp(str, CurrentValue()->GetString()) != 0) return false;
-    return EndValue(context);
+    REQUIRED_PROPERTY_(YggdrasilString, CurrentValue()->IsYggdrasil());
+    REQUIRED_PROPERTY_(YggdrasilString, (CurrentValue()->GetValueSchema() == valueSchema));
+    REQUIRED_PROPERTY_(YggdrasilString, CurrentValue()->IsString());
+    REQUIRED_PROPERTY_(YggdrasilString, (internal::StrCmp(str, CurrentValue()->GetString()) == 0));
+    return EndValue(context, schema);
   }
   template <typename YggSchemaValueType>
-  bool YggdrasilStartObject(Context& context, const SchemaType&, YggSchemaValueType& valueSchema) {
-    BEGIN_NORMALIZE_(YggdrasilStartObject, (valueSchema), (kObjectType, valueSchema));
-    if (!CurrentValue()->IsYggdrasil()) return false;
-    if (CurrentValue()->GetValueSchema() != valueSchema) return false;
-    return CurrentValue()->IsObject();
+  bool YggdrasilStartObject(Context& context, const SchemaType& schema, YggSchemaValueType& valueSchema) {
+    BEGIN_NORMALIZE_START_(YggdrasilStartObject, (valueSchema), (kObjectType, valueSchema));
+    REQUIRED_PROPERTY_(YggdrasilObject, CurrentValue()->IsYggdrasil());
+    REQUIRED_PROPERTY_(YggdrasilObject, (CurrentValue()->GetValueSchema() == valueSchema));
+    REQUIRED_PROPERTY_(YggdrasilObject, CurrentValue()->IsObject());
+    return true;
   }
-  bool YggdrasilEndObject(Context& context, const SchemaType&, SizeType memberCount) {
-    NORMALIZE_(YggdrasilEndObject, (memberCount));
-    return EndValue(context);
+  bool YggdrasilEndObject(Context& context, const SchemaType& schema, SizeType memberCount) {
+    NORMALIZE_END_(YggdrasilEndObject, (memberCount));
+    return EndValue(context, schema);
   }
-  bool StartObject(Context& context, const SchemaType&) {
-    BEGIN_NORMALIZE_(StartObject, (), (kObjectType));
-    return CurrentValue()->IsObject();
-  }
-  bool GetFinalAlias(Context& context, const ValueType& aliases,
-		     const ValueType& orig, ValueType* dest) {
-    if (!follow_aliases_(aliases, orig, dest, document_.GetAllocator())) {
-      context.error_handler.CircularAlias(*dest);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
-    }
+  bool StartObject(Context& context, const SchemaType& schema) {
+    BEGIN_NORMALIZE_START_(StartObject, (), (kObjectType));
+    REQUIRED_PROPERTY_(Object, CurrentValue()->IsObject());
     return true;
   }
   bool Key(Context& context, const SchemaType& schema, const Ch*& str, SizeType& len, bool copy, bool dont_check_aliases=false) {
@@ -738,7 +786,7 @@ public:
 	}
       }
     }
-    NORMALIZE_(Key, (str, len, copy));
+    NORMALIZE_NONE_(Key, (str, len, copy));
     PushKey(str, len);
     return true;
   }
@@ -763,20 +811,32 @@ public:
       }
     }
     // Do EndObject
-    NORMALIZE_(EndObject, (memberCount));
-    return EndValue(context);
+    NORMALIZE_END_(EndObject, (memberCount));
+    return EndValue(context, schema);
   }
-  bool StartArray(Context& context, const SchemaType&) {
-    BEGIN_NORMALIZE_(StartArray, (), (kArrayType));
-    return CurrentValue()->IsArray();
+  bool StartArray(Context& context, const SchemaType& schema) {
+    BEGIN_NORMALIZE_START_(StartArray, (), (kArrayType));
+    REQUIRED_PROPERTY_(Array, (schema.allowSingular_ || CurrentValue()->IsArray()));
+    return true;
   }
-  bool EndArray(Context& context, const SchemaType&, SizeType elementCount) {
-    NORMALIZE_(EndArray, (elementCount));
-    return EndValue(context);
+  bool EndArray(Context& context, const SchemaType& schema, SizeType elementCount) {
+    NORMALIZE_END_(EndArray, (elementCount));
+    if (schema.allowSingular_) {
+      ValueType tmp(kArrayType);
+      tmp.PushBack(*CurrentValue(), document_.GetAllocator());
+      CurrentValue()->Swap(tmp);
+    }
+    return EndValue(context, schema);
   }
 
-#undef NORMALIZE_
+#undef REQUIRED_PROPERTY_
+#undef NORMALIZE_NONE_
+#undef NORMALIZE_START_
+#undef NORMALIZE_END_
+#undef NORMALIZE_FULL_
+#undef NORMALIZE_MISSING_KEY_
 #undef BEGIN_NORMALIZE_
+#undef BEGIN_NORMALIZE_START_
 #undef NORMALIZE_VALUE_
 
 #define NORMALIZE_HANDLER_(method, ...)					\
@@ -819,6 +879,11 @@ public:
       
 private:
 
+  bool ToggleSingular() {
+    inSingular_ = (!inSingular_);
+    return inSingular_;
+  }
+
   ValueType* CurrentValue() {
     if (extending_ && !appending_) {
       RAPIDJSON_ASSERT(!valueStack_.Empty());
@@ -850,6 +915,14 @@ private:
     ValueType** ref = keyStack_.template Pop<ValueType*>(1);
     if (ref[0])
       delete ref[0];
+  }
+  bool GetFinalAlias(Context& context, const ValueType& aliases,
+		     const ValueType& orig, ValueType* dest) {
+    if (!follow_aliases_(aliases, orig, dest, document_.GetAllocator())) {
+      context.error_handler.CircularAlias(*dest);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
+    }
+    return true;
   }
   ValueType GetAddress(bool parent=true) {
     RAPIDJSON_ASSERT(documentStack_);
@@ -948,8 +1021,7 @@ private:
 	  }
 	  ValueType* base = Address2Value(it->name, root, unfinalized);
 	  if (!base) continue;
-	  RAPIDJSON_ASSERT(base->IsObject());
-	  if (base->HasMember(v->name)) {
+	  if (base->IsObject() && (base->HasMember(v->name))) {
 	    typename ValueType::MemberIterator old = base->FindMember(v->name);
 	    if (base->HasMember(primary)) {
 	      typename ValueType::MemberIterator alt = base->FindMember(primary);
@@ -1025,6 +1097,7 @@ private:
   internal::Stack<AllocatorType> childStack_;
   internal::Stack<AllocatorType>* documentStack_;
   ValueType aliases_;
+  bool inSingular_;
 };
 
 #endif // RAPIDJSON_YGGDRASIL
@@ -1052,7 +1125,7 @@ public:
 
     Schema(SchemaDocumentType* schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document, AllocatorType* allocator, const UriType& id = UriType()
 #ifdef RAPIDJSON_YGGDRASIL
-	   , const bool isMetaschema = false, const bool singular = false
+	   , const bool isMetaschema = false, const SingularFlag isSingular = kSingularNoFlags
 #endif // RAPIDJSON_YGGDRASIL
 	   ) :
         allocator_(allocator),
@@ -1103,7 +1176,7 @@ public:
 	metaschema_(),
 	metaschemaValidatorIndex_(),
 	aliases_(kArrayType), child_aliases_(kObjectType), hasAliases_(false),
-	allowSingular_(false)
+	allowSingular_(false), isSingular_(isSingular)
 #endif // RAPIDJSON_YGGDRASIL
     {
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
@@ -1136,12 +1209,13 @@ public:
 	  if (v->IsArray())
 	    aliases_.CopyFrom(*v, *allocator_);
 	}
-	if (schemaDocument && !singular) {
+	if (schemaDocument && (isSingular_ != kSingularArray)) {
 	  AssignSingularIfExist(*schemaDocument, p, value, GetAllowSingularString(), document);
 	  if ((allowSingular_) && (!allowSingularSchema_.schemas))
 	    AssignSingularIfExist(*schemaDocument, p, value, GetItemsString(), document);
 	  if (allowSingularSchema_.schemas) {
-	    schemaDocument->CreateSchema(&allowSingularSchema_.schemas[0], p, value, document, id_, true);
+	    allowSingular_ = true;
+	    schemaDocument->CreateSchema(&allowSingularSchema_.schemas[0], p, value, document, id_, kSingularArray);
 	    RAPIDJSON_ASSERT(!allowSingularSchema_.schemas[0]->allowSingularSchema_.schemas);
 	    return;
 	  }
@@ -1598,15 +1672,7 @@ public:
 	    }
 
 	    if (context.normalized) {
-	      for (SizeType i = 0; i < context.validatorCount; i++) {
-		if (context.validators[i]->IsValid()) {
-		  if (!context.normalized->ExtendChild(context, *this,
-						       context.validators[i]->GetValidatorID()))
-		    return false;
-		  break;
-		}
-	      }
-	      
+
 	      if (allOf_.schemas)
                 for (SizeType i = allOf_.begin; i < allOf_.begin + allOf_.count; i++)
 		  if (!context.normalized->ExtendChild(context, *this,
@@ -2066,6 +2132,7 @@ public:
 	    case kNormalizeErrorAliasDuplicate:         return GetAliasesString();
 	    case kNormalizeErrorCircularAlias:          return GetAliasesString();
 	    case kNormalizeErrorConflictingAliases:     return GetAliasesString();
+	    case kNormalizeErrorMergeConflict:          return GetNormalizationString();
 #endif // RAPIDJSON_YGGDRASIL
 
             default:                                    return GetNullString();
@@ -2155,6 +2222,14 @@ public:
     RAPIDJSON_STRING_(ComplexSubType, 'c', 'o', 'm', 'p', 'l', 'e', 'x')
     // Normalization
     RAPIDJSON_STRING_(Normalization, 'n', 'o', 'r', 'm', 'a', 'l', 'i', 'z', 'a', 't', 'i', 'o', 'n')
+    RAPIDJSON_STRING_(Bool, 'b', 'o', 'o', 'l')
+    RAPIDJSON_STRING_(Double, 'd', 'o', 'u', 'b', 'l', 'e')
+    RAPIDJSON_STRING_(Int, 'i', 'n', 't')
+    RAPIDJSON_STRING_(Uint, 'u', 'i', 'n', 't')
+    RAPIDJSON_STRING_(Int64, 'i', 'n', 't', '6', '4')
+    RAPIDJSON_STRING_(Uint64, 'u', 'i', 'n', 't', '6', '4')
+    RAPIDJSON_STRING_(YggdrasilObject, 'y', 'g', 'g', 'O', 'b', 'j', 'e', 'c', 't')
+    RAPIDJSON_STRING_(YggdrasilString, 'y', 'g', 'g', 'S', 't', 'r', 'i', 'n', 'g')
 #endif // RAPIDJSON_YGGDRASIL
 
 #undef RAPIDJSON_STRING_
@@ -2243,7 +2318,7 @@ protected:
 	allowSingularSchema_.count = 2;
 	allowSingularSchema_.schemas = static_cast<const Schema**>(allocator_->Malloc(allowSingularSchema_.count * sizeof(const Schema*)));
 	memset(allowSingularSchema_.schemas, 0, sizeof(Schema*)* allowSingularSchema_.count);
-	schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_);
+	schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_, kSingularItem);
 	allowSingularSchema_.begin = validatorCount_;
 	validatorCount_ += allowSingularSchema_.count;
       }
@@ -2815,6 +2890,7 @@ protected:
     bool hasAliases_;
     SchemaArray allowSingularSchema_;
     bool allowSingular_;
+    SingularFlag isSingular_;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -3032,7 +3108,7 @@ private:
     // Changed by PR #1393
     const UriType& CreateSchema(const SchemaType** schema, const PointerType& pointer, const ValueType& v, const ValueType& document, const UriType& id
 #ifdef RAPIDJSON_YGGDRASIL
-		, bool singular=false
+		, internal::SingularFlag singular=internal::kSingularNoFlags
 #endif // RAPIDJSON_YGGDRASIL
 				) {
 #ifdef RAPIDJSON_YGGDRASIL
@@ -3737,6 +3813,13 @@ public:
     typename ValueType::ConstMemberIterator vcode = m->value.FindMember(GetErrorCodeString());
     RAPIDJSON_ASSERT(vcode != m->value.MemberEnd());
     return static_cast<ValidateErrorCode>(vcode->value.GetUint());
+  }
+  void NormalizationMergeConflict(const SValue& cond) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetConflictingString(),
+			    ValueType(cond, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    AddCurrentError(kNormalizeErrorMergeConflict, true);
   }
 #endif // RAPIDJSON_YGGDRASIL
   

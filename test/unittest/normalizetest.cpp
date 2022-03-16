@@ -230,6 +230,25 @@ TEST(SchemaNormalizer, Alias) {
 		     "}}");
 }
 
+TEST(SchemaNormalizer, SingularAlias) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"streets\": { \"type\": \"array\","
+	"                    \"items\": {\"type\": \"string\"},"
+	"                    \"allowSingular\": true,"
+	"                    \"aliases\": [\"street\"] }},"
+	"  \"required\": [\"streets\"]"
+        "}");
+  SchemaDocument s(sd);
+  NORMALIZE(s, "{ \"streets\": \"1600 Pennsylvania Ave.\" }", true,
+	    "{ \"streets\": [\"1600 Pennsylvania Ave.\"] }");
+  NORMALIZE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true,
+	    "{ \"streets\": [\"1600 Pennsylvania Ave.\"] }");
+}
+
 TEST(SchemaNormalizer, AliasCircular) {
     Document sd;
     sd.Parse(

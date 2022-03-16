@@ -204,6 +204,7 @@ enum ValidateErrorCode {
     kNormalizeErrorAliasDuplicate,             //!< Aliased property already exists in the normalized document.
     kNormalizeErrorCircularAlias,              //!< Property has circular aliases.
     kNormalizeErrorConflictingAliases,         //!< Property has conflicting aliases.
+    kNormalizeErrorMergeConflict,              //!< Property has conflicting normalized documents.
 #endif // RAPIDJSON_YGGDRASIL
 };
 
