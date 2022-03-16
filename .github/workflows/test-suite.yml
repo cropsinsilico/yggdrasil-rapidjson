@@ -57,7 +57,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DPython3_ROOT_DIR=${pythonLocation}
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DPython3_ROOT_DIR=${pythonLocation} -DRAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF
       - name: Build
         run: |
           cd build

@@ -1767,6 +1767,7 @@ public:
       RAPIDJSON_ASSERT(deg->values.size() == 2);
       n = deg->values[1];
     }
+    (void)n;
     RAPIDJSON_ASSERT(values.size() == ((n + 1)*(n + 1)));
   }
   //! \copydoc ObjElement::read_values

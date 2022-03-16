@@ -576,6 +576,7 @@ public:
     RAPIDJSON_ASSERT(from_table(str));
     power_ = power; // Base units do not have powers
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
+    (void)str;
   }
   //! \brief Set instance attributes based on an entry from one of the lookup
   //!   tables.
@@ -1200,7 +1201,7 @@ class OperatorToken : public TokenBase<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
   OperatorToken(const Ch op0, TokenBase<Encoding> *parent0=nullptr) : TokenBase<Encoding>(kOperatorToken, parent0), op(op0) { this->finalize(); }
-  void append(const Ch c) override { RAPIDJSON_ASSERT(!c); } // GCOVR_EXCL_LINE
+  void append(const Ch c) override { RAPIDJSON_ASSERT(!c); (void)c; } // GCOVR_EXCL_LINE
   Units<Encoding> operate(const Units<Encoding>& a, const Units<Encoding>& b) {
     switch (op) {
     case '*':
