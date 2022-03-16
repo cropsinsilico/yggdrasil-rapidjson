@@ -31,6 +31,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libc6-dbg gdb valgrind
           sudo apt upgrade --fix-missing
+          valgrind --version
           # sudo apt autoremove -y
           # sudo apt autoclean -y
       - name: Setup Python
