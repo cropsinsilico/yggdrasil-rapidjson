@@ -15,7 +15,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add normalization
 	- units
 	- type (int -> double)
-	- test for error on conflicting aliases
 
 ### COMPLETE
 * Added schema to document class

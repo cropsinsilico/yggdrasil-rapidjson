@@ -147,6 +147,63 @@ TEST(SchemaNormalizer, Default) {
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }");
 }
 
+TEST(SchemaNormalizer, MergeConflict) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"allOf\": ["
+        "    { \"properties\": {"
+        "        \"shipping_address\": { \"default\": \"a\" }},"
+	"      \"required\": [\"shipping_address\"]"
+	"    },"
+        "    { \"properties\": {"
+        "        \"shipping_address\": { \"default\": \"b\" }},"
+	"      \"required\": [\"shipping_address\"]"
+	"    }"
+	"  ]"
+        "}");
+    SchemaDocument s(sd);
+    FAILED_NORMALIZE(s, "{}", "", "normalization", "",
+		     "{ \"normalization\": {"
+		     "    \"errorCode\": 36,"
+		     "    \"instanceRef\": \"#/shipping_address\","
+		     "    \"schemaRef\": \"#/allOf/1\","
+		     "    \"conflicting\": \"string\""
+		     "}}");
+}
+
+TEST(SchemaNormalizer, MergeConflictNested) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"    \"client\": {"
+	"      \"allOf\": ["
+        "        { \"properties\": {"
+        "            \"shipping_address\": { \"default\": \"a\" }},"
+	"          \"required\": [\"shipping_address\"]"
+	"        },"
+        "        { \"properties\": {"
+        "            \"shipping_address\": { \"default\": \"b\" }},"
+	"          \"required\": [\"shipping_address\"]"
+	"        }"
+	"      ]"
+	"    }"
+	"  }"
+        "}");
+    SchemaDocument s(sd);
+    FAILED_NORMALIZE(s, "{ \"client\": {} }",
+		     "/properties/client", "normalization", "/client",
+		     "{ \"normalization\": {"
+		     "    \"errorCode\": 36,"
+		     "    \"instanceRef\": \"#/client/shipping_address\","
+		     "    \"schemaRef\": \"#/properties/client/allOf/1\","
+		     "    \"conflicting\": \"string\""
+		     "}}");
+}
+
 TEST(SchemaNormalizer, DefaultNested) {
     Document sd;
     sd.Parse(

@@ -51,21 +51,21 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=$env:pythonLocation
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DPython3_ROOT_DIR=$env:pythonLocation
       - name: Configure
         if: matrix.os != 'windows-latest'
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=${pythonLocation}
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DPython3_ROOT_DIR=${pythonLocation}
       - name: Build
         run: |
           cd build
-          cmake --build . --config Debug
+          cmake --build . --config Release
       - name: Test
         run: |
           cd build
-          ctest -C Debug --output-on-failure --verbose
+          ctest -C Release --output-on-failure --verbose
   build_conda:
     runs-on: ${{ matrix.os }}
     strategy:
