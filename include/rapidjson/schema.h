@@ -563,9 +563,24 @@ public:
     parent->AddChild(this);
   }
 
+  //! Destructor.
+  ~GenericNormalizedDocument() {
+    while (!keyStack_.Empty())
+      PopKey();
+    while (!valueStack_.Empty())
+      PopValue();
+    while (!childStack_.Empty())
+      PopChild();
+    while (!pointerStack_.Empty())
+      PopPointer();
+  }
+
   void AddChild(GenericNormalizedDocument* child) {
     GenericNormalizedDocument** ref = childStack_.template Push<GenericNormalizedDocument*>();
     ref[0] = child;
+  }
+  void PopChild() {
+    childStack_.template Pop<GenericNormalizedDocument*>(1);
   }
   GenericNormalizedDocument* FindChild(unsigned index) {
     GenericNormalizedDocument** ref = childStack_.template Bottom<GenericNormalizedDocument*>();
