@@ -2,6 +2,7 @@
 #define RAPIDJSON_PLY_H_
 
 #include <iostream>
+#include <map>
 
 RAPIDJSON_NAMESPACE_BEGIN
 

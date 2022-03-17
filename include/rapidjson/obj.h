@@ -232,7 +232,7 @@ RAPIDJSON_NAMESPACE_BEGIN
     from_values();							\
   }									\
   C_ARRAY_CONSTRUCTOR(cls);						\
-  GENERIC_ELEMENT_CONSTRUCTOR(cls);
+  GENERIC_ELEMENT_CONSTRUCTOR(cls)
 
 #define DUMMY_ARRAY_CONSTRUCTOR(cls)					\
   C_ARRAY_CONSTRUCTOR(cls);						\
@@ -322,7 +322,7 @@ RAPIDJSON_NAMESPACE_BEGIN
   }									\
   type value;
 #define GENERIC_CLASS_SCALAR_TYPE_BODY(cls, codeS, type, def)		\
-  GENERIC_CLASS_SCALAR_TYPE_BASE(cls, codeS, type, def);		\
+  GENERIC_CLASS_SCALAR_TYPE_BASE(cls, codeS, type, def)		\
   /*! \brief Initialize an element from a scalar. */			\
   /*! \param value0 Scalar value. */					\
   /*! \param parent0 Parent group. */					\
@@ -1264,7 +1264,7 @@ public:
     values(), x(0), y(0), z(0), w(-1), color() {}
   GENERIC_CONSTRUCTOR_COPY(ObjVertex),
     values(rhs.values), x(rhs.x), y(rhs.y), z(rhs.z), w(rhs.w), color(rhs.color) {}
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVertex);
+  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVertex)
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 3)
@@ -1330,7 +1330,7 @@ public:
     values(), u(0), v(0), w(-1) {}
   GENERIC_CONSTRUCTOR_COPY(ObjVParameter),
     values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVParameter);
+  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVParameter)
   //! \copydoc ObjElement::from_values()
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 2)
@@ -1381,7 +1381,7 @@ public:
     values(), i(0), j(0), k(0) {}
   GENERIC_CONSTRUCTOR_COPY(ObjVNormal),
     values(), i(rhs.i), j(rhs.j), k(rhs.k) {}
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVNormal);
+  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVNormal)
   //! \copydoc ObjElement::from_values
   void from_values() override {
     RAPIDJSON_ASSERT(values.size() == 3);
@@ -1426,7 +1426,7 @@ public:
     values(), u(0), v(0), w(0) {}
   GENERIC_CONSTRUCTOR_COPY(ObjVTexture),
     values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVTexture);
+  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVTexture)
   //! \copydoc ObjElement::from_values
   void from_values() override {
     RAPIDJSON_ASSERT((values.size() == 1)
@@ -1589,7 +1589,7 @@ class ObjCurve2D : public ObjFreeFormElement {
 public:
   FREEFORM_CONSTRUCTOR_EMPTY(ObjCurve2D, curv2), values() {}
   FREEFORM_CONSTRUCTOR_COPY(ObjCurve2D), values(rhs.values) {}
-  GENERIC_CONSTRUCTOR_VECTOR_INT(ObjCurve2D);
+  GENERIC_CONSTRUCTOR_VECTOR_INT(ObjCurve2D)
   GENERIC_GET_INT_ARRAY;
   //! \copydoc ObjElement::read_values
   void read_values(std::istream &in, const bool& dont_descend=false) override {
@@ -1696,7 +1696,7 @@ public:
 //! Free-form element group.
 class ObjFreeFormType : public ObjElement {
 public:
-  GENERIC_CLASS_VECTOR_TYPE_BODY(ObjFreeFormType, cstype, std::string);
+  GENERIC_CLASS_VECTOR_TYPE_BODY(ObjFreeFormType, cstype, std::string)
   GENERIC_GET_STRING_ARRAY;
   //! \copydoc ObjElement::from_values()
   void from_values() override {
@@ -1718,7 +1718,7 @@ public:
 //! Degree element.
 class ObjDegree : public ObjElement {
 public:
-  GENERIC_CLASS_VECTOR_TYPE_BODY(ObjDegree, deg, uint16_t);
+  GENERIC_CLASS_VECTOR_TYPE_BODY(ObjDegree, deg, uint16_t)
   GENERIC_GET_INT_ARRAY;
   GENERIC_FROM_VALUES(1, 2);
 };
@@ -1798,7 +1798,7 @@ public:
 //! Step element.
 class ObjStep : public ObjElement {
 public:
-  GENERIC_CLASS_VECTOR_TYPE_BODY(ObjStep, step, double);
+  GENERIC_CLASS_VECTOR_TYPE_BODY(ObjStep, step, double)
   GENERIC_FROM_VALUES(1, 2);
   GENERIC_GET_DOUBLE_ARRAY;
 };
@@ -1890,7 +1890,7 @@ public:
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjGroup(const ObjGroup& rhs) :
     ObjGroupBase(rhs), values(rhs.values) {}
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjGroup, std::string);
+  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjGroup, std::string)
   //! \brief Initialize and element from a scalar.
   //! \tparam T Type of value.
   //! \param value Scalar value.
@@ -1941,7 +1941,7 @@ public:
 //! Smoothing group element.
 class ObjSmoothingGroup : public ObjElement {
 public:
-  GENERIC_CLASS_SCALAR_TYPE_BASE(ObjSmoothingGroup, s, std::string, "off");
+  GENERIC_CLASS_SCALAR_TYPE_BASE(ObjSmoothingGroup, s, std::string, "off")
   //! \brief Initialize the smoothing group from a string.
   //! \param value0 Scalar value.
   //! \param parent0 Parent group.

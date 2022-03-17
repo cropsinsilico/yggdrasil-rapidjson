@@ -35,9 +35,9 @@ namespace units {
   }
   template<>
   inline bool compare_values(const double &a, const double &b) {    
-    // double abs_precision = 1.0e-13; // DBL_EPSILON;
-    double abs_precision = DBL_EPSILON;
-    double rel_precision = DBL_EPSILON;
+    // double abs_precision = 1.0e-13; // std::numeric_limits<double>::epsilon();
+    double abs_precision = std::numeric_limits<double>::epsilon();
+    double rel_precision = std::numeric_limits<double>::epsilon();
     if ((std::abs(a) < abs_precision) || (std::abs(b) < abs_precision))
       return (std::abs((a - b)*(b - a)) <= abs_precision);
     return (std::abs(((a - b)*(b - a)) / (a * b)) <= rel_precision);
