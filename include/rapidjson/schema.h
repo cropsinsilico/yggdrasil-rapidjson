@@ -535,9 +535,10 @@ class GenericNormalizedDocument {
   typedef typename ValueType::MemberIterator MemberIterator;
   typedef typename ValueType::ConstMemberIterator ConstMemberIterator;
 public:
-  GenericNormalizedDocument(size_t stackCapacity = kDefaultStackCapacity,
+  GenericNormalizedDocument(AllocatorType* allocator = 0,
+			    size_t stackCapacity = kDefaultStackCapacity,
 			    StackAllocator* stackAllocator = 0) :
-    document_(0, stackCapacity, stackAllocator), index_(0),
+    document_(allocator, stackCapacity, stackAllocator), index_(0),
     modified_(false), extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
@@ -548,9 +549,10 @@ public:
     aliases_(kObjectType), inSingular_(false),
     extend_pointer_(nullptr), key_modified_(nullptr) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent, unsigned& index,
+			    AllocatorType* allocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity,
 			    StackAllocator* stackAllocator = 0) :
-    document_(0, stackCapacity, stackAllocator), index_(index),
+    document_(allocator, stackCapacity, stackAllocator), index_(index),
     modified_(false), extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
@@ -4476,7 +4478,7 @@ public:
   typedef typename EncodingType::Ch Ch;
   typedef GenericStringRef<Ch> StringRefType;
   typedef GenericValue<EncodingType, StateAllocator> ValueType;
-  typedef internal::GenericNormalizedDocument<SchemaDocumentType> NormalizedDocumentType;
+  typedef internal::GenericNormalizedDocument<SchemaDocumentType, StateAllocator> NormalizedDocumentType;
 
   GenericSchemaNormalizer(
         const SchemaDocumentType& schemaDocument,
@@ -4488,7 +4490,7 @@ public:
      allocator,
      schemaStackCapacity,
      documentStackCapacity),
-    normalized_(), normalization_depth_(0), validator_index_(0), child_validators_(0) {
+    normalized_(allocator), normalization_depth_(0), validator_index_(0), child_validators_(0) {
     normalized_.SetDocumentStack(&this->documentStack_);
   }
   GenericSchemaNormalizer(
@@ -4503,7 +4505,7 @@ public:
      allocator,
      schemaStackCapacity,
      documentStackCapacity),
-    normalized_(), normalization_depth_(0), validator_index_(0), child_validators_(0) {
+    normalized_(allocator), normalization_depth_(0), validator_index_(0), child_validators_(0) {
     normalized_.SetDocumentStack(&this->documentStack_);
   }
 
