@@ -546,7 +546,7 @@ public:
     documentStack_(nullptr),
     pointerStack_(stackAllocator, stackCapacity),
     aliases_(kObjectType), inSingular_(false),
-    extend_pointer_(nullptr) {}
+    extend_pointer_(nullptr), key_modified_(nullptr) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent, unsigned& index,
 			    size_t stackCapacity = kDefaultStackCapacity,
 			    StackAllocator* stackAllocator = 0) :
@@ -559,7 +559,7 @@ public:
     documentStack_(nullptr),
     pointerStack_(stackAllocator, stackCapacity),
     aliases_(kObjectType), inSingular_(false),
-    extend_pointer_(nullptr) {
+    extend_pointer_(nullptr), key_modified_(nullptr) {
     parent->AddChild(this);
   }
 
@@ -790,13 +790,13 @@ public:
       if (FindAliasName(aliases, orig, match)) {
 	if (!GetFinalAlias(context, aliases, orig, &primary))
 	  return false;
+	RAPIDJSON_ASSERT(!key_modified_);
 	modified_ = true;
 	len = primary.GetStringLength();
-	Ch* str0 = 0;
-	str0 = static_cast<Ch *>(document_.GetAllocator().Malloc((len + 1) * sizeof(Ch)));
-	std::memcpy(str0, primary.GetString(), len * sizeof(Ch));
-	str0[len] = '\0';
-	str = str0;
+	key_modified_ = static_cast<Ch *>(document_.GetAllocator().Malloc((len + 1) * sizeof(Ch)));
+	std::memcpy(key_modified_, primary.GetString(), len * sizeof(Ch));
+	key_modified_[len] = '\0';
+	str = key_modified_;
       } else if (FindAliasValue(aliases, orig, match)) {
 	primary.CopyFrom(orig, document_.GetAllocator());
 	orig.CopyFrom(match->name, document_.GetAllocator());
@@ -899,6 +899,12 @@ public:
 
   void SetDocumentStack(internal::Stack<AllocatorType>* stack) {
     documentStack_ = stack;
+  }
+
+  void ReleaseKey() {
+    if (!key_modified_) return;
+    document_.GetAllocator().Free(key_modified_);
+    key_modified_ = nullptr;
   }
       
 private:
@@ -1173,6 +1179,7 @@ private:
   ValueType aliases_;
   bool inSingular_;
   const PointerType* extend_pointer_;
+  Ch* key_modified_;
 };
 
 #endif // RAPIDJSON_YGGDRASIL
@@ -2035,6 +2042,10 @@ public:
 	  len = dest.GetStringLength();
 	  copy = true;
 	}
+#define RELEASE_KEY_							\
+	if (context.normalized) context.normalized->ReleaseKey();
+#else // RAPIDJSON_YGGDRASIL
+#define RELEASE_KEY_	
 #endif // RAPIDJSON_YGGDRASIL
         if (patternProperties_) {
             context.patternPropertiesSchemaCount = 0;
@@ -2058,6 +2069,7 @@ public:
             if (context.propertyExist)
                 context.propertyExist[index] = true;
 
+	    RELEASE_KEY_;
             return true;
         }
 
@@ -2069,10 +2081,12 @@ public:
             }
             else
                 context.valueSchema = additionalPropertiesSchema_;
+	    RELEASE_KEY_;
             return true;
         }
         else if (additionalProperties_) {
             context.valueSchema = typeless_;
+	    RELEASE_KEY_;
             return true;
         }
 
@@ -2080,10 +2094,13 @@ public:
             // Must set valueSchema for when kValidateContinueOnErrorFlag is set, else reports spurious type error
             context.valueSchema = typeless_;
             context.error_handler.DisallowedProperty(str, len);
+	    RELEASE_KEY_;
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
         }
 
+	RELEASE_KEY_;
         return true;
+#undef RELEASE_KEY_
     }
 
     bool EndObject(Context& context, SizeType memberCount) const {
