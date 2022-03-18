@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 #ifdef _DEBUG
 #undef _DEBUG
 #include <Python.h>

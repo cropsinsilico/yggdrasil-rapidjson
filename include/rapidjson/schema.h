@@ -782,22 +782,23 @@ public:
     REQUIRED_PROPERTY_(Object, CurrentValue()->IsObject());
     return true;
   }
-  bool Key(Context& context, const SchemaType& schema, const Ch*& str, SizeType& len, bool copy, bool dont_check_aliases=false) {
+  bool Key(Context& context, const SchemaType& schema, const Ch* str, SizeType len, bool copy, bool dont_check_aliases=false) {
+    ValueType primary;
     if (!dont_check_aliases) {
       const ValueType& aliases = AddAliases(schema);
       ValueType orig(str, len, document_.GetAllocator());
       ConstMemberIterator match = aliases.MemberEnd();
-      ValueType primary;
       if (FindAliasName(aliases, orig, match)) {
 	if (!GetFinalAlias(context, aliases, orig, &primary))
 	  return false;
 	RAPIDJSON_ASSERT(!key_modified_);
 	modified_ = true;
 	len = primary.GetStringLength();
-	key_modified_ = static_cast<Ch *>(document_.GetAllocator().Malloc((len + 1) * sizeof(Ch)));
-	std::memcpy(key_modified_, primary.GetString(), len * sizeof(Ch));
-	key_modified_[len] = '\0';
-	str = key_modified_;
+	str = primary.GetString();
+	// key_modified_ = static_cast<Ch *>(document_.GetAllocator().Malloc((len + 1) * sizeof(Ch)));
+	// std::memcpy(key_modified_, primary.GetString(), len * sizeof(Ch));
+	// key_modified_[len] = '\0';
+	// str = key_modified_;
 	copy = true;
       } else if (FindAliasValue(aliases, orig, match)) {
 	primary.CopyFrom(orig, document_.GetAllocator());
