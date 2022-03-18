@@ -262,7 +262,7 @@ public:
   virtual void CircularAlias(const SValue& alias) = 0;
   virtual void ConflictingAliases(const SValue& alias, const SValue& base1, const SValue& base2) = 0;
   virtual ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) = 0;
-  virtual void NormalizationMergeConflict(const SValue& cond, const SValue& instanceRef, const SValue& schemaRef) = 0;
+  virtual void NormalizationMergeConflict(const typename SchemaType::ValueType& cond, const SValue& instanceRef, const SValue& schemaRef) = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -722,8 +722,7 @@ public:
   
 #define REQUIRED_PROPERTY_(method, cond)				\
   if (!(cond)) {							\
-    ValueType vcond(SchemaType::Get ## method ## String(), document_.GetAllocator()); \
-    context.error_handler.NormalizationMergeConflict(vcond, GetInstanceRef(false), GetSchemaRef(schema)); \
+    context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), GetInstanceRef(false), GetSchemaRef(schema)); \
     RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
   }
 
@@ -799,6 +798,7 @@ public:
 	std::memcpy(key_modified_, primary.GetString(), len * sizeof(Ch));
 	key_modified_[len] = '\0';
 	str = key_modified_;
+	copy = true;
       } else if (FindAliasValue(aliases, orig, match)) {
 	primary.CopyFrom(orig, document_.GetAllocator());
 	orig.CopyFrom(match->name, document_.GetAllocator());
@@ -3913,7 +3913,7 @@ public:
     RAPIDJSON_ASSERT(vcode != m->value.MemberEnd());
     return static_cast<ValidateErrorCode>(vcode->value.GetUint());
   }
-  void NormalizationMergeConflict(const SValue& cond,
+  void NormalizationMergeConflict(const typename SchemaType::ValueType& cond,
 				  const SValue& instanceRef,
 				  const SValue& schemaRef) {
     currentError_.SetObject();
