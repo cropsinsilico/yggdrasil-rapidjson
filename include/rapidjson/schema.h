@@ -807,6 +807,7 @@ public:
       if (match != aliases.MemberEnd()) {
 	if (HasMember(primary)) {
 	  // TODO: Check equivalence when the value is added?
+	  ReleaseKey();
 	  context.error_handler.DuplicateAlias(orig, primary);
 	  RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
 	}
