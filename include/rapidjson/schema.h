@@ -536,8 +536,8 @@ class GenericNormalizedDocument {
   typedef typename ValueType::ConstMemberIterator ConstMemberIterator;
 public:
   GenericNormalizedDocument(AllocatorType* allocator = 0,
-			    size_t stackCapacity = kDefaultStackCapacity,
-			    StackAllocator* stackAllocator = 0) :
+			    StackAllocator* stackAllocator = 0,
+			    size_t stackCapacity = kDefaultStackCapacity) :
     document_(allocator, stackCapacity, stackAllocator), index_(0),
     modified_(false), extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
@@ -549,11 +549,10 @@ public:
     aliases_(kObjectType), inSingular_(false),
     extend_pointer_(nullptr), key_modified_(nullptr) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent, unsigned& index,
-			    AllocatorType* allocator = 0,
-			    size_t stackCapacity = kDefaultStackCapacity,
-			    StackAllocator* stackAllocator = 0) :
-    document_(allocator, stackCapacity, stackAllocator), index_(index),
-    modified_(false), extending_(false), appending_(false),
+			    StackAllocator* stackAllocator = 0,
+			    size_t stackCapacity = kDefaultStackCapacity) :
+    document_(&parent->GetAllocator(), stackCapacity, stackAllocator),
+    index_(index), modified_(false), extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
     valueStack_(stackAllocator, stackCapacity),
@@ -577,6 +576,11 @@ public:
       PopPointer();
   }
 
+  //! Get the allocator of this document.
+  AllocatorType& GetAllocator() {
+    return document_.GetAllocator();
+  }
+  
   void AddChild(GenericNormalizedDocument* child) {
     GenericNormalizedDocument** ref = childStack_.template Push<GenericNormalizedDocument*>();
     ref[0] = child;
@@ -705,9 +709,9 @@ public:
   if (CurrentKey() && !CurrentValue()->HasMember(CurrentKey()->GetString())) { \
     ValueType tmp(CurrentKey()->GetString(),				\
 		  CurrentKey()->GetStringLength(),			\
-		  document_.GetAllocator());				\
+		  GetAllocator());					\
     CurrentValue()->AddMember(tmp, ValueType arg2,			\
-			      document_.GetAllocator());		\
+			      GetAllocator());		\
   }									\
 
 #define BEGIN_NORMALIZE_(method, arg1, arg2)				\
@@ -750,7 +754,7 @@ public:
     return EndValue(context, schema);
   }
   bool String(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy) {
-    BEGIN_NORMALIZE_(String, (str, length, copy), (str, length, document_.GetAllocator()));
+    BEGIN_NORMALIZE_(String, (str, length, copy), (str, length, GetAllocator()));
     REQUIRED_PROPERTY_(String, CurrentValue()->IsString());
     REQUIRED_PROPERTY_(String, (internal::StrCmp(str, CurrentValue()->GetString()) == 0));
     return EndValue(context, schema);
@@ -786,7 +790,7 @@ public:
     ValueType primary;
     if (!dont_check_aliases) {
       const ValueType& aliases = AddAliases(schema);
-      ValueType orig(str, len, document_.GetAllocator());
+      ValueType orig(str, len, GetAllocator());
       ConstMemberIterator match = aliases.MemberEnd();
       if (FindAliasName(aliases, orig, match)) {
 	if (!GetFinalAlias(context, aliases, orig, &primary))
@@ -795,14 +799,14 @@ public:
 	modified_ = true;
 	len = primary.GetStringLength();
 	str = primary.GetString();
-	// key_modified_ = static_cast<Ch *>(document_.GetAllocator().Malloc((len + 1) * sizeof(Ch)));
+	// key_modified_ = static_cast<Ch *>(GetAllocator().Malloc((len + 1) * sizeof(Ch)));
 	// std::memcpy(key_modified_, primary.GetString(), len * sizeof(Ch));
 	// key_modified_[len] = '\0';
 	// str = key_modified_;
 	copy = true;
       } else if (FindAliasValue(aliases, orig, match)) {
-	primary.CopyFrom(orig, document_.GetAllocator());
-	orig.CopyFrom(match->name, document_.GetAllocator());
+	primary.CopyFrom(orig, GetAllocator());
+	orig.CopyFrom(match->name, GetAllocator());
       }
       // Check previous keys for alias target
       if (match != aliases.MemberEnd()) {
@@ -851,7 +855,7 @@ public:
     NORMALIZE_END_(EndArray, (elementCount));
     if (schema.allowSingular_) {
       ValueType tmp(kArrayType);
-      tmp.PushBack(*CurrentValue(), document_.GetAllocator());
+      tmp.PushBack(*CurrentValue(), GetAllocator());
       CurrentValue()->Swap(tmp);
     }
     return EndValue(context, schema);
@@ -907,7 +911,7 @@ public:
 
   void ReleaseKey() {
     if (!key_modified_) return;
-    document_.GetAllocator().Free(key_modified_);
+    GetAllocator().Free(key_modified_);
     key_modified_ = nullptr;
   }
       
@@ -936,11 +940,11 @@ private:
     PushValue(value, p);
   }
   void PushValue(ValueType& value, ValueType& key) {
-    PointerType p = CurrentPointer().Append(key.GetString(), key.GetStringLength(), &document_.GetAllocator());
+    PointerType p = CurrentPointer().Append(key.GetString(), key.GetStringLength(), &GetAllocator());
     PushValue(value, p);
   }
   void PushValue(ValueType& value, SizeType index) {
-    PointerType p = CurrentPointer().Append(index, &document_.GetAllocator());
+    PointerType p = CurrentPointer().Append(index, &GetAllocator());
     PushValue(value, p);
   }
   void PopValue() {
@@ -968,7 +972,7 @@ private:
   }
   void PushKey(const Ch* str, SizeType len) {
     ValueType** ref = keyStack_.template Push<ValueType*>();
-    ref[0] = new ValueType(str, len, document_.GetAllocator());
+    ref[0] = new ValueType(str, len, GetAllocator());
   }
   void PushKey() {
     ValueType** ref = keyStack_.template Push<ValueType*>();
@@ -981,7 +985,7 @@ private:
   }
   bool GetFinalAlias(Context& context, const ValueType& aliases,
 		     const ValueType& orig, ValueType* dest) {
-    if (!follow_aliases_(aliases, orig, dest, document_.GetAllocator())) {
+    if (!follow_aliases_(aliases, orig, dest, GetAllocator())) {
       context.error_handler.CircularAlias(*dest);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
     }
@@ -999,7 +1003,7 @@ private:
     schemaPointer->StringifyUriFragment(sb);
     ValueType schemaRef(sb.GetString(),
 			static_cast<SizeType>(sb.GetSize() / sizeof(Ch)),
-			document_.GetAllocator());
+			GetAllocator());
     return schemaRef;
   }
   ValueType GetInstanceRef(bool parent=true) {
@@ -1021,7 +1025,7 @@ private:
      ? PointerType(instancePointer.GetTokens(), instancePointer.GetTokenCount() - 1)
      : instancePointer).StringifyUriFragment(sb);
     ValueType instanceRef(sb.GetString(), static_cast<SizeType>(sb.GetSize() / sizeof(Ch)),
-			  document_.GetAllocator());
+			  GetAllocator());
     return instanceRef;
   }
   bool HasMember(ValueType& key, ValueType* val=nullptr) {
@@ -1029,7 +1033,7 @@ private:
       if (CurrentValue()->HasMember(key)) {
 	if (val)
 	  val->CopyFrom(CurrentValue()->FindMember(key)->value,
-			document_.GetAllocator());
+			GetAllocator());
 	return true;
       }
       return false;
@@ -1045,7 +1049,7 @@ private:
       if (*base == key) {
 	if (val && ((base + 1) != document_.StackTop()))
 	  val->CopyFrom(*(base + 1),
-			document_.GetAllocator());
+			GetAllocator());
 	return true;
       }
       base++;
@@ -1073,8 +1077,8 @@ private:
     for (typename ValueType::ConstMemberIterator it = aliases.MemberBegin(); it != aliases.MemberEnd(); ++it) {
       if (!aliases_.HasMember(it->name)) {
 	ValueType tmp(it->name.GetString(), it->name.GetStringLength(),
-		      document_.GetAllocator());
-	aliases_.AddMember(tmp, kObjectType, document_.GetAllocator());
+		      GetAllocator());
+	aliases_.AddMember(tmp, kObjectType, GetAllocator());
       }
       for (typename ValueType::ConstMemberIterator v = it->value.MemberBegin(); v != it->value.MemberEnd(); ++v) {
 	if (aliases_[it->name].HasMember(v->name)) {
@@ -1085,10 +1089,10 @@ private:
 	  }
 	} else {
 	  ValueType key(v->name.GetString(), v->name.GetStringLength(),
-			document_.GetAllocator());
+			GetAllocator());
 	  ValueType val(v->value.GetString(), v->value.GetStringLength(),
-			document_.GetAllocator());
-	  aliases_[it->name].AddMember(key, val, document_.GetAllocator());
+			GetAllocator());
+	  aliases_[it->name].AddMember(key, val, GetAllocator());
 	  ValueType primary;
 	  if (!GetFinalAlias(context, aliases_[it->name], v->name, &primary))
 	    return false;
@@ -1115,12 +1119,12 @@ private:
 	    } else {
 	      *replaced = true;
 	      ValueType new_val;
-	      new_val.CopyFrom(old->value, document_.GetAllocator());
+	      new_val.CopyFrom(old->value, GetAllocator());
 	      base->AddMember(ValueType(v->value.GetString(),
 					v->value.GetStringLength(),
-					document_.GetAllocator()),
+					GetAllocator()),
 			      new_val,
-			      document_.GetAllocator());
+			      GetAllocator());
 	      base->RemoveMember(v->name);
 	    }
 	  }
@@ -1146,8 +1150,8 @@ private:
   ValueType& GetAliases() {
     const ValueType address = GetInstanceRef();
     if (!aliases_.HasMember(address)) {
-      ValueType tmp(address.GetString(), address.GetStringLength(), document_.GetAllocator());
-      aliases_.AddMember(tmp, kObjectType, document_.GetAllocator());
+      ValueType tmp(address.GetString(), address.GetStringLength(), GetAllocator());
+      aliases_.AddMember(tmp, kObjectType, GetAllocator());
     }
     return aliases_[address];
   }
@@ -1158,10 +1162,10 @@ private:
     for (typename SValue::ConstMemberIterator it = schema.child_aliases_.MemberBegin(); it != schema.child_aliases_.MemberEnd(); ++it) {
       if (!aliases.HasMember(it->name.GetString())) {
 	ValueType key1(it->name.GetString(), it->name.GetStringLength(),
-		       document_.GetAllocator());
+		       GetAllocator());
 	ValueType key2(it->value.GetString(), it->value.GetStringLength(),
-		       document_.GetAllocator());
-	aliases.AddMember(key1, key2, document_.GetAllocator());
+		       GetAllocator());
+	aliases.AddMember(key1, key2, GetAllocator());
       }
     }
     return aliases;
@@ -4492,7 +4496,7 @@ public:
      allocator,
      schemaStackCapacity,
      documentStackCapacity),
-    normalized_(allocator), normalization_depth_(0), validator_index_(0), child_validators_(0) {
+    normalized_(&this->GetStateAllocator()), normalization_depth_(0), validator_index_(0), child_validators_(0) {
     normalized_.SetDocumentStack(&this->documentStack_);
   }
   GenericSchemaNormalizer(
@@ -4507,7 +4511,7 @@ public:
      allocator,
      schemaStackCapacity,
      documentStackCapacity),
-    normalized_(allocator), normalization_depth_(0), validator_index_(0), child_validators_(0) {
+    normalized_(&this->GetStateAllocator()), normalization_depth_(0), validator_index_(0), child_validators_(0) {
     normalized_.SetDocumentStack(&this->documentStack_);
   }
 
