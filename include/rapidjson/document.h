@@ -4906,6 +4906,9 @@ private:
     //! Prohibit assignment
     GenericDocument& operator=(const GenericDocument&);
 
+#ifdef RAPIDJSON_YGGDRASIL
+public:
+#endif // RAPIDJSON_YGGDRASIL
     void ClearStack() {
         if (Allocator::kNeedFree)
             while (stack_.GetSize() > 0)    // Here assumes all elements in stack array are GenericValue (Member is actually 2 GenericValue objects)
@@ -4915,6 +4918,9 @@ private:
         stack_.ShrinkToFit();
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+private:
+#endif // RAPIDJSON_YGGDRASIL
     void Destroy() {
         RAPIDJSON_DELETE(ownAllocator_);
     }

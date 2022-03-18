@@ -574,6 +574,7 @@ public:
       PopChild();
     while (!pointerStack_.Empty())
       PopPointer();
+    document_.ClearStack();
   }
 
   //! Get the allocator of this document.
@@ -711,7 +712,7 @@ public:
 		  CurrentKey()->GetStringLength(),			\
 		  GetAllocator());					\
     CurrentValue()->AddMember(tmp, ValueType arg2,			\
-			      GetAllocator());		\
+			      GetAllocator());				\
   }									\
 
 #define BEGIN_NORMALIZE_(method, arg1, arg2)				\
