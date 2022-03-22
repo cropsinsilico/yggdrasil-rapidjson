@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add "encoding" property for bytes
 * Remove use of standard libraries (std::basic_string, std::vector, std::map)?
 * Use explicit allocator for QuantityArray?
+* Add allowSingular for object
 
 ### IN PROGRESS
 * Add normalization

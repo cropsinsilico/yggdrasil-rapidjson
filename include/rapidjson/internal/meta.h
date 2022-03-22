@@ -193,26 +193,26 @@ template <typename T, typename VT> struct HasYggdrasilMethod
 
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #define YGGDRASIL_IS_COMPLEX_TYPE(T)				\
-    internal::OrExpr<internal::IsSame<T,std::complex<float>>,	\
-    internal::OrExpr<internal::IsSame<T,std::complex<double>>,	\
-		     internal::IsSame<T,std::complex<long double>>>>
+    internal::OrExpr<internal::IsSame<T,std::complex<float> >,	\
+    internal::OrExpr<internal::IsSame<T,std::complex<double> >,	\
+		     internal::IsSame<T,std::complex<long double> > > >
 #define YGGDRASIL_IS_SCALAR_TYPE(T)				\
   internal::OrExpr<internal::IsSame<T,uint8_t>,			\
     internal::OrExpr<internal::IsSame<T,uint16_t>,		\
     internal::OrExpr<internal::IsSame<T,int8_t>,		\
     internal::OrExpr<internal::IsSame<T,int16_t>,		\
     internal::OrExpr<internal::IsSame<T,long double>,	        \
-		     YGGDRASIL_IS_COMPLEX_TYPE(T)>>>>>
+		     YGGDRASIL_IS_COMPLEX_TYPE(T)> > > > >
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #define YGGDRASIL_IS_COMPLEX_TYPE(T)				\
-    internal::OrExpr<internal::IsSame<T,std::complex<float>>,	\
-		     internal::IsSame<T,std::complex<double>>>
+    internal::OrExpr<internal::IsSame<T,std::complex<float> >,	\
+		     internal::IsSame<T,std::complex<double> > >
 #define YGGDRASIL_IS_SCALAR_TYPE(T)				\
   internal::OrExpr<internal::IsSame<T,uint8_t>,			\
     internal::OrExpr<internal::IsSame<T,uint16_t>,		\
     internal::OrExpr<internal::IsSame<T,int8_t>,		\
     internal::OrExpr<internal::IsSame<T,int16_t>,		\
-		     YGGDRASIL_IS_COMPLEX_TYPE(T)>>>>
+		     YGGDRASIL_IS_COMPLEX_TYPE(T)> > > >
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #define YGGDRASIL_IS_ANY_SCALAR(T)			\
   internal::OrExpr<YGGDRASIL_IS_SCALAR_TYPE(T),		\
@@ -221,10 +221,10 @@ template <typename T, typename VT> struct HasYggdrasilMethod
     internal::OrExpr<internal::IsSame<T,uint32_t>,	\
     internal::OrExpr<internal::IsSame<T,uint64_t>,	\
     internal::OrExpr<internal::IsSame<T,int32_t>,	\
-		     internal::IsSame<T,int64_t> >>>>>>
+		     internal::IsSame<T,int64_t> > > > > > >
 #define YGGDRASIL_IS_CHAR(T)			\
   internal::OrExpr<internal::IsSame<T,char>,	\
-		   internal::IsSame<T,wchar_t>>
+		   internal::IsSame<T,wchar_t> >
 
 RAPIDJSON_NAMESPACE_END
 //@endcond

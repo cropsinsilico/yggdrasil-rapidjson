@@ -52,29 +52,47 @@ RAPIDJSON_NAMESPACE_BEGIN
     else if (word == "end"       ) lhs = nullptr;			\
     else REPORT_UNSUPPORTED_ELEMENT(init, word);			\
   }
-#define GENERIC_ELEMENT_CONSTRUCTOR(cls)				\
-  /*! \copydoc ObjElement::ObjElement(const ObjElement*) */		\
-  cls(const ObjElement* rhs) : cls(*dynamic_cast<const cls*>(rhs)) {}	\
+#if RAPIDJSON_HAS_CXX11
+#define OVERRIDE_CXX11 override
+#else // RAPIDJSON_HAS_CXX11
+#define OVERRIDE_CXX11
+#endif // RAPIDJSON_HAS_CXX11
+#define SINGLE_ARG(...) (__VA_ARGS__)
+#define UNPACK( ... ) __VA_ARGS__
+
+#define GENERIC_CONSTRUCTOR_READ(cls, base, codeS, init)		\
   /*! \brief Initialize an element by reading from an input stream. */	\
   /*! \param in Input stream to read from. */				\
   /*! \param parent0 The element's parent group. */			\
   /*! \param dont_descend If true, subelements will not be read from */ \
   /*!   the input stream. */						\
   cls(std::istream &in, const ObjGroupBase* parent0 = nullptr,		\
-      const bool& dont_descend = false) :				\
-    cls(parent0) {							\
+      const bool& dont_descend = false) : base(#codeS, parent0) UNPACK init {	\
     read_values(in, dont_descend);					\
     from_values();							\
+  }
+#define GENERIC_CONSTRUCTOR_COPY(cls, base, init)			\
+  /*! \copydoc ObjElement::ObjElement(const ObjElement&) */		\
+  cls(const cls& rhs) :							\
+    base(rhs.code, rhs.parent) UNPACK init {				\
+    base::copy_members(*dynamic_cast<const base*>(&rhs));		\
+    this->copy_members(rhs);						\
+  }									\
+  /*! \copydoc ObjElement::ObjElement(const ObjElement*) */		\
+  cls(const ObjElement* rhs) :						\
+    base(rhs->code, rhs->parent) UNPACK init {				\
+    base::copy_members(*dynamic_cast<const base*>(rhs));		\
+    this->copy_members(*dynamic_cast<const cls*>(rhs));			\
   }									\
   /*! \copydoc ObjElement::copy() */					\
-  cls* copy() const override { return new cls(*this); }
-#define C_ARRAY_CONSTRUCTOR(cls)					\
-  /*! \brief Initialize an element from a C array of values. */		\
-  /*! \tparam T Array element type. */					\
-  /*! \tparam N Array size. */						\
-  /*! \param src Array of values. */					\
-  template <typename T, size_t N>					\
-  cls(const T (&values)[N]) : cls(std::vector<T>(values, values+N)) {}
+  cls* copy() const OVERRIDE_CXX11 { return new cls(*this); }
+#define GENERIC_ELEMENT_CONSTRUCTOR(cls, base, code, init)		\
+  /*! \brief Empty constructor. */					\
+  /*! \param parent0 The element's parent group. */			\
+  cls(const ObjGroupBase* parent0 = nullptr) :				\
+    base(#code, parent0) UNPACK init {}					\
+  GENERIC_CONSTRUCTOR_COPY(cls, base, init);				\
+  GENERIC_CONSTRUCTOR_READ(cls, base, code, init);
 #define COMPATIBLE_WITH_INT(T)				       \
   internal::OrExpr<internal::IsSame<T,int>,	               \
     internal::OrExpr<internal::IsSame<T,int8_t>,               \
@@ -85,13 +103,13 @@ RAPIDJSON_NAMESPACE_BEGIN
 	      internal::OrExpr<internal::IsSame<T,uint32_t>,   \
 		internal::OrExpr<internal::IsSame<T,int64_t>,  \
 		  internal::OrExpr<internal::IsSame<T,ObjRef>, \
-		    internal::IsSame<T,uint64_t>>>>>>>>>>
+		    internal::IsSame<T,uint64_t> > > > > > > > > >
 #define COMPATIBLE_WITH_UINT(T)				       \
       internal::OrExpr<internal::IsSame<T,uint8_t>,	       \
 	  internal::OrExpr<internal::IsSame<T,uint16_t>,       \
 	      internal::OrExpr<internal::IsSame<T,uint32_t>,   \
 		  internal::OrExpr<internal::IsSame<T,ObjRef>, \
-		      internal::IsSame<T,uint64_t>>>>>
+		      internal::IsSame<T,uint64_t> > > > >
 #define COMPATIBLE_WITH_FLOAT(T)			       \
   internal::OrExpr<internal::IsSame<T,int>,	               \
     internal::OrExpr<internal::IsSame<T,int8_t>,               \
@@ -103,7 +121,7 @@ RAPIDJSON_NAMESPACE_BEGIN
 		internal::OrExpr<internal::IsSame<T,int64_t>,  \
 		  internal::OrExpr<internal::IsSame<T,float>, \
   		    internal::OrExpr<internal::IsSame<T,double>, \
-		      internal::IsSame<T,uint64_t>>>>>>>>>>>
+		      internal::IsSame<T,uint64_t> > > > > > > > > > >
 #define COMPATIBLE_WITH_VERT(T)						\
   internal::OrExpr<internal::IsSame<T,ObjRefVertex>, COMPATIBLE_WITH_INT(T)>
 #define COMPATIBLE_WITH_CURV(T)					\
@@ -118,158 +136,98 @@ RAPIDJSON_NAMESPACE_BEGIN
       internal::OrExpr<COMPATIBLE_WITH_VERT(T),				\
        	internal::OrExpr<COMPATIBLE_WITH_CURV(T),	                \
        	  internal::OrExpr<COMPATIBLE_WITH_SURF(T),	                \
-			   COMPATIBLE_WITH_TYPE(T, std::string)>>>>>
+			   COMPATIBLE_WITH_TYPE(T, std::string)> > > > >
 #define ASSERT_COMPATIBLE(T1, T2)					\
   std::cerr << typeid(T1).name() << " and " << typeid(T2).name() << " types are not compatible." << std::endl; \
   RAPIDJSON_ASSERT(!sizeof("T1 and T2 types are not compatible."))
-#define GENERIC_CONSTRUCTOR_EMPTY(cls, code)				\
-  /*! \brief Empty constructor. */					\
-  /*! \param parent0 The element's parent group. */			\
-  cls(const ObjGroupBase* parent0 = nullptr) :				\
-    ObjElement(#code, parent0)
-#define GENERIC_CONSTRUCTOR_COPY(cls)					\
-  /*! \copydoc ObjElement::ObjElement(const ObjElement&) */		\
-  cls(const cls& rhs) :							\
-    ObjElement(rhs)
-#define GENERIC_CONSTRUCTOR_VECTOR_INT(cls)				\
-  /*! \brief Initialize and element from a C++ vector of int values. */	\
-  /*! \tparam T Vector element type. Must be int castable. */		\
+#define GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, base, code, init, compat, T2) \
+  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, code, init);			\
+  /*! \brief Initialize and element from a C++ vector of values. */	\
+  /*! \tparam T Vector element type. Must be castable to the type. */	\
   /*! \param values0 Vector of values. */				\
   /*! \param parent0 The element's parent group. */			\
   template <typename T>							\
   cls(const std::vector<T> &values0,					\
       const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) : cls(parent0) {	\
+      RAPIDJSON_ENABLEIF((compat))) :					\
+    base(#code, parent0) UNPACK init {						\
     assign_values(values, values0);					\
     from_values();							\
   }									\
-  /*! \brief Raise an error if non-int vector is provided. */		\
+  /*! \brief Raise an error if non-compatible vector is provided. */	\
   /*! \tparam T Type of vector elements. */				\
   template <typename T>							\
   cls(const std::vector<T>&,						\
       const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_INT(T)))) : cls(parent0) {	\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from integers.")); \
+      RAPIDJSON_DISABLEIF((compat))) :		\
+    base(#code, parent0) UNPACK init {						\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
   }									\
-  C_ARRAY_CONSTRUCTOR(cls);						\
-  GENERIC_ELEMENT_CONSTRUCTOR(cls);
-#define GENERIC_CONSTRUCTOR_VECTOR_UINT(cls)				\
-  /*! \brief Initialize and element from a C++ vector of uint values. */ \
-  /*! \tparam T Vector element type. Must be unsigned int castable. */	\
-  /*! \param values0 Vector of values. */				\
-  /*! \param parent0 The element's parent group. */			\
-  template <typename T>							\
-  cls(const std::vector<T> &values0,					\
+  /*! \brief Initialize an element from a C array of values. */		\
+  /*! \tparam T Array element type. */					\
+  /*! \tparam N Array size. */						\
+  /*! \param src Array of values. */					\
+  template <typename T, size_t N>					\
+  cls(const T (&values0)[N],						\
       const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_UINT(T)))) : cls(parent0) {	\
-    assign_values(values, values0);					\
+      RAPIDJSON_ENABLEIF((compat))) :			\
+    base(#code, parent0) UNPACK init {						\
+    assign_values(values, std::vector<T>(values0, values0+N));		\
     from_values();							\
   }									\
-  /*! \brief Raise an error if non-uint vector is provided. */		\
+  /*! \brief Raise an error if non-compatible vector is provided. */	\
   /*! \tparam T Type of vector elements. */				\
-  template <typename T>							\
-  cls(const std::vector<T>&,						\
+  /*! \tparam N Array size. */						\
+  template <typename T, size_t N>					\
+  cls(const T (&)[N],							\
       const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_UINT(T)))) : cls(parent0) {	\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from unsigned integers.")); \
-  }									\
-  C_ARRAY_CONSTRUCTOR(cls);						\
-  GENERIC_ELEMENT_CONSTRUCTOR(cls);
-#define GENERIC_CONSTRUCTOR_VECTOR_FLOAT(cls)				\
-  /*! \brief Initialize and element from a C++ vector of float values. */ \
-  /*! \tparam T Vector element type. Must be float castable. */		\
-  /*! \param values0 Vector of values. */				\
-  /*! \param parent0 The element's parent group. */			\
-  template <typename T>							\
-  cls(const std::vector<T> &values0,					\
-      const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) : cls(parent0) {	\
-    assign_values(values, values0);					\
-    from_values();							\
-  }									\
-  /*! \brief Raise an error if non-float vector is provided. */		\
-  /*! \tparam T Type of vector elements. */				\
-  template <typename T>							\
-  cls(const std::vector<T>&,						\
-      const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) : cls(parent0) {	\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from floats.")); \
-  }									\
-  C_ARRAY_CONSTRUCTOR(cls);						\
-  GENERIC_ELEMENT_CONSTRUCTOR(cls);
-#define GENERIC_CONSTRUCTOR_VECTOR_VERT(cls)				\
-  /*! \brief Initialize and element from a C++ vector of vertex values. */ \
-  /*! \tparam T Vector element type. Must be vertex castable. */	\
-  /*! \param values0 Vector of values. */				\
-  /*! \param parent0 The element's parent group. */			\
-  template <typename T>							\
-  cls(const std::vector<T> &values0,					\
-      const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_VERT(T)))) : cls(parent0) {	\
-    assign_values(values, values0);					\
-    from_values();							\
-  }									\
-  /*! \brief Raise an error if non-vert vector is provided. */		\
-  /*! \tparam T Type of vector elements. */				\
-  template <typename T>							\
-  cls(const std::vector<T>&,						\
-      const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_VERT(T)))) :	cls(parent0) {	\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from vertices.")); \
-  }									\
-  C_ARRAY_CONSTRUCTOR(cls);						\
-  GENERIC_ELEMENT_CONSTRUCTOR(cls);
-#define GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, T2)			\
-  /*! \brief Initialize and element from a C++ vector of type values. */ \
-  /*! \tparam T Vector element type. Must be castable to type. */	\
-  /*! \param values0 Vector of values. */				\
-  /*! \param parent0 The element's parent group. */			\
-  template <typename T>							\
-  cls(const std::vector<T> &values0,					\
-      const ObjGroupBase* parent0 = nullptr) :				\
-    cls(parent0) {							\
-    assign_values(values, values0);					\
-    from_values();							\
-  }									\
-  C_ARRAY_CONSTRUCTOR(cls);						\
-  GENERIC_ELEMENT_CONSTRUCTOR(cls)
-
-#define DUMMY_ARRAY_CONSTRUCTOR(cls)					\
-  C_ARRAY_CONSTRUCTOR(cls);						\
+      RAPIDJSON_DISABLEIF((compat))) :		\
+    base(#code, parent0) UNPACK init {						\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
+  }
+#define GENERIC_CONSTRUCTOR_VECTOR_FLOAT(cls, base, code, init)		\
+  GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, base, code, init, COMPATIBLE_WITH_FLOAT(T), float)
+#define DUMMY_ARRAY_CONSTRUCTOR(cls, base, code, init)			\
   /*! \brief Raise an error. */						\
   template <typename T>							\
   cls(const std::vector<T> &,						\
-      const ObjGroupBase* parent0 = nullptr) : cls(parent0) {		\
+      const ObjGroupBase* parent0 = nullptr) : base(#code, parent0) UNPACK init { \
     RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from a vector")); \
+  }									\
+  /*! \brief Raise an error. */						\
+  template <typename T, size_t N>					\
+  cls(const T (&)[N],							\
+      const ObjGroupBase* parent0 = nullptr) : base(#code, parent0) UNPACK init { \
+    RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from an array")); \
   }
 #define GENERIC_READ_VALUES						\
   /*! \copydoc ObjElement::read_values */				\
-  void read_values(std::istream &in, const bool&) override { ObjElement::read_values(in, values); }
+  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 { ObjElement::read_values(in, values); }
 #define GENERIC_WRITE_VALUES						\
   /*! \copydoc ObjElement::write_values */				\
-  void write_values(std::ostream &out) const override { ObjElement::write_values(out, values); }
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 { ObjElement::write_values(out, values); }
 #define GENERIC_FROM_VALUES(min, max)					\
   /*! \copydoc ObjElement::from_values() */				\
-  void from_values() override {						\
+  void from_values() OVERRIDE_CXX11 {						\
     RAPIDJSON_ASSERT((values.size() >= min) && (values.size() <= max)); \
   }
 #define GENERIC_IS_EQUAL(cls)						\
   /*! \copydoc ObjElement::is_equal */					\
-  bool is_equal(const ObjElement* rhs0) const override {		\
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {		\
     if (rhs0->code != this->code) return false;				\
     const cls* lhs = this;						\
     const cls* rhs = dynamic_cast<const cls*>(rhs0);			\
     if (!(is_equal_vectors(lhs->values, rhs->values))) return false;	\
     return true;							\
   }
-#define GENERIC_GET_INT_ARRAY						\
+#define GENERIC_GET_INT_ARRAY(type)					\
   /*! \param nvert Number of vertices previously added to a Ply */	\
   /*!   object being constructed from this geometry. */			\
   /*! \copydoc ObjElement::get_int_array */				\
-  std::vector<int> get_int_array(const size_t nvert=0) const override {	\
+  std::vector<int> get_int_array(const size_t nvert=0) const OVERRIDE_CXX11 {	\
     std::vector<int> out;						\
     int v = 0;								\
-    for (auto it = values.begin(); it != values.end(); it++) {		\
+    for (std::vector<type>::const_iterator it = values.begin(); it != values.end(); it++) { \
       v = (int)(*it);							\
       if (nvert > 0) {							\
 	if (v < 0)							\
@@ -282,47 +240,50 @@ RAPIDJSON_NAMESPACE_BEGIN
   }
 #define GENERIC_GET_STRING_ARRAY				\
   /*! \copydoc ObjElement::get_string_array */			\
-  std::vector<std::string> get_string_array() const override {	\
+  std::vector<std::string> get_string_array() const OVERRIDE_CXX11 {	\
     std::vector<std::string> out;				\
-    for (auto it = values.begin(); it != values.end(); it++)	\
+    for (std::vector<std::string>::const_iterator it = values.begin(); it != values.end(); it++) \
       out.push_back(*it);					\
     return out;							\
   }
 #define GENERIC_GET_DOUBLE_ARRAY				\
   /*! \copydoc ObjElement::get_double_array */			\
-  std::vector<double> get_double_array() const override {	\
+  std::vector<double> get_double_array() const OVERRIDE_CXX11 {	\
     std::vector<double> out;					\
-    for (auto it = values.begin(); it != values.end(); it++)	\
+    for (std::vector<double>::const_iterator it = values.begin(); it != values.end(); it++) \
       out.push_back(*it);					\
     return out;							\
   }
 
 #define GENERIC_CLASS_SCALAR_TYPE_ISEQUAL(cls)				\
   /*! \copydoc ObjElement::is_equal */					\
-  bool is_equal(const ObjElement* rhs0) const override {		\
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {		\
     if (rhs0->code != this->code) return false;				\
     const cls* lhs = this;						\
     const cls* rhs = dynamic_cast<const cls*>(rhs0);			\
     if (lhs->value != rhs->value) return false;				\
     return true;							\
   }
-#define GENERIC_CLASS_SCALAR_TYPE_BASE(cls, codeS, type, def)		\
-  GENERIC_CONSTRUCTOR_EMPTY(cls, codeS), value(def) {}			\
-  GENERIC_CONSTRUCTOR_COPY(cls), value(rhs.value) {}			\
-  DUMMY_ARRAY_CONSTRUCTOR(cls);						\
-  GENERIC_ELEMENT_CONSTRUCTOR(cls);					\
+#define GENERIC_CLASS_SCALAR_TYPE_BASE(cls, base, codeS, type, def)	\
+  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, SINGLE_ARG(, value(def))); \
+  DUMMY_ARRAY_CONSTRUCTOR(cls, base, code, SINGLE_ARG(, value(def)));	\
   GENERIC_CLASS_SCALAR_TYPE_ISEQUAL(cls);				\
+  /*! \brief Copy element specific members from another instance. */	\
+  /*! \param[in] rhs Element to copy members from. */			\
+  void copy_members(const cls& rhs) {					\
+    value = rhs.value;							\
+  }									\
   /*! \copydoc ObjElement::read_values */				\
-  void read_values(std::istream &in, const bool&) override {		\
+  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {		\
     in >> value;							\
   }									\
   /*! \copydoc ObjElement::write_values */				\
-  void write_values(std::ostream &out) const override {			\
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {			\
     out << value;							\
   }									\
   type value;
-#define GENERIC_CLASS_SCALAR_TYPE_BODY(cls, codeS, type, def)		\
-  GENERIC_CLASS_SCALAR_TYPE_BASE(cls, codeS, type, def)		\
+#define GENERIC_CLASS_SCALAR_TYPE_BODY(cls, base, codeS, type, def)	\
+  GENERIC_CLASS_SCALAR_TYPE_BASE(cls, base, codeS, type, def)		\
   /*! \brief Initialize an element from a scalar. */			\
   /*! \param value0 Scalar value. */					\
   /*! \param parent0 Parent group. */					\
@@ -330,7 +291,7 @@ RAPIDJSON_NAMESPACE_BEGIN
   cls(const T& value0,							\
       const ObjGroupBase* parent0 = nullptr,				\
       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, type)))) :		\
-    ObjElement(#codeS, parent0), value(value0) {}			\
+    base(#codeS, parent0), value(value0) {}				\
   /*! \brief Initialize an element from a scalar. */			\
   /*! \param value0 Scalar value. */					\
   /*! \param parent0 Parent group. */					\
@@ -338,40 +299,41 @@ RAPIDJSON_NAMESPACE_BEGIN
   cls(const T&,								\
       const ObjGroupBase* parent0 = nullptr,				\
       RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, type)))) :		\
-    cls(parent0) {							\
+    base(#codeS, parent0), value(def) {					\
     RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from" #type ".")); \
   }
 #define GENERIC_CLASS_SCALAR_TYPE(cls, code, type, def)			\
   class cls : public ObjElement {					\
   public:								\
-  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, code, type, def);			\
+  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, type, def);	\
   }
-#define GENERIC_CLASS_VECTOR_TYPE_BODY(cls, code, type)	\
-  GENERIC_CONSTRUCTOR_EMPTY(cls, code), values() {}	\
-  GENERIC_CONSTRUCTOR_COPY(cls), values(rhs.values) {}	\
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, type);		\
-  GENERIC_READ_VALUES;					\
-  GENERIC_WRITE_VALUES;					\
-  GENERIC_IS_EQUAL(cls);				\
+#define GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, type, compat)	\
+  GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, ObjElement, code, SINGLE_ARG(), UNPACK compat, type); \
+  GENERIC_READ_VALUES;							\
+  GENERIC_WRITE_VALUES;							\
+  GENERIC_IS_EQUAL(cls);						\
+  /*! \brief Copy element specific members from another instance. */	\
+  /*! \param[in] rhs Element to copy members from. */			\
+  void copy_members(const cls& rhs) {					\
+    values.insert(values.begin(), rhs.values.begin(), rhs.values.end()); \
+  }									\
   std::vector<type> values;
-#define GENERIC_CLASS_VECTOR_TYPE(cls, code, type)	\
-  class cls : public ObjElement {			\
-  public:						\
-  GENERIC_CLASS_VECTOR_TYPE_BODY(cls, code, type)	\
+#define GENERIC_CLASS_VECTOR_TYPE_BODY(cls, code, type)			\
+  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, type, SINGLE_ARG(COMPATIBLE_WITH_TYPE(T, type)))
+#define GENERIC_CLASS_VECTOR_TYPE_COMPARE(cls, code, type, compat)	\
+  class cls : public ObjElement {					\
+  public:								\
+  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, type, compat)	\
   }
-#define GENERIC_CLASS_VECTOR_OBJREF(cls, code)		\
-  class cls : public ObjElement {			\
-  public:						\
-  GENERIC_CLASS_VECTOR_TYPE_BODY(cls, code, ObjRef)	\
-  GENERIC_GET_INT_ARRAY;				\
-  }
+#define GENERIC_CLASS_VECTOR_TYPE(cls, code, type)		\
+  GENERIC_CLASS_VECTOR_TYPE_COMPARE(cls, code, type, SINGLE_ARG(COMPATIBLE_WITH_TYPE(T, type)))
 #define GENERIC_CLASS_VECTOR_OBJREFVERTEX(cls, code, min)	\
   class cls : public ObjElement {				\
   public:							\
-  GENERIC_CLASS_VECTOR_TYPE_BODY(cls, code, ObjRefVertex)	\
-  GENERIC_GET_INT_ARRAY;					\
+  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, ObjRefVertex, SINGLE_ARG(COMPATIBLE_WITH_VERT(T))) \
+  GENERIC_GET_INT_ARRAY(ObjRefVertex);				\
   /*! \copydoc ObjElement::from_values() */			\
-  void from_values() override					\
+  void from_values() OVERRIDE_CXX11				\
     { RAPIDJSON_ASSERT(values.size() >= min); }			\
   }
   
@@ -395,7 +357,7 @@ inline bool is_equal(const double &a, const double &b) {
 template <typename T>
 inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
   if (a.size() != b.size()) return false;
-  for (auto ait = a.begin(), bit = b.begin(); ait != a.end(); ait++, bit++)
+  for (typename std::vector<T>::const_iterator ait = a.begin(), bit = b.begin(); ait != a.end(); ait++, bit++)
     if (!is_equal(*ait, *bit)) return false;
   return true;
 };
@@ -510,7 +472,7 @@ public:
   template <typename T>
   ObjRefVertex(const T& v0,
 	       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
-    ObjRefVertex(v0, 0, 0) {}
+    v(v0), vt(0), vn(0), Nparam(1) {}
   //! \brief Write the vertex to an output stream.
   //! \param out Output stream.
   //! \return Output stream.
@@ -801,18 +763,27 @@ public:
   template <typename T, size_t N>
   ObjElement(const std::string& code0, const T (&src)[N],
 	     const ObjGroupBase* parent0 = nullptr) :
-    ObjElement(code0, std::vector<T>(src, src+N), parent0) {}
+    code(code0), parent(parent0) {
+    RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
+  }
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //! \param parent0 The element's parent group.
   template <typename T>
   ObjElement(const std::string& code0, const std::vector<T> &,
-	     const ObjGroupBase* parent0 = nullptr) : code(code0), parent(parent0) {
+	     const ObjGroupBase* parent0 = nullptr) :
+    code(code0), parent(parent0) {
     RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
   }
   
   //! \brief Destructor.
   virtual ~ObjElement() {}
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjElement& rhs) {
+    RAPIDJSON_ASSERT(code == rhs.code);
+    RAPIDJSON_ASSERT(parent == rhs.parent);
+  }
   //! \brief Create a copy of the element.
   //! \return Copied element.
   virtual ObjElement* copy() const = 0;
@@ -854,9 +825,14 @@ public:
        COMPATIBLE_WITH_TYPE(T2, std::string)>,
        internal::OrExpr<internal::AndExpr<internal::IsSame<T1,uint16_t>,
        COMPATIBLE_WITH_UINT(T2)>,
-       COMPATIBLE_WITH_TYPE(T1, T2)>>>>>))) {
+       COMPATIBLE_WITH_TYPE(T1, T2)> > > > >))) {
+#if RAPIDJSON_HAS_CXX11
     for (auto it = src.begin(); it != src.end(); it++)
       dst.emplace_back((T1)(*it));
+#else // RAPIDJSON_HAS_CXX11
+    for (typename std::vector<T1>::const_iterator it = src.begin(); it != src.end(); it++)
+      dst.push_back((T1)(*it));
+#endif // RAPIDJSON_HAS_CXX11
   }
   //! \brief Raise an error if the types are not compatible.
   template <typename T1, typename T2>
@@ -872,7 +848,7 @@ public:
        COMPATIBLE_WITH_TYPE(T2, std::string)>,
        internal::OrExpr<internal::AndExpr<internal::IsSame<T1,uint16_t>,
        COMPATIBLE_WITH_UINT(T2)>,
-       COMPATIBLE_WITH_TYPE(T1, T2)>>>>>))) {
+       COMPATIBLE_WITH_TYPE(T1, T2)> > > > >))) {
     ASSERT_COMPATIBLE(T1, T2);
   }
   //! \brief Assign element members from an array of values stored in another
@@ -956,7 +932,7 @@ public:
   //! \param values Values to write.
   template <typename T>
   void write_values(std::ostream &out, const std::vector<T> &values) const {
-    for (auto it = values.begin(); it != values.end(); it++) {
+    for (typename std::vector<T>::const_iterator it = values.begin(); it != values.end(); it++) {
       if (it != values.begin())
 	out << " ";
       out << *it;
@@ -995,35 +971,41 @@ public:
   ObjGroupBase(const ObjGroupBase* parent0 = nullptr) :
     ObjElement(parent0), elements(), finalized(false) {}
   //! \brief Initialize an element group from an element code.
+  //! \param code The element code string.
   //! \param parent0 The element's parent group.
   ObjGroupBase(const std::string& code,
 	       const ObjGroupBase* parent0 = nullptr) :
     ObjElement(code, parent0), elements(), finalized(false) {}
   //! \brief Initialize an element group from an element code.
+  //! \param code The element code string.
+  //! \param elements0 Group elements.
   //! \param parent0 The element's parent group.
   ObjGroupBase(const std::string& code,
 	       const std::vector<ObjElement*> &elements0,
 	       const ObjGroupBase* parent0 = nullptr) :
-    ObjGroupBase(code, parent0) {
+    ObjElement(code, parent0), elements(), finalized(false) {
     assign_values(elements, elements0);
   }
-  GENERIC_CONSTRUCTOR_COPY(ObjGroupBase), elements(), finalized(rhs.finalized) {
-    for (auto it = rhs.elements.begin(); it != rhs.elements.end(); it++)
-      elements.push_back((*it)->copy());
-  }
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjGroupBase);
+  GENERIC_CONSTRUCTOR_COPY(ObjGroupBase, ObjElement, SINGLE_ARG(, elements(), finalized(false)));
   ~ObjGroupBase() {
-    for (auto it = elements.begin(); it != elements.end(); it++)
+    for (std::vector<ObjElement*>::iterator it = elements.begin(); it != elements.end(); it++)
       delete *it;
     elements.resize(0);
   }
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjGroupBase& rhs) {
+    finalized = rhs.finalized;
+    for (std::vector<ObjElement*>::const_iterator it = rhs.elements.begin(); it != rhs.elements.end(); it++)
+      elements.push_back((*it)->copy());
+  }
   //! \brief Check if the element is a group of elements.
   //! \return true if the element is a group.
-  bool is_group() const override { return true; }
+  bool is_group() const OVERRIDE_CXX11 { return true; }
   //! \brief Finalize the group.
   void finalize() { finalized = true; }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool& dont_descend=false) override {
+  void read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
     read_group_header(in);
     if (!dont_descend) {
       while (!finalized) {
@@ -1039,22 +1021,22 @@ public:
   //! \param out Output stream.
   virtual void write_group_header(std::ostream &) const {}
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     if (this->code != "") {
       write_group_header(out);
       out << std::endl;
     }
-    for (auto it = elements.begin(); it != elements.end(); it++)
+    for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++)
       (*it)->write(out);
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (rhs0->code != this->code)
       return false;
     const ObjGroupBase* lhs = this;
     const ObjGroupBase* rhs = dynamic_cast<const ObjGroupBase*>(rhs0);
     if (lhs->elements.size() != rhs->elements.size()) return false;
-    for (auto lit = lhs->elements.begin(), rit = rhs->elements.begin();
+    for (std::vector<ObjElement*>::const_iterator lit = lhs->elements.begin(), rit = rhs->elements.begin();
 	 lit != lhs->elements.end(); lit++, rit++)
       if (!((*lit)->is_equal(*rit))) return false;
     return true;
@@ -1069,7 +1051,7 @@ public:
   //! \brief Find the last element of a given type.
   //! \param code Code of element to find.
   const ObjElement* last_element(const std::string& code0) const {
-    for (auto it = elements.rbegin(); it != elements.rend(); it++)
+    for (std::vector<ObjElement*>::const_reverse_iterator it = elements.rbegin(); it != elements.rend(); it++)
       if ((*it)->code == code0)
 	return *it;
     return nullptr;
@@ -1260,13 +1242,18 @@ public:
 //! Vertex data
 class ObjVertex : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_EMPTY(ObjVertex, v),
-    values(), x(0), y(0), z(0), w(-1), color() {}
-  GENERIC_CONSTRUCTOR_COPY(ObjVertex),
-    values(rhs.values), x(rhs.x), y(rhs.y), z(rhs.z), w(rhs.w), color(rhs.color) {}
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVertex)
+  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVertex, ObjElement, v, SINGLE_ARG(, values(), x(0), y(0), z(0), w(-1), color()));
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjVertex& rhs) {
+    x = rhs.x;
+    y = rhs.y;
+    z = rhs.z;
+    w = rhs.w;
+    color = rhs.color;
+  }
   //! \copydoc ObjElement::from_values()
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT((values.size() == 3)
 		     || (values.size() == 4)
 		     || (values.size() == 6)
@@ -1286,7 +1273,7 @@ public:
   }
   GENERIC_READ_VALUES;
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << x << " " << y << " " << z;
     if (color.is_set)
       out << " " << color.r << " " << color.g << " " << color.b;
@@ -1294,7 +1281,7 @@ public:
       out << " " << w;
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (rhs0->code != this->code) return false;
     const ObjVertex* lhs = this;
     const ObjVertex* rhs = dynamic_cast<const ObjVertex*>(rhs0);
@@ -1305,8 +1292,11 @@ public:
     return (lhs->color == rhs->color);
   }
   //! \copydoc ObjElement::get_double_array
-  std::vector<double> get_double_array() const override {
-    std::vector<double> out({x, y, z});
+  std::vector<double> get_double_array() const OVERRIDE_CXX11 {
+    std::vector<double> out;
+    out.push_back(x);
+    out.push_back(y);
+    out.push_back(z);
     return out;
   }
   //! Vertex values vector.
@@ -1326,13 +1316,16 @@ public:
 //! Object vertex parameter
 class ObjVParameter : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_EMPTY(ObjVParameter, vp),
-    values(), u(0), v(0), w(-1) {}
-  GENERIC_CONSTRUCTOR_COPY(ObjVParameter),
-    values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVParameter)
+  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVParameter, ObjElement, vp, SINGLE_ARG(, values(), u(0), v(0), w(-1)))
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjVParameter& rhs) {
+    u = rhs.u;
+    v = rhs.v;
+    w = rhs.w;
+  }
   //! \copydoc ObjElement::from_values()
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT((values.size() == 2)
 		     || (values.size() == 3));
     u = values[0];
@@ -1344,13 +1337,13 @@ public:
   }
   GENERIC_READ_VALUES;
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << u << " " << v;
     if (w >= 0)
       out << " " << w;
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (rhs0->code != this->code) return false;
     const ObjVParameter* lhs = this;
     const ObjVParameter* rhs = dynamic_cast<const ObjVParameter*>(rhs0);
@@ -1360,8 +1353,11 @@ public:
     return true;
   }
   //! \copydoc ObjElement::get_double_array
-  std::vector<double> get_double_array() const override {
-    std::vector<double> out({u, v, w});
+  std::vector<double> get_double_array() const OVERRIDE_CXX11 {
+    std::vector<double> out;
+    out.push_back(u);
+    out.push_back(v);
+    out.push_back(w);
     return out;
   }
   //! Array of values.
@@ -1377,13 +1373,16 @@ public:
 //! Vertex normal element.
 class ObjVNormal : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_EMPTY(ObjVNormal, vn),
-    values(), i(0), j(0), k(0) {}
-  GENERIC_CONSTRUCTOR_COPY(ObjVNormal),
-    values(), i(rhs.i), j(rhs.j), k(rhs.k) {}
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVNormal)
+  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVNormal, ObjElement, vn, SINGLE_ARG(, values(), i(0), j(0), k(0)))
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjVNormal& rhs) {
+    i = rhs.i;
+    j = rhs.j;
+    k = rhs.k;
+  }
   //! \copydoc ObjElement::from_values
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT(values.size() == 3);
     i = values[0];
     j = values[1];
@@ -1391,11 +1390,11 @@ public:
   }
   GENERIC_READ_VALUES;
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << i << " " << j << " " << k;
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (rhs0->code != this->code) return false;
     const ObjVNormal* lhs = this;
     const ObjVNormal* rhs = dynamic_cast<const ObjVNormal*>(rhs0);
@@ -1405,8 +1404,11 @@ public:
     return true;
   }
   //! \copydoc ObjElement::get_double_array
-  std::vector<double> get_double_array() const override {
-    std::vector<double> out({i, j, k});
+  std::vector<double> get_double_array() const OVERRIDE_CXX11 {
+    std::vector<double> out;
+    out.push_back(i);
+    out.push_back(j);
+    out.push_back(k);
     return out;
   }
   //! Vector of normal values.
@@ -1422,13 +1424,16 @@ public:
 //! Texture vertex element.
 class ObjVTexture : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_EMPTY(ObjVTexture, vt),
-    values(), u(0), v(0), w(0) {}
-  GENERIC_CONSTRUCTOR_COPY(ObjVTexture),
-    values(), u(rhs.u), v(rhs.v), w(rhs.w) {}
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVTexture)
+  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVTexture, ObjElement, vt, SINGLE_ARG(, values(), u(0), v(0), w(0)))
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjVTexture& rhs) {
+    u = rhs.u;
+    v = rhs.v;
+    w = rhs.w;
+  }
   //! \copydoc ObjElement::from_values
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT((values.size() == 1)
 		     || (values.size() == 2)
 		     || (values.size() == 3));
@@ -1442,7 +1447,7 @@ public:
   }
   GENERIC_READ_VALUES;
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << u;
     if (v >= 0)
       out << " " << v;
@@ -1450,7 +1455,7 @@ public:
       out << " " << w;
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (rhs0->code != this->code) return false;
     const ObjVTexture* lhs = this;
     const ObjVTexture* rhs = dynamic_cast<const ObjVTexture*>(rhs0);
@@ -1460,8 +1465,11 @@ public:
     return true;
   }
   //! \copydoc ObjElement::get_double_array
-  std::vector<double> get_double_array() const override {
-    std::vector<double> out({u, v, w});
+  std::vector<double> get_double_array() const OVERRIDE_CXX11 {
+    std::vector<double> out;
+    out.push_back(u);
+    out.push_back(v);
+    out.push_back(w);
     return out;
   }
   //! Vector of texture values.
@@ -1477,7 +1485,11 @@ public:
 // Elements
 
 //! Point element.
-GENERIC_CLASS_VECTOR_OBJREF(ObjPoint, p);
+class ObjPoint : public ObjElement {
+public:
+  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(ObjPoint, p, ObjRef, SINGLE_ARG(COMPATIBLE_WITH_INT(T)))
+  GENERIC_GET_INT_ARRAY(ObjRef);
+};
 
 //! Line element.
 GENERIC_CLASS_VECTOR_OBJREFVERTEX(ObjLine, l, 2);
@@ -1501,29 +1513,17 @@ public:
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjFreeFormElement(const ObjFreeFormElement& rhs) : ObjGroupBase(rhs) {}
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     ObjGroupBase::write_values(out);
     out << "end";
   }
 };
 
-#define FREEFORM_CONSTRUCTOR_EMPTY(cls, code)				\
-  /*! \brief Empty constructor. */					\
-  /*! \param parent0 The element's parent group. */			\
-  cls(const ObjGroupBase* parent0 = nullptr) :				\
-    ObjFreeFormElement(#code, parent0)
-#define FREEFORM_CONSTRUCTOR_COPY(cls)					\
-  /*! \copydoc ObjElement::ObjElement(const ObjElement&) */		\
-  cls(const cls& rhs) :							\
-    ObjFreeFormElement(rhs)
-
 //! Curve element.
 class ObjCurve : public ObjFreeFormElement {
 public:
-  FREEFORM_CONSTRUCTOR_EMPTY(ObjCurve, curv),
-    values(), u0(0), u1(0) {}
-  FREEFORM_CONSTRUCTOR_COPY(ObjCurve),
-    values(rhs.values), u0(rhs.u0), u1(rhs.u1) {}
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjCurve, ObjFreeFormElement, curv, SINGLE_ARG(, values(), u0(0), u1(0)))
+  DUMMY_ARRAY_CONSTRUCTOR(ObjCurve, ObjFreeFormElement, curv, SINGLE_ARG(, values(), u0(0), u1(0)));
   //! \brief Initialize and element from a C++ vector of values.
   //! \param u00 Starting curve parameter value.
   //! \param u10 Ending curve parameter value.
@@ -1540,27 +1540,32 @@ public:
     assign_values(values, values0);
     from_values();
   }
-  DUMMY_ARRAY_CONSTRUCTOR(ObjCurve);
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjCurve);
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjCurve& rhs) {
+    u0 = rhs.u0;
+    u1 = rhs.u1;
+    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
+  }
   //! \copydoc ObjElement::from_values()
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT(values.size() >= 2);
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool& dont_descend=false) override {
+  void read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
     in >> u0;
     in >> u1;
     ObjElement::read_values(in, values);
     ObjFreeFormElement::read_values(in, dont_descend);
   }
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << u0 << " " << u1 << " ";
     ObjElement::write_values(out, values);
     ObjFreeFormElement::write_values(out);
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (!(ObjFreeFormElement::is_equal(rhs0))) return false;
     const ObjCurve* lhs = this;
     const ObjCurve* rhs = dynamic_cast<const ObjCurve*>(rhs0);
@@ -1570,9 +1575,11 @@ public:
     return true;
   }
   //! \copydoc ObjElement::get_double_array
-  std::vector<double> get_double_array() const override {
-    std::vector<double> out({u0, u1});
-    for (auto it = values.begin(); it != values.end(); it++)
+  std::vector<double> get_double_array() const OVERRIDE_CXX11 {
+    std::vector<double> out;
+    out.push_back(u0);
+    out.push_back(u1);
+    for (std::vector<ObjRef>::const_iterator it = values.begin(); it != values.end(); it++)
       out.push_back((double)(*it));
     return out;
   }
@@ -1587,26 +1594,29 @@ public:
 //! 2D curve element.
 class ObjCurve2D : public ObjFreeFormElement {
 public:
-  FREEFORM_CONSTRUCTOR_EMPTY(ObjCurve2D, curv2), values() {}
-  FREEFORM_CONSTRUCTOR_COPY(ObjCurve2D), values(rhs.values) {}
-  GENERIC_CONSTRUCTOR_VECTOR_INT(ObjCurve2D)
-  GENERIC_GET_INT_ARRAY;
+  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjCurve2D, ObjFreeFormElement, curv2, SINGLE_ARG(, values()), COMPATIBLE_WITH_INT(T), int)
+  GENERIC_GET_INT_ARRAY(ObjRef);
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjCurve2D& rhs) {
+    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
+  }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool& dont_descend=false) override {
+  void read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
     ObjElement::read_values(in, values);
     ObjFreeFormElement::read_values(in, dont_descend);
   }
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     ObjElement::write_values(out, values);
     ObjFreeFormElement::write_values(out);
   }
   //! \copydoc ObjElement::from_values()
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT(values.size() >= 2);
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (!(ObjFreeFormElement::is_equal(rhs0))) return false;
     const ObjCurve2D* lhs = this;
     const ObjCurve2D* rhs = dynamic_cast<const ObjCurve2D*>(rhs0);
@@ -1620,10 +1630,7 @@ public:
 //! Surface element.
 class ObjSurface : public ObjFreeFormElement {
 public:
-  FREEFORM_CONSTRUCTOR_EMPTY(ObjSurface, surf),
-    values(), s0(0), s1(0), t0(0), t1(0) {}
-  FREEFORM_CONSTRUCTOR_COPY(ObjSurface),
-    values(rhs.values), s0(rhs.s0), s1(rhs.s1), t0(rhs.t0), t1(rhs.t1) {}
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjSurface, ObjFreeFormElement, surf, SINGLE_ARG(, values(), s0(0), s1(0), t0(0), t1(0)));
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer.
   //! \param s00 Starting curve parameter value in 1st dimension.
@@ -1642,10 +1649,18 @@ public:
     assign_values(values, values0);
     from_values();
   }
-  DUMMY_ARRAY_CONSTRUCTOR(ObjSurface);
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjSurface);
+  DUMMY_ARRAY_CONSTRUCTOR(ObjSurface, ObjFreeFormElement, surf, SINGLE_ARG(, values(), s0(0), s1(0), t0(0), t1(0)));
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjSurface& rhs) {
+    s0 = rhs.s0;
+    s1 = rhs.s1;
+    t0 = rhs.t0;
+    t1 = rhs.t1;
+    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
+  }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool& dont_descend=false) override {
+  void read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
     in >> s0;
     in >> s1;
     in >> t0;
@@ -1654,13 +1669,13 @@ public:
     ObjFreeFormElement::read_values(in, dont_descend);
   }
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << s0 << " " << s1 << " " << t0 << " " << t1 << " ";
     ObjElement::write_values(out, values);
     ObjFreeFormElement::write_values(out);
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (!(ObjFreeFormElement::is_equal(rhs0))) return false;
     const ObjSurface* lhs = this;
     const ObjSurface* rhs = dynamic_cast<const ObjSurface*>(rhs0);
@@ -1672,9 +1687,13 @@ public:
     return true;
   }
   //! \copydoc ObjElement::get_double_array
-  std::vector<double> get_double_array() const override {
-    std::vector<double> out({s0, s1, t0, t1});
-    for (auto it = values.begin(); it != values.end(); it++)
+  std::vector<double> get_double_array() const OVERRIDE_CXX11 {
+    std::vector<double> out;
+    out.push_back(s0);
+    out.push_back(s1);
+    out.push_back(t0);
+    out.push_back(t1);
+    for (std::vector<ObjRefVertex>::const_iterator it = values.begin(); it != values.end(); it++)
       out.push_back((double)(it->v));
     return out;
   }
@@ -1699,7 +1718,7 @@ public:
   GENERIC_CLASS_VECTOR_TYPE_BODY(ObjFreeFormType, cstype, std::string)
   GENERIC_GET_STRING_ARRAY;
   //! \copydoc ObjElement::from_values()
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT((values.size() == 1)
 		     || (values.size() == 2));
     std::string ival = values[0];
@@ -1718,8 +1737,8 @@ public:
 //! Degree element.
 class ObjDegree : public ObjElement {
 public:
-  GENERIC_CLASS_VECTOR_TYPE_BODY(ObjDegree, deg, uint16_t)
-  GENERIC_GET_INT_ARRAY;
+  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(ObjDegree, deg, uint16_t, SINGLE_ARG(COMPATIBLE_WITH_UINT(T)))
+  GENERIC_GET_INT_ARRAY(uint16_t);
   GENERIC_FROM_VALUES(1, 2);
 };
 
@@ -1727,10 +1746,7 @@ public:
 //! Basis matrix element.
 class ObjBasisMatrix : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_EMPTY(ObjBasisMatrix, bmat),
-    values(), direction("") {}
-  GENERIC_CONSTRUCTOR_COPY(ObjBasisMatrix),
-    values(rhs.values), direction(rhs.direction) {}
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjBasisMatrix, ObjElement, bmat, SINGLE_ARG(, values(), direction("")));
   //! \brief Initialize an element from a C array of values.
   //! \tparam T Array element type.
   //! \tparam N Array size.
@@ -1740,7 +1756,11 @@ public:
   template <typename T, size_t N>
   ObjBasisMatrix(const std::string& direction0, const T (&src)[N],
 		 const ObjGroupBase* parent0 = nullptr) :
-    ObjBasisMatrix(direction0, std::vector<T>(src, src+N), parent0) {}
+    ObjElement("bmat", parent0), values(), direction(direction0) {
+    std::vector<T> values0(src, src+N);
+    assign_values(values, values0);
+    from_values();
+  }
   //! \brief Initialize and element from a C++ vector of values.
   //! \param direction0 Basis direction.
   //! \param values0 Vector of values.
@@ -1751,10 +1771,15 @@ public:
     assign_values(values, values0);
     from_values();
   }
-  DUMMY_ARRAY_CONSTRUCTOR(ObjBasisMatrix);
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjBasisMatrix);
+  DUMMY_ARRAY_CONSTRUCTOR(ObjBasisMatrix, ObjElement, bmat, SINGLE_ARG(, values(), direction("")));
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjBasisMatrix& rhs) {
+    direction = rhs.direction;
+    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
+  }
   //! \copydoc ObjElement::from_values()
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT((direction == "u") || (direction == "v"));
     RAPIDJSON_ASSERT(this->parent);
     const ObjElement* deg0 = this->parent->last_element("deg");
@@ -1771,17 +1796,17 @@ public:
     RAPIDJSON_ASSERT(values.size() == ((n + 1)*(n + 1)));
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool&) override {
+  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {
     in >> direction;
     ObjElement::read_values(in, values);
   }
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << direction << " ";
     ObjElement::write_values(out, values);
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (rhs0->code != this->code) return false;
     const ObjBasisMatrix* lhs = this;
     const ObjBasisMatrix* rhs = dynamic_cast<const ObjBasisMatrix*>(rhs0);
@@ -1798,7 +1823,7 @@ public:
 //! Step element.
 class ObjStep : public ObjElement {
 public:
-  GENERIC_CLASS_VECTOR_TYPE_BODY(ObjStep, step, double)
+  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(ObjStep, step, double, SINGLE_ARG(COMPATIBLE_WITH_FLOAT(T)))
   GENERIC_FROM_VALUES(1, 2);
   GENERIC_GET_DOUBLE_ARRAY;
 };
@@ -1806,10 +1831,7 @@ public:
 //! Parameter element.
 class ObjParameter : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_EMPTY(ObjParameter, parm),
-    values(), direction("") {}
-  GENERIC_CONSTRUCTOR_COPY(ObjParameter),
-    values(rhs.values), direction(rhs.direction) {}
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjParameter, ObjElement, parm, SINGLE_ARG(, values(), direction("")));
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be catable to double.
   //! \param direction0 Parameter direction.
@@ -1831,27 +1853,32 @@ public:
   ObjParameter(const std::string&, const std::vector<T> &,
 	       const ObjGroupBase* parent0 = nullptr,
 	       RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
-    ObjParameter(parent0) {
+    ObjElement("parm", parent0), values(), direction("") {
     RAPIDJSON_ASSERT(sizeof("ObjParameter type is double"));
   }
-  DUMMY_ARRAY_CONSTRUCTOR(ObjParameter);
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjParameter);
+  DUMMY_ARRAY_CONSTRUCTOR(ObjParameter, ObjElement, parm, SINGLE_ARG(, values(), direction("")));
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjParameter& rhs) {
+    direction = rhs.direction;
+    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
+  }
   //! \copydoc ObjElement::from_values()
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT((direction == "u") || (direction == "v"));
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool&) override {
+  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {
     in >> direction;
     ObjElement::read_values(in, values);
   }
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << direction << " ";
     ObjElement::write_values(out, values);
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (rhs0->code != this->code) return false;
     const ObjParameter* lhs = this;
     const ObjParameter* rhs = dynamic_cast<const ObjParameter*>(rhs0);
@@ -1875,7 +1902,7 @@ GENERIC_CLASS_VECTOR_TYPE(ObjHole, hole, ObjRefCurve);
 GENERIC_CLASS_VECTOR_TYPE(ObjScrv, scrv, ObjRefCurve);
 
 //! Special points element.
-GENERIC_CLASS_VECTOR_TYPE(ObjSpecialPoints, sp, ObjRef);
+GENERIC_CLASS_VECTOR_TYPE_COMPARE(ObjSpecialPoints, sp, ObjRef, SINGLE_ARG(COMPATIBLE_WITH_INT(T)));
 
 //! Connection element.
 GENERIC_CLASS_VECTOR_TYPE(ObjConnect, con, ObjRefSurface);
@@ -1883,44 +1910,58 @@ GENERIC_CLASS_VECTOR_TYPE(ObjConnect, con, ObjRefSurface);
 //! Group of elements.
 class ObjGroup : public ObjGroupBase {
 public:
-  //! \brief Empty constructor.
-  //! \param parent0 The element's parent group.
-  ObjGroup(const ObjGroupBase* parent0 = nullptr) :
-    ObjGroupBase("g", parent0), values() {}
-  //! \copydoc ObjElement::ObjElement(const ObjElement&)
-  ObjGroup(const ObjGroup& rhs) :
-    ObjGroupBase(rhs), values(rhs.values) {}
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjGroup, std::string)
+  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjGroup, ObjGroupBase, g, SINGLE_ARG(, values()), COMPATIBLE_WITH_TYPE(T, std::string), std::string)
   //! \brief Initialize and element from a scalar.
   //! \tparam T Type of value.
   //! \param value Scalar value.
   //! \param parent0 The element's parent group.
   template<typename T>
   ObjGroup(const T &value,
-	   const ObjGroupBase* parent0 = nullptr) :
-    ObjGroup(std::vector<T>{value}, parent0) {}
+	   const ObjGroupBase* parent0 = nullptr,
+	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
+    ObjGroupBase("g", parent0), values() {
+    std::vector<T> values0;
+    values0.push_back(value);
+    assign_values(values, values0);
+    from_values();
+  }
+  //! \brief Raise an error for incompatible types.
+  //! \tparam T Type of value.
+  //! \param parent0 The element's parent group.
+  template<typename T>
+  ObjGroup(const T &,
+	   const ObjGroupBase* parent0 = nullptr,
+	   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
+    ObjGroupBase("g", parent0), values() {
+    ASSERT_COMPATIBLE(T, std::string);
+  }
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjGroup& rhs) {
+    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
+  }
   //! \copydoc ObjGroupBase::read_group_header
-  void read_group_header(std::istream &in) override {
+  void read_group_header(std::istream &in) OVERRIDE_CXX11 {
     ObjElement::read_values(in, values);
   }
   //! \copydoc ObjGroupBase::write_group_header
-  void write_group_header(std::ostream &out) const override {
+  void write_group_header(std::ostream &out) const OVERRIDE_CXX11 {
     ObjElement::write_values(out, values);
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (!ObjGroupBase::is_equal(rhs0))
       return false;
     const ObjGroup* lhs = this;
     const ObjGroup* rhs = dynamic_cast<const ObjGroup*>(rhs0);
     std::string lhs_str = "";
     std::string rhs_str = "";
-    for (auto it = lhs->values.begin(); it != lhs->values.end(); it++) {
+    for (std::vector<std::string>::const_iterator it = lhs->values.begin(); it != lhs->values.end(); it++) {
       if (it != lhs->values.begin())
 	lhs_str.append(" ");
       lhs_str.append(*it);
     }
-    for (auto it = rhs->values.begin(); it != rhs->values.end(); it++) {
+    for (std::vector<std::string>::const_iterator it = rhs->values.begin(); it != rhs->values.end(); it++) {
       if (it != rhs->values.begin())
 	rhs_str.append(" ");
       rhs_str.append(*it);
@@ -1933,15 +1974,10 @@ public:
   std::vector<std::string> values;
 };
 
-// #define GENERIC_CLASS_GROUP(cls, codeS)
-//   GENERIC_CLASS_SCALAR_TYPE_BASE(cls, codeS, std::string, "off");
-//   cls(const ObjGroupBase* parent0 = nullptr) :
-//     ObjElement(#codeS, parent0), value("off") {}
-
 //! Smoothing group element.
 class ObjSmoothingGroup : public ObjElement {
 public:
-  GENERIC_CLASS_SCALAR_TYPE_BASE(ObjSmoothingGroup, s, std::string, "off")
+  GENERIC_CLASS_SCALAR_TYPE_BASE(ObjSmoothingGroup, ObjElement, s, std::string, "off")
   //! \brief Initialize the smoothing group from a string.
   //! \param value0 Scalar value.
   //! \param parent0 Parent group.
@@ -1955,14 +1991,14 @@ public:
   template<typename T>
   ObjSmoothingGroup(const T& value0, const ObjGroupBase* parent0 = nullptr,
 		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
-    ObjSmoothingGroup(std::to_string(value0), parent0) {}
+    ObjElement("s", parent0), value(std::to_string(value0)) {}
   //! \brief Raise an error for non string or integer types.
   template<typename T>
   ObjSmoothingGroup(const T&, const ObjGroupBase* parent0 = nullptr,
 		    RAPIDJSON_DISABLEIF((internal::OrExpr<
 					 COMPATIBLE_WITH_INT(T),
 					 COMPATIBLE_WITH_TYPE(T, std::string)>))) :
-    ObjSmoothingGroup(parent0) {
+    ObjElement("s", parent0), value("off") {
     RAPIDJSON_ASSERT(!sizeof("ObjSmoothingGroup must be initialized from a string or integer."));
   }
 };
@@ -1970,12 +2006,8 @@ public:
 //! Merging group.
 class ObjMergingGroup : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_EMPTY(ObjMergingGroup, mg),
-    value("off"), resolution(0) {}
-  GENERIC_CONSTRUCTOR_COPY(ObjMergingGroup),
-    value(rhs.value), resolution(rhs.resolution) {}
-  DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup);
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjMergingGroup);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value("off"), resolution(0)));
+  DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value("off"), resolution(0)));
   //! \brief Initialize the smoothing group from a string.
   //! \param value0 Scalar value.
   //! \param parent0 Parent group.
@@ -1991,7 +2023,7 @@ public:
   ObjMergingGroup(const T& value0, const double& resolution0,
 		  const ObjGroupBase* parent0 = nullptr,
 		  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
-    ObjMergingGroup(std::to_string(value0), resolution0, parent0) {}
+    ObjElement("mg", parent0), value(std::to_string(value0)), resolution(resolution0) {}
   //! \brief Raise an error for non string or integer types.
   template <typename T>
   ObjMergingGroup(const T&, const double&,
@@ -1999,11 +2031,17 @@ public:
 		  RAPIDJSON_DISABLEIF((internal::OrExpr<
 				       COMPATIBLE_WITH_INT(T),
 				       COMPATIBLE_WITH_TYPE(T, std::string)>))) :
-    ObjMergingGroup(parent0) {
+    ObjElement("mg", parent0), value("off"), resolution(0) {
     RAPIDJSON_ASSERT(!sizeof("ObjMergingGroup must be initialized from a string or integer."));
   }
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjMergingGroup& rhs) {
+    value = rhs.value;
+    resolution = rhs.resolution;
+  }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool&) override {
+  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {
     in >> value;
     if (value == "off")
       resolution = 0.0;
@@ -2011,13 +2049,13 @@ public:
       in >> resolution;
   }
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << value;
     if (value != "off")
       out << " " << resolution;
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (this->code != rhs0->code) return false;
     const ObjMergingGroup* lhs = this;
     const ObjMergingGroup* rhs = dynamic_cast<const ObjMergingGroup*>(rhs0);
@@ -2039,9 +2077,9 @@ GENERIC_CLASS_SCALAR_TYPE(ObjObjectName, o, std::string, "");
 #define BOOL_ELEMENT_CLASS(cls, code)					\
   class cls : public ObjElement {					\
   public:								\
-  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, code, std::string, "off");	\
+  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, std::string, "off"); \
   /*! \copydoc ObjElement::from_values() */				\
-  void from_values() override {						\
+  void from_values() OVERRIDE_CXX11 {						\
     RAPIDJSON_ASSERT(((value == "on") || (value == "off")));		\
   }									\
   }
@@ -2081,12 +2119,8 @@ GENERIC_CLASS_SCALAR_TYPE(ObjTraceFile, trace_obj, std::string, "");
 //! Curve technique resolution.
 class ObjCTech : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_EMPTY(ObjCTech, ctech),
-    technique(""), values() {}
-  GENERIC_CONSTRUCTOR_COPY(ObjCTech),
-    technique(rhs.technique), values(rhs.values) {}
-  DUMMY_ARRAY_CONSTRUCTOR(ObjCTech);
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjCTech);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjCTech, ObjElement, ctech, SINGLE_ARG(, technique(""), values()));
+  DUMMY_ARRAY_CONSTRUCTOR(ObjCTech, ObjElement, ctech, SINGLE_ARG(, technique(""), values()));
   template<typename T>
   ObjCTech(const std::string& technique0,
 	   const std::vector<T> &values0,
@@ -2104,8 +2138,14 @@ public:
     ObjElement("ctech", parent0), technique(technique0), values() {
     RAPIDJSON_ASSERT(sizeof("ObjCTech type is double"));
   }
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjCTech& rhs) {
+    technique = rhs.technique;
+    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
+  }
   //! \copydoc ObjElement::from_values()
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT(((technique == "cparm" ) ||
 		      (technique == "cspace") ||
 		      (technique == "curv"  )));
@@ -2115,7 +2155,7 @@ public:
       RAPIDJSON_ASSERT((values.size() == 2));
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool&) override {
+  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {
     in >> technique;
     RAPIDJSON_ASSERT(((technique == "cparm" ) ||
 		      (technique == "cspace") ||
@@ -2123,12 +2163,12 @@ public:
     ObjElement::read_values(in, values);
   }
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << technique << " ";
     ObjElement::write_values(out, values);
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (rhs0->code != this->code) return false;
     const ObjCTech* lhs = this;
     const ObjCTech* rhs = dynamic_cast<const ObjCTech*>(rhs0);
@@ -2145,12 +2185,8 @@ public:
 //! Surface technique resolution.
 class ObjSTech : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_EMPTY(ObjSTech, stech),
-    technique(""), values() {}
-  GENERIC_CONSTRUCTOR_COPY(ObjSTech),
-    technique(rhs.technique), values(rhs.values) {}
-  DUMMY_ARRAY_CONSTRUCTOR(ObjSTech);
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjSTech);
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjSTech, ObjElement, stech, SINGLE_ARG(, technique(""), values()));
+  DUMMY_ARRAY_CONSTRUCTOR(ObjSTech, ObjElement, stech, SINGLE_ARG(, technique(""), values()));
   template<typename T>
   ObjSTech(const std::string& technique0,
 	   const std::vector<T> &values0,
@@ -2168,8 +2204,14 @@ public:
     ObjElement("stech", parent0), technique(technique0), values() {
     RAPIDJSON_ASSERT(!sizeof("ObjSTech type is double"));
   }
+  //! \brief Copy element specific members from another instance.
+  //! \param[in] rhs Element to copy members from.
+  void copy_members(const ObjSTech& rhs) {
+    technique = rhs.technique;
+    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
+  }
   //! \copydoc ObjElement::from_values()
-  void from_values() override {
+  void from_values() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT(((technique == "cparma") ||
 		      (technique == "cparmb") ||
 		      (technique == "cspace") ||
@@ -2180,7 +2222,7 @@ public:
       RAPIDJSON_ASSERT((values.size() == 2));
   }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool&) override {
+  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {
     in >> technique;
     RAPIDJSON_ASSERT(((technique == "cparma") ||
 		      (technique == "cparmb") ||
@@ -2189,12 +2231,12 @@ public:
     ObjElement::read_values(in, values);
   }
   //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const override {
+  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << technique << " ";
     ObjElement::write_values(out, values);
   }
   //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const override {
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (rhs0->code != this->code) return false;
     const ObjSTech* lhs = this;
     const ObjSTech* rhs = dynamic_cast<const ObjSTech*>(rhs0);
@@ -2237,7 +2279,7 @@ public:
   //! \tparam Nv Number of values in the array for each vertex element.
   //! \param vertices Array of vertex element value arrays.
   template<typename Tv, size_t Mv, size_t Nv>
-  ObjWavefront(const Tv (&vertices)[Mv][Nv]) : ObjWavefront() {
+  ObjWavefront(const Tv (&vertices)[Mv][Nv]) : ObjGroupBase("") {
     add_element_set("v", vertices);
   }
   //! \brief Create an ObjWavefront instance from C arrays of vertices and
@@ -2252,8 +2294,9 @@ public:
   //! \param faces Array of face element value arrays.
   template<typename Tv, size_t Mv, size_t Nv,
 	   typename Tf, size_t Mf, size_t Nf>
-  ObjWavefront(const Tv (&vertices)[Mv][Nv], const Tf (&faces)[Mf][Nf]={}) :
-    ObjWavefront(vertices) {
+  ObjWavefront(const Tv (&vertices)[Mv][Nv], const Tf (&faces)[Mf][Nf]) :
+    ObjGroupBase("") {
+    add_element_set("v", vertices);
     add_element_set("f", faces);
   }
   //! \brief Create an ObjWavefront instance from C arrays of vertices,
@@ -2273,9 +2316,11 @@ public:
   template<typename Tv, size_t Mv, size_t Nv,
 	   typename Tf, size_t Mf, size_t Nf,
 	   typename Te, size_t Me, size_t Ne>
-  ObjWavefront(const Tv (&vertices)[Mv][Nv], const Tf (&faces)[Mf][Nf]={},
-	       const Te (&edges)[Me][Ne]={}) :
-    ObjWavefront(vertices, faces) {
+  ObjWavefront(const Tv (&vertices)[Mv][Nv], const Tf (&faces)[Mf][Nf],
+	       const Te (&edges)[Me][Ne]) :
+    ObjGroupBase("") {
+    add_element_set("v", vertices);
+    add_element_set("f", faces);
     add_element_set("l", edges);
   }
   //! \brief Add a set of elements to the geometry from a C array of value
@@ -2375,10 +2420,15 @@ RAPIDJSON_DISABLEIF_RETURN((internal::IsPointer<T>), (ObjElement*)) ObjGroupBase
   else if (name == "usemtl"    ) x = new ObjMaterial(value, this);
   else if (name == "shadow_obj") x = new ObjShadowFile(value, this);
   else if (name == "trace_obj" ) x = new ObjTraceFile(value, this);
-  else if (name == "maplib"    )
-    x = new ObjTextureMapLib(std::vector<std::string>{name}, this);
-  else if (name == "mtllib"    )
-    x = new ObjMaterialLib(std::vector<std::string>{name}, this);
+  else if (name == "maplib"    ) {
+    std::vector<std::string> values;
+    values.push_back(name);
+    x = new ObjTextureMapLib(values, this);
+  } else if (name == "mtllib"  ) {
+    std::vector<std::string> values;
+    values.push_back(name);
+    x = new ObjMaterialLib(values, this);
+  }
   else REPORT_UNSUPPORTED_ELEMENT(scalar, name);
   return ObjGroupBase::add_element(x);
 };
@@ -2397,19 +2447,26 @@ ObjElement* ObjGroupBase::add_element(std::string name,
 				      const double& resolution) {
   ObjElement* x = nullptr;
   if      (name == "mg"   ) x = new ObjMergingGroup(value, resolution, this);
-  else if (name == "parm" )
-    x = new ObjParameter(value, std::vector<double>{resolution}, this);
-  else if (name == "ctech")
-    x = new ObjCTech(value, std::vector<double>{resolution}, this);
-  else if (name == "stech")
-    x = new ObjSTech(value, std::vector<double>{resolution}, this);
+  else if (name == "parm" ) {
+    std::vector<double> vres;
+    vres.push_back(resolution);
+    x = new ObjParameter(value, vres, this);
+  }
+  else if (name == "ctech") {
+    std::vector<double> vres;
+    vres.push_back(resolution);
+    x = new ObjCTech(value, vres, this);
+  }
+  else if (name == "stech") {
+    std::vector<double> vres;
+    vres.push_back(resolution);
+    x = new ObjSTech(value, vres, this);
+  }
   else REPORT_UNSUPPORTED_ELEMENT(ObjMergingGroupString, name);
   return ObjGroupBase::add_element(x);
 };
 
 #undef GENERIC_CLASS_VECTOR_OBJREFVERTEX
-#undef GENERIC_CLASS_VECTOR_OBJREF
-#undef GENERIC_CLASS_VECTOR_OBJREF
 #undef GENERIC_CLASS_VECTOR_TYPE
 #undef GENERIC_CLASS_VECTOR_TYPE_BODY
 #undef GENERIC_CLASS_SCALAR_TYPE
@@ -2425,12 +2482,8 @@ ObjElement* ObjGroupBase::add_element(std::string name,
 #undef GENERIC_READ_VALUES
 #undef DUMMY_ARRAY_CONSTRUCTOR
 #undef GENERIC_CONSTRUCTOR_VECTOR_TYPE
-#undef GENERIC_CONSTRUCTOR_VECTOR_VERT
 #undef GENERIC_CONSTRUCTOR_VECTOR_FLOAT
-#undef GENERIC_CONSTRUCTOR_VECTOR_UINT
-#undef GENERIC_CONSTRUCTOR_VECTOR_INT
 #undef GENERIC_CONSTRUCTOR_COPY
-#undef GENERIC_CONSTRUCTOR_EMPTY
 #undef ASSERT_COMPATIBLE
 #undef COMPATIBLE_WITH_ANY
 #undef COMPATIBLE_WITH_TYPE
@@ -2440,12 +2493,12 @@ ObjElement* ObjGroupBase::add_element(std::string name,
 #undef COMPATIBLE_WITH_FLOAT
 #undef COMPATIBLE_WITH_UINT
 #undef COMPATIBLE_WITH_INT
-#undef C_ARRAY_CONSTRUCTOR
 #undef GENERIC_ELEMENT_CONSTRUCTOR
 #undef OBJ_ELEMENT_INIT
 #undef REPORT_UNSUPPORTED_ELEMENT
 #undef IS_EQUAL_DBL
 #undef IS_EQUAL_FLT
+#undef OVERRIDE_CXX11
 
 RAPIDJSON_NAMESPACE_END
 
