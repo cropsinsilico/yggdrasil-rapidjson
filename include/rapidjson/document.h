@@ -3321,7 +3321,7 @@ public:
       for (typename SchemaValueType::ConstMemberIterator m = schema_->MemberBegin();
 	   m != schema_->MemberEnd(); ++m)
 	out.AddMember(ValueType(m->name, allocator, true),
-		      ValueType(m->value, allocator, true),
+		      ValueType(m->value, allocator, true).Move(),
 		      allocator);
     } else {
       switch(GetType()) {
@@ -3334,7 +3334,7 @@ public:
 	    if (m->value.HasSchemaNested())
 	      props.AddMember(StringRef(m->name.GetString(),
 					m->name.GetStringLength()),
-			      m->value.GetSchemaNested(allocator),
+			      m->value.GetSchemaNested(allocator).Move(),
 			      allocator);
 	  out.AddMember(GetPropertiesString(), props, allocator);
 	  break;
@@ -3345,7 +3345,7 @@ public:
 	  out.AddMember(GetTypeString(), v, allocator);
 	  ValueType items(kArrayType);
 	  for (ConstValueIterator v2 = Begin(); v2 != End(); ++v2)
-	    items.PushBack(v2->GetSchemaNested(allocator), allocator);
+	    items.PushBack(v2->GetSchemaNested(allocator).Move(), allocator);
 	  out.AddMember(GetItemsString(), items, allocator);
 	  break;
 	}
@@ -3363,21 +3363,21 @@ public:
     RAPIDJSON_ASSERT(schema_ != NULL);
     Allocator& allocator = schema_->GetAllocator();
     schema_->AddMember(typename SchemaValueType::ValueType(key, allocator, true),
-		       typename SchemaValueType::ValueType(value, allocator, true),
+		       typename SchemaValueType::ValueType(value, allocator, true).Move(),
 		       allocator);
   }
   void AddSchemaMember(const ValueType& key, unsigned int value) {
     RAPIDJSON_ASSERT(schema_ != NULL);
     Allocator& allocator = schema_->GetAllocator();
     schema_->AddMember(typename SchemaValueType::ValueType(key, allocator, true),
-		       typename SchemaValueType::ValueType(value),
+		       typename SchemaValueType::ValueType(value).Move(),
 		       allocator);
   }
   void AddSchemaMember(const ValueType& key, const Ch* str, SizeType str_len) {
     RAPIDJSON_ASSERT(schema_ != NULL);
     Allocator& allocator = schema_->GetAllocator();
     schema_->AddMember(typename SchemaValueType::ValueType(key, allocator, true),
-		       typename SchemaValueType::ValueType(str, str_len, allocator),
+		       typename SchemaValueType::ValueType(str, str_len, allocator).Move(),
 		       allocator);
   }
 		       
@@ -3611,13 +3611,13 @@ public:
       RAPIDJSON_ASSERT(allocator);
       SetArray();
       for (SizeType i = 0; i < PyList_Size(x); i++) {
-        PushBack(ValueType(PyList_GetItem(x, i), *allocator), *allocator);
+        PushBack(ValueType(PyList_GetItem(x, i), *allocator).Move(), *allocator);
       }
     } else if (PyTuple_CheckExact(x)) {
       RAPIDJSON_ASSERT(allocator);
       SetArray();
       for (SizeType i = 0; i < PyTuple_Size(x); i++) {
-        PushBack(ValueType(PyTuple_GetItem(x, i), *allocator), *allocator);
+        PushBack(ValueType(PyTuple_GetItem(x, i), *allocator).Move(), *allocator);
       }
     } else if (PyDict_CheckExact(x)) {
       RAPIDJSON_ASSERT(allocator);
@@ -3627,7 +3627,7 @@ public:
       for (SizeType i = 0; i < PyDict_Size(x); i++) {
         ikey = PyList_GetItem(keys, i);
         AddMember(ValueType(ikey, *allocator),
-                  ValueType(PyDict_GetItem(x, ikey), *allocator),
+                  ValueType(PyDict_GetItem(x, ikey), *allocator).Move(),
                   *allocator);
       }
       Py_DECREF(keys);

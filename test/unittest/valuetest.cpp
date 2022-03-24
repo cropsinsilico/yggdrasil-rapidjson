@@ -46,6 +46,12 @@ TEST(Value, Size) {
 }
 
 #ifdef RAPIDJSON_YGGDRASIL
+#if RAPIDJSON_HAS_CXX11
+#define TEMPLATE_CXX11 template
+#else // RAPIDJSON_HAS_CXX11
+#define TEMPLATE_CXX11
+#endif // RAPIDJSON_HAS_CXX11
+
 #define YGGDRASIL_SCALAR_UNIT_TEST(type, value)				\
   {									\
     units::Quantity<type, Value::EncodingType> q1(value, "g");		\
@@ -53,19 +59,19 @@ TEST(Value, Size) {
     EXPECT_TRUE(q1.equivalent_to(q2));					\
     Value zq1(value, "g");						\
     Value zq2(q2);							\
-    EXPECT_EQ(1000000 * value, zq1.template GetScalar<type>("ug"));	\
-    EXPECT_EQ(value, zq2.template GetScalar<type>("g"));		\
-    EXPECT_EQ(q1, zq1.template GetScalarQuantity<type>("g"));		\
-    EXPECT_EQ(q1, zq2.template GetScalarQuantity<type>("g"));		\
-    EXPECT_EQ(q1, zq1.template GetScalarQuantity<type>());		\
-    EXPECT_EQ(q2, zq1.template GetScalarQuantity<type>("ug"));		\
-    EXPECT_EQ(q2, zq2.template GetScalarQuantity<type>("ug"));		\
-    EXPECT_EQ(q2, zq2.template GetScalarQuantity<type>());		\
+    EXPECT_EQ(1000000 * value, zq1.TEMPLATE_CXX11 GetScalar<type>("ug")); \
+    EXPECT_EQ(value, zq2.TEMPLATE_CXX11 GetScalar<type>("g"));		\
+    EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetScalarQuantity<type>("g"));	\
+    EXPECT_EQ(q1, zq2.TEMPLATE_CXX11 GetScalarQuantity<type>("g"));	\
+    EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetScalarQuantity<type>());	\
+    EXPECT_EQ(q2, zq1.TEMPLATE_CXX11 GetScalarQuantity<type>("ug"));	\
+    EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetScalarQuantity<type>("ug"));	\
+    EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetScalarQuantity<type>());	\
   }
 #define YGGDRASIL_1DARRAY_EXPECT_EQ(a, a_len, v, type, units)		\
   {									\
     SizeType b_len = 0;							\
-    type* b = v.template Get1DArray<type>(b_len, allocator, units);	\
+    type* b = v.TEMPLATE_CXX11 Get1DArray<type>(b_len, allocator, units); \
     EXPECT_EQ(a_len, b_len);						\
     for (SizeType i = 0; i < b_len; i++)				\
       EXPECT_EQ(a[i], b[i]);						\
@@ -81,18 +87,18 @@ TEST(Value, Size) {
     Value zq2(q2);							\
     YGGDRASIL_1DARRAY_EXPECT_EQ(value2, 4u, zq1, type, "ug");		\
     YGGDRASIL_1DARRAY_EXPECT_EQ(value1, 4u, zq2, type, "g");		\
-    EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator, "g"));	\
-    EXPECT_EQ(q1, zq2.template GetArrayQuantity<type>(allocator, "g"));	\
-    EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator));	\
-    EXPECT_EQ(q2, zq1.template GetArrayQuantity<type>(allocator, "ug")); \
-    EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator, "ug")); \
-    EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator));	\
+    EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator, "g")); \
+    EXPECT_EQ(q1, zq2.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator, "g")); \
+    EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator)); \
+    EXPECT_EQ(q2, zq1.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator, "ug")); \
+    EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator, "ug")); \
+    EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator)); \
   }
 #define YGGDRASIL_NDARRAY_EXPECT_EQ(a, a_dim, a_shape, v, type, units)  \
   {									\
     SizeType b_dim = 0;							\
     SizeType* b_shape = nullptr;					\
-    type* b = v.template GetNDArray<type>(b_shape, b_dim, allocator, units); \
+    type* b = v.TEMPLATE_CXX11 GetNDArray<type>(b_shape, b_dim, allocator, units); \
     EXPECT_EQ(a_dim, b_dim);						\
     SizeType N = 1;							\
     for (SizeType i = 0; i < b_dim; i++) {				\
@@ -121,12 +127,12 @@ TEST(Value, Size) {
     std::cout << std::endl;						\
     YGGDRASIL_NDARRAY_EXPECT_EQ(value2, 2u, shape2, zq1, type, "ug");	\
     YGGDRASIL_NDARRAY_EXPECT_EQ(value1, 2u, shape1, zq2, type, "g");	\
-    EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator, "g"));	\
-    EXPECT_EQ(q1, zq2.template GetArrayQuantity<type>(allocator, "g"));	\
-    EXPECT_EQ(q1, zq1.template GetArrayQuantity<type>(allocator));	\
-    EXPECT_EQ(q2, zq1.template GetArrayQuantity<type>(allocator, "ug")); \
-    EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator, "ug")); \
-    EXPECT_EQ(q2, zq2.template GetArrayQuantity<type>(allocator));	\
+    EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator, "g")); \
+    EXPECT_EQ(q1, zq2.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator, "g")); \
+    EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator)); \
+    EXPECT_EQ(q2, zq1.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator, "ug")); \
+    EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator, "ug")); \
+    EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator)); \
   }
 #else
 #define YGGDRASIL_SCALAR_UNIT_TEST(type, value) {}
@@ -1232,7 +1238,7 @@ TEST(Value, ScalarUInt) {
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(kYggUintSubType, x.GetSubTypeCode());
-  EXPECT_EQ(uint8_t(12), x.template GetScalar<uint8_t>());
+  EXPECT_EQ(uint8_t(12), x.TEMPLATE_CXX11 GetScalar<uint8_t>());
   EXPECT_EQ(x, y);
   EXPECT_EQ(x, z);
   EXPECT_NE(y, z);
@@ -1265,7 +1271,7 @@ TEST(Value, ScalarInt) {
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(kYggIntSubType, x.GetSubTypeCode());
-  EXPECT_EQ(int8_t(12), x.template GetScalar<int8_t>());
+  EXPECT_EQ(int8_t(12), x.TEMPLATE_CXX11 GetScalar<int8_t>());
   EXPECT_EQ(x, y);
   EXPECT_EQ(x, z);
   EXPECT_NE(y, z);
@@ -1298,7 +1304,7 @@ TEST(Value, ScalarComplex) {
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(kYggComplexSubType, x.GetSubTypeCode());
-  EXPECT_EQ(std::complex<double>(2.2, 3.4), x.template GetScalar<std::complex<double>>());
+  EXPECT_EQ(std::complex<double>(2.2, 3.4), x.TEMPLATE_CXX11 GetScalar<std::complex<double> >());
   EXPECT_EQ(x, y);
   EXPECT_EQ(x, z);
   EXPECT_NE(y, z);
@@ -1327,15 +1333,15 @@ TEST(Value, ScalarComplex) {
   Value zq2(q2);
   // EXPECT_EQ failes for complex values
   EXPECT_TRUE(units::compare_values(std::complex<double>(2.2e6, 3.4e6),
-				    zq1.template GetScalar<std::complex<double>>("ug")));
+				    zq1.TEMPLATE_CXX11 GetScalar<std::complex<double> >("ug")));
   EXPECT_TRUE(units::compare_values(std::complex<double>(2.2, 3.4),
-				    zq2.template GetScalar<std::complex<double>>("g")));
-  EXPECT_EQ(q1, zq1.template GetScalarQuantity<std::complex<double>>("g"));
-  EXPECT_EQ(q1, zq2.template GetScalarQuantity<std::complex<double>>("g"));
-  EXPECT_EQ(q1, zq1.template GetScalarQuantity<std::complex<double>>());
-  EXPECT_EQ(q2, zq1.template GetScalarQuantity<std::complex<double>>("ug"));
-  EXPECT_EQ(q2, zq2.template GetScalarQuantity<std::complex<double>>("ug"));
-  EXPECT_EQ(q2, zq2.template GetScalarQuantity<std::complex<double>>());
+				    zq2.TEMPLATE_CXX11 GetScalar<std::complex<double> >("g")));
+  EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >("g"));
+  EXPECT_EQ(q1, zq2.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >("g"));
+  EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >());
+  EXPECT_EQ(q2, zq1.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >("ug"));
+  EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >("ug"));
+  EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >());
 }
 
 #define YGGDRASIL_1D_ARRAY_TEST_BODY(name, precision, type, value)\
@@ -1484,7 +1490,30 @@ YGGDRASIL_ND_ARRAY_TEST(Complex, 8, std::complex<float>,
      {2 + zero, 3 + zero},					\
      {3 + zero, 0 + zero},					\
      {2 + zero, 0 + zero}};
-  
+
+#if RAPIDJSON_HAS_CXX11
+#define C_ARR(...) {__VA_ARGS__}
+#define C_ARR1(x) {x}
+#define ADD_ELEMENT_STR1(name, ...) obj.add_element(name, std::vector<std::string>{__VA_ARGS__})
+#define ADD_ELEMENT_STR2(name, ...) obj.add_element(name, std::vector<std::string>{__VA_ARGS__})
+#else // RAPIDJSON_HAS_CXX11
+#define C_ARR(...) internal::pack_vector_(__VA_ARGS__)
+#define C_ARR1(x) internal::pack_vector__(1, x)
+#define ADD_ELEMENT_STR1(name, x)		\
+  {						\
+    std::vector<std::string> names;		\
+    names.push_back(x);				\
+    obj.add_element(name, names);		\
+  }
+#define ADD_ELEMENT_STR2(name, x, y)		\
+  {						\
+    std::vector<std::string> names;		\
+    names.push_back(x);				\
+    names.push_back(y);				\
+    obj.add_element(name, names);		\
+  }
+#endif // RAPIDJSON_HAS_CXX11
+
 TEST(Value, ObjWavefront) {
   ARRAYS_3D(0);
   ARRAYS_3D(1);
@@ -1503,238 +1532,263 @@ TEST(Value, ObjWavefront) {
   x.GetPly(cpy_ply);
   EXPECT_EQ(ply, cpy_ply);
   // More complex elements that do not map 1-to-1 with Ply
-  obj.add_element("vp", {1.0, 2.0});
-  obj.add_element("vp", {2.0, 1.0, 3.0});
-  obj.add_element("vn", {1.0, 2.0, 3.0});
-  obj.add_element("vt", {1.0});
-  obj.add_element("vt", {2.0, 1.0});
-  obj.add_element("vt", {3.0, 2.0, 1.0});
-  obj.add_element("p", {3u, 1u, 2u});
+  obj.add_element("vp", C_ARR(1.0, 2.0));
+  obj.add_element("vp", C_ARR(2.0, 1.0, 3.0));
+  obj.add_element("vn", C_ARR(1.0, 2.0, 3.0));
+  obj.add_element("vt", C_ARR1(1.0));
+  obj.add_element("vt", C_ARR(2.0, 1.0));
+  obj.add_element("vt", C_ARR(3.0, 2.0, 1.0));
+  obj.add_element("p", C_ARR(3u, 1u, 2u));
   // Taylor curve
-  obj.add_element("cstype", std::vector<std::string>{"taylor"});
-  obj.add_element("deg", {4u});
-  obj.add_element("curv", 0.500, 1.600, {1u, 2u, 3u, 4u, 5u});
-  obj.add_element("parm", "u", {0.000, 2.000});
+  ADD_ELEMENT_STR1("cstype", "taylor");
+  obj.add_element("deg", C_ARR1(4u));
+  obj.add_element("curv", 0.500, 1.600, C_ARR(1u, 2u, 3u, 4u, 5u));
+  obj.add_element("parm", "u", C_ARR(0.000, 2.000));
   obj.end_group();
   // Bezier curve
-  obj.add_element("cstype", std::vector<std::string>{"bezier"});
-  obj.add_element("ctech", "cparm", {1.000});
-  obj.add_element("deg", {3u});
-  obj.add_element("curv", 0.00, 4.00, {1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u});
-  obj.add_element("parm", "u", {0.000, 1.000, 2.000, 3.000, 4.000});
+  ADD_ELEMENT_STR1("cstype", "bezier");
+  obj.add_element("ctech", "cparm", C_ARR1(1.000));
+  obj.add_element("deg", C_ARR1(3u));
+  obj.add_element("curv", 0.00, 4.00, C_ARR(1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u));
+  obj.add_element("parm", "u", C_ARR(0.000, 1.000, 2.000, 3.000, 4.000));
   obj.end_group();
   // B-spline surface
-  obj.add_element("cstype", std::vector<std::string>{"bspline"});
-  obj.add_element("stech", "curv", {0.5, 10.000000});
-  obj.add_element("deg", {3u, 3u});
+  ADD_ELEMENT_STR1("cstype", "bspline");
+  obj.add_element("stech", "curv", C_ARR(0.5, 10.000000));
+  obj.add_element("deg", C_ARR(3u, 3u));
   obj.add_element("surf", 0.00, 1.00, 0.00, 1.00,
-		  {13u, 14u, 15u, 16u, 9u, 10u, 11u, 12u, 5u, 6u, 7u, 8u, 1u, 2u, 3u, 4u});
-  obj.add_element("parm", "u", {-3.000000, -2.000000, -1.000000, 0.000000,
-				1.000000, 2.000000, 3.000000, 4.000000});
-  obj.add_element("parm", "v", {-3.000000, -2.000000, -1.000000, 0.000000,
-				1.000000, 2.000000, 3.000000, 4.000000});
+		  C_ARR(13u, 14u, 15u, 16u, 9u, 10u, 11u, 12u, 5u, 6u, 7u, 8u, 1u, 2u, 3u, 4u));
+  obj.add_element("parm", "u", C_ARR(-3.000000, -2.000000, -1.000000, 0.000000,
+				     1.000000, 2.000000, 3.000000, 4.000000));
+  obj.add_element("parm", "v", C_ARR(-3.000000, -2.000000, -1.000000, 0.000000,
+				     1.000000, 2.000000, 3.000000, 4.000000));
   obj.end_group();
   // Cardinal surface
-  obj.add_element("cstype", std::vector<std::string>{"cardinal"});
-  obj.add_element("stech", "cparma", {1.000000, 1.000000});
-  obj.add_element("deg", {3u, 3u});
+  ADD_ELEMENT_STR1("cstype", "cardinal");
+  obj.add_element("stech", "cparma", C_ARR(1.000000, 1.000000));
+  obj.add_element("deg", C_ARR(3u, 3u));
   obj.add_element("surf", 0.00, 1.00, 0.00, 1.00,
-		  {13u, 14u, 15u, 16u, 9u, 10u, 11u, 12u, 5u, 6u, 7u, 8u, 1u, 2u, 3u, 4u});
-  obj.add_element("parm", "u", {0.00, 1.00});
-  obj.add_element("parm", "v", {0.00, 1.00});
+		  C_ARR(13u, 14u, 15u, 16u, 9u, 10u, 11u, 12u, 5u, 6u, 7u, 8u, 1u, 2u, 3u, 4u));
+  obj.add_element("parm", "u", C_ARR(0.00, 1.00));
+  obj.add_element("parm", "v", C_ARR(0.00, 1.00));
   obj.end_group();
   // Rational B-spline surface
-  obj.add_element("cstype", std::vector<std::string>{"rat", "bspline"});
-  obj.add_element("deg", {2u, 2u});
-  obj.add_element("surf", 0.00, 1.00, 0.00, 1.00,
-		  {ObjRefVertex(1, 1), ObjRefVertex(2, 2), ObjRefVertex(3, 3),
-		   ObjRefVertex(4, 4), ObjRefVertex(5, 5), ObjRefVertex(6, 6),
-		   ObjRefVertex(7, 7), ObjRefVertex(8, 8), ObjRefVertex(9, 9)});
-  obj.add_element("parm", "u", {0.0, 0.0, 0.0, 1.0, 1.0, 1.0});
-  obj.add_element("parm", "v", {0.0, 0.0, 0.0, 1.0, 1.0, 1.0});
+  ADD_ELEMENT_STR2("cstype", "rat", "bspline");
+  obj.add_element("deg", C_ARR(2u, 2u));
+  {
+    std::vector<ObjRefVertex> verts;
+    verts.push_back(ObjRefVertex(1, 1));
+    verts.push_back(ObjRefVertex(2, 2));
+    verts.push_back(ObjRefVertex(3, 3));
+    verts.push_back(ObjRefVertex(4, 4));
+    verts.push_back(ObjRefVertex(5, 5));
+    verts.push_back(ObjRefVertex(6, 6));
+    verts.push_back(ObjRefVertex(7, 7));
+    verts.push_back(ObjRefVertex(8, 8));
+    verts.push_back(ObjRefVertex(9, 9));
+    obj.add_element("surf", 0.00, 1.00, 0.00, 1.00, verts);
+  }
+  obj.add_element("parm", "u", C_ARR(0.0, 0.0, 0.0, 1.0, 1.0, 1.0));
+  obj.add_element("parm", "v", C_ARR(0.0, 0.0, 0.0, 1.0, 1.0, 1.0));
   obj.end_group();
   // Trimmed NURB surface
-  obj.add_element("cstype", std::vector<std::string>{"rat", "bezier"});
-  obj.add_element("deg", {3u});
-  obj.add_element("curv2", {-6, -5, -4, -3, -2, -1, -6});
-  obj.add_element("parm", "u", {0.00, 1.00, 2.00});
+  ADD_ELEMENT_STR2("cstype", "rat", "bezier");
+  obj.add_element("deg", C_ARR1(3u));
+  obj.add_element("curv2", C_ARR(-6, -5, -4, -3, -2, -1, -6));
+  obj.add_element("parm", "u", C_ARR(0.00, 1.00, 2.00));
   obj.end_group();
-  obj.add_element("cstype", std::vector<std::string>{"rat", "bspline"});
-  obj.add_element("deg", {2u, 2u});
+  ADD_ELEMENT_STR2("cstype", "rat", "bspline");
+  obj.add_element("deg", C_ARR(2u, 2u));
   obj.add_element("surf", -1.0, 2.5, -2.0, 2.0,
-		  {-9, -8, -7, -6, -5, -4, -3, -2, -1});
-  obj.add_element("parm", "u", {-1.00, -1.00, -1.00, 2.50, 2.50, 2.50});
-  obj.add_element("parm", "v", {-2.00, -2.00, -2.00, -2.00, -2.00, -2.00});
-  obj.add_element("trim", {ObjRefCurve(0.0, 2.0, 1)});
+		  C_ARR(-9, -8, -7, -6, -5, -4, -3, -2, -1));
+  obj.add_element("parm", "u", C_ARR(-1.00, -1.00, -1.00, 2.50, 2.50, 2.50));
+  obj.add_element("parm", "v", C_ARR(-2.00, -2.00, -2.00, -2.00, -2.00, -2.00));
+  obj.add_element("trim", ObjRefCurve(0.0, 2.0, 1));
   obj.end_group();
   // Two trimming regions with a hole
-  obj.add_element("deg", {1u});
-  obj.add_element("cstype", std::vector<std::string>{"bezier"});
-  obj.add_element("curv2", {1, 2, 3, 4, 1});
-  obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
+  obj.add_element("deg", C_ARR1(1u));
+  ADD_ELEMENT_STR1("cstype", "bezier");
+  obj.add_element("curv2", C_ARR(1, 2, 3, 4, 1));
+  obj.add_element("parm", "u", C_ARR(0.00, 1.00, 2.00, 3.00, 4.00));
   obj.end_group();
-  obj.add_element("curv2", {5, 6, 7, 8, 5});
-  obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
+  obj.add_element("curv2", C_ARR(5, 6, 7, 8, 5));
+  obj.add_element("parm", "u", C_ARR(0.00, 1.00, 2.00, 3.00, 4.00));
   obj.end_group();
-  obj.add_element("curv2", {9, 10, 11, 12, 9});
-  obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
+  obj.add_element("curv2", C_ARR(9, 10, 11, 12, 9));
+  obj.add_element("parm", "u", C_ARR(0.00, 1.00, 2.00, 3.00, 4.00));
   obj.end_group();
-  obj.add_element("curv2", {13, 14, 15, 16, 13});
-  obj.add_element("parm", "u", {0.00, 1.00, 2.00, 3.00, 4.00});
+  obj.add_element("curv2", C_ARR(13, 14, 15, 16, 13));
+  obj.add_element("parm", "u", C_ARR(0.00, 1.00, 2.00, 3.00, 4.00));
   obj.end_group();
-  obj.add_element("deg", {1u, 1u});
-  obj.add_element("cstype", std::vector<std::string>{"bezier"});
-  obj.add_element("surf", 0.0, 2.0, 0.0, 2.0, {1, 2, 3, 4});
-  obj.add_element("parm", "u", {0.00, 2.00});
-  obj.add_element("parm", "v", {0.00, 2.00});
-  obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 1)});
-  obj.add_element("hole", {ObjRefCurve(0.0, 4.0, 2)});
-  obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 3)});
-  obj.add_element("hole", {ObjRefCurve(0.0, 4.0, 4)});
+  obj.add_element("deg", C_ARR(1u, 1u));
+  ADD_ELEMENT_STR1("cstype", "bezier");
+  obj.add_element("surf", 0.0, 2.0, 0.0, 2.0, C_ARR(1, 2, 3, 4));
+  obj.add_element("parm", "u", C_ARR(0.00, 2.00));
+  obj.add_element("parm", "v", C_ARR(0.00, 2.00));
+  obj.add_element("trim", ObjRefCurve(0.0, 4.0, 1));
+  obj.add_element("hole", ObjRefCurve(0.0, 4.0, 2));
+  obj.add_element("trim", ObjRefCurve(0.0, 4.0, 3));
+  obj.add_element("hole", ObjRefCurve(0.0, 4.0, 4));
   obj.end_group();
   // Trimming with a special curve
-  obj.add_element("cstype", std::vector<std::string>{"rat", "bezier"});
-  obj.add_element("deg", {3u});
-  obj.add_element("curv2", {-6, -5, -4, -3, -2, -1, -6});
-  obj.add_element("parm", "u", {0.00, 1.00, 2.00});
+  ADD_ELEMENT_STR2("cstype", "rat", "bezier");
+  obj.add_element("deg", C_ARR1(3u));
+  obj.add_element("curv2", C_ARR(-6, -5, -4, -3, -2, -1, -6));
+  obj.add_element("parm", "u", C_ARR(0.00, 1.00, 2.00));
   obj.end_group();
-  obj.add_element("curv2", {-4, -3, -2, -1});
-  obj.add_element("parm", "u", {2.00, 10.00});
+  obj.add_element("curv2", C_ARR(-4, -3, -2, -1));
+  obj.add_element("parm", "u", C_ARR(2.00, 10.00));
   obj.end_group();
-  obj.add_element("cstype", std::vector<std::string>{"rat", "bspline"});
-  obj.add_element("deg", {2u, 2u});
-  obj.add_element("surf", -1.0, 2.5, -2.0, 2.0, {-9, -8, -7, -6, -5, -4, -3, -2, -1});
-  obj.add_element("parm", "u", {-1.00, -1.00, -1.00, 2.50, 2.50, 2.50});
-  obj.add_element("parm", "v", {-2.00, -2.00, -2.00, 2.00, 2.00, 2.00});
-  obj.add_element("trim", {ObjRefCurve(0.0, 2.0, 1)});
-  obj.add_element("scrv", {ObjRefCurve(4.2, 9.7, 2)});
+  ADD_ELEMENT_STR2("cstype", "rat", "bspline");
+  obj.add_element("deg", C_ARR(2u, 2u));
+  obj.add_element("surf", -1.0, 2.5, -2.0, 2.0, C_ARR(-9, -8, -7, -6, -5, -4, -3, -2, -1));
+  obj.add_element("parm", "u", C_ARR(-1.00, -1.00, -1.00, 2.50, 2.50, 2.50));
+  obj.add_element("parm", "v", C_ARR(-2.00, -2.00, -2.00, 2.00, 2.00, 2.00));
+  obj.add_element("trim", ObjRefCurve(0.0, 2.0, 1));
+  obj.add_element("scrv", ObjRefCurve(4.2, 9.7, 2));
   obj.end_group();
   // Trimming with special points
-  obj.add_element("cstype", std::vector<std::string>{"bezier"});
-  obj.add_element("deg", {3u});
-  obj.add_element("curv", 0.2, 0.9, {-4, -3, -2, -1});
-  obj.add_element("sp", {1});
-  obj.add_element("parm", "u", {0.00, 1.00});
+  ADD_ELEMENT_STR1("cstype", "bezier");
+  obj.add_element("deg", C_ARR1(3u));
+  obj.add_element("curv", 0.2, 0.9, C_ARR(-4, -3, -2, -1));
+  obj.add_element("sp", C_ARR1(1));
+  obj.add_element("parm", "u", C_ARR(0.00, 1.00));
   obj.end_group();
-  obj.add_element("cstype", std::vector<std::string>{"rat", "bezier"});
-  obj.add_element("curv2", {-6, -5, -4, -3, -2, -1, -6});
-  obj.add_element("parm", "u", {0.00, 1.00, 2.00});
-  obj.add_element("sp", {2, 3});
+  ADD_ELEMENT_STR2("cstype", "rat", "bezier");
+  obj.add_element("curv2", C_ARR(-6, -5, -4, -3, -2, -1, -6));
+  obj.add_element("parm", "u", C_ARR(0.00, 1.00, 2.00));
+  obj.add_element("sp", C_ARR(2, 3));
   obj.end_group();
-  obj.add_element("cstype", std::vector<std::string>{"rat", "bspline"});
-  obj.add_element("deg", {2u, 2u});
-  obj.add_element("surf", -1.0, 2.5, -2.0, 2.0, {-9, -8, -7, -6, -5, -4, -3, -2, -1});
-  obj.add_element("parm", "u", {-1.00, -1.00, -1.00, 2.50, 2.50, 2.50});
-  obj.add_element("parm", "v", {-2.00, -2.00, -2.00, 2.00, 2.00, 2.00});
-  obj.add_element("trim", {ObjRefCurve(0.0, 2.0, 1)});
-  obj.add_element("sp", {4});
+  ADD_ELEMENT_STR2("cstype", "rat", "bspline");
+  obj.add_element("deg", C_ARR(2u, 2u));
+  obj.add_element("surf", -1.0, 2.5, -2.0, 2.0, C_ARR(-9, -8, -7, -6, -5, -4, -3, -2, -1));
+  obj.add_element("parm", "u", C_ARR(-1.00, -1.00, -1.00, 2.50, 2.50, 2.50));
+  obj.add_element("parm", "v", C_ARR(-2.00, -2.00, -2.00, 2.00, 2.00, 2.00));
+  obj.add_element("trim", ObjRefCurve(0.0, 2.0, 1));
+  obj.add_element("sp", C_ARR1(4));
   obj.end_group();
   // Connectivity between two surfaces
-  obj.add_element("cstype", std::vector<std::string>{"bezier"});
-  obj.add_element("deg", {1u, 1u});
-  obj.add_element("curv2", {1, 2, 3, 4, 1});
-  obj.add_element("parm", "u", {0.0, 1.0, 2.0, 3.0, 4.0});
+  ADD_ELEMENT_STR1("cstype", "bezier");
+  obj.add_element("deg", C_ARR(1u, 1u));
+  obj.add_element("curv2", C_ARR(1, 2, 3, 4, 1));
+  obj.add_element("parm", "u", C_ARR(0.0, 1.0, 2.0, 3.0, 4.0));
   obj.end_group();
-  obj.add_element("surf", 0.0, 1.0, 0.0, 1.0, {1, 2, 3, 4});
-  obj.add_element("parm", "u", {0.0, 1.0});
-  obj.add_element("parm", "v", {0.0, 1.0});
-  obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 1)});
+  obj.add_element("surf", 0.0, 1.0, 0.0, 1.0, C_ARR(1, 2, 3, 4));
+  obj.add_element("parm", "u", C_ARR(0.0, 1.0));
+  obj.add_element("parm", "v", C_ARR(0.0, 1.0));
+  obj.add_element("trim", ObjRefCurve(0.0, 4.0, 1));
   obj.end_group();
-  obj.add_element("surf", 0.0, 1.0, 0.0, 1.0, {5, 6, 7, 8});
-  obj.add_element("parm", "u", {0.0, 1.0});
-  obj.add_element("parm", "v", {0.0, 1.0});
-  obj.add_element("trim", {ObjRefCurve(0.0, 4.0, 1)});
+  obj.add_element("surf", 0.0, 1.0, 0.0, 1.0, C_ARR(5, 6, 7, 8));
+  obj.add_element("parm", "u", C_ARR(0.0, 1.0));
+  obj.add_element("parm", "v", C_ARR(0.0, 1.0));
+  obj.add_element("trim", ObjRefCurve(0.0, 4.0, 1));
   obj.end_group();
-  obj.add_element("con", {ObjRefSurface(1, 2.0, 2.0, 1),
-			  ObjRefSurface(2, 4.0, 3.0, 1)});
-  obj.add_element("g", std::vector<std::string>{"front", "cube"});
-  obj.add_element("f", {1, 2, 3, 4});
-  obj.add_element("g", std::vector<std::string>{"back", "cube"});
-  obj.add_element("f", {8, 7, 6, 5});
-  obj.add_element("g", std::vector<std::string>{"right", "cube"});
-  obj.add_element("f", {4, 3, 7, 8});
-  obj.add_element("g", std::vector<std::string>{"top", "cube"});
-  obj.add_element("f", {5, 1, 4, 8});
-  obj.add_element("g", std::vector<std::string>{"left", "cube"});
-  obj.add_element("f", {5, 6, 2, 1});
-  obj.add_element("g", std::vector<std::string>{"bottom", "cube"});
-  obj.add_element("f", {2, 6, 7, 3});
+  {
+    std::vector<ObjRefSurface> surfs;
+    surfs.push_back(ObjRefSurface(1, 2.0, 2.0, 1));
+    surfs.push_back(ObjRefSurface(2, 4.0, 3.0, 1));
+    obj.add_element("con", surfs);
+  }
+  ADD_ELEMENT_STR2("g", "front", "cube");
+  obj.add_element("f", C_ARR(1, 2, 3, 4));
+  ADD_ELEMENT_STR2("g", "back", "cube");
+  obj.add_element("f", C_ARR(8, 7, 6, 5));
+  ADD_ELEMENT_STR2("g", "right", "cube");
+  obj.add_element("f", C_ARR(4, 3, 7, 8));
+  ADD_ELEMENT_STR2("g", "top", "cube");
+  obj.add_element("f", C_ARR(5, 1, 4, 8));
+  ADD_ELEMENT_STR2("g", "left", "cube");
+  obj.add_element("f", C_ARR(5, 6, 2, 1));
+  ADD_ELEMENT_STR2("g", "bottom", "cube");
+  obj.add_element("f", C_ARR(2, 6, 7, 3));
   // Two adjoining squares with a smoothing group
-  obj.add_element("g", "all");
+  ADD_ELEMENT_STR1("g", "all");
   obj.add_element("s", 1);
-  obj.add_element("f", {1, 2, 3, 4});
-  obj.add_element("f", {4, 3, 5, 6});
+  obj.add_element("f", C_ARR(1, 2, 3, 4));
+  obj.add_element("f", C_ARR(4, 3, 5, 6));
   // Two adjoining squares with vertex normals
-  obj.add_element("g", "all");
+  ADD_ELEMENT_STR1("g", "all");
   obj.add_element("s", 1);
-  obj.add_element("f", {ObjRefVertex(1, 0, 1), ObjRefVertex(2, 0, 2),
-			ObjRefVertex(3, 0, 3), ObjRefVertex(4, 0, 4)});
-  obj.add_element("f", {ObjRefVertex(4, 0, 4), ObjRefVertex(3, 0, 3),
-			ObjRefVertex(5, 0, 5), ObjRefVertex(6, 0, 6)});
+  {
+    std::vector<ObjRefVertex> verts;
+    verts.push_back(ObjRefVertex(1, 0, 1));
+    verts.push_back(ObjRefVertex(2, 0, 2));
+    verts.push_back(ObjRefVertex(3, 0, 3));
+    verts.push_back(ObjRefVertex(4, 0, 4));
+    obj.add_element("f", verts);
+  }
+  {
+    std::vector<ObjRefVertex> verts;
+    verts.push_back(ObjRefVertex(4, 0, 4));
+    verts.push_back(ObjRefVertex(3, 0, 3));
+    verts.push_back(ObjRefVertex(5, 0, 5));
+    verts.push_back(ObjRefVertex(6, 0, 6));
+    obj.add_element("f", verts);
+  }
   // Merging group
-  obj.add_element("g", "all");
+  ADD_ELEMENT_STR1("g", "all");
   obj.add_element("mg", 1, 0.500);
-  obj.add_element("cstype", std::vector<std::string>{"bezier"});
-  obj.add_element("deg", {3u, 3u});
+  ADD_ELEMENT_STR1("cstype", "bezier");
+  obj.add_element("deg", C_ARR(3u, 3u));
   obj.add_element("surf", 0.00, 1.00, 0.00, 1.00,
-		  {13u, 14u, 15u, 16u, 9u, 10u, 11u, 12u, 5u, 6u, 7u, 8u, 1u,
-		   2u, 3u, 4u});
-  obj.add_element("parm", "u", {0.000, 1.000});
-  obj.add_element("parm", "v", {0.000, 1.000});
+		  C_ARR(13u, 14u, 15u, 16u, 9u, 10u, 11u, 12u, 5u, 6u, 7u, 8u, 1u,
+			2u, 3u, 4u));
+  obj.add_element("parm", "u", C_ARR(0.000, 1.000));
+  obj.add_element("parm", "v", C_ARR(0.000, 1.000));
   obj.end_group();
   obj.add_element("surf", 0.00, 1.00, 0.00, 1.00,
-		  {29u, 30u, 31u, 32u, 25u, 26u, 27u, 28u, 21u, 22u, 23u,
-		   24u, 17u, 18u, 19u, 20u});
-  obj.add_element("parm", "u", {0.000, 1.000});
-  obj.add_element("parm", "v", {0.000, 1.000});
+		  C_ARR(29u, 30u, 31u, 32u, 25u, 26u, 27u, 28u, 21u, 22u, 23u,
+			24u, 17u, 18u, 19u, 20u));
+  obj.add_element("parm", "u", C_ARR(0.000, 1.000));
+  obj.add_element("parm", "v", C_ARR(0.000, 1.000));
   obj.end_group();
   // Cube with materials casting a shadow
   obj.add_element("mtllib", "master.mtl");
   obj.add_element("shadow_obj", "cube.obj");
   obj.add_element("g", "front");
   obj.add_element("usemtl", "red");
-  obj.add_element("f", {1, 2, 3, 4});
+  obj.add_element("f", C_ARR(1, 2, 3, 4));
   obj.add_element("g", "back");
   obj.add_element("usemtl", "blue");
-  obj.add_element("f", {8, 7, 6, 5});
+  obj.add_element("f", C_ARR(8, 7, 6, 5));
   obj.add_element("g", "right");
   obj.add_element("usemtl", "green");
-  obj.add_element("f", {4, 3, 7, 8});
+  obj.add_element("f", C_ARR(4, 3, 7, 8));
   obj.add_element("g", "top");
   obj.add_element("usemtl", "gold");
-  obj.add_element("f", {5, 1, 4, 8});
+  obj.add_element("f", C_ARR(5, 1, 4, 8));
   obj.add_element("g", "left");
   obj.add_element("usemtl", "orange");
-  obj.add_element("f", {5, 6, 2, 1});
+  obj.add_element("f", C_ARR(5, 6, 2, 1));
   obj.add_element("g", "bottom");
   obj.add_element("usemtl", "purple");
-  obj.add_element("f", {2, 6, 7, 3});
+  obj.add_element("f", C_ARR(2, 6, 7, 3));
   // Cube with materials casting a reflection
   obj.add_element("mtllib", "master.mtl");
   obj.add_element("trace_obj", "cube.obj");
   obj.add_element("g", "front");
   obj.add_element("usemtl", "red");
-  obj.add_element("f", {1, 2, 3, 4});
+  obj.add_element("f", C_ARR(1, 2, 3, 4));
   obj.add_element("g", "back");
   obj.add_element("usemtl", "blue");
-  obj.add_element("f", {8, 7, 6, 5});
+  obj.add_element("f", C_ARR(8, 7, 6, 5));
   obj.add_element("g", "right");
   obj.add_element("usemtl", "green");
-  obj.add_element("f", {4, 3, 7, 8});
+  obj.add_element("f", C_ARR(4, 3, 7, 8));
   obj.add_element("g", "top");
   obj.add_element("usemtl", "gold");
-  obj.add_element("f", {5, 1, 4, 8});
+  obj.add_element("f", C_ARR(5, 1, 4, 8));
   obj.add_element("g", "left");
   obj.add_element("usemtl", "orange");
-  obj.add_element("f", {5, 6, 2, 1});
+  obj.add_element("f", C_ARR(5, 6, 2, 1));
   obj.add_element("g", "bottom");
   obj.add_element("usemtl", "purple");
-  obj.add_element("f", {2, 6, 7, 3});
+  obj.add_element("f", C_ARR(2, 6, 7, 3));
   // Texture-mapped square
-  obj.add_element("mtllib", "master.mtl");
-  obj.add_element("usemtl", "wood");
-  obj.add_element("f", {ObjRefVertex(1, 2, 0), ObjRefVertex(2, 2, 0),
-			ObjRefVertex(3, 3, 0), ObjRefVertex(4, 4, 0)});
+  // obj.add_element("mtllib", "master.mtl");
+  // obj.add_element("usemtl", "wood");
+  // obj.add_element("f", C_ARR(ObjRefVertex(1, 2, 0), ObjRefVertex(2, 2, 0),
+  // 			     ObjRefVertex(3, 3, 0), ObjRefVertex(4, 4, 0)));
   rapidjson::Value x2(obj);
   rapidjson::ObjWavefront cpy2;
   x2.GetObjWavefront(cpy2);

@@ -187,6 +187,41 @@ public:
 };
 template <typename T, typename VT> struct HasYggdrasilMethod
   : BoolExpr<HasYggdrasilMethodImpl<T, VT> >::Type {};
+
+template<typename T>
+std::vector<T> pack_vector__(const size_t N, const T first...) {
+  std::vector<T> out;
+  out.push_back(first);
+  va_list args;
+  va_start(args, first);
+  size_t i = 1;
+  while (i < N) {
+    const T x = va_arg(args, const T);
+    out.push_back(x);
+    i++;
+  }
+  va_end(args);
+  return out;
+};
+  
+/*! @brief Define macros to allow counts of variables. */
+// https://codecraft.co/2014/11/25/variadic-macros-tricks/
+#ifdef _MSC_VER
+// https://stackoverflow.com/questions/48710758/how-to-fix-variadic-macro-related-issues-with-macro-overloading-in-msvc-mic
+#define MSVC_BUG(MACRO, ARGS) MACRO ARGS  // name to remind that bug fix is due to MSVC :-)
+#define _GET_NTH_ARG_2(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, N, ...) N
+#define _GET_NTH_ARG(...) MSVC_BUG(_GET_NTH_ARG_2, (__VA_ARGS__))
+#define COUNT_VARARGS(...) _GET_NTH_ARG("ignored", ##__VA_ARGS__, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#define VA_MACRO(MACRO, ...) MSVC_BUG(CONCATE, (MACRO, COUNT_VARARGS(__VA_ARGS__)))(__VA_ARGS__)
+#else
+#define _GET_NTH_ARG(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, N, ...) N
+#define COUNT_VARARGS(...) _GET_NTH_ARG("ignored", ##__VA_ARGS__, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#endif
+#define UNUSED(arg) ((void)&(arg))
+
+#define pack_vector_(x, ...) pack_vector__(COUNT_VARARGS(__VA_ARGS__) + 1, x, __VA_ARGS__)
+#define pack_vector_T_(T, ...) pack_vector__<T>(COUNT_VARARGS(__VA_ARGS__), __VA_ARGS__)
+
 #endif // RAPIDJSON_YGGDRASIL
   
 } // namespace internal

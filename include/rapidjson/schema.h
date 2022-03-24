@@ -24,6 +24,11 @@
 #ifdef RAPIDJSON_YGGDRASIL
 #include "units.h"
 #include "metaschema.h"
+#if RAPIDJSON_HAS_CXX11
+#define OVERRIDE_CXX11 override
+#else // RAPIDJSON_HAS_CXX11
+#define OVERRIDE_CXX11
+#endif // RAPIDJSON_HAS_CXX11
 #endif // RAPIDJSON_YGGDRASIL
 
 #if !defined(RAPIDJSON_SCHEMA_USE_INTERNALREGEX)
@@ -262,7 +267,7 @@ public:
   virtual void CircularAlias(const SValue& alias) = 0;
   virtual void ConflictingAliases(const SValue& alias, const SValue& base1, const SValue& base2) = 0;
   virtual ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) = 0;
-  virtual void NormalizationMergeConflict(const typename SchemaType::ValueType& cond, const SValue& instanceRef, const SValue& schemaRef) = 0;
+  virtual void NormalizationMergeConflict(const typename SchemaType::ValueType& cond, const GenericStringBuffer<typename SchemaType::EncodingType>& instanceRef, const GenericStringBuffer<typename SchemaType::EncodingType>& schemaRef) = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -501,7 +506,7 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
   }
   ValueType path(kArrayType);
   RAPIDJSON_ASSERT(orig.IsString());
-  path.PushBack(ValueType(orig, allocator), allocator);
+  path.PushBack(ValueType(orig, allocator).Move(), allocator);
   RAPIDJSON_ASSERT(primary->value.IsString());
   while (aliases.HasMember(primary->value)) {
     for (typename ValueType::ConstValueIterator it = path.Begin(); it != path.End(); ++it) {
@@ -510,7 +515,7 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 	return false;
       }
     }
-    path.PushBack(ValueType(primary->value, allocator), allocator);
+    path.PushBack(ValueType(primary->value, allocator).Move(), allocator);
     primary = aliases.FindMember(primary->value);
     RAPIDJSON_ASSERT(primary->value.IsString());
   }
@@ -711,7 +716,7 @@ public:
     ValueType tmp(CurrentKey()->GetString(),				\
 		  CurrentKey()->GetStringLength(),			\
 		  GetAllocator());					\
-    CurrentValue()->AddMember(tmp, ValueType arg2,			\
+    CurrentValue()->AddMember(tmp, ValueType arg2.Move(),		\
 			      GetAllocator());				\
   }									\
 
@@ -992,7 +997,7 @@ private:
     }
     return true;
   }
-  ValueType GetSchemaRef(const SchemaType& schema) {
+  GenericStringBuffer<EncodingType> GetSchemaRef(const SchemaType& schema) {
     GenericStringBuffer<EncodingType> sb;
     SizeType len = schema.GetURI().GetStringLength();
     if (len) memcpy(sb.Push(len), schema.GetURI().GetString(), len * sizeof(Ch));
@@ -1002,12 +1007,9 @@ private:
     else
       schemaPointer = &schema.GetPointer();
     schemaPointer->StringifyUriFragment(sb);
-    ValueType schemaRef(sb.GetString(),
-			static_cast<SizeType>(sb.GetSize() / sizeof(Ch)),
-			GetAllocator());
-    return schemaRef;
+    return sb;
   }
-  ValueType GetInstanceRef(bool parent=true) {
+  GenericStringBuffer<EncodingType> GetInstanceRef(bool parent=true) {
     RAPIDJSON_ASSERT(documentStack_);
     GenericStringBuffer<EncodingType> sb;
     PointerType instancePointer;
@@ -1025,9 +1027,7 @@ private:
     ((parent && (instancePointer.GetTokenCount() > 0))
      ? PointerType(instancePointer.GetTokens(), instancePointer.GetTokenCount() - 1)
      : instancePointer).StringifyUriFragment(sb);
-    ValueType instanceRef(sb.GetString(), static_cast<SizeType>(sb.GetSize() / sizeof(Ch)),
-			  GetAllocator());
-    return instanceRef;
+    return sb;
   }
   bool HasMember(ValueType& key, ValueType* val=nullptr) {
     if (extending_ && !appending_) {
@@ -1064,9 +1064,9 @@ private:
     size_t idx = 0;
     GenericPointer<ValueType> ptr;
     if (unfinalized) {
-      ValueType current = GetInstanceRef(false);
-      ptr = GenericPointer<ValueType>(address.GetString() + current.GetStringLength(),
-				      address.GetStringLength() - current.GetStringLength());
+      SizeType currentLength = static_cast<SizeType>(GetInstanceRef(false).GetSize() / sizeof(Ch));
+      ptr = GenericPointer<ValueType>(address.GetString() + currentLength,
+				      address.GetStringLength() - currentLength);
     } else {
       ptr = GenericPointer<ValueType>(address.GetString(), address.GetStringLength());
     }
@@ -1149,12 +1149,12 @@ private:
     return (match != aliases.MemberEnd());
   }
   ValueType& GetAliases() {
-    const ValueType address = GetInstanceRef();
-    if (!aliases_.HasMember(address)) {
-      ValueType tmp(address.GetString(), address.GetStringLength(), GetAllocator());
+    const GenericStringBuffer<EncodingType>& address = GetInstanceRef();
+    if (!aliases_.HasMember(address.GetString())) {
+      ValueType tmp(address.GetString(), static_cast<SizeType>(address.GetSize() / sizeof(Ch)), GetAllocator());
       aliases_.AddMember(tmp, kObjectType, GetAllocator());
     }
-    return aliases_[address];
+    return aliases_[address.GetString()];
   }
   const ValueType& AddAliases(const SchemaType& schema) {
     ValueType& aliases = GetAliases();
@@ -1416,7 +1416,7 @@ public:
 						       *allocator_),
 						SValue(itr->name.GetString(),
 						       itr->name.GetStringLength(),
-						       *allocator_),
+						       *allocator_).Move(),
 						*allocator_);
 		    }
 		  }
@@ -2886,7 +2886,7 @@ protected:
       return true;
     SValue actual(kArrayType);
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetShapeString());
-    for (auto v = vs->value.Begin(); v != vs->value.End(); ++v)
+    for (typename YggSchemaValueType::ConstValueIterator v = vs->value.Begin(); v != vs->value.End(); ++v)
       actual.PushBack(static_cast<SizeType>(v->GetUint()), *allocator_);
     if (!shape_.IsNull() && (shape_ != actual)) {
       context.error_handler.IncorrectShape(actual, shape_);
@@ -3263,7 +3263,7 @@ private:
 	  if (isInstance) {
 	    ValueType v;
 	    v.SetArray();
-	    v.PushBack(ValueType(v.GetPythonClassString(), d.GetAllocator()), d.GetAllocator());
+	    v.PushBack(ValueType(v.GetPythonClassString(), d.GetAllocator()).Move(), d.GetAllocator());
 	    d.AddMember(SchemaType::GetRequiredString(), v, d.GetAllocator());
 	  }
 	  metaschema_ = new GenericSchemaDocument<ValueType, AllocatorType>(d, 0, 0, 0, 0, PointerType(), true);
@@ -3878,7 +3878,7 @@ public:
   void DuplicateAlias(const SValue& base, const SValue& alias) {
     currentError_.SetObject();
     currentError_.AddMember(GetDuplicatesString(),
-			    ValueType(kArrayType),
+			    ValueType(kArrayType).Move(),
 			    GetStateAllocator());
     ValueType dup(GetDuplicatesString(), GetStateAllocator());
     currentError_[dup].PushBack(ValueType(base, GetStateAllocator()).Move(),
@@ -3921,16 +3921,16 @@ public:
     return static_cast<ValidateErrorCode>(vcode->value.GetUint());
   }
   void NormalizationMergeConflict(const typename SchemaType::ValueType& cond,
-				  const SValue& instanceRef,
-				  const SValue& schemaRef) {
+				  const GenericStringBuffer<EncodingType>& instanceRef,
+				  const GenericStringBuffer<EncodingType>& schemaRef) {
     currentError_.SetObject();
     currentError_.AddMember(GetConflictingString(),
 			    ValueType(cond, GetStateAllocator()).Move(),
 			    GetStateAllocator());
     ValidateErrorCode code = kNormalizeErrorMergeConflict;
     AddErrorCode(currentError_, code);
-    currentError_.AddMember(GetInstanceRefString(), ValueType(instanceRef, GetStateAllocator()).Move(), GetStateAllocator());
-    currentError_.AddMember(GetSchemaRefString(), ValueType(schemaRef, GetStateAllocator()).Move(), GetStateAllocator());
+    currentError_.AddMember(GetInstanceRefString(), ValueType(instanceRef.GetString(), static_cast<SizeType>(instanceRef.GetSize() / sizeof(Ch)), GetStateAllocator()).Move(), GetStateAllocator());
+    currentError_.AddMember(GetSchemaRefString(), ValueType(schemaRef.GetString(), static_cast<SizeType>(schemaRef.GetSize() / sizeof(Ch)) ,GetStateAllocator()).Move(), GetStateAllocator());
     AddError(ValueType(SchemaType::GetValidateErrorKeyword(code), GetStateAllocator(), false).Move(), currentError_);
   }
 #endif // RAPIDJSON_YGGDRASIL
@@ -4563,7 +4563,7 @@ public:
   //! Check if the document was normalized.
   bool WasNormalized() const { return normalized_.WasModified(); }
 
-  bool BeginValue() override {
+  bool BeginValue() OVERRIDE_CXX11 {
     if (!GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::BeginValue())
       return false;
     normalization_depth_++;
@@ -4571,7 +4571,7 @@ public:
     return true;
   }
 
-  bool EndValue() override {
+  bool EndValue() OVERRIDE_CXX11 {
     if (!GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::EndValue())
       return false;
     // TODO: Check parallel validators
@@ -4582,10 +4582,10 @@ public:
   }
   
   //! Implementation of ISchemaValidator
-  unsigned GetValidatorID() const override { return validator_index_; }
+  unsigned GetValidatorID() const OVERRIDE_CXX11 { return validator_index_; }
   
   //! Implementation of ISchemaStateFactory<SchemaType>
-  ISchemaValidator* CreateSchemaValidator(const SchemaType& root, const bool inheritContinueOnErrors) override {
+  ISchemaValidator* CreateSchemaValidator(const SchemaType& root, const bool inheritContinueOnErrors) OVERRIDE_CXX11 {
     ISchemaValidator* sv = new (this->GetStateAllocator().Malloc(sizeof(GenericSchemaNormalizer))) GenericSchemaNormalizer(*this->schemaDocument_, root, this->documentStack_.template Bottom<char>(), this->documentStack_.GetSize(),
 #if RAPIDJSON_SCHEMA_VERBOSE
         depth_ + 1,
@@ -4598,7 +4598,7 @@ public:
     return sv;
   }
 
-  void DestroySchemaValidator(ISchemaValidator* validator) override {
+  void DestroySchemaValidator(ISchemaValidator* validator) OVERRIDE_CXX11 {
     GenericSchemaNormalizer* v = static_cast<GenericSchemaNormalizer*>(validator);
     v->~GenericSchemaNormalizer();
     StateAllocator::Free(v);

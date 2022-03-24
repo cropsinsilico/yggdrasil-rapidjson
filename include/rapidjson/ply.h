@@ -669,8 +669,9 @@ public:
   PlyElementSet(const std::string& name0,
 		const T (&arr)[M][N],
 		const std::vector<std::string> &property_names) :
-    PlyElementSet(name0, property_names, arr[0][0],
-		  bool(N != (property_names.size()))) {
+    name(name0), count(0), elements(), property_order(),
+    property_flags(), property_size_flags() {
+    set_flags<T>(property_names, bool(N != (property_names.size())));
     RAPIDJSON_ASSERT((N == property_names.size())
 		     || (property_names.size() == 1));
     count = M;
@@ -846,7 +847,8 @@ public:
   template<typename Tv, SizeType Mv, SizeType Nv,
 	   typename Tf, SizeType Mf, SizeType Nf>
   Ply(const Tv (&vertices)[Mv][Nv], const Tf (&faces)[Mf][Nf]) :
-    Ply(vertices) {
+    comments(), format("ascii 1.0"), elements(), element_order() {
+    add_element_set_vertex(vertices);
     std::vector<std::string> names;
     names.push_back("vertex_index");
     add_element_set("face", faces, names);
@@ -870,7 +872,11 @@ public:
 	   typename Te, SizeType Me, SizeType Ne>
   Ply(const Tv (&vertices)[Mv][Nv], const Tf (&faces)[Mf][Nf],
       const Te (&edges)[Me][Ne]) :
-    Ply(vertices, faces) {
+    comments(), format("ascii 1.0"), elements(), element_order() {
+    add_element_set_vertex(vertices);
+    std::vector<std::string> names;
+    names.push_back("vertex_index");
+    add_element_set("face", faces, names);
     add_element_set_edge(edges);
   }
 

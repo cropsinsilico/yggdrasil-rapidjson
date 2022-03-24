@@ -308,7 +308,7 @@ RAPIDJSON_NAMESPACE_BEGIN
   GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, type, def);	\
   }
 #define GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, type, compat)	\
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, ObjElement, code, SINGLE_ARG(), UNPACK compat, type); \
+  GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, ObjElement, code, SINGLE_ARG(, values()), UNPACK compat, type); \
   GENERIC_READ_VALUES;							\
   GENERIC_WRITE_VALUES;							\
   GENERIC_IS_EQUAL(cls);						\
@@ -398,9 +398,6 @@ public:
   //! Empty initializer with (r,g,b) = (0,0,0)
   ObjColor() :
     r(0), g(0), b(0), is_set(false) {}
-  //! Copy constructor
-  ObjColor(const ObjColor& rhs) :
-    r(rhs.r), g(rhs.g), b(rhs.b), is_set(rhs.is_set) {}
   //! \brief Create a RGB color element.
   //! \param red Color index in red.
   //! \param green Color index in green.
@@ -442,11 +439,6 @@ typedef int64_t ObjRef;
 //! ObjWavefront vertex reference
 class ObjRefVertex {
 public:
-  ObjRefVertex() :
-    v(0), vt(0), vn(0), Nparam(-1) {}
-  //! Copy constructor
-  ObjRefVertex(const ObjRefVertex& rhs) :
-    v(rhs.v), vt(rhs.vt), vn(rhs.vn), Nparam(rhs.Nparam) {}
   //! \brief Constructor
   //! \param v0 Index of the vertex's coordinates
   //! \param vt0 Index of the vertex's texcoord
@@ -454,18 +446,9 @@ public:
   //! \param Nparam0 The number of parameters specified by the vertex. If
   //!    not provided, it will be determined by chcking the values of v0, vt0,
   //!    and vn0. (1: (v), 2: (v, vt), 3: (v, vt, vn)).
-  ObjRefVertex(ObjRef v0, ObjRef vt0=0, ObjRef vn0=0,
+  ObjRefVertex(ObjRef v0=0, ObjRef vt0=0, ObjRef vn0=0,
 	       int8_t Nparam0=-1) :
-    v(v0), vt(vt0), vn(vn0), Nparam(Nparam0) {
-    if (Nparam < 0) {
-      if (vn != 0)
-	Nparam = 3;
-      else if (vt != 0)
-	Nparam = 2;
-      else
-	Nparam = 1;
-    }
-  }
+    v(v0), vt(vt0), vn(vn0), Nparam(Nparam0) {}
   //! \brief Constructor
   //! \tparam T Vertex index type
   //! \param v0 Index of the vertex's coordinates
@@ -477,13 +460,22 @@ public:
   //! \param out Output stream.
   //! \return Output stream.
   std::ostream & write(std::ostream &out) const {
+    int8_t Nparam0 = Nparam;
+    if (Nparam0 < 0) {
+      if (vn != 0)
+	Nparam0 = 3;
+      else if (vt != 0)
+	Nparam0 = 2;
+      else
+	Nparam0 = 1;
+    }
     out << v;
-    if (Nparam > 1) {
+    if (Nparam0 > 1) {
       out << "/";
       if (vt != 0)
 	out << vt;
     }
-    if (Nparam > 2) {
+    if (Nparam0 > 2) {
       out << "/";
       if (vn != 0)
 	out << vn;
@@ -545,7 +537,6 @@ public:
   //! \return true if rhs is equivalent.
   bool is_equal(const ObjRefVertex& rhs) const {
     const ObjRefVertex& lhs = *this;
-    if (lhs.Nparam != rhs.Nparam) return false;
     if (lhs.v != rhs.v) return false;
     if (lhs.vt != rhs.vt) return false;
     if (lhs.vn != rhs.vn) return false;
@@ -587,10 +578,6 @@ public:
   //! \brief Empty constructor.
   ObjRefCurve() :
     u0(0.0), u1(0.0), curv2d(-1) {}
-  //! \brief Copy constructor.
-  //! \param rhs Curve to copy.
-  ObjRefCurve(const ObjRefCurve& rhs) :
-    u0(rhs.u0), u1(rhs.u1), curv2d(rhs.curv2d) {}
   //! \brief Constructor.
   //! \param u00 Curve parameter starting value.
   //! \param u10 Curve parameter ending value.
@@ -665,10 +652,6 @@ public:
   //! \brief Empty constructor.
   ObjRefSurface() :
     surf(-1), q0(0), q1(0), curv2d(-1) {}
-  //! \brief Copy constructor.
-  //! \param rhs Surface to copy.
-  ObjRefSurface(const ObjRefSurface& rhs) :
-    surf(rhs.surf), q0(rhs.q0), q1(rhs.q1), curv2d(rhs.curv2d) {}
   //! \brief Constructor.
   //! \brief surf0 Index of surface definition.
   //! \brief q00 Starting parameter value.
@@ -830,7 +813,7 @@ public:
     for (auto it = src.begin(); it != src.end(); it++)
       dst.emplace_back((T1)(*it));
 #else // RAPIDJSON_HAS_CXX11
-    for (typename std::vector<T1>::const_iterator it = src.begin(); it != src.end(); it++)
+    for (typename std::vector<T2>::const_iterator it = src.begin(); it != src.end(); it++)
       dst.push_back((T1)(*it));
 #endif // RAPIDJSON_HAS_CXX11
   }
@@ -2428,6 +2411,10 @@ RAPIDJSON_DISABLEIF_RETURN((internal::IsPointer<T>), (ObjElement*)) ObjGroupBase
     std::vector<std::string> values;
     values.push_back(name);
     x = new ObjMaterialLib(values, this);
+  } else if ((name == "trim") || (name == "scrv") || (name == "hole")) {
+    std::vector<T> values;
+    values.push_back(value);
+    return ObjGroupBase::add_element(name, values);
   }
   else REPORT_UNSUPPORTED_ELEMENT(scalar, name);
   return ObjGroupBase::add_element(x);

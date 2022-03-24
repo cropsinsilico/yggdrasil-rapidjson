@@ -589,16 +589,21 @@ inline std::ostream & operator << (std::ostream& os, const UnitPrefix<Encoding> 
       PACK_PREFIX("d", 1e-1, "deci"),
       PACK_PREFIX("c", 1e-2, "centi"),
       PACK_PREFIX("m", 1e-3, "mili"),
-      PACK_PREFIX(u8"\u00b5", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
       PACK_PREFIX("u", 1e-6, "micro"),
+#if RAPIDJSON_HAS_CXX11
+      PACK_PREFIX(u8"\u00b5", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
       PACK_PREFIX(u8"\u03bc", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
+#else // RAPIDJSON_HAS_CXX11
+      PACK_PREFIX("\u00b5", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
+      PACK_PREFIX("\u03bc", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
+#endif // RAPIDJSON_HAS_CXX11
       PACK_PREFIX("n", 1e-9, "nano"),
       PACK_PREFIX("p", 1e-12, "pico"),
       PACK_PREFIX("f", 1e-15, "femto"),
       PACK_PREFIX("a", 1e-18, "atto"),
       PACK_PREFIX("z", 1e-21, "zepto"),
       PACK_PREFIX("y", 1e-24, "yocto"),
-      nullptr
+      (void*)nullptr
     );
 
 #undef PACK_PREFIX
@@ -1102,7 +1107,7 @@ Units<Encoding> operator/(const Unit<Encoding>& a, const Unit<Encoding>& b) {
 
 
 #define PACK_UNIT(...) PACK_LUT(Unit<UTF8<char> >, (__VA_ARGS__))
-#define VSTR(...) pack_strings<char>(__VA_ARGS__, nullptr)
+#define VSTR(...) pack_strings<char>(__VA_ARGS__, (char*)nullptr)
 
   // MKS as base, units that can have SI prefixes
   static CachedLUT<Unit<UTF8<char> > > _base_units (
@@ -1114,11 +1119,15 @@ Units<Encoding> operator/(const Unit<Encoding>& a, const Unit<Encoding>& b) {
       PACK_UNIT("mole", "mol", dimensions::number, 1.0 / constants::amu_grams),
       PACK_UNIT("candela", "cd", dimensions::luminous_intensity),
       PACK_UNIT("radian", "rad", dimensions::angle),
-      nullptr
+      (void*)nullptr
     );
   
   static CachedLUT<Unit<UTF8<char> > > _prefixable_units (
+#if RAPIDJSON_HAS_CXX11
       _base_units.template get<Unit<UTF8<char> > >(),
+#else // RAPIDJSON_HAS_CXX11
+      _base_units.get<Unit<UTF8<char> > >(),
+#endif // RAPIDJSON_HAS_CXX11
       // cgs
       PACK_UNIT("dyne", "dyn", dimensions::force, 1.0e-5),
       PACK_UNIT("erg", "erg", dimensions::energy, 1.0e-7),
@@ -1154,7 +1163,7 @@ Units<Encoding> operator/(const Unit<Encoding>& a, const Unit<Encoding>& b) {
       PACK_UNIT("jansky", "J", dimensions::specific_flux, constants::jansky_mks),
       PACK_UNIT("sievert", "Sv", dimensions::specific_energy),
       PACK_UNIT("molar", "M", dimensions::number_density, 100.0 / constants::amu_grams),
-      nullptr
+      (void*)nullptr
     );
   
   static CachedLUT<Unit<UTF8<char> > > _unprefixable_units(
@@ -1230,7 +1239,7 @@ Units<Encoding> operator/(const Unit<Encoding>& a, const Unit<Encoding>& b) {
     PACK_UNIT("acre", "ac", dimensions::area, 4046.86),
     PACK_UNIT("are", "a", dimensions::area, 100.0),
     PACK_UNIT("hectare", "ha", dimensions::area, 10000.0),
-    nullptr
+    (void*)nullptr
   );
 
 #undef PACK_UNIT
@@ -1870,18 +1879,16 @@ public:
   //! \param units Units instance.
   QuantityArray(const T* value, const SizeType& ndim, const SizeType* shape,
 		const Units<Encoding>& units = Units<Encoding>()) :
-    value_(nullptr), units_(units), ndim_(ndim), shape_(nullptr) {
-    RAPIDJSON_ASSERT(ndim > 0);
-    _init_shape(shape);
-    _init_value(value);
-  }
+    value_(nullptr), units_(units), ndim_(ndim), shape_(nullptr)
+  { _init(value, shape); }
   //! \brief Create a quantity.
   //! \param value Pointer to an array.
   //! \param len Number of elements in the 1D array.
   //! \param units Units instance.
   QuantityArray(const T* value, const SizeType& len,
 		const Units<Encoding>& units = Units<Encoding>()) :
-    QuantityArray(value, 1, &len, units) {}
+    value_(nullptr), units_(units), ndim_(1), shape_(nullptr)
+  { _init(value, &len); }
   //! \brief Create a quantity from units string.
   //! \param value Pointer to an array.
   //! \param ndim Number of dimensions in the array.
@@ -1889,23 +1896,24 @@ public:
   //! \param units Units string.
   QuantityArray(const T* value, const SizeType& ndim, const SizeType* shape,
 		const Ch* units) :
-    QuantityArray(value, ndim, shape, Units<Encoding>(units)) {}
-  
+    value_(nullptr), units_(Units<Encoding>(units)), ndim_(ndim), shape_(nullptr)
+  { _init(value, shape); }
   //! \brief Create a quantity without units.
   //! \tparam N Number of elements in the array.
   //! \param value 1D array.
   //! \param units Units instance.
   template<SizeType N>
   QuantityArray(const T (&value)[N], const Units<Encoding>& units = Units<Encoding>()) :
-    QuantityArray(&(value[0]), N, units) {}
+    value_(nullptr), units_(units), ndim_(1), shape_(nullptr)
+  { SizeType len = N; _init(&(value[0]), &len); }
   //! \brief Constructor from units string.
   //! \tparam N Number of elements in the array.
   //! \param value 1D array.
   //! \param units Units string.
   template<SizeType N>
   QuantityArray(const T (&value)[N], const Ch* units) :
-    QuantityArray(value, Units<Encoding>(units)) {}
-  
+    value_(nullptr), units_(Units<Encoding>(units)), ndim_(1), shape_(nullptr)
+  { SizeType len = N; _init(&(value[0]), &len); }
   //! \brief Create a quantity without units.
   //! \tparam N Number of elements in the array in dimension 1.
   //! \tparam M Number of elements in the array in dimension 2.
@@ -1913,11 +1921,8 @@ public:
   //! \param units Units instance.
   template<SizeType N, SizeType M>
   QuantityArray(const T (&value)[N][M], const Units<Encoding>& units = Units<Encoding>()) :
-    value_(nullptr), units_(units), ndim_(2), shape_(nullptr) {
-    SizeType shape[] = {N, M};
-    _init_shape(&(shape[0]));
-    _init_value(&(value[0][0]));
-  }
+    value_(nullptr), units_(units), ndim_(2), shape_(nullptr)
+  { SizeType shape[] = {N, M}; _init(&(value[0][0]), &(shape[0])); }
   //! \brief Constructor from units string.
   //! \tparam N Number of elements in the array in dimension 1.
   //! \tparam M Number of elements in the array in dimension 2.
@@ -1925,11 +1930,13 @@ public:
   //! \param units Units string.
   template<SizeType N, SizeType M>
   QuantityArray(const T (&value)[N][M], const Ch* units) :
-    QuantityArray(value, Units<Encoding>(units)) {}
+    value_(nullptr), units_(Units<Encoding>(units)), ndim_(2), shape_(nullptr)
+  { SizeType shape[] = {N, M}; _init(&(value[0][0]), &(shape[0])); }
   //! \brief Copy constructor.
   //! \param other QuantityArray to copy.
   QuantityArray(const QuantityArray<T, Encoding>& other) :
-    QuantityArray() { *this = other; }
+    value_(nullptr), units_(), ndim_(1), shape_(nullptr)
+  { *this = other; }
   //! \brief Destructor.
   ~QuantityArray() {
     if (value_ != nullptr) free(value_);
@@ -1944,8 +1951,7 @@ public:
     if (shape_ != nullptr) free(shape_);
     ndim_ = other.ndim_;
     units_ = other.units_;
-    _init_shape(other.shape_);
-    _init_value(other.value_);
+    _init(other.value_, other.shape_);
     return *this;
   }
   //! \brief Print instance information to an output stream.
@@ -1979,6 +1985,11 @@ private:
     }
     out.push_back(idx - prev);
     return out;
+  }
+  void _init(const T* value, const SizeType* shape) {
+    RAPIDJSON_ASSERT(ndim_ > 0);
+    _init_shape(shape);
+    _init_value(value);
   }
   void _init_shape(const SizeType* shape) {
     shape_ = (SizeType*)malloc(ndim_ * sizeof(SizeType));
