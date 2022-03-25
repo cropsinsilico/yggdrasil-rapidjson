@@ -345,6 +345,12 @@ private:
        powers[6], powers[7]} };
     return values;
   }
+  static DimArray packArray(const double p0, const double p1, const double p2,
+			    const double p3, const double p4, const double p5,
+			    const double p6, const double p7) {
+    DimArray values = {p0, p1, p2, p3, p4, p5, p6, p7};
+    return values;
+  }
 public:
   Dimension(const BaseDimension k, const double power=1.0) :
     powers_(packArray()) {
@@ -358,16 +364,8 @@ public:
 	    const double Temp = 0.0,
 	    const double N = 0.0,
 	    const double LI = 0.0,
-	    const double A = 0.0) {
-    powers_.values[0] = L;
-    powers_.values[1] = M;
-    powers_.values[2] = T;
-    powers_.values[3] = EC;
-    powers_.values[4] = Temp;
-    powers_.values[5] = N;
-    powers_.values[6] = LI;
-    powers_.values[7] = A;
-  }
+	    const double A = 0.0) :
+    powers_(packArray(L, M, T, EC, Temp, N, LI, A)) {}
   Dimension(const double powers[8]) : powers_(packArray(powers)) {}
   Dimension operator*(const Dimension& x) const {
     double new_powers[8];

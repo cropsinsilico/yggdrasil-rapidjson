@@ -3186,7 +3186,7 @@ public:
 			Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, &(shape[0]), N, units_str, units_len, &allocator); }
+  { SetNDArrayRaw(x, shape, ndim, units_str, units_len, &allocator); }
   // ND array of strings
   explicit GenericValue(const Ch* x, const SizeType precision,
 			const SizeType shape[], const SizeType ndim,

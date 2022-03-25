@@ -744,7 +744,7 @@ public:
   //! \tparam T Vector element type. Must be an integer or floating point.
   //! \param parent0 The element's parent group.
   template <typename T, size_t N>
-  ObjElement(const std::string& code0, const T (&src)[N],
+  ObjElement(const std::string& code0, const T (&)[N],
 	     const ObjGroupBase* parent0 = nullptr) :
     code(code0), parent(parent0) {
     RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
