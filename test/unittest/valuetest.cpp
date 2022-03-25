@@ -1912,6 +1912,7 @@ TEST(Value, Array) {
 
     // Working in gcc without C++11, but VS2013 cannot compile. To be diagnosed.
     // http://en.wikipedia.org/wiki/Erase-remove_idiom
+#if RAPIDJSON_HAS_CXX11
     x.Clear();
     for (int i = 0; i < 10; i++)
         if (i % 2 == 0)
@@ -1924,6 +1925,7 @@ TEST(Value, Array) {
     EXPECT_EQ(5u, x.Size());
     for (int i = 0; i < 5; i++)
         EXPECT_EQ(i * 2, x[static_cast<SizeType>(i)]);
+#endif // RAPIDJSON_HAS_CXX11
 
     // SetArray()
     Value z;

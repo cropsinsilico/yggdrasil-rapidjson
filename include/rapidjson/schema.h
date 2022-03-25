@@ -732,8 +732,10 @@ public:
   
 #define REQUIRED_PROPERTY_(method, cond)				\
   if (!(cond)) {							\
-    const GenericStringBuffer<EncodingType>& instanceRef = GetInstanceRef(false); \
-    const GenericStringBuffer<EncodingType>& schemaRef = GetSchemaRef(schema); \
+    GenericStringBuffer<EncodingType> instanceRef;			\
+    GenericStringBuffer<EncodingType> schemaRef;			\
+    GetInstanceRef(instanceRef, false);					\
+    GetSchemaRef(schemaRef, schema);					\
     context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), instanceRef, schemaRef); \
     RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
   }
@@ -999,8 +1001,7 @@ private:
     }
     return true;
   }
-  GenericStringBuffer<EncodingType> GetSchemaRef(const SchemaType& schema) {
-    GenericStringBuffer<EncodingType> sb;
+  void GetSchemaRef(GenericStringBuffer<EncodingType>& sb, const SchemaType& schema) {
     SizeType len = schema.GetURI().GetStringLength();
     if (len) memcpy(sb.Push(len), schema.GetURI().GetString(), len * sizeof(Ch));
     const PointerType* schemaPointer;
@@ -1009,11 +1010,9 @@ private:
     else
       schemaPointer = &schema.GetPointer();
     schemaPointer->StringifyUriFragment(sb);
-    return sb;
   }
-  GenericStringBuffer<EncodingType> GetInstanceRef(bool parent=true) {
+  void GetInstanceRef(GenericStringBuffer<EncodingType>& sb, bool parent=true) {
     RAPIDJSON_ASSERT(documentStack_);
-    GenericStringBuffer<EncodingType> sb;
     PointerType instancePointer;
     if (documentStack_->Empty()) {
       instancePointer = PointerType();
@@ -1029,7 +1028,6 @@ private:
     ((parent && (instancePointer.GetTokenCount() > 0))
      ? PointerType(instancePointer.GetTokens(), instancePointer.GetTokenCount() - 1)
      : instancePointer).StringifyUriFragment(sb);
-    return sb;
   }
   bool HasMember(ValueType& key, ValueType* val=nullptr) {
     if (extending_ && !appending_) {
@@ -1066,7 +1064,8 @@ private:
     size_t idx = 0;
     GenericPointer<ValueType> ptr;
     if (unfinalized) {
-      const GenericStringBuffer<EncodingType>& instanceRef = GetInstanceRef(false);
+      GenericStringBuffer<EncodingType> instanceRef;
+      GetInstanceRef(instanceRef, false);
       SizeType currentLength = static_cast<SizeType>(instanceRef.GetSize() / sizeof(Ch));
       ptr = GenericPointer<ValueType>(address.GetString() + currentLength,
 				      address.GetStringLength() - currentLength);
@@ -1152,7 +1151,8 @@ private:
     return (match != aliases.MemberEnd());
   }
   ValueType& GetAliases() {
-    const GenericStringBuffer<EncodingType>& address = GetInstanceRef();
+    GenericStringBuffer<EncodingType> address;
+    GetInstanceRef(address);
     if (!aliases_.HasMember(address.GetString())) {
       ValueType tmp(address.GetString(), static_cast<SizeType>(address.GetSize() / sizeof(Ch)), GetAllocator());
       aliases_.AddMember(tmp, kObjectType, GetAllocator());

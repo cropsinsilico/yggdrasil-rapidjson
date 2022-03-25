@@ -663,7 +663,11 @@ RAPIDJSON_NAMESPACE_END
 #  define RAPIDJSON_DELIBERATE_FALLTHROUGH
 # endif
 #else
-# define RAPIDJSON_DELIBERATE_FALLTHROUGH
+# if defined(__clang__)
+#  define RAPIDJSON_DELIBERATE_FALLTHROUGH [[clang::fallthrough]]
+# else
+#  define RAPIDJSON_DELIBERATE_FALLTHROUGH
+# endif
 #endif
 
 //!@endcond
