@@ -31,6 +31,10 @@ RAPIDJSON_DIAG_OFF(6334)
 #include <type_traits>
 #endif
 
+#ifdef RAPIDJSON_YGGDRASIL
+#include <cstdarg>
+#endif // RAPIDJSON_YGGDRASIL
+
 //@cond RAPIDJSON_INTERNAL
 RAPIDJSON_NAMESPACE_BEGIN
 namespace internal {
@@ -196,7 +200,7 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
   va_start(args, first);
   size_t i = 1;
   while (i < N) {
-    const T x = va_arg(args, const T);
+    const T x = va_arg(args, T);
     out.push_back(x);
     i++;
   }
