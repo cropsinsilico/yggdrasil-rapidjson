@@ -6,3 +6,4 @@ dependencies:
   - c-compiler
   - cxx-compiler
   - gcovr
+  - Jinja2 < 3.1.0
