@@ -732,7 +732,9 @@ public:
   
 #define REQUIRED_PROPERTY_(method, cond)				\
   if (!(cond)) {							\
-    context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), GetInstanceRef(false), GetSchemaRef(schema)); \
+    const GenericStringBuffer<EncodingType>& instanceRef = GetInstanceRef(false); \
+    const GenericStringBuffer<EncodingType>& schemaRef = GetSchemaRef(schema); \
+    context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), instanceRef, schemaRef); \
     RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
   }
 
@@ -1064,7 +1066,8 @@ private:
     size_t idx = 0;
     GenericPointer<ValueType> ptr;
     if (unfinalized) {
-      SizeType currentLength = static_cast<SizeType>(GetInstanceRef(false).GetSize() / sizeof(Ch));
+      const GenericStringBuffer<EncodingType>& instanceRef = GetInstanceRef(false);
+      SizeType currentLength = static_cast<SizeType>(instanceRef.GetSize() / sizeof(Ch));
       ptr = GenericPointer<ValueType>(address.GetString() + currentLength,
 				      address.GetStringLength() - currentLength);
     } else {
@@ -1123,7 +1126,7 @@ private:
 	      new_val.CopyFrom(old->value, GetAllocator());
 	      base->AddMember(ValueType(v->value.GetString(),
 					v->value.GetStringLength(),
-					GetAllocator()),
+					GetAllocator()).Move(),
 			      new_val,
 			      GetAllocator());
 	      base->RemoveMember(v->name);
