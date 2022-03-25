@@ -57,7 +57,7 @@ void init_numpy_API() {
 #endif
   if (err.length() > 0)
     throw std::runtime_error(err); // GCOVR_EXCL_LINE
-};
+}
 
 
 /*!
@@ -99,7 +99,7 @@ void init_python_API() {
 #endif
   if (err.length() > 0)
     throw std::runtime_error(err); // GCOVR_EXCL_LINE
-};
+}
 
 /*!
   @brief Initialize Python if it is not initialized.
@@ -112,7 +112,7 @@ void initialize_python(const std::string error_prefix="") {
   } catch (std::exception& e) {
     throw std::runtime_error(error_prefix + "initialize_python: " + e.what()); // GCOVR_EXCL_LINE
   }
-};
+}
 
 
 /*!
@@ -127,7 +127,7 @@ void finalize_python(const std::string error_prefix="") {
   } catch (std::exception& e) {
     throw std::runtime_error(error_prefix + "finalize_python: " + e.what()); // GCOVR_EXCL_LINE
   }
-};
+}
 
 
 /*!
@@ -150,7 +150,7 @@ PyObject* import_python_module(const char* module_name,
       throw std::runtime_error(error_prefix + "import_python_module: Failed to import Python model '" + module_name + "'");
   } // GCOVR_EXCL_STOP
   return out;
-};
+}
 
 
 /*!
@@ -180,7 +180,7 @@ PyObject* import_python_class(const char* module_name,
       throw std::runtime_error(error_prefix + "import_python_class: Failed to import Python class/function/object '" + class_name + "'");
   } // GCOVR_EXCL_STOP
   return out;
-};
+}
 
 inline
 PyObject* import_python_object(const char* mod_class,
@@ -194,7 +194,7 @@ PyObject* import_python_object(const char* mod_class,
     return NULL;
   }
   return import_python_class(module_name, class_name, error_prefix, ignore_error);
-};
+}
 
 
 RAPIDJSON_NAMESPACE_END

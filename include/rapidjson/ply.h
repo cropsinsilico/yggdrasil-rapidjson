@@ -602,7 +602,7 @@ public:
 //! \return true if the two elements are equivalent.
 inline
 bool operator == (const PlyElement& lhs, const PlyElement& rhs)
-{ return lhs.is_equal(rhs); };
+{ return lhs.is_equal(rhs); }
 
 //! \brief Get the flag indicating a type.
 //! \tparam T Type to get flag for.
@@ -816,7 +816,7 @@ public:
 //! \return true if the two instances are equivalent.
 inline
 bool operator == (const PlyElementSet& lhs, const PlyElementSet& rhs)
-{ return lhs.is_equal(rhs); };
+{ return lhs.is_equal(rhs); }
 
 //! Ply 3D geometry container class.
 class Ply {
@@ -1085,7 +1085,7 @@ public:
 //! \return true if the two geometries are equivalent.
 inline
 bool operator == (const Ply& lhs, const Ply& rhs)
-{ return lhs.is_equal(rhs); };
+{ return lhs.is_equal(rhs); }
 
 //! \brief Write a Ply geometry to an output stream.
 //! \param out Output stream.
@@ -1093,7 +1093,7 @@ bool operator == (const Ply& lhs, const Ply& rhs)
 //! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const Ply &p)
-{ return p.write(out); };
+{ return p.write(out); }
 
 //! \brief Read a Ply geometry from an input stream.
 //! \param in Input stream.
@@ -1101,7 +1101,7 @@ std::ostream & operator << (std::ostream &out, const Ply &p)
 //! \return Input sream.
 inline
 std::istream & operator >> (std::istream &in, Ply &p)
-{ return p.read(in); };
+{ return p.read(in); }
 
 
 RAPIDJSON_NAMESPACE_END

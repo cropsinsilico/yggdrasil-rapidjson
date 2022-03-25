@@ -94,14 +94,14 @@ if __name__ == "__main__":
                 + json.dumps(base, indent=1).replace(
                     "\"", "\\\"").replace('\n', "\"\n    \"") + "\";",
                 "  return out;",
-                "};", "",
+                "}", "",
                 "template<>",
                 "inline const item_return<wchar_t>::type* get_metaschema<wchar_t>() {",
                 "  const wchar_t* out = L\""
                 + json.dumps(base, indent=1).replace(
                     "\"", "\\\"").replace('\n', "\"\n    L\"") + "\";",
                 "  return out;",
-                "};", "",
+                "}", "",
                 "", "#endif // METASCHEMA_H_"]
     with open(args.dest, 'w') as fd:
         fd.write('\n'.join(contents))

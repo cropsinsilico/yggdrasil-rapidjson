@@ -495,7 +495,7 @@ enum SingularFlag {
 //       std::cerr << it->value.GetString() << std::endl;
 //     }
 //   }
-// };
+// }
 template<typename ValueType, typename AllocatorType>
 bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 		     ValueType* dest, AllocatorType& allocator) {
@@ -521,7 +521,7 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
   }
   dest->CopyFrom(primary->value, allocator);
   return true;
-};
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // GenericNormalizedDocument

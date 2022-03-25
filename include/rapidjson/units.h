@@ -315,7 +315,7 @@ namespace units {
       } else {
 	return (std::vector<T2>*)(match->second);
       }
-    };
+    }
   private:
     std::vector<T> base_;
     std::map<std::type_index, void*> cache_;
@@ -419,7 +419,7 @@ inline std::ostream & operator << (std::ostream& os, const Dimension &x) {
     os << "," << x.powers_.values[i];
   os << "]";
   return os;
-};
+}
 
 namespace dimensions {
   // Base
@@ -501,7 +501,7 @@ const std::basic_string<typename DestEncoding::Ch> convert_chars(const std::basi
   }
   std::basic_string<typename DestEncoding::Ch> out(dst.GetString(), dst.GetLength());
   return out;
-};
+}
 								 
 // template<typename T1, typename T2>
 // const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
@@ -568,7 +568,7 @@ inline std::ostream & operator << (std::ostream& os, const UnitPrefix<Encoding> 
   if (x.abbr.size() > 0)
     os << convert_chars<Encoding,UTF8<char> >(x.abbr);
   return os;
-};
+}
 
 #define PACK_PREFIX(...) PACK_LUT(UnitPrefix<UTF8<char> >, (__VA_ARGS__))
   
@@ -883,7 +883,7 @@ inline std::ostream & operator << (std::ostream& os, const Unit<Encoding> &x) {
      << convert_chars<Encoding,UTF8<char> >(x.abbrs_[0]);
   if (x.has_power()) os << "**" << x.power_;
   return os;
-};
+}
 
 //! \brief Units class.
 template<typename Encoding>
@@ -1090,7 +1090,7 @@ inline std::ostream & operator << (std::ostream &os, const Units<Encoding> &x) {
       os << "(" << *it << ")";
     }
     return os;
-};
+}
 
 template<typename Encoding>
 Units<Encoding> operator*(const Unit<Encoding>& a, const Unit<Encoding>& b) {
@@ -1320,7 +1320,7 @@ public:
 template<typename Encoding2>
 inline std::ostream & operator << (std::ostream &os, const TokenBase<Encoding2>* x) {
   return x->display(os);
-};
+}
   
 template<typename Encoding>
 class OperatorToken : public TokenBase<Encoding> {
@@ -1652,7 +1652,7 @@ Units<Encoding> Units<Encoding>::parse_units(const typename Encoding::Ch* str,
     }
   }
   return token.finalize();
-};
+}
 
 //! Scalar quantity with units.
 //! \tparam T Type of the underlying scalar.
@@ -1698,7 +1698,7 @@ private:
 public:
   //! \brief Get the quantity value without units.
   //! \return Value.
-  T value() const { return value_; };
+  T value() const { return value_; }
   //! \brief Get the units instance.
   //! \return Units.
   Units<Encoding> units() const { return units_; }
@@ -1838,7 +1838,7 @@ template<typename T, typename Encoding>
 inline std::ostream & operator << (std::ostream &os, const Quantity<T, Encoding> &x) {
     os << x.value_ << " " << x.units_;
     return os;
-};
+}
 
 #define ARRAY_ARRAY_OP(op)						\
   QuantityArray operator op(const QuantityArray& x) const {		\
@@ -2034,7 +2034,7 @@ private:
 public:
   //! \brief Get the quantity value without units.
   //! \return Value.
-  const T* value() const { return value_; };
+  const T* value() const { return value_; }
   //! \brief Get the units instance.
   //! \return Units.
   Units<Encoding> units() const { return units_; }
@@ -2050,7 +2050,7 @@ public:
     T* out = value_;
     value_ = nullptr;
     return out;
-  };
+  }
   //! \brief Retrun the pointer to the shape and then reset it.
   //! \return Shape.
   SizeType* pop_shape() {
@@ -2192,7 +2192,7 @@ inline std::ostream & operator << (std::ostream &os, const QuantityArray<T, Enco
   x._write_array(os);
   os << " " << x.units_;
   return os;
-};
+}
   
 #undef ARRAY_ARRAY_OP
 #undef ARRAY_SCALAR_OP

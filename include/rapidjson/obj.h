@@ -141,7 +141,7 @@ RAPIDJSON_NAMESPACE_BEGIN
   std::cerr << typeid(T1).name() << " and " << typeid(T2).name() << " types are not compatible." << std::endl; \
   RAPIDJSON_ASSERT(!sizeof("T1 and T2 types are not compatible."))
 #define GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, base, code, init, compat, T2) \
-  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, code, init);			\
+  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, code, init)			\
   /*! \brief Initialize and element from a C++ vector of values. */	\
   /*! \tparam T Vector element type. Must be castable to the type. */	\
   /*! \param values0 Vector of values. */				\
@@ -265,9 +265,9 @@ RAPIDJSON_NAMESPACE_BEGIN
     return true;							\
   }
 #define GENERIC_CLASS_SCALAR_TYPE_BASE(cls, base, codeS, type, def)	\
-  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, SINGLE_ARG(, value(def))); \
-  DUMMY_ARRAY_CONSTRUCTOR(cls, base, code, SINGLE_ARG(, value(def)));	\
-  GENERIC_CLASS_SCALAR_TYPE_ISEQUAL(cls);				\
+  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, SINGLE_ARG(, value(def))) \
+  DUMMY_ARRAY_CONSTRUCTOR(cls, base, code, SINGLE_ARG(, value(def)))	\
+  GENERIC_CLASS_SCALAR_TYPE_ISEQUAL(cls)				\
   /*! \brief Copy element specific members from another instance. */	\
   /*! \param[in] rhs Element to copy members from. */			\
   void copy_members(const cls& rhs) {					\
@@ -308,7 +308,7 @@ RAPIDJSON_NAMESPACE_BEGIN
   GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, type, def);	\
   }
 #define GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, type, compat)	\
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, ObjElement, code, SINGLE_ARG(, values()), UNPACK compat, type); \
+  GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, ObjElement, code, SINGLE_ARG(, values()), UNPACK compat, type) \
   GENERIC_READ_VALUES;							\
   GENERIC_WRITE_VALUES;							\
   GENERIC_IS_EQUAL(cls);						\
@@ -341,17 +341,17 @@ RAPIDJSON_NAMESPACE_BEGIN
 template <typename T>
 inline bool is_equal(const T &a, const T &b) {
   return (a == b);
-};
+}
 //! Checks if two float values are equal using comparison.
 template <>
 inline bool is_equal(const float &a, const float &b) {
   return IS_EQUAL_FLT(a, b);
-};
+}
 //! Checks if two double values are equal using comparison.
 template <>
 inline bool is_equal(const double &a, const double &b) {
   return IS_EQUAL_DBL(a, b);
-};
+}
 
 //! Test if two vectors are equal element-by-element using is_equal
 template <typename T>
@@ -360,7 +360,7 @@ inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
   for (typename std::vector<T>::const_iterator ait = a.begin(), bit = b.begin(); ait != a.end(); ait++, bit++)
     if (!is_equal(*ait, *bit)) return false;
   return true;
-};
+}
 
 // Forward declaration
 class ObjElement;
@@ -431,7 +431,7 @@ public:
 //! \return true if the two instances are equivalent.
 inline
 bool operator == (const ObjColor& lhs, const ObjColor& rhs)
-{ return lhs.is_equal(rhs); };
+{ return lhs.is_equal(rhs); }
 
 //! Object reference index.
 typedef int64_t ObjRef;
@@ -553,7 +553,7 @@ public:
 //! \return true if the two instances are equivalent.
 inline
 bool operator == (const ObjRefVertex& lhs, const ObjRefVertex& rhs)
-{ return lhs.is_equal(rhs); };
+{ return lhs.is_equal(rhs); }
 
 //! Write an ObjRefVertex element to an output stream.
 //! \param out Output stream.
@@ -561,7 +561,7 @@ bool operator == (const ObjRefVertex& lhs, const ObjRefVertex& rhs)
 //! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjRefVertex &p)
-{ return p.write(out); };
+{ return p.write(out); }
 
 //! Read an ObjRefVertex element from an input stream.
 //! \param in Input stream.
@@ -569,7 +569,7 @@ std::ostream & operator << (std::ostream &out, const ObjRefVertex &p)
 //! \return Input stream.
 inline
 std::istream & operator >> (std::istream &in, ObjRefVertex &p)
-{ return p.read(in); };
+{ return p.read(in); }
 
 
 //! ObjWavefront curve reference.
@@ -627,7 +627,7 @@ public:
 //! \return true if the two elements are equivalent.
 inline
 bool operator == (const ObjRefCurve& lhs, const ObjRefCurve& rhs)
-{ return lhs.is_equal(rhs); };
+{ return lhs.is_equal(rhs); }
 
 //! Write an ObjRefCurve element to an output stream.
 //! \param out Output stream.
@@ -635,7 +635,7 @@ bool operator == (const ObjRefCurve& lhs, const ObjRefCurve& rhs)
 //! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjRefCurve &p)
-{ return p.write(out); };
+{ return p.write(out); }
 
 //! Read an ObjRefCurve element from an input stream.
 //! \param in Input stream.
@@ -643,7 +643,7 @@ std::ostream & operator << (std::ostream &out, const ObjRefCurve &p)
 //! \return Input stream.
 inline
 std::istream & operator >> (std::istream &in, ObjRefCurve &p)
-{ return p.read(in); };
+{ return p.read(in); }
 
 
 //! ObjWavefront surface reference.
@@ -706,7 +706,7 @@ public:
 //! \return true if the two elements are equivalent.
 inline
 bool operator == (const ObjRefSurface& lhs, const ObjRefSurface& rhs)
-{ return lhs.is_equal(rhs); };
+{ return lhs.is_equal(rhs); }
 
 //! Write an ObjRefSurface element to an output stream.
 //! \param out Output stream.
@@ -714,7 +714,7 @@ bool operator == (const ObjRefSurface& lhs, const ObjRefSurface& rhs)
 //! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjRefSurface &p)
-{ return p.write(out); };
+{ return p.write(out); }
 
 //! Read an ObjRefSurface element from an input stream.
 //! \param in Input stream.
@@ -722,7 +722,7 @@ std::ostream & operator << (std::ostream &out, const ObjRefSurface &p)
 //! \return Input stream.
 inline
 std::istream & operator >> (std::istream &in, ObjRefSurface &p)
-{ return p.read(in); };
+{ return p.read(in); }
 
 //! ObjWavefront element base class.
 class ObjElement {
@@ -944,7 +944,7 @@ public:
 //! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjElement &p)
-{ return p.write(out); };
+{ return p.write(out); }
 
 //! Element grouping base class.
 class ObjGroupBase : public ObjElement {
@@ -1225,7 +1225,7 @@ public:
 //! Vertex data
 class ObjVertex : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVertex, ObjElement, v, SINGLE_ARG(, values(), x(0), y(0), z(0), w(-1), color()));
+  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVertex, ObjElement, v, SINGLE_ARG(, values(), x(0), y(0), z(0), w(-1), color()))
   //! \brief Copy element specific members from another instance.
   //! \param[in] rhs Element to copy members from.
   void copy_members(const ObjVertex& rhs) {
@@ -1506,7 +1506,7 @@ public:
 class ObjCurve : public ObjFreeFormElement {
 public:
   GENERIC_ELEMENT_CONSTRUCTOR(ObjCurve, ObjFreeFormElement, curv, SINGLE_ARG(, values(), u0(0), u1(0)))
-  DUMMY_ARRAY_CONSTRUCTOR(ObjCurve, ObjFreeFormElement, curv, SINGLE_ARG(, values(), u0(0), u1(0)));
+  DUMMY_ARRAY_CONSTRUCTOR(ObjCurve, ObjFreeFormElement, curv, SINGLE_ARG(, values(), u0(0), u1(0)))
   //! \brief Initialize and element from a C++ vector of values.
   //! \param u00 Starting curve parameter value.
   //! \param u10 Ending curve parameter value.
@@ -1613,7 +1613,7 @@ public:
 //! Surface element.
 class ObjSurface : public ObjFreeFormElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjSurface, ObjFreeFormElement, surf, SINGLE_ARG(, values(), s0(0), s1(0), t0(0), t1(0)));
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjSurface, ObjFreeFormElement, surf, SINGLE_ARG(, values(), s0(0), s1(0), t0(0), t1(0)))
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer.
   //! \param s00 Starting curve parameter value in 1st dimension.
@@ -1632,7 +1632,7 @@ public:
     assign_values(values, values0);
     from_values();
   }
-  DUMMY_ARRAY_CONSTRUCTOR(ObjSurface, ObjFreeFormElement, surf, SINGLE_ARG(, values(), s0(0), s1(0), t0(0), t1(0)));
+  DUMMY_ARRAY_CONSTRUCTOR(ObjSurface, ObjFreeFormElement, surf, SINGLE_ARG(, values(), s0(0), s1(0), t0(0), t1(0)))
   //! \brief Copy element specific members from another instance.
   //! \param[in] rhs Element to copy members from.
   void copy_members(const ObjSurface& rhs) {
@@ -1729,7 +1729,7 @@ public:
 //! Basis matrix element.
 class ObjBasisMatrix : public ObjElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjBasisMatrix, ObjElement, bmat, SINGLE_ARG(, values(), direction("")));
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjBasisMatrix, ObjElement, bmat, SINGLE_ARG(, values(), direction("")))
   //! \brief Initialize an element from a C array of values.
   //! \tparam T Array element type.
   //! \tparam N Array size.
@@ -1754,7 +1754,7 @@ public:
     assign_values(values, values0);
     from_values();
   }
-  DUMMY_ARRAY_CONSTRUCTOR(ObjBasisMatrix, ObjElement, bmat, SINGLE_ARG(, values(), direction("")));
+  DUMMY_ARRAY_CONSTRUCTOR(ObjBasisMatrix, ObjElement, bmat, SINGLE_ARG(, values(), direction("")))
   //! \brief Copy element specific members from another instance.
   //! \param[in] rhs Element to copy members from.
   void copy_members(const ObjBasisMatrix& rhs) {
@@ -1814,7 +1814,8 @@ public:
 //! Parameter element.
 class ObjParameter : public ObjElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjParameter, ObjElement, parm, SINGLE_ARG(, values(), direction("")));
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjParameter, ObjElement, parm, SINGLE_ARG(, values(), direction("")))
+  DUMMY_ARRAY_CONSTRUCTOR(ObjParameter, ObjElement, parm, SINGLE_ARG(, values(), direction("")))
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be catable to double.
   //! \param direction0 Parameter direction.
@@ -1839,7 +1840,6 @@ public:
     ObjElement("parm", parent0), values(), direction("") {
     RAPIDJSON_ASSERT(sizeof("ObjParameter type is double"));
   }
-  DUMMY_ARRAY_CONSTRUCTOR(ObjParameter, ObjElement, parm, SINGLE_ARG(, values(), direction("")));
   //! \brief Copy element specific members from another instance.
   //! \param[in] rhs Element to copy members from.
   void copy_members(const ObjParameter& rhs) {
@@ -1989,8 +1989,8 @@ public:
 //! Merging group.
 class ObjMergingGroup : public ObjElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value("off"), resolution(0)));
-  DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value("off"), resolution(0)));
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value("off"), resolution(0)))
+  DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value("off"), resolution(0)))
   //! \brief Initialize the smoothing group from a string.
   //! \param value0 Scalar value.
   //! \param parent0 Parent group.
@@ -2060,7 +2060,7 @@ GENERIC_CLASS_SCALAR_TYPE(ObjObjectName, o, std::string, "");
 #define BOOL_ELEMENT_CLASS(cls, code)					\
   class cls : public ObjElement {					\
   public:								\
-  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, std::string, "off"); \
+  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, std::string, "off") \
   /*! \copydoc ObjElement::from_values() */				\
   void from_values() OVERRIDE_CXX11 {						\
     RAPIDJSON_ASSERT(((value == "on") || (value == "off")));		\
@@ -2102,8 +2102,8 @@ GENERIC_CLASS_SCALAR_TYPE(ObjTraceFile, trace_obj, std::string, "");
 //! Curve technique resolution.
 class ObjCTech : public ObjElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjCTech, ObjElement, ctech, SINGLE_ARG(, technique(""), values()));
-  DUMMY_ARRAY_CONSTRUCTOR(ObjCTech, ObjElement, ctech, SINGLE_ARG(, technique(""), values()));
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjCTech, ObjElement, ctech, SINGLE_ARG(, technique(""), values()))
+  DUMMY_ARRAY_CONSTRUCTOR(ObjCTech, ObjElement, ctech, SINGLE_ARG(, technique(""), values()))
   template<typename T>
   ObjCTech(const std::string& technique0,
 	   const std::vector<T> &values0,
@@ -2168,8 +2168,8 @@ public:
 //! Surface technique resolution.
 class ObjSTech : public ObjElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjSTech, ObjElement, stech, SINGLE_ARG(, technique(""), values()));
-  DUMMY_ARRAY_CONSTRUCTOR(ObjSTech, ObjElement, stech, SINGLE_ARG(, technique(""), values()));
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjSTech, ObjElement, stech, SINGLE_ARG(, technique(""), values()))
+  DUMMY_ARRAY_CONSTRUCTOR(ObjSTech, ObjElement, stech, SINGLE_ARG(, technique(""), values()))
   template<typename T>
   ObjSTech(const std::string& technique0,
 	   const std::vector<T> &values0,
@@ -2247,7 +2247,7 @@ inline ObjElement* read_obj_element(std::istream &in,
   if (in >> word)
     OBJ_ELEMENT_INIT(word, out, (in, parent, dont_descend));
   return out;
-};
+}
 
 //! Obj wavefront 3D geometry container class.
 class ObjWavefront : public ObjGroupBase {
@@ -2330,7 +2330,7 @@ public:
 //! \return true if the two instances are equivalent.
 inline
 bool operator == (const ObjWavefront& lhs, const ObjWavefront& rhs)
-{ return lhs.is_equal(&rhs); };
+{ return lhs.is_equal(&rhs); }
 
 //! \brief Write an ObjWavefront object to an output stream.
 //! \param out Output stream.
@@ -2338,7 +2338,7 @@ bool operator == (const ObjWavefront& lhs, const ObjWavefront& rhs)
 //! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjWavefront &p)
-{ return p.write(out); };
+{ return p.write(out); }
 
 //! \brief Read an ObjWavefront object from an input stream.
 //! \param in Input stream.
@@ -2346,21 +2346,21 @@ std::ostream & operator << (std::ostream &out, const ObjWavefront &p)
 //! \return Input stream.
 inline
 std::istream & operator >> (std::istream &in, ObjWavefront &p)
-{ return p.read(in); };
+{ return p.read(in); }
 
 inline
 ObjElement* ObjGroupBase::add_element(const ObjElement& x) {
   ObjElement* x_cpy = nullptr;
   OBJ_ELEMENT_INIT(x.code, x_cpy, (&x));
   return ObjGroupBase::add_element(x_cpy);
-};
+}
 template <typename T>
 ObjElement* ObjGroupBase::add_element(std::string name,
 				      const std::vector<T> &values) {
   ObjElement* x = nullptr;
   OBJ_ELEMENT_INIT(name, x, (values, this));
   return ObjGroupBase::add_element(x);
-};
+}
 template <typename T>
 ObjElement* ObjGroupBase::add_element(const std::string name,
 				      const double& u0, const double& u1,
@@ -2369,7 +2369,7 @@ ObjElement* ObjGroupBase::add_element(const std::string name,
   if (name == "curv") x = new ObjCurve(u0, u1, values, this);
   else REPORT_UNSUPPORTED_ELEMENT(ObjCurve, name);
   return ObjGroupBase::add_element(x);
-};
+}
 template <typename T>
 ObjElement* ObjGroupBase::add_element(const std::string name,
 				      const double& u0, const double& u1,
@@ -2379,7 +2379,7 @@ ObjElement* ObjGroupBase::add_element(const std::string name,
   if (name == "surf") x = new ObjSurface(u0, u1, u2, u3, values, this);
   else REPORT_UNSUPPORTED_ELEMENT(ObjSurface, name);
   return ObjGroupBase::add_element(x);
-};
+}
 template <typename T>
 ObjElement* ObjGroupBase::add_element(std::string name, std::string direction,
 				      const std::vector<T> &values) {
@@ -2389,7 +2389,7 @@ ObjElement* ObjGroupBase::add_element(std::string name, std::string direction,
   else if (name == "stech") x = new ObjSTech(direction, values, this);
   else REPORT_UNSUPPORTED_ELEMENT(direction, name);
   return ObjGroupBase::add_element(x);
-};
+}
 template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::IsPointer<T>), (ObjElement*)) ObjGroupBase::add_element(std::string name, const T& value) {
   ObjElement* x = nullptr;
@@ -2418,7 +2418,7 @@ RAPIDJSON_DISABLEIF_RETURN((internal::IsPointer<T>), (ObjElement*)) ObjGroupBase
   }
   else REPORT_UNSUPPORTED_ELEMENT(scalar, name);
   return ObjGroupBase::add_element(x);
-};
+}
 
 inline
 ObjElement* ObjGroupBase::add_element(std::string name, const int& value,
@@ -2427,7 +2427,7 @@ ObjElement* ObjGroupBase::add_element(std::string name, const int& value,
   if      (name == "mg"   ) x = new ObjMergingGroup(value, resolution, this);
   else REPORT_UNSUPPORTED_ELEMENT(ObjMergingGroup, name);
   return ObjGroupBase::add_element(x);
-};
+}
 inline
 ObjElement* ObjGroupBase::add_element(std::string name,
 				      const std::string& value,
@@ -2451,7 +2451,7 @@ ObjElement* ObjGroupBase::add_element(std::string name,
   }
   else REPORT_UNSUPPORTED_ELEMENT(ObjMergingGroupString, name);
   return ObjGroupBase::add_element(x);
-};
+}
 
 #undef GENERIC_CLASS_VECTOR_OBJREFVERTEX
 #undef GENERIC_CLASS_VECTOR_TYPE

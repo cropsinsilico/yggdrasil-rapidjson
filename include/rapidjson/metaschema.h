@@ -320,7 +320,7 @@ inline const item_return<char>::type* get_metaschema<char>() {
     " \"title\": \"Ygg meta-schema for data type schemas\""
     "}";
   return out;
-};
+}
 
 template<>
 inline const item_return<wchar_t>::type* get_metaschema<wchar_t>() {
@@ -633,7 +633,7 @@ inline const item_return<wchar_t>::type* get_metaschema<wchar_t>() {
     L" \"title\": \"Ygg meta-schema for data type schemas\""
     L"}";
   return out;
-};
+}
 
 
 #endif // METASCHEMA_H_
