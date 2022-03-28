@@ -206,7 +206,7 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
   }
   va_end(args);
   return out;
-};
+}
   
 /*! @brief Define macros to allow counts of variables. */
 // https://codecraft.co/2014/11/25/variadic-macros-tricks/

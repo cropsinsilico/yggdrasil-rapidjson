@@ -11,11 +11,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Remove use of standard libraries (std::basic_string, std::vector, std::map)?
 * Use explicit allocator for QuantityArray?
 * Add allowSingular for object
-
-### IN PROGRESS
+* Add deprecating option for properties
 * Add normalization
 	- units
 	- type (int -> double)
+
+### IN PROGRESS
 
 ### COMPLETE
 * Added schema to document class

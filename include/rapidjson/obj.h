@@ -305,7 +305,7 @@ RAPIDJSON_NAMESPACE_BEGIN
 #define GENERIC_CLASS_SCALAR_TYPE(cls, code, type, def)			\
   class cls : public ObjElement {					\
   public:								\
-  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, type, def);	\
+  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, type, def)	\
   }
 #define GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, type, compat)	\
   GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, ObjElement, code, SINGLE_ARG(, values()), UNPACK compat, type) \

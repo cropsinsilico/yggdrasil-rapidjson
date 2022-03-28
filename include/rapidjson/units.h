@@ -1272,7 +1272,7 @@ bool Unit<Encoding>::from_table(const std::basic_string<typename Encoding::Ch> s
   std::cerr << "No match found for \"" << convert_chars<Encoding,UTF8<char> >(substr) << "\"" << std::endl; // GCOVR_EXCL_LINE
   RAPIDJSON_ASSERT(!sizeof("No match found")); // GCOVR_EXCL_LINE
   return false; // GCOVR_EXCL_LINE
-};
+}
 
 namespace parser {
 
@@ -2097,12 +2097,12 @@ public:
   //! \tparam T2 Scalar type.
   //! \param x Scalar to multiply by.
   //! \return Result of multiplication.
-  ARRAY_SCALAR_OP(*);
+  ARRAY_SCALAR_OP(*)
   //! \brief Divide by a scalar.
   //! \tparam T2 Scalar type.
   //! \param x Scalar to divide by.
   //! \return Result of division.
-  ARRAY_SCALAR_OP(/);
+  ARRAY_SCALAR_OP(/)
   //! \brief Add a quantity with compatible units.
   //! \param x QuantityArray to add.
   //! \return Result of addition.
