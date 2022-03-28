@@ -478,7 +478,9 @@ struct SchemaValidationContext {
 enum SingularFlag {
   kSingularNoFlags = 0,
   kSingularArray = 1,
-  kSingularItem = 2
+  kSingularItem = 2,
+  kSingularObject = 3,
+  kSingularValue = 4,
 };
 
 // template<typename ValueType>
@@ -659,9 +661,8 @@ public:
     if (context.inArray)
       PushValue(CurrentValue()[context.arrayElementIndex],
 		context.arrayElementIndex);
-    if (CurrentKey())
-      PushValue((*CurrentValue())[*CurrentKey()],
-		*CurrentKey());
+    if (CurrentKey() && !inSingular(schema, 2))
+      PushValue((*CurrentValue())[*CurrentKey()], *CurrentKey());
     PushKey();
     return true;
   }
@@ -669,7 +670,7 @@ public:
     PopKey();
     if (context.inArray)
       PopValue();
-    if (CurrentKey()) {
+    if (CurrentKey() && !inSingular(schema, 2)) {
       PopValue();
       PopKey();
     }
@@ -679,12 +680,21 @@ public:
     if ((schema.isSingular_ == kSingularItem) && (ToggleSingular())) {
       modified_ = true;
       return StartArray(context, schema);
+    } else if ((schema.isSingular_ == kSingularValue) && (ToggleSingular())) {
+      modified_ = true;
+      if (!StartObject(context, schema)) return false;
+      RAPIDJSON_ASSERT(schema.parentKey_.IsString());
+      return Key(context, schema, schema.parentKey_.GetString(), schema.parentKey_.GetStringLength(), true);
     }
     return true;
   }
   bool EndValueDirect(Context& context, const SchemaType& schema) {
     if ((schema.isSingular_ == kSingularItem) && (ToggleSingular()))
       return EndArray(context, schema, 1);
+    else if ((schema.isSingular_ == kSingularValue) && (ToggleSingular())) {
+      SizeType memberCount = 1;
+      return EndObject(context, schema, memberCount);
+    }
     return true;
   }
   
@@ -712,13 +722,16 @@ public:
   }
 
 #define NORMALIZE_MISSING_KEY_(arg2)					\
-  if (CurrentKey() && !CurrentValue()->HasMember(CurrentKey()->GetString())) { \
-    ValueType tmp(CurrentKey()->GetString(),				\
-		  CurrentKey()->GetStringLength(),			\
-		  GetAllocator());					\
-    CurrentValue()->AddMember(tmp, ValueType arg2.Move(),		\
-			      GetAllocator());				\
-  }									\
+  if (CurrentKey() && !inSingular(schema, 2)) {				\
+    RAPIDJSON_ASSERT(CurrentValue()->IsObject());			\
+    if (!CurrentValue()->HasMember(CurrentKey()->GetString())) {	\
+      ValueType tmp(CurrentKey()->GetString(),				\
+		    CurrentKey()->GetStringLength(),			\
+		    GetAllocator());					\
+      CurrentValue()->AddMember(tmp, ValueType arg2.Move(),		\
+				GetAllocator());			\
+    }									\
+  }
 
 #define BEGIN_NORMALIZE_(method, arg1, arg2)				\
   NORMALIZE_FULL_(method, arg1);					\
@@ -793,7 +806,7 @@ public:
   }
   bool StartObject(Context& context, const SchemaType& schema) {
     BEGIN_NORMALIZE_START_(StartObject, (), (kObjectType));
-    REQUIRED_PROPERTY_(Object, CurrentValue()->IsObject());
+    REQUIRED_PROPERTY_(Object, (inSingular(schema) || CurrentValue()->IsObject()));
     return true;
   }
   bool Key(Context& context, const SchemaType& schema, const Ch* str, SizeType len, bool copy, bool dont_check_aliases=false) {
@@ -854,16 +867,25 @@ public:
     }
     // Do EndObject
     NORMALIZE_END_(EndObject, (memberCount));
+    if (inSingular(schema, 2)) {
+      const ValueType* key = CurrentKey();
+      RAPIDJSON_ASSERT(key->IsString());
+      ValueType tmp(kObjectType);
+      tmp.AddMember(*key, ValueType(kNullType).Move(), GetAllocator());
+      CurrentValue()->Swap(tmp[*key]);
+      CurrentValue()->Swap(tmp);
+      PopKey();
+    }
     return EndValue(context, schema);
   }
   bool StartArray(Context& context, const SchemaType& schema) {
     BEGIN_NORMALIZE_START_(StartArray, (), (kArrayType));
-    REQUIRED_PROPERTY_(Array, (schema.allowSingular_ || CurrentValue()->IsArray()));
+    REQUIRED_PROPERTY_(Array, (inSingular(schema) || CurrentValue()->IsArray()));
     return true;
   }
   bool EndArray(Context& context, const SchemaType& schema, SizeType elementCount) {
     NORMALIZE_END_(EndArray, (elementCount));
-    if (schema.allowSingular_) {
+    if (inSingular(schema)) {
       ValueType tmp(kArrayType);
       tmp.PushBack(*CurrentValue(), GetAllocator());
       CurrentValue()->Swap(tmp);
@@ -927,6 +949,12 @@ public:
       
 private:
 
+  bool inSingular(const SchemaType& schema, size_t nKeys=1) const {
+    if (extending_ && !appending_)
+      return (schema.allowSingular_ && (KeyCount() == nKeys));
+    return ((schema.isSingular_ == kSingularItem) || (schema.isSingular_ == kSingularValue));
+  }
+
   bool ToggleSingular() {
     inSingular_ = (!inSingular_);
     return inSingular_;
@@ -947,6 +975,8 @@ private:
   }
   void PushValue(ValueType& value) {
     PointerType p;
+    if (!pointerStack_.Empty())
+      p = CurrentPointer();
     PushValue(value, p);
   }
   void PushValue(ValueType& value, ValueType& key) {
@@ -961,6 +991,9 @@ private:
     valueStack_.template Pop<ValueType*>(1);
     PopPointer();
   }
+  size_t ValueCount() const {
+    return valueStack_.GetSize() / sizeof(ValueType*);
+  }
   PointerType& CurrentPointer() {
     RAPIDJSON_ASSERT(!pointerStack_.Empty());
     return *pointerStack_.template Top<PointerType>();
@@ -973,6 +1006,9 @@ private:
   void PopPointer() {
     PointerType* p = pointerStack_.template Pop<PointerType>(1);
     p->~PointerType();
+  }
+  size_t PointerCount() const {
+    return pointerStack_.GetSize() / sizeof(PointerType);
   }
   ValueType* CurrentKey() {
     if (keyStack_.Empty())
@@ -992,6 +1028,9 @@ private:
     ValueType** ref = keyStack_.template Pop<ValueType*>(1);
     if (ref[0])
       delete ref[0];
+  }
+  size_t KeyCount() const {
+    return keyStack_.GetSize() / sizeof(ValueType*);
   }
   bool GetFinalAlias(Context& context, const ValueType& aliases,
 		     const ValueType& orig, ValueType* dest) {
@@ -1031,6 +1070,7 @@ private:
   }
   bool HasMember(ValueType& key, ValueType* val=nullptr) {
     if (extending_ && !appending_) {
+      RAPIDJSON_ASSERT(CurrentValue()->IsObject());
       if (CurrentValue()->HasMember(key)) {
 	if (val)
 	  val->CopyFrom(CurrentValue()->FindMember(key)->value,
@@ -1219,7 +1259,7 @@ public:
 
     Schema(SchemaDocumentType* schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document, AllocatorType* allocator, const UriType& id = UriType()
 #ifdef RAPIDJSON_YGGDRASIL
-	   , const bool isMetaschema = false, const SingularFlag isSingular = kSingularNoFlags
+	   , const bool isMetaschema = false, const SingularFlag isSingular = kSingularNoFlags, const ValueType* parentKey = nullptr
 #endif // RAPIDJSON_YGGDRASIL
 	   ) :
         allocator_(allocator),
@@ -1270,7 +1310,7 @@ public:
 	metaschema_(),
 	metaschemaValidatorIndex_(),
 	aliases_(kArrayType), child_aliases_(kObjectType), hasAliases_(false),
-	allowSingular_(false), isSingular_(isSingular)
+	allowSingular_(false), isSingular_(isSingular), parentKey_(kNullType)
 #endif // RAPIDJSON_YGGDRASIL
     {
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
@@ -1298,24 +1338,6 @@ public:
             }
         }
 
-#ifdef RAPIDJSON_YGGDRASIL
-	if (const ValueType* v = GetMember(value, GetAliasesString())) {
-	  if (v->IsArray())
-	    aliases_.CopyFrom(*v, *allocator_);
-	}
-	if (schemaDocument && (isSingular_ != kSingularArray)) {
-	  AssignSingularIfExist(*schemaDocument, p, value, GetAllowSingularString(), document);
-	  if ((allowSingular_) && (!allowSingularSchema_.schemas))
-	    AssignSingularIfExist(*schemaDocument, p, value, GetItemsString(), document);
-	  if (allowSingularSchema_.schemas) {
-	    allowSingular_ = true;
-	    schemaDocument->CreateSchema(&allowSingularSchema_.schemas[0], p, value, document, id_, kSingularArray);
-	    RAPIDJSON_ASSERT(!allowSingularSchema_.schemas[0]->allowSingularSchema_.schemas);
-	    return;
-	  }
-	}
-#endif // RAPIDJSON_YGGDRASIL
-	
         if (const ValueType* v = GetMember(value, GetTypeString())) {
             type_ = 0;
 #ifdef RAPIDJSON_YGGDRASIL
@@ -1328,6 +1350,48 @@ public:
                     AddType(*itr);
         }
 
+#ifdef RAPIDJSON_YGGDRASIL
+	if (parentKey)
+	  parentKey_.CopyFrom(*parentKey, *allocator_);
+	if (const ValueType* v = GetMember(value, GetAliasesString())) {
+	  if (v->IsArray())
+	    aliases_.CopyFrom(*v, *allocator_);
+	}
+	if (schemaDocument && (isSingular_ != kSingularArray) && (isSingular_ != kSingularObject) && (!isMetaschema_)) {
+	  SingularFlag kSingular = kSingularNoFlags;
+	  if (type_ & (1 << kArraySchemaType))
+	    kSingular = kSingularArray;
+	  else if (type_ & (1 << kObjectSchemaType))
+	    kSingular = kSingularObject;
+	  AssignSingularIfExist(*schemaDocument, p, value, GetAllowSingularString(), document, kSingular);
+	  if ((allowSingular_) && (!allowSingularSchema_.schemas)) {
+	    if (kSingular == kSingularArray) {
+	      AssignSingularIfExist(*schemaDocument, p, value, GetItemsString(), document, kSingular);
+	    } else if (kSingular == kSingularObject) {
+	      const ValueType* properties = GetMember(value, GetPropertiesString());
+	      const ValueType* required = GetMember(value, GetRequiredString());
+	      const ValueType* prop0 = nullptr;
+	      if (required && required->IsArray() && (required->Size() == 1))
+		prop0 = &((*required)[0]);
+	      else if (properties && properties->IsObject() && (properties->MemberCount() == 1))
+		prop0 = &(properties->MemberBegin()->name);
+	      if (properties && prop0)
+		AssignSingularIfExist(*schemaDocument, p.Append(GetPropertiesString(), allocator_), *properties, *prop0, document, kSingular);
+	    }
+	  }
+	  if (allowSingularSchema_.schemas) {
+	    allowSingular_ = true;
+	    schemaDocument->CreateSchema(&allowSingularSchema_.schemas[0], p, value, document, id_, kSingular);
+	    RAPIDJSON_ASSERT(!allowSingularSchema_.schemas[0]->allowSingularSchema_.schemas);
+	    // Reset types so that they are only evaluated within the nested
+	    // schema
+	    type_ = (1 << kTotalSchemaType) - 1;
+	    yggtype_ = kYggNullSchemaType;
+	    return;
+	  }
+	}
+#endif // RAPIDJSON_YGGDRASIL
+	
         if (const ValueType* v = GetMember(value, GetEnumString())) {
             if (v->IsArray() && v->Size() > 0) {
                 enum_ = static_cast<uint64_t*>(allocator_->Malloc(sizeof(uint64_t) * v->Size()));
@@ -2409,7 +2473,7 @@ protected:
     }
 
 #ifdef RAPIDJSON_YGGDRASIL
-  void AssignSingularIfExist(SchemaDocumentType& schemaDocument, const PointerType& p, const ValueType& value, const ValueType& name, const ValueType& document) {
+  void AssignSingularIfExist(SchemaDocumentType& schemaDocument, const PointerType& p, const ValueType& value, const ValueType& name, const ValueType& document, const SingularFlag containerFlag) {
     if (const ValueType* v = GetMember(value, name)) {
       if (v->IsBool()) {
 	allowSingular_ = v->GetBool();
@@ -2427,7 +2491,10 @@ protected:
 	allowSingularSchema_.count = 2;
 	allowSingularSchema_.schemas = static_cast<const Schema**>(allocator_->Malloc(allowSingularSchema_.count * sizeof(const Schema*)));
 	memset(allowSingularSchema_.schemas, 0, sizeof(Schema*)* allowSingularSchema_.count);
-	schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_, kSingularItem);
+	if (containerFlag == kSingularObject)
+	  schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_, kSingularValue, &name);
+	else
+	  schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_, kSingularItem);
 	allowSingularSchema_.begin = validatorCount_;
 	validatorCount_ += allowSingularSchema_.count;
       }
@@ -3000,6 +3067,7 @@ protected:
     SchemaArray allowSingularSchema_;
     bool allowSingular_;
     SingularFlag isSingular_;
+    SValue parentKey_;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -3217,12 +3285,14 @@ private:
     // Changed by PR #1393
     const UriType& CreateSchema(const SchemaType** schema, const PointerType& pointer, const ValueType& v, const ValueType& document, const UriType& id
 #ifdef RAPIDJSON_YGGDRASIL
-		, internal::SingularFlag singular=internal::kSingularNoFlags
+		,
+		internal::SingularFlag singular=internal::kSingularNoFlags,
+		const ValueType* parentKey=nullptr
 #endif // RAPIDJSON_YGGDRASIL
 				) {
 #ifdef RAPIDJSON_YGGDRASIL
         if (singular && v.IsObject() && (!HandleRefSchema(pointer, schema, v, document, id))) {
-	  SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id, isMetaschema_, singular);
+	  SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id, isMetaschema_, singular, parentKey);
 	  if (schema)
 	    *schema = s;
 	  return s->GetId();
@@ -3239,7 +3309,7 @@ private:
                 // The new schema constructor adds itself and its $ref(s) to schemaMap_
 	        SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id
 #ifdef RAPIDJSON_YGGDRASIL
-		, isMetaschema_, singular
+		, isMetaschema_, singular, parentKey
 #endif // RAPIDJSON_YGGDRASIL
 		);
                 if (schema)

@@ -287,7 +287,7 @@ TEST(SchemaNormalizer, Alias) {
 		     "}}");
 }
 
-TEST(SchemaNormalizer, SingularAlias) {
+TEST(SchemaNormalizer, SingularArray) {
   Document sd;
   sd.Parse(
         "{"
@@ -304,6 +304,26 @@ TEST(SchemaNormalizer, SingularAlias) {
 	    "{ \"streets\": [\"1600 Pennsylvania Ave.\"] }");
   NORMALIZE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true,
 	    "{ \"streets\": [\"1600 Pennsylvania Ave.\"] }");
+}
+
+TEST(SchemaNormalizer, SingularObject) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"streets\": { \"type\": \"object\","
+	"                    \"properties\": {"
+	"                       \"key\": {\"type\": \"string\"}},"
+	"                    \"allowSingular\": true,"
+	"                    \"aliases\": [\"street\"] }},"
+	"  \"required\": [\"streets\"]"
+        "}");
+  SchemaDocument s(sd);
+  NORMALIZE(s, "{ \"streets\": \"1600 Pennsylvania Ave.\" }", true,
+	    "{ \"streets\": {\"key\": \"1600 Pennsylvania Ave.\"} }");
+  NORMALIZE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true,
+	    "{ \"streets\": {\"key\": \"1600 Pennsylvania Ave.\"} }");
 }
 
 TEST(SchemaNormalizer, AliasCircular) {

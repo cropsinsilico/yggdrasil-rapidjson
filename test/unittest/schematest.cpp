@@ -1889,7 +1889,7 @@ TEST(SchemaValidator, Alias) {
   VALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true);
 }
 
-TEST(SchemaValidator, SingularAlias) {
+TEST(SchemaValidator, SingularArray) {
   Document sd;
   sd.Parse(
         "{"
@@ -1906,7 +1906,7 @@ TEST(SchemaValidator, SingularAlias) {
   VALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true);
 }
 
-TEST(SchemaValidator, SingularAliasError) {
+TEST(SchemaValidator, SingularArrayError) {
   Document sd;
   sd.Parse("{"
 	   "  \"type\": \"array\","
@@ -1923,7 +1923,7 @@ TEST(SchemaValidator, SingularAliasError) {
   VALIDATE(s, "\"string\"", true);
 }
 
-TEST(SchemaValidator, SingularAliasSchema) {
+TEST(SchemaValidator, SingularArraySchema) {
   Document sd;
   sd.Parse(
         "{"
@@ -1938,6 +1938,72 @@ TEST(SchemaValidator, SingularAliasSchema) {
 	     "{ \"schema\": {"
 	     "    \"errorCode\": 32,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#/items\","
+	     "    \"errors\": {"
+	     "        \"anyOf\": {"
+	     "            \"errorCode\": 24,"
+	     "            \"instanceRef\": \"#/type\","
+	     "            \"schemaRef\": \"#/properties/type\","
+	     "            \"errors\": ["
+	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
+	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
+	     "            ]"
+	     "}}}}");
+}
+
+TEST(SchemaValidator, SingularObject) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"streets\": { \"type\": \"array\","
+	"                    \"items\": {\"type\": \"string\"},"
+	"                    \"allowSingular\": true }},"
+	"  \"allowSingular\": true,"
+	"  \"required\": [\"streets\"]"
+        "}");
+  SchemaDocument s(sd);
+  VALIDATE(s, "\"1600 Pennsylvania Ave.\"", true);
+}
+
+TEST(SchemaValidator, SingularObjectError) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"streets\": { \"type\": \"array\","
+	"                    \"items\": {\"type\": \"string\"},"
+	"                    \"allowSingular\": true }},"
+	"  \"allowSingular\": true,"
+	"  \"required\": [\"streets\"]"
+        "}");
+  SchemaDocument s(sd);
+  INVALIDATE(s, "true", "", "type", "",
+	     "{ \"type\": {"
+	     "    \"errorCode\": 20,"
+	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	     "    \"expected\": [\"object\"], \"actual\": \"boolean\""
+	     "}}");
+  VALIDATE(s, "[ \"string\" ]", true);
+}
+
+TEST(SchemaValidator, SingularObjectSchema) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"allowSingular\": true,"
+        "  \"properties\": {\"key\": {\"type\": \"schema\"}},"
+	"  \"additionalProperties\": false"
+        "}");
+  SchemaDocument s(sd);
+  VALIDATE(s, "{\"type\": \"string\"}", true);
+  INVALIDATE(s, "{\"type\": \"invalid\"}",
+	     "", "schema", "",
+	     "{ \"schema\": {"
+	     "    \"errorCode\": 32,"
+	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#/properties/key\","
 	     "    \"errors\": {"
 	     "        \"anyOf\": {"
 	     "            \"errorCode\": 24,"
