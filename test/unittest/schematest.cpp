@@ -188,6 +188,53 @@ TEST(SchemaValidator, Hasher) {
     }\
 }
 
+#define VALIDATE_WARNING(schema, json, invalidSchemaPointer, invalidSchemaKeyword, invalidDocumentPointer, warning) \
+{\
+    VALIDATE_WARNING_(schema, json, invalidSchemaPointer, invalidSchemaKeyword, invalidDocumentPointer, warning, kValidateDefaultFlags, SchemaValidator, Pointer) \
+}
+
+#define VALIDATE_WARNING_(schema, json, invalidSchemaPointer, invalidSchemaKeyword, invalidDocumentPointer, warning, \
+    flags, SchemaValidatorType, PointerType) \
+{\
+    SchemaValidatorType validator(schema);\
+    validator.SetValidateFlags(flags);\
+    Document d;\
+    /*printf("\n%s\n", json);*/\
+    d.Parse(json);\
+    EXPECT_FALSE(d.HasParseError());\
+    d.Accept(validator);\
+    EXPECT_TRUE(validator.IsValid());\
+    ValidateErrorCode code = validator.GetInvalidSchemaCode();\
+    ASSERT_TRUE(code != kValidateErrorNone);\
+    ASSERT_TRUE(strcmp(GetValidateError_En(code), "Unknown error.") != 0);\
+    if (validator.GetInvalidSchemaPointer() != PointerType(invalidSchemaPointer)) {\
+        StringBuffer sb;\
+        validator.GetInvalidSchemaPointer().Stringify(sb);\
+        printf("GetInvalidSchemaPointer() Expected: %s Actual: %s\n", invalidSchemaPointer, sb.GetString());\
+        ADD_FAILURE();\
+    }\
+    ASSERT_TRUE(validator.GetInvalidSchemaKeyword() != 0);\
+    if (strcmp(validator.GetInvalidSchemaKeyword(), invalidSchemaKeyword) != 0) {\
+        printf("GetInvalidSchemaKeyword() Expected: %s Actual %s\n", invalidSchemaKeyword, validator.GetInvalidSchemaKeyword());\
+        ADD_FAILURE();\
+    }\
+    if (validator.GetInvalidDocumentPointer() != PointerType(invalidDocumentPointer)) {\
+        StringBuffer sb;\
+        validator.GetInvalidDocumentPointer().Stringify(sb);\
+        printf("GetInvalidDocumentPointer() Expected: %s Actual: %s\n", invalidDocumentPointer, sb.GetString());\
+        ADD_FAILURE();\
+    }\
+    Document e;\
+    e.Parse(warning);\
+    if (validator.GetWarning() != e) {\
+        StringBuffer sb;\
+        Writer<StringBuffer> w(sb);\
+        validator.GetWarning().Accept(w);\
+        printf("GetWarning() Expected: %s Actual: %s\n", warning, sb.GetString());\
+        ADD_FAILURE();\
+    }\
+}
+
 TEST(SchemaValidator, Typeless) {
     Document sd;
     sd.Parse("{}");
@@ -2062,6 +2109,30 @@ TEST(SchemaValidator, ConflictingAliases) {
 	     "    \"expected\": \"street_address\","
 	     "    \"actual\": \"address\""
 	     "}}");
+}
+
+TEST(SchemaValidator, Deprecating) {
+  Document sd;
+  sd.Parse("{"
+	   "  \"type\": \"object\","
+	   "  \"properties\": {"
+	   "     \"deprecated\": {"
+	   "        \"type\": \"string\","
+	   "        \"deprecated\": \"Deprecation message\"},"
+	   "     \"valid\": {"
+	   "        \"type\": \"integer\"}"
+	   "  }"
+	   "}");
+  SchemaDocument s(sd);
+  VALIDATE_WARNING(s, "{\"deprecated\": \"string\", \"valid\": 0}",
+		   "", "warnings", "",
+		   "{ \"deprecated\": {"
+		   "    \"errorCode\": 38,"
+		   "    \"instanceRef\": \"#/deprecated\","
+		   "    \"schemaRef\": \"#/properties/deprecated\","
+		   "    \"warning\": \"Deprecation message\""
+		   "  }"
+		   "}")
 }
 
 #endif // RAPIDJSON_YGGDRASIL

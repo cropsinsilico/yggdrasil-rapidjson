@@ -132,6 +132,15 @@ RAPIDJSON_MULTILINEMACRO_BEGIN\
     return false;\
 RAPIDJSON_MULTILINEMACRO_END
 
+#ifdef RAPIDJSON_YGGDRASIL
+#define RAPIDJSON_INVALID_KEYWORD_WARNING(code)\
+RAPIDJSON_MULTILINEMACRO_BEGIN\
+    context.invalidCode = code;\
+    context.invalidKeyword = SchemaType::GetValidateErrorKeyword(code).GetString();\
+    RAPIDJSON_INVALID_KEYWORD_VERBOSE(context.invalidKeyword);\
+RAPIDJSON_MULTILINEMACRO_END
+#endif // RAPIDJSON_YGGDRASIL
+
 ///////////////////////////////////////////////////////////////////////////////
 // ValidateFlag
 
@@ -268,6 +277,8 @@ public:
   virtual void ConflictingAliases(const SValue& alias, const SValue& base1, const SValue& base2) = 0;
   virtual ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) = 0;
   virtual void NormalizationMergeConflict(const typename SchemaType::ValueType& cond, const GenericStringBuffer<typename SchemaType::EncodingType>& instanceRef, const GenericStringBuffer<typename SchemaType::EncodingType>& schemaRef) = 0;
+  virtual void AddWarnings(ISchemaValidator** subvalidators, SizeType count) = 0;
+  virtual void DeprecationWarning(const SValue* warning=nullptr) = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -1310,7 +1321,8 @@ public:
 	metaschema_(),
 	metaschemaValidatorIndex_(),
 	aliases_(kArrayType), child_aliases_(kObjectType), hasAliases_(false),
-	allowSingular_(false), isSingular_(isSingular), parentKey_(kNullType)
+	allowSingular_(false), isSingular_(isSingular), parentKey_(kNullType),
+	deprecated_(false)
 #endif // RAPIDJSON_YGGDRASIL
     {
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
@@ -1389,6 +1401,12 @@ public:
 	    yggtype_ = kYggNullSchemaType;
 	    return;
 	  }
+	}
+	if (const ValueType* v = GetMember(value, GetDeprecatedString())) {
+	  if (v->IsBool())
+	    deprecated_.SetBool(v->GetBool());
+	  else if (v->IsString())
+	    deprecated_.SetString(v->GetString(), v->GetStringLength(), *allocator_);
 	}
 #endif // RAPIDJSON_YGGDRASIL
 	
@@ -1881,11 +1899,50 @@ public:
 		  return false;
 
 	    }
+
+	    // Warnings
+	    if (allOf_.schemas)
+	      context.error_handler.AddWarnings(&context.validators[allOf_.begin], allOf_.count);
+	    
+	    if (anyOf_.schemas)
+	      for (SizeType i = anyOf_.begin; i < anyOf_.begin + anyOf_.count; i++)
+		if (context.validators[i]->IsValid()) {
+		  context.error_handler.AddWarnings(&context.validators[i], 1);
+		  break;
+		}
+
+            if (oneOf_.schemas)
+	      for (SizeType i = oneOf_.begin; i < oneOf_.begin + oneOf_.count; i++)
+		if (context.validators[i]->IsValid()) {
+		  context.error_handler.AddWarnings(&context.validators[i], 1);
+		  break;
+		}
+
+	    if (metaschema_)
+	      context.error_handler.AddWarnings(&context.validators[metaschemaValidatorIndex_], 1);
+
+	    if (allowSingularSchema_.schemas)
+	      for (SizeType i = allowSingularSchema_.begin; i < allowSingularSchema_.begin + allowSingularSchema_.count; i++)
+		if (context.validators[i]->IsValid()) {
+		  context.error_handler.AddWarnings(&context.validators[i], 1);
+		  break;
+		}
+	    
+		    
 #endif // RAPIDJSON_YGGDRASIL
 	    
         }
 
+#ifdef RAPIDJSON_YGGDRASIL
+	if (deprecated_.IsBool() && deprecated_.GetBool()) {
+	  context.error_handler.DeprecationWarning();
+	  RAPIDJSON_INVALID_KEYWORD_WARNING(kDeprecatedWarning);
+	} else if (deprecated_.IsString()) {
+	  context.error_handler.DeprecationWarning(&deprecated_);
+	  RAPIDJSON_INVALID_KEYWORD_WARNING(kDeprecatedWarning);
+	}
         return true;
+#endif // RAPIDJSON_YGGDRASIL
     }
   
 #ifdef RAPIDJSON_YGGDRASIL
@@ -2306,6 +2363,7 @@ public:
 	    case kNormalizeErrorCircularAlias:          return GetAliasesString();
 	    case kNormalizeErrorConflictingAliases:     return GetAliasesString();
 	    case kNormalizeErrorMergeConflict:          return GetNormalizationString();
+	    case kDeprecatedWarning:                    return GetDeprecatedString();
 #endif // RAPIDJSON_YGGDRASIL
 
             default:                                    return GetNullString();
@@ -2387,6 +2445,7 @@ public:
     RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
     RAPIDJSON_STRING_(Aliases, 'a', 'l', 'i', 'a', 's', 'e', 's')
     RAPIDJSON_STRING_(AllowSingular, 'a', 'l', 'l', 'o', 'w', 'S', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
+    RAPIDJSON_STRING_(Deprecated, 'd', 'e', 'p', 'r', 'e', 'c', 'a', 't', 'e', 'd')
     // Subtypes
     RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'g')
     RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
@@ -3068,6 +3127,7 @@ protected:
     bool allowSingular_;
     SingularFlag isSingular_;
     SValue parentKey_;
+    SValue deprecated_;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -3607,6 +3667,10 @@ public:
 #if RAPIDJSON_SCHEMA_VERBOSE
         , depth_(0)
 #endif
+#ifdef RAPIDJSON_YGGDRASIL
+	, warning_(kObjectType),
+	currentWarning_()
+#endif // RAPIDJSON_YGGDRASIL
     {
     }
 
@@ -3639,6 +3703,10 @@ public:
 #if RAPIDJSON_SCHEMA_VERBOSE
         , depth_(0)
 #endif
+#ifdef RAPIDJSON_YGGDRASIL
+	, warning_(kObjectType),
+	currentWarning_()
+#endif // RAPIDJSON_YGGDRASIL
     {
     }
 
@@ -3654,6 +3722,7 @@ public:
             PopSchema();
         documentStack_.Clear();
         ResetError();
+	ResetWarning();
     }
 
     //! Reset the error state.
@@ -3684,6 +3753,18 @@ public:
     ValueType& GetError() { return error_; }
     const ValueType& GetError() const { return error_; }
 
+#ifdef RAPIDJSON_YGGDRASIL
+    //! Reset the warning state.
+    void ResetWarning() {
+        warning_.SetObject();
+        currentWarning_.SetNull();
+    }
+  
+    //! Gets the warning object.
+    ValueType& GetWarning() { return warning_; }
+    const ValueType& GetWarning() const { return warning_; }
+#endif // RAPIDJSON_YGGDRASIL
+
     //! Gets the JSON pointer pointed to the invalid schema.
     //  If reporting all errors, the stack will be empty.
     PointerType GetInvalidSchemaPointer() const {
@@ -3695,6 +3776,9 @@ public:
     const Ch* GetInvalidSchemaKeyword() const {
         if (!schemaStack_.Empty()) return CurrentContext().invalidKeyword;
         if (GetContinueOnErrors() && !error_.ObjectEmpty()) return (const Ch*)GetErrorsString();
+#ifdef RAPIDJSON_YGGDRASIL
+	if (!warning_.ObjectEmpty()) return (const Ch*)GetWarningsString();
+#endif // RAPIDJSON_YGGDRASIL
         return 0;
     }
 
@@ -3703,6 +3787,9 @@ public:
     ValidateErrorCode GetInvalidSchemaCode() const {
         if (!schemaStack_.Empty()) return CurrentContext().invalidCode;
         if (GetContinueOnErrors() && !error_.ObjectEmpty()) return kValidateErrors;
+#ifdef RAPIDJSON_YGGDRASIL
+	if (!warning_.ObjectEmpty()) return kValidateWarnings;
+#endif // RAPIDJSON_YGGDRASIL
         return kValidateErrorNone;
     }
 
@@ -4006,6 +4093,17 @@ public:
     currentError_.AddMember(GetSchemaRefString(), ValueType(schemaRef.GetString(), static_cast<SizeType>(schemaRef.GetSize() / sizeof(Ch)) ,GetStateAllocator()).Move(), GetStateAllocator());
     AddError(ValueType(SchemaType::GetValidateErrorKeyword(code), GetStateAllocator(), false).Move(), currentError_);
   }
+  void AddWarnings(ISchemaValidator** subvalidators, SizeType count) {
+    AddWarningArray(subvalidators, count);
+  }
+  void DeprecationWarning(const SValue* warning=nullptr) {
+    currentWarning_.SetObject();
+    if (warning)
+      currentWarning_.AddMember(GetWarningString(),
+			      ValueType(*warning, GetStateAllocator()).Move(),
+			      GetStateAllocator());
+    AddCurrentWarning(kDeprecatedWarning, false);
+  }
 #endif // RAPIDJSON_YGGDRASIL
   
 
@@ -4030,6 +4128,8 @@ public:
     RAPIDJSON_STRING_(Circular, 'c', 'i', 'r', 'c', 'u', 'l', 'a', 'r')
     RAPIDJSON_STRING_(Conflicting, 'c', 'o', 'n', 'f', 'l', 'i', 'c', 't', 'i', 'n', 'g')
     RAPIDJSON_STRING_(Type, 't', 'y', 'p', 'e')
+    RAPIDJSON_STRING_(Warning, 'w', 'a', 'r', 'n', 'i', 'n', 'g')
+    RAPIDJSON_STRING_(Warnings, 'w', 'a', 'r', 'n', 'i', 'n', 'g', 's')
 #endif //RAPIDJSON_YGGDRASIL
 #undef RAPIDJSON_STRING_
 
@@ -4241,6 +4341,10 @@ private:
 #if RAPIDJSON_SCHEMA_VERBOSE
         , depth_(depth)
 #endif
+#ifdef RAPIDJSON_YGGDRASIL
+	, warning_(kObjectType),
+	currentWarning_()
+#endif // RAPIDJSON_YGGDRASIL
     {
         if (basePath && basePathSize)
             memcpy(documentStack_.template Push<char>(basePathSize), basePath, basePathSize);
@@ -4443,6 +4547,45 @@ private:
     Context& CurrentContext() { return *schemaStack_.template Top<Context>(); }
     const Context& CurrentContext() const { return *schemaStack_.template Top<Context>(); }
 
+#ifdef RAPIDJSON_YGGDRASIL
+    //! Support for warnings
+    void AddWarning(const ValueType& keyword, const ValueType& warning) {
+      typename ValueType::MemberIterator member = warning_.FindMember(keyword);
+      if (member == warning_.MemberEnd())
+	warning_.AddMember(keyword, ValueType(warning, GetStateAllocator()).Move(), GetStateAllocator());
+      else {
+	if (member->value.IsObject()) {
+	  ValueType warnings(kArrayType);
+	  warnings.PushBack(member->value, GetStateAllocator());
+	  member->value = warnings;
+	}
+	member->value.PushBack(ValueType(warning, GetStateAllocator()).Move(), GetStateAllocator());
+      }
+    }
+
+    void AddCurrentWarning(const ValidateErrorCode code, bool parent = false) {
+        AddErrorCode(currentWarning_, code);
+        AddErrorInstanceLocation(currentWarning_, parent);
+        AddErrorSchemaLocation(currentWarning_);
+        AddWarning(ValueType(SchemaType::GetValidateErrorKeyword(code), GetStateAllocator(), false).Move(), currentWarning_);
+    }
+
+    void AddWarningArray(ISchemaValidator** subvalidators, SizeType count) {
+      for (SizeType i = 0; i < count; ++i) {
+	const ValueType& iwarnings = static_cast<GenericSchemaValidator*>(subvalidators[i])->GetWarning();
+	for (typename ValueType::ConstMemberIterator it = iwarnings.MemberBegin(); it != iwarnings.MemberEnd(); ++it) {
+	  if (it->value.IsArray()) {
+	    for (typename ValueType::ConstValueIterator iit = it->value.Begin(); iit != it->value.End(); ++iit)
+	      AddWarning(it->name, *iit);
+	  } else {
+	    AddWarning(it->name, it->value);
+	  }
+	}
+      }
+    }
+
+#endif // RAPIDJSON_YGGDRASIL
+
     static const size_t kDefaultSchemaStackCapacity = 1024;
     static const size_t kDefaultDocumentStackCapacity = 256;
     const SchemaDocumentType* schemaDocument_;
@@ -4460,6 +4603,10 @@ private:
 #if RAPIDJSON_SCHEMA_VERBOSE
     unsigned depth_;
 #endif
+#ifdef RAPIDJSON_YGGDRASIL
+    ValueType warning_;
+    ValueType currentWarning_;
+#endif // RAPIDJSON_YGGDRASIL
 };
 
 typedef GenericSchemaValidator<SchemaDocument> SchemaValidator;

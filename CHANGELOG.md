@@ -10,7 +10,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add "encoding" property for bytes
 * Remove use of standard libraries (std::basic_string, std::vector, std::map)?
 * Use explicit allocator for QuantityArray?
-* Add deprecating option for properties
 * Add normalization
 	- units
 	- type (int -> double)
@@ -31,7 +30,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Continuous integration
 * Validation of circular, conflicting, & singular aliases
 * Normalization of default, aliases, & allowSingular w/ error handling
-* Add allowSingular for object
+* Warning messages during validation for deprecated properties
 
 ## [Unreleased]
 
