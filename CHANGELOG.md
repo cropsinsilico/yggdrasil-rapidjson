@@ -11,10 +11,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Remove use of standard libraries (std::basic_string, std::vector, std::map)?
 * Use explicit allocator for QuantityArray?
 * Add normalization
-	- units
 	- type (int -> double)
 
 ### IN PROGRESS
+* Add normalization for units
 
 ### COMPLETE
 * Added schema to document class

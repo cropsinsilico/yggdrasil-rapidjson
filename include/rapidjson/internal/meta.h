@@ -226,6 +226,9 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
 #define pack_vector_(x, ...) pack_vector__(COUNT_VARARGS(__VA_ARGS__) + 1, x, __VA_ARGS__)
 #define pack_vector_T_(T, ...) pack_vector__<T>(COUNT_VARARGS(__VA_ARGS__), __VA_ARGS__)
 
+#define PACK_MACRO(...) (__VA_ARGS__)
+#define UNPACK_MACRO(...) __VA_ARGS__
+
 #endif // RAPIDJSON_YGGDRASIL
   
 } // namespace internal

@@ -1941,8 +1941,9 @@ public:
 	  context.error_handler.DeprecationWarning(&deprecated_);
 	  RAPIDJSON_INVALID_KEYWORD_WARNING(kDeprecatedWarning);
 	}
-        return true;
 #endif // RAPIDJSON_YGGDRASIL
+	
+        return true;
     }
   
 #ifdef RAPIDJSON_YGGDRASIL
@@ -3722,7 +3723,9 @@ public:
             PopSchema();
         documentStack_.Clear();
         ResetError();
+#ifdef RAPIDJSON_YGGDRASIL
 	ResetWarning();
+#endif // RAPIDJSON_YGGDRASIL
     }
 
     //! Reset the error state.

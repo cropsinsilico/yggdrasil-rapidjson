@@ -1692,22 +1692,6 @@ TEST(SchemaValidator, Null) {
 }
 
 #ifdef RAPIDJSON_YGGDRASIL
-// TODO: Remove this once writer tests are complete
-#include "rapidjson/writer.h"
-#define DISPLAY_STRING(name, value)			\
-  {							\
-    StringBuffer buffer;				\
-    Writer<StringBuffer> writer(buffer);		\
-    Value container;							\
-    Value::AllocatorType allocator;					\
-    Value v2(value, allocator);						\
-    container.SetArray();						\
-    container.PushBack(v2, allocator);					\
-    RAPIDJSON_ASSERT(container.Accept(writer));				\
-    std::cerr << name << ": " << buffer.GetString() << std::endl;	\
-  }
-  
-
 TEST(SchemaValidator, SubType) {
     Document sd;
     sd.Parse(
