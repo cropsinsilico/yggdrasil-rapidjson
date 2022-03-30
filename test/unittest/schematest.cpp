@@ -1748,9 +1748,7 @@ TEST(SchemaValidator, Units) { // 29
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"expected\": \"g\", \"actual\": \"cm\""
 	       "}}");
-    // TODO: Test with units that have the same dimensions
-    // Value z(uint8_t(12), "kg");
-    // DISPLAY_STRING("UNIT DIM TEST", z);
+    // Test with units that have the same dimensions
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoia2cifQ==-YGG-DA==-YGG-\"", true);
 }
 TEST(SchemaValidator, Length) { // 30

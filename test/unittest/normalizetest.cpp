@@ -606,6 +606,40 @@ TEST(SchemaNormalizer, Scalar) {
 	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImcifQ==-YGG-AAAAAABAj0A=-YGG-\"");
 }
 
+TEST(SchemaNormalizer, OneDArray) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"1darray\","
+	"  \"subtype\": \"float\","
+	"  \"precision\": 4,"
+	"  \"units\": \"g\","
+	"  \"length\": 4"
+	"}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoia2ciLCJzaGFwZSI6WzRdfQ==-YGG-AAECAw==-YGG-\"",
+	      true,
+	      "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwidW5pdHMiOiJnIiwic2hhcGUiOls0XX0=-YGG-AAAAAAAAekQAAPpEAIA7RQ==-YGG-\"");
+}
+
+TEST(SchemaNormalizer, NDArray) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"ndarray\","
+	"  \"subtype\": \"float\","
+	"  \"precision\": 8,"
+	"  \"units\": \"g\","
+	"  \"shape\": [2, 3]"
+	"}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwidW5pdHMiOiJrZyIsInNoYXBlIjpbMiwzXX0=-YGG-AAAAAAAAgD8AAABAAABAQAAAgEAAAKBA-YGG-\"",
+	      true,
+	      "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwidW5pdHMiOiJnIiwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAAAAAAAAAAECPQAAAAAAAQJ9AAAAAAABwp0AAAAAAAECvQAAAAAAAiLNA-YGG-\"");
+}
+
 #if defined(_MSC_VER) || defined(__clang__)
 RAPIDJSON_DIAG_POP
 #endif

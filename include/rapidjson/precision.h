@@ -178,7 +178,7 @@ void changePrecision(const unsigned char* bytes, T2* dst, SizeType nelements,
 }
 
 template <typename T1, typename T2>
-void changePrecision(const unsigned char* bytes, T2* dst, SizeType nelements,
+void changePrecision(const unsigned char*, T2*, SizeType,
 		     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T1,T2)))) {
   std::cerr << typeid(T1).name() << " cannot be cast to " << typeid(T2).name() << std::endl;
   RAPIDJSON_ASSERT(!sizeof("Cannot change from T1 to T2"));
