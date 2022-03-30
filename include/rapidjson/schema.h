@@ -537,6 +537,25 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Temporary memory
+template <typename NormalizedDocument>
+class TemporaryMemory {
+public:
+  TemporaryMemory(NormalizedDocument* doc=0) : doc_(doc), mem_() {}
+  ~TemporaryMemory() {
+    if (doc_ && mem_)
+      doc_->GetAllocator().Free(mem_);
+  }
+  void stealMemory() {
+    RAPIDJSON_ASSERT(!mem_);
+    mem_ = doc_->temporary_memory_;
+    doc_->temporary_memory_ = nullptr;
+  }
+  NormalizedDocument* doc_;
+  void* mem_;
+};
+  
+///////////////////////////////////////////////////////////////////////////////
 // GenericNormalizedDocument
   
 template <typename SchemaDocumentType, typename StackAllocator = RAPIDJSON_DEFAULT_STACK_ALLOCATOR>
@@ -552,6 +571,7 @@ class GenericNormalizedDocument {
   typedef typename EncodingType::Ch Ch;
   typedef typename ValueType::MemberIterator MemberIterator;
   typedef typename ValueType::ConstMemberIterator ConstMemberIterator;
+  friend class TemporaryMemory<GenericNormalizedDocument<SchemaDocumentType, StackAllocator> >;
 public:
   GenericNormalizedDocument(AllocatorType* allocator = 0,
 			    StackAllocator* stackAllocator = 0,
@@ -565,7 +585,7 @@ public:
     documentStack_(nullptr),
     pointerStack_(stackAllocator, stackCapacity),
     aliases_(kObjectType), inSingular_(false),
-    extend_pointer_(nullptr), key_modified_(nullptr) {}
+    extend_pointer_(nullptr), temporary_memory_(nullptr) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent, unsigned& index,
 			    StackAllocator* stackAllocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity) :
@@ -578,7 +598,7 @@ public:
     documentStack_(nullptr),
     pointerStack_(stackAllocator, stackCapacity),
     aliases_(kObjectType), inSingular_(false),
-    extend_pointer_(nullptr), key_modified_(nullptr) {
+    extend_pointer_(nullptr), temporary_memory_(nullptr) {
     parent->AddChild(this);
   }
 
@@ -593,6 +613,10 @@ public:
     while (!pointerStack_.Empty())
       PopPointer();
     document_.ClearStack();
+    if (temporary_memory_) {
+      GetAllocator().Free(temporary_memory_);
+      temporary_memory_ = nullptr;
+    }
   }
 
   //! Get the allocator of this document.
@@ -797,7 +821,6 @@ public:
   template <typename YggSchemaValueType>
   bool YggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
     // Units
-    std::cerr << "YggdrasilString: " << str << std::endl;
     typename YggSchemaValueType::ConstMemberIterator typeV = valueSchema.FindMember(SchemaType::GetTypeString());
     typename YggSchemaValueType::ConstMemberIterator subtypeV = valueSchema.FindMember(SchemaType::GetSubTypeString());
     typename YggSchemaValueType::ConstMemberIterator precisionV = valueSchema.FindMember(SchemaType::GetPrecisionString());
@@ -810,7 +833,9 @@ public:
       typename SchemaType::YggSchemaValueSubType subtype = schema.GetSubType(subtypeV->value);
       SizeType precision = (SizeType)(precisionV->value.GetUint64());
       SizeType nelements = 0;
-      if (lengthV != valueSchema.MemberEnd())
+      if (typeV->value == YggSchemaValueType::GetScalarString())
+	nelements = 1;
+      else if (lengthV != valueSchema.MemberEnd())
 	nelements = (SizeType)(lengthV->value.GetUint64());
       else if (shapeV != valueSchema.MemberEnd()) {
 	nelements = 1;
@@ -818,22 +843,43 @@ public:
 	  nelements *= static_cast<SizeType>(v->GetUint64());
       }
       // Subtype & precision
-      if ((subtype == schema.subtype_) ||
+      if (((subtype == schema.subtype_) &&
+	   (precision < schema.precision_.GetUint())) ||
+	  // ((subtype != schema.subtype_) &&
+	  //  canCast<subtype, schema.subtype_>())) {
 	  ((subtype == SchemaType::kYggUintSchemaSubType) &&
 	   (schema.subtype_ == SchemaType::kYggIntSchemaSubType)) ||
 	  ((subtype == SchemaType::kYggUintSchemaSubType) &&
 	   (schema.subtype_ == SchemaType::kYggFloatSchemaSubType)) ||
 	  ((subtype == SchemaType::kYggIntSchemaSubType) &&
 	   (schema.subtype_ == SchemaType::kYggFloatSchemaSubType))) {
-	if (precision < schema.precision_.GetInt()) {
-	  // changePrecision(subtype, precision,
-	  //                 (const unsigned char*)str, length,
-	  //                 schema.subtype_, schema.precision_.GetInt(),
-	  //                 (unsigned char*)(&(str[0])), length, nelements);
-	  // subtype = schema.subtype_;
-	  // precision = schema.precision_.GetInt();
-	  // const ValueType& subtype_str = SubType2String(schema.subtype_);
-	  // valueSchema[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema.GetAllocator())
+	if (precision <= schema.precision_.GetUint()) {
+	  YggSubType src_subtype = (YggSubType)subtype;
+	  YggSubType dst_subtype = (YggSubType)schema.subtype_;
+	  SizeType src_precision = precision;
+	  SizeType dst_precision = schema.precision_.GetUint();
+	  SizeType src_size = sizeOfSubtype(src_subtype, src_precision);
+	  SizeType dst_size = sizeOfSubtype(dst_subtype, dst_precision);
+	  SizeType src_nbytes = length * sizeof(Ch);
+	  SizeType dst_nbytes = src_nbytes;
+	  RAPIDJSON_ASSERT(src_nbytes == (nelements * src_size));
+	  unsigned char* dst = (unsigned char*)(&(str[0]));
+	  if (dst_size > src_size) {
+	    dst_nbytes = nelements * dst_size;
+	    dst = (unsigned char*)SetTemporary(dst_nbytes);
+	  }
+	  changePrecision(src_subtype, src_precision,
+	                  (const unsigned char*)str, src_nbytes,
+			  dst_subtype, dst_precision,
+	                  dst, dst_nbytes, nelements);
+	  if (dst_size > src_size) {
+	    str = (Ch*)dst;
+	    length = dst_nbytes / sizeof(Ch);
+	  }
+	  subtype = schema.subtype_;
+	  precision = schema.precision_.GetUint();
+	  const typename SchemaType::ValueType& subtype_str = schema.SubType2String(schema.subtype_);
+	  valueSchema[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema.GetAllocator());
 	}
       }
       // Units
@@ -893,14 +939,9 @@ public:
       if (FindAliasName(aliases, orig, match)) {
 	if (!GetFinalAlias(context, aliases, orig, &primary))
 	  return false;
-	RAPIDJSON_ASSERT(!key_modified_);
 	modified_ = true;
 	len = primary.GetStringLength();
 	str = primary.GetString();
-	// key_modified_ = static_cast<Ch *>(GetAllocator().Malloc((len + 1) * sizeof(Ch)));
-	// std::memcpy(key_modified_, primary.GetString(), len * sizeof(Ch));
-	// key_modified_[len] = '\0';
-	// str = key_modified_;
 	copy = true;
       } else if (FindAliasValue(aliases, orig, match)) {
 	primary.CopyFrom(orig, GetAllocator());
@@ -910,7 +951,6 @@ public:
       if (match != aliases.MemberEnd()) {
 	if (HasMember(primary)) {
 	  // TODO: Check equivalence when the value is added?
-	  ReleaseKey();
 	  context.error_handler.DuplicateAlias(orig, primary);
 	  RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
 	}
@@ -1016,10 +1056,11 @@ public:
     documentStack_ = stack;
   }
 
-  void ReleaseKey() {
-    if (!key_modified_) return;
-    GetAllocator().Free(key_modified_);
-    key_modified_ = nullptr;
+  void* SetTemporary(SizeType size) {
+    RAPIDJSON_ASSERT(!temporary_memory_);
+    temporary_memory_ = GetAllocator().Malloc(size);
+    RAPIDJSON_ASSERT(temporary_memory_);
+    return temporary_memory_;
   }
       
 private:
@@ -1306,7 +1347,7 @@ private:
   ValueType aliases_;
   bool inSingular_;
   const PointerType* extend_pointer_;
-  Ch* key_modified_;
+  void* temporary_memory_;
 };
 
 #endif // RAPIDJSON_YGGDRASIL
@@ -2014,9 +2055,11 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
   // TODO: Error about normalization
 #define RAPIDJSON_NORMALIZER_BASE_(method, arg)				\
+  TemporaryMemory<typename Context::NormalizedDocumentType> __temporary_normalized_memory(context.normalized); \
   if (context.normalized) {						\
     if (!context.normalized->method arg)				\
       return false;							\
+    __temporary_normalized_memory.stealMemory();			\
   }
 #define RAPIDJSON_NORMALIZER_NOARG_(method)				\
   RAPIDJSON_NORMALIZER_BASE_(method, (context, *this))
@@ -2241,10 +2284,6 @@ public:
 	  len = dest.GetStringLength();
 	  copy = true;
 	}
-#define RELEASE_KEY_							\
-	if (context.normalized) context.normalized->ReleaseKey();
-#else // RAPIDJSON_YGGDRASIL
-#define RELEASE_KEY_	
 #endif // RAPIDJSON_YGGDRASIL
         if (patternProperties_) {
             context.patternPropertiesSchemaCount = 0;
@@ -2268,7 +2307,6 @@ public:
             if (context.propertyExist)
                 context.propertyExist[index] = true;
 
-	    RELEASE_KEY_;
             return true;
         }
 
@@ -2280,12 +2318,10 @@ public:
             }
             else
                 context.valueSchema = additionalPropertiesSchema_;
-	    RELEASE_KEY_;
             return true;
         }
         else if (additionalProperties_) {
             context.valueSchema = typeless_;
-	    RELEASE_KEY_;
             return true;
         }
 
@@ -2293,13 +2329,10 @@ public:
             // Must set valueSchema for when kValidateContinueOnErrorFlag is set, else reports spurious type error
             context.valueSchema = typeless_;
             context.error_handler.DisallowedProperty(str, len);
-	    RELEASE_KEY_;
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
         }
 
-	RELEASE_KEY_;
         return true;
-#undef RELEASE_KEY_
     }
 
     bool EndObject(Context& context, SizeType memberCount) const {

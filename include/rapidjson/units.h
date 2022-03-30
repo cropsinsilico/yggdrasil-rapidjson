@@ -2221,7 +2221,7 @@ inline std::ostream & operator << (std::ostream &os, const QuantityArray<T, Enco
 		   const Units<Encoding>& dst_units,
 		   const SizeType nbytes,
 		   const SizeType nelements=0) {
-    SWITCH_SUBTYPE(subtype, precision, changeUnits, Encoding,
+    SWITCH_SUBTYPE(subtype, precision, changeUnits, PACK_MACRO(Encoding),
 		   (src_bytes, src_units, dst_bytes, dst_units, nbytes, nelements),
 		   RAPIDJSON_ASSERT(false));
   }

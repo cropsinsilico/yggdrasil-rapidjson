@@ -226,7 +226,10 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
 #define pack_vector_(x, ...) pack_vector__(COUNT_VARARGS(__VA_ARGS__) + 1, x, __VA_ARGS__)
 #define pack_vector_T_(T, ...) pack_vector__<T>(COUNT_VARARGS(__VA_ARGS__), __VA_ARGS__)
 
-#define PACK_MACRO(...) (__VA_ARGS__)
+#define _Args(...) __VA_ARGS__
+#define STRIP_PARENS(X) X
+#define PACK_MACRO_(X) STRIP_PARENS( _Args X )
+#define PACK_MACRO(...) PACK_MACRO_((__VA_ARGS__))
 #define UNPACK_MACRO(...) __VA_ARGS__
 
 #endif // RAPIDJSON_YGGDRASIL
@@ -238,6 +241,10 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
     internal::OrExpr<internal::IsSame<T,std::complex<float> >,	\
     internal::OrExpr<internal::IsSame<T,std::complex<double> >,	\
 		     internal::IsSame<T,std::complex<long double> > > >
+#define YGGDRASIL_IS_FLOAT_TYPE(T)				\
+  internal::OrExpr<internal::IsSame<T,float>,			\
+    internal::OrExpr<internal::IsSame<T,double>,		\
+    internal::IsSame<T,long double> > >
 #define YGGDRASIL_IS_SCALAR_TYPE(T)				\
   internal::OrExpr<internal::IsSame<T,uint8_t>,			\
     internal::OrExpr<internal::IsSame<T,uint16_t>,		\
@@ -249,6 +256,9 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
 #define YGGDRASIL_IS_COMPLEX_TYPE(T)				\
     internal::OrExpr<internal::IsSame<T,std::complex<float> >,	\
 		     internal::IsSame<T,std::complex<double> > >
+#define YGGDRASIL_IS_FLOAT_TYPE(T)				\
+  internal::OrExpr<internal::IsSame<T,float>,			\
+    internal::IsSame<T, double> >
 #define YGGDRASIL_IS_SCALAR_TYPE(T)				\
   internal::OrExpr<internal::IsSame<T,uint8_t>,			\
     internal::OrExpr<internal::IsSame<T,uint16_t>,		\
@@ -256,6 +266,16 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
     internal::OrExpr<internal::IsSame<T,int16_t>,		\
 		     YGGDRASIL_IS_COMPLEX_TYPE(T)> > > >
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#define YGGDRASIL_IS_INT_TYPE(T)			\
+  internal::OrExpr<internal::IsSame<T,int8_t>,		\
+    internal::OrExpr<internal::IsSame<T,int16_t>,	\
+    internal::OrExpr<internal::IsSame<T,int32_t>,	\
+    internal::IsSame<T,int64_t> > > >
+#define YGGDRASIL_IS_UINT_TYPE(T)			\
+  internal::OrExpr<internal::IsSame<T,uint8_t>,		\
+    internal::OrExpr<internal::IsSame<T,uint16_t>,	\
+    internal::OrExpr<internal::IsSame<T,uint32_t>,	\
+    internal::IsSame<T,uint64_t> > > >
 #define YGGDRASIL_IS_ANY_SCALAR(T)			\
   internal::OrExpr<YGGDRASIL_IS_SCALAR_TYPE(T),		\
     internal::OrExpr<internal::IsSame<T,float>,		\
