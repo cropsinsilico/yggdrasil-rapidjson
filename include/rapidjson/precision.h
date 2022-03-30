@@ -231,6 +231,40 @@ void changePrecision(YggSubType subtype, SizeType precision,
 		 RAPIDJSON_ASSERT(false));
 }
 
+template <typename T, size_t>
+SizeType _sizeOf() { return sizeof(T); }
+
+static inline
+SizeType sizeOfSubtype(const YggSubType subtype, const SizeType precision) {
+  SWITCH_SUBTYPE(subtype, precision, _sizeOf, 1, (), return 0);
+}
+
+template <typename T, size_t>
+void changePrecision(YggSubType subtype, SizeType precision,
+		     const unsigned char* src_bytes,
+		     unsigned char* dst_bytes, SizeType& dst_nbytes,
+		     SizeType nelements) {
+  RAPIDJSON_ASSERT((nelements * sizeof(T)) <= dst_nbytes);
+  SWITCH_SUBTYPE(subtype, precision, changePrecision,
+		 T, (src_bytes, (T*)dst_bytes, nelements),
+		 RAPIDJSON_ASSERT(false));
+  dst_nbytes = nelements * sizeof(T);
+}
+
+static inline
+void changePrecision(const YggSubType src_subtype, const SizeType src_precision,
+		     const unsigned char* src_bytes, const SizeType src_nbytes,
+		     YggSubType dst_subtype, SizeType dst_precision,
+		     unsigned char* dst_bytes, SizeType& dst_nbytes,
+		     const SizeType nelements=0) {
+  RAPIDJSON_ASSERT(sizeOfSubtype(dst_subtype, dst_precision) <=
+		   sizeOfSubtype(src_subtype, src_precision));
+  SWITCH_SUBTYPE(dst_subtype, dst_precision, changePrecision,
+		 1, (src_subtype, src_precision, src_bytes,
+		     dst_bytes, dst_nbytes, nelements),
+		 RAPIDJSON_ASSERT(false));
+}
+
 #endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_NAMESPACE_END

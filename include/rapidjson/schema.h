@@ -793,8 +793,72 @@ public:
     REQUIRED_PROPERTY_(String, (internal::StrCmp(str, CurrentValue()->GetString()) == 0));
     return EndValue(context, schema);
   }
+
   template <typename YggSchemaValueType>
   bool YggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
+    // Units
+    std::cerr << "YggdrasilString: " << str << std::endl;
+    typename YggSchemaValueType::ConstMemberIterator typeV = valueSchema.FindMember(SchemaType::GetTypeString());
+    typename YggSchemaValueType::ConstMemberIterator subtypeV = valueSchema.FindMember(SchemaType::GetSubTypeString());
+    typename YggSchemaValueType::ConstMemberIterator precisionV = valueSchema.FindMember(SchemaType::GetPrecisionString());
+    typename YggSchemaValueType::ConstMemberIterator unitsV = valueSchema.FindMember(SchemaType::GetUnitsString());
+    typename YggSchemaValueType::ConstMemberIterator shapeV = valueSchema.FindMember(SchemaType::GetShapeString());
+    typename YggSchemaValueType::ConstMemberIterator lengthV = valueSchema.FindMember(SchemaType::GetLengthString());
+    if ((typeV != valueSchema.MemberEnd()) &&
+	(subtypeV != valueSchema.MemberEnd()) &&
+	(precisionV != valueSchema.MemberEnd())) {
+      typename SchemaType::YggSchemaValueSubType subtype = schema.GetSubType(subtypeV->value);
+      SizeType precision = (SizeType)(precisionV->value.GetUint64());
+      SizeType nelements = 0;
+      if (lengthV != valueSchema.MemberEnd())
+	nelements = (SizeType)(lengthV->value.GetUint64());
+      else if (shapeV != valueSchema.MemberEnd()) {
+	nelements = 1;
+	for (typename YggSchemaValueType::ConstValueIterator v = shapeV->value.Begin(); v != shapeV->value.End(); ++v)
+	  nelements *= static_cast<SizeType>(v->GetUint64());
+      }
+      // Subtype & precision
+      if ((subtype == schema.subtype_) ||
+	  ((subtype == SchemaType::kYggUintSchemaSubType) &&
+	   (schema.subtype_ == SchemaType::kYggIntSchemaSubType)) ||
+	  ((subtype == SchemaType::kYggUintSchemaSubType) &&
+	   (schema.subtype_ == SchemaType::kYggFloatSchemaSubType)) ||
+	  ((subtype == SchemaType::kYggIntSchemaSubType) &&
+	   (schema.subtype_ == SchemaType::kYggFloatSchemaSubType))) {
+	if (precision < schema.precision_.GetInt()) {
+	  // changePrecision(subtype, precision,
+	  //                 (const unsigned char*)str, length,
+	  //                 schema.subtype_, schema.precision_.GetInt(),
+	  //                 (unsigned char*)(&(str[0])), length, nelements);
+	  // subtype = schema.subtype_;
+	  // precision = schema.precision_.GetInt();
+	  // const ValueType& subtype_str = SubType2String(schema.subtype_);
+	  // valueSchema[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema.GetAllocator())
+	}
+      }
+      // Units
+      if (unitsV != valueSchema.MemberEnd()) {
+	if (schema.units_.IsString() && (unitsV->value != schema.units_.IsString())) {
+	  units::Units<EncodingType> src_units(unitsV->value.GetString(),
+					       unitsV->value.GetStringLength(),
+					       false);
+	  units::Units<EncodingType> dst_units(schema.units_.GetString(),
+					       schema.units_.GetStringLength(),
+					       false);
+	  if ((src_units != dst_units) && (src_units.is_compatible(dst_units))) {
+	    modified_ = true;
+	    changeUnits((YggSubType)subtype, precision,
+			(unsigned char*)str, src_units,
+			(unsigned char*)(&(str[0])), dst_units,
+			length * sizeof(Ch), nelements);
+	    valueSchema[SchemaType::GetUnitsString()].SetString(schema.units_.GetString(),
+								schema.units_.GetStringLength(),
+								valueSchema.GetAllocator());
+								
+	  }
+	}
+      }
+    }
     BEGIN_NORMALIZE_(YggdrasilString, (str, length, copy, valueSchema),
 		     (str, length, valueSchema));
     REQUIRED_PROPERTY_(YggdrasilString, CurrentValue()->IsYggdrasil());
@@ -1314,6 +1378,7 @@ public:
 	yggtype_(kYggNullSchemaType),
 	subtype_(kYggNullSubType),
 	precision_(),
+	units_(),
 	shape_(),
 	args_(),
 	kwargs_(),

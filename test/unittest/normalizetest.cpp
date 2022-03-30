@@ -574,6 +574,22 @@ TEST(SchemaNormalizer, AliasNestedConflicting) {
 		     "}}");
 }
 
+TEST(SchemaNormalizer, Units) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": \"float\","
+	"  \"precision\": 8,"
+	"  \"units\": \"g\""
+	"}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImtnIn0=-YGG-AAAAAAAA8D8=-YGG-\"",
+	      true,
+	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImcifQ==-YGG-AAAAAABAj0A=-YGG-\"");
+}
+
 #if defined(_MSC_VER) || defined(__clang__)
 RAPIDJSON_DIAG_POP
 #endif

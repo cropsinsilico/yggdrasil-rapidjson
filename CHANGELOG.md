@@ -10,11 +10,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add "encoding" property for bytes
 * Remove use of standard libraries (std::basic_string, std::vector, std::map)?
 * Use explicit allocator for QuantityArray?
-* Add normalization
-	- type (int -> double)
 
 ### IN PROGRESS
-* Add normalization for units
+* Add normalization for type conversion
 
 ### COMPLETE
 * Added schema to document class
@@ -25,7 +23,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Python function
 * Python instance
 * Coverage (via gcov/llvm-cov gcovr and cmake)
-* Unit-full type
+* Added Unit-full type w/ validation & normalization
 * Schema type
 * Continuous integration
 * Validation of circular, conflicting, & singular aliases

@@ -19,6 +19,7 @@
 #include "stream.h"
 #include "stringbuffer.h"
 #include "internal/meta.h"
+#include "precision.h"
 #include <wchar.h>
 #include <locale.h>
 #include <typeindex>
@@ -2193,6 +2194,37 @@ inline std::ostream & operator << (std::ostream &os, const QuantityArray<T, Enco
   os << " " << x.units_;
   return os;
 }
+
+  template <typename T, typename Encoding>
+  void changeUnits(const unsigned char* src_bytes,
+		   const Units<Encoding>& src_units,
+		   unsigned char* dst_bytes,
+		   const Units<Encoding>& dst_units,
+		   const SizeType nbytes,
+		   SizeType nelements=0) {
+    if (nelements == 0)
+      nelements = nbytes / sizeof(T);
+    else
+      RAPIDJSON_ASSERT(nelements == (nbytes / sizeof(T)));
+    RAPIDJSON_ASSERT(!(nbytes % sizeof(T)));
+    QuantityArray<T, Encoding> qa((T*)src_bytes, nelements, src_units);
+    qa.convert_to(dst_units);
+    memcpy(dst_bytes, qa.value(), nelements * sizeof(T));
+  }
+
+
+  template <typename Encoding>
+  void changeUnits(YggSubType subtype, SizeType precision,
+		   const unsigned char* src_bytes,
+		   const Units<Encoding>& src_units,
+		   unsigned char* dst_bytes,
+		   const Units<Encoding>& dst_units,
+		   const SizeType nbytes,
+		   const SizeType nelements=0) {
+    SWITCH_SUBTYPE(subtype, precision, changeUnits, Encoding,
+		   (src_bytes, src_units, dst_bytes, dst_units, nbytes, nelements),
+		   RAPIDJSON_ASSERT(false));
+  }
   
 #undef ARRAY_ARRAY_OP
 #undef ARRAY_SCALAR_OP
