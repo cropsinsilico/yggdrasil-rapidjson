@@ -843,44 +843,36 @@ public:
 	  nelements *= static_cast<SizeType>(v->GetUint64());
       }
       // Subtype & precision
-      if (((subtype == schema.subtype_) &&
-	   (precision < schema.precision_.GetUint())) ||
-	  // ((subtype != schema.subtype_) &&
-	  //  canCast<subtype, schema.subtype_>())) {
-	  ((subtype == SchemaType::kYggUintSchemaSubType) &&
-	   (schema.subtype_ == SchemaType::kYggIntSchemaSubType)) ||
-	  ((subtype == SchemaType::kYggUintSchemaSubType) &&
-	   (schema.subtype_ == SchemaType::kYggFloatSchemaSubType)) ||
-	  ((subtype == SchemaType::kYggIntSchemaSubType) &&
-	   (schema.subtype_ == SchemaType::kYggFloatSchemaSubType))) {
-	if (precision <= schema.precision_.GetUint()) {
-	  YggSubType src_subtype = (YggSubType)subtype;
-	  YggSubType dst_subtype = (YggSubType)schema.subtype_;
-	  SizeType src_precision = precision;
-	  SizeType dst_precision = schema.precision_.GetUint();
-	  SizeType src_size = sizeOfSubtype(src_subtype, src_precision);
-	  SizeType dst_size = sizeOfSubtype(dst_subtype, dst_precision);
-	  SizeType src_nbytes = length * sizeof(Ch);
-	  SizeType dst_nbytes = src_nbytes;
-	  RAPIDJSON_ASSERT(src_nbytes == (nelements * src_size));
-	  unsigned char* dst = (unsigned char*)(&(str[0]));
-	  if (dst_size > src_size) {
-	    dst_nbytes = nelements * dst_size;
-	    dst = (unsigned char*)SetTemporary(dst_nbytes);
-	  }
-	  changePrecision(src_subtype, src_precision,
-	                  (const unsigned char*)str, src_nbytes,
-			  dst_subtype, dst_precision,
-	                  dst, dst_nbytes, nelements);
-	  if (dst_size > src_size) {
-	    str = (Ch*)dst;
-	    length = dst_nbytes / sizeof(Ch);
-	  }
-	  subtype = schema.subtype_;
-	  precision = schema.precision_.GetUint();
-	  const typename SchemaType::ValueType& subtype_str = schema.SubType2String(schema.subtype_);
-	  valueSchema[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema.GetAllocator());
+      YggSubType src_subtype = (YggSubType)subtype;
+      YggSubType dst_subtype = (YggSubType)schema.subtype_;
+      SizeType src_precision = precision;
+      SizeType dst_precision = schema.precision_.GetUint();
+      if (((src_subtype == dst_subtype) &&
+	   (src_precision < dst_precision)) ||
+	  ((src_subtype != dst_subtype) &&
+	   canCast(src_subtype, src_precision, dst_subtype, dst_precision, false))) {
+	SizeType src_size = sizeOfSubtype(src_subtype, src_precision);
+	SizeType dst_size = sizeOfSubtype(dst_subtype, dst_precision);
+	SizeType src_nbytes = length * sizeof(Ch);
+	SizeType dst_nbytes = src_nbytes;
+	RAPIDJSON_ASSERT(src_nbytes == (nelements * src_size));
+	unsigned char* dst = (unsigned char*)(&(str[0]));
+	if (dst_size > src_size) {
+	  dst_nbytes = nelements * dst_size;
+	  dst = (unsigned char*)SetTemporary(dst_nbytes);
 	}
+	changePrecision(src_subtype, src_precision,
+			(const unsigned char*)str, src_nbytes,
+			dst_subtype, dst_precision,
+			dst, dst_nbytes, nelements);
+	if (dst_size > src_size) {
+	  str = (Ch*)dst;
+	  length = dst_nbytes / sizeof(Ch);
+	}
+	subtype = schema.subtype_;
+	precision = schema.precision_.GetUint();
+	const typename SchemaType::ValueType& subtype_str = schema.SubType2String(schema.subtype_);
+	valueSchema[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema.GetAllocator());
       }
       // Units
       if (unitsV != valueSchema.MemberEnd()) {

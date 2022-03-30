@@ -110,15 +110,18 @@ bool canCast(bool=true,
 	     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T1, T2)))) {
   return false;
 }
-// template <typename T2, YggSubType S1, SizeType P1>
-// bool canCast(bool allowDecreasedPrecision=true) {
-//   SWITCH_SUBTYPE(S1, P1, canCast, 
-// }
-// template <YggSubType S1, SizeType P1, YggSubType S2, SizeType P2>
-// bool canCast(bool allowDecreasedPrecision=true) {
-//   SWITCH_SUBTYPE(S2, P2, canCast, (1), (allowDecreasedPrecision),
-// 		 return false);
-// }
+template <typename T2, size_t>
+bool canCast(YggSubType S1, SizeType P1, bool allowDecreasedPrecision=true) {
+  SWITCH_SUBTYPE(S1, P1, canCast, PACK_MACRO(T2), (allowDecreasedPrecision),
+		 return false);
+}
+static inline
+bool canCast(YggSubType S1, SizeType P1,
+	     YggSubType S2, SizeType P2,
+	     bool allowDecreasedPrecision=true) {
+  SWITCH_SUBTYPE(S2, P2, canCast, PACK_MACRO(1), (S1, P2, allowDecreasedPrecision),
+		 return false);
+}
 
 template <typename T1, typename T2>
 T2 castPrecision(const T1& v1,
@@ -160,7 +163,7 @@ const T2 castPrecision(const T1& v1,
   const T1* src = reinterpret_cast<const T1*>(bytes);
 #define SAME_PRECISION							\
   if ((GetYggSubType<T1>() == GetYggSubType<T2>()) && (sizeof(T2) == sizeof(T1))) { \
-    memcpy(dst, src, nelements * sizeof(T2));				\
+    memcpy((void*)dst, (void*)src, nelements * sizeof(T2));		\
     return;								\
   }
 #define DIFF_PRECISION				\

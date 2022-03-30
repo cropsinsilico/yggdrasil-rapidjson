@@ -621,6 +621,15 @@ TEST(SchemaNormalizer, OneDArray) {
 	      "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoia2ciLCJzaGFwZSI6WzRdfQ==-YGG-AAECAw==-YGG-\"",
 	      true,
 	      "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwidW5pdHMiOiJnIiwic2hhcGUiOls0XX0=-YGG-AAAAAAAAekQAAPpEAIA7RQ==-YGG-\"");
+    FAILED_NORMALIZE(s,
+		     "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwidW5pdHMiOiJnIiwic2hhcGUiOls0XX0=-YGG-AAAAAAAAAAAAAAAAAECPQAAAAAAAQJ9AAAAAAABwp0A=-YGG-\"",
+		     "", "precision", "",
+		     "{ \"precision\": {"
+		     "    \"errorCode\": 28,"
+		     "    \"instanceRef\": \"#\","
+		     "    \"schemaRef\": \"#\","
+		     "    \"expected\": 4, \"actual\": 8"
+		     "}}");
 }
 
 TEST(SchemaNormalizer, NDArray) {
@@ -638,6 +647,15 @@ TEST(SchemaNormalizer, NDArray) {
 	      "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwidW5pdHMiOiJrZyIsInNoYXBlIjpbMiwzXX0=-YGG-AAAAAAAAgD8AAABAAABAQAAAgEAAAKBA-YGG-\"",
 	      true,
 	      "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwidW5pdHMiOiJnIiwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAAAAAAAAAAECPQAAAAAAAQJ9AAAAAAABwp0AAAAAAAECvQAAAAAAAiLNA-YGG-\"");
+    FAILED_NORMALIZE(s,
+		     "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJjb21wbGV4IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AACAPwAAAAAAAABAAAAAAAAAQEAAAAAAAACAQAAAAAAAAKBAAAAAAAAAAEEAAAAA-YGG-\"",
+		     "", "subtype", "",
+		     "{ \"subtype\": {"
+		     "    \"errorCode\": 27,"
+		     "    \"instanceRef\": \"#\","
+		     "    \"schemaRef\": \"#\","
+		     "    \"expected\": \"float\", \"actual\": \"complex\""
+		     "}}");
 }
 
 #if defined(_MSC_VER) || defined(__clang__)

@@ -12,7 +12,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Use explicit allocator for QuantityArray?
 
 ### IN PROGRESS
-* Add normalization for type conversion
 
 ### COMPLETE
 * Added schema to document class
@@ -29,6 +28,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Validation of circular, conflicting, & singular aliases
 * Normalization of default, aliases, & allowSingular w/ error handling
 * Warning messages during validation for deprecated properties
+* Normalization of compatible type/precision conversion
 
 ## [Unreleased]
 
