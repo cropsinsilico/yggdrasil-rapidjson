@@ -678,9 +678,9 @@ public:
   //! \param prefix Prefix that should be applied to the base unit.
   GenericUnit(const std::basic_string<Ch> str, const double& power=1.0) :
     names_(), abbrs_(), dim_(), factor_(1.0), offset_(0.0), power_(1.0), prefix_() {
-    bool flag = from_table(str);
-    RAPIDJSON_ASSERT(flag);
-    (void)flag;
+    bool errorFlag = (!from_table(str));
+    RAPIDJSON_ASSERT(!errorFlag);
+    (void)errorFlag;
     power_ = power; // Base units do not have powers
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
     (void)str;
@@ -829,6 +829,9 @@ public:
   //!   one irreducible unit.
   //! \return true if the unit is irreducible.
   bool is_irreducible() const { return dim_.is_irreducible(); }
+  //! \brief Check if the unit definition is empty.
+  //! \return true if there arn't any units, false otherwise.
+  bool is_empty() const { return (names_.size() == 0); }
   //! \brief Get the conversion factors necessary to convert from this
   //!   unit to another.
   //! \param x Unit to convert to.
@@ -961,12 +964,18 @@ public:
 				  const bool verbose=false);  // Forward declaration
   //! \brief Add a unit to the unit set from a string.
   //! \param str Unit string.
-  void add_unit(const std::basic_string<Ch> str) {
+  //! \returns true if the unit was added successfully, false otherwise.
+  bool add_unit(const std::basic_string<Ch> str) {
 #if RAPIDJSON_HAS_CXX11
     units_.emplace_back(str);
 #else // RAPIDJSON_HAS_CXX11
     units_.push_back(GenericUnit<Encoding>(str));
 #endif // RAPIDJSON_HAS_CXX11
+    if ((units_.end() - 1)->is_empty()) {
+      units_.clear();
+      return false;
+    }
+    return true;
   }
   //! \brief Display the units instance.
   //! \param os Output stream.
@@ -1186,7 +1195,7 @@ typedef GenericUnits<UTF8<char> > Units;
       PACK_UNIT("year", "yr", dimensions::time, constants::sec_per_year),
       PACK_UNIT("parsec", "pc", dimensions::length, constants::m_per_pc),
       PACK_UNIT("electronvolt", "eV", dimensions::energy, constants::J_per_eV),
-      PACK_UNIT("jansky", "J", dimensions::specific_flux, constants::jansky_mks),
+      PACK_UNIT(VSTR("jansky"), VSTR("J", "j"), dimensions::specific_flux, constants::jansky_mks),
       PACK_UNIT("sievert", "Sv", dimensions::specific_energy),
       PACK_UNIT("molar", "M", dimensions::number_density, 100.0 / constants::amu_grams),
       (void*)nullptr
@@ -1215,7 +1224,7 @@ typedef GenericUnits<UTF8<char> > Units;
     PACK_UNIT("percent", "%", dimensions::dimensionless, 0.01),
     PACK_UNIT("minute", "min", dimensions::time, constants::sec_per_min),
     PACK_UNIT("hour", "hr", dimensions::time, constants::sec_per_hr),
-    PACK_UNIT("day", "day", dimensions::time, constants::sec_per_day),
+    PACK_UNIT(VSTR("day"), VSTR("day", "d"), dimensions::time, constants::sec_per_day),
     // Astronomy units
     PACK_UNIT("c", "c", dimensions::velocity, constants::speed_of_light_m_per_s),
     PACK_UNIT(VSTR("solar_mass", "solMass", "mass_sun"), VSTR("Msun", "Msol", "msun", "m_sun", "M_sun", "m_Sun"), dimensions::mass, constants::mass_sun_kg),
@@ -1321,7 +1330,7 @@ class TokenBase {
 private:
   TokenBase(const TokenBase<Encoding>& rhs);
 public:
-  TokenBase(const TokenType t0, TokenBase *parent0=nullptr) : t(t0), units(), finalized(false), parent(parent0), value_(0.0) {}
+  TokenBase(const TokenType t0, TokenBase *parent0=nullptr) : t(t0), units(), finalized(false), parent(parent0), value_(0.0), errorFlag(false) {}
   virtual ~TokenBase() {}
   virtual TokenBase<Encoding>* current_token() { return this; }
   virtual GenericUnits<Encoding> finalize() {
@@ -1334,6 +1343,11 @@ public:
     return value_;
   }
   virtual bool is_numeric() { return false; }
+  virtual void set_error() {
+    errorFlag = true;
+    if (parent)
+      parent->set_error();
+  }
   virtual void append(const Ch) = 0;
   virtual std::ostream & display(std::ostream &os) const = 0;
   TokenBase<Encoding>& operator=(const TokenBase<Encoding>& other);
@@ -1342,6 +1356,7 @@ public:
   bool finalized;
   TokenBase<Encoding> *parent;
   double value_;
+  bool errorFlag;
   template<typename Encoding2>
   friend std::ostream & operator << (std::ostream &os, const TokenBase<Encoding2>* x);
 };
@@ -1420,7 +1435,8 @@ public:
   GenericUnits<Encoding> finalize() OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT(word.size());
     if (!(this->finalized))
-      this->units.add_unit(word);
+      if (!this->units.add_unit(word))
+	this->set_error();
       // this->units = GenericUnits<Encoding>({GenericUnit<Encoding>(word)});
     return TokenBase<Encoding>::finalize();
   }
@@ -1480,7 +1496,7 @@ public:
   }
   void append(const Ch c) OVERRIDE_CXX11 {
     TokenBase<Encoding>* curr = current_token();
-    if ((curr->t == kGroupToken) || (curr->finalized)) {
+    if ((curr->t == kGroupToken) || curr->finalized) {
       switch (c) {
       case '-':
       case '+':
@@ -1565,7 +1581,7 @@ public:
       tokens.erase(tokens.begin() + (int)(*it));
   }
   GenericUnits<Encoding> finalize() OVERRIDE_CXX11 {
-    if ((tokens.size() == 0) || (this->finalized))
+    if ((tokens.size() == 0) || this->finalized)
       return this->units;
     // Group operators first in order of operations
     if (tokens.size() > 3) {
@@ -1678,8 +1694,13 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
       token.display(std::cout);
       std::cout << std::endl;
     }
+    if (token.errorFlag)
+      break;
   }
-  return token.finalize();
+  GenericUnits<Encoding> out = token.finalize();
+  if (token.errorFlag)
+    out = GenericUnits<Encoding>();
+  return out;
 }
 
 //! Scalar quantity with units.
