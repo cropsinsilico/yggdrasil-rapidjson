@@ -119,7 +119,7 @@ static inline
 bool canCast(YggSubType S1, SizeType P1,
 	     YggSubType S2, SizeType P2,
 	     bool allowDecreasedPrecision=true) {
-  SWITCH_SUBTYPE(S2, P2, canCast, PACK_MACRO(1), (S1, P2, allowDecreasedPrecision),
+  SWITCH_SUBTYPE(S2, P2, canCast, PACK_MACRO(1), (S1, P1, allowDecreasedPrecision),
 		 return false);
 }
 
