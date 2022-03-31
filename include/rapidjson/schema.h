@@ -854,7 +854,7 @@ public:
 	   canCast(src_subtype, src_precision, dst_subtype, dst_precision, false))) {
 	SizeType src_size = sizeOfSubtype(src_subtype, src_precision);
 	SizeType dst_size = sizeOfSubtype(dst_subtype, dst_precision);
-	SizeType src_nbytes = length * sizeof(Ch);
+	SizeType src_nbytes = length * (SizeType)sizeof(Ch);
 	SizeType dst_nbytes = src_nbytes;
 	RAPIDJSON_ASSERT(src_nbytes == (nelements * src_size));
 	unsigned char* dst = (unsigned char*)(&(str[0]));
@@ -868,7 +868,7 @@ public:
 			dst, dst_nbytes, nelements);
 	if (dst_size > src_size) {
 	  str = (Ch*)dst;
-	  length = dst_nbytes / sizeof(Ch);
+	  length = dst_nbytes / (SizeType)sizeof(Ch);
 	}
 	subtype = schema.subtype_;
 	precision = schema.precision_.GetUint();
@@ -889,7 +889,7 @@ public:
 	    changeUnits((YggSubType)subtype, precision,
 			(unsigned char*)str, src_units,
 			(unsigned char*)(&(str[0])), dst_units,
-			length * sizeof(Ch), nelements);
+			length * (SizeType)sizeof(Ch), nelements);
 	    valueSchema[SchemaType::GetUnitsString()].SetString(schema.units_.GetString(),
 								schema.units_.GetStringLength(),
 								valueSchema.GetAllocator());

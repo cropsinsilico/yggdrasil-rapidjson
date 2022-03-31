@@ -19,10 +19,14 @@
 #include "stream.h"
 #include "stringbuffer.h"
 #include "internal/meta.h"
+#include "internal/strfunc.h"
 #include "precision.h"
 #include <wchar.h>
 #include <locale.h>
 #include <typeindex>
+#include <map>
+#include <vector>
+#include <iostream>
 
 RAPIDJSON_NAMESPACE_BEGIN
 

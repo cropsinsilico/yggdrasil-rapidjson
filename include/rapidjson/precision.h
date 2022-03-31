@@ -5,6 +5,7 @@
 
 #include "internal/meta.h"
 #include "rapidjson.h"
+#include <iostream>
 
 RAPIDJSON_NAMESPACE_BEGIN
 
