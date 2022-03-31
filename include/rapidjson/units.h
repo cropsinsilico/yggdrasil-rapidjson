@@ -499,7 +499,14 @@ double char_to_double(const std::basic_string<T1>& x,
   return wcstod(x.c_str(), NULL);
 }
 template<typename SourceEncoding, typename DestEncoding>
-const std::basic_string<typename DestEncoding::Ch> convert_chars(const std::basic_string<typename SourceEncoding::Ch>& x) {
+const std::basic_string<typename DestEncoding::Ch> convert_chars(const std::basic_string<typename SourceEncoding::Ch>& x,
+								 RAPIDJSON_ENABLEIF((internal::IsSame<SourceEncoding, DestEncoding>))) {
+  return x;
+}
+  
+template<typename SourceEncoding, typename DestEncoding>
+const std::basic_string<typename DestEncoding::Ch> convert_chars(const std::basic_string<typename SourceEncoding::Ch>& x,
+								 RAPIDJSON_DISABLEIF((internal::IsSame<SourceEncoding, DestEncoding>))) {
   GenericStringStream<SourceEncoding> src(x.c_str());
   GenericStringBuffer<DestEncoding> dst;
   if (DestEncoding::supportUnicode)
@@ -514,13 +521,6 @@ const std::basic_string<typename DestEncoding::Ch> convert_chars(const std::basi
   return out;
 }
 								 
-// template<typename T1, typename T2>
-// const std::basic_string<T2> convert_chars(const std::basic_string<T1>& x,
-// 					  RAPIDJSON_ENABLEIF((internal::IsSame<T1,T2>))) {
-//   return x;
-// }
-
-
 //! GenericUnit prefix.
 template<typename Encoding>
 class GenericUnitPrefix {
@@ -678,7 +678,9 @@ public:
   //! \param prefix Prefix that should be applied to the base unit.
   GenericUnit(const std::basic_string<Ch> str, const double& power=1.0) :
     names_(), abbrs_(), dim_(), factor_(1.0), offset_(0.0), power_(1.0), prefix_() {
-    RAPIDJSON_ASSERT(from_table(str));
+    bool flag = from_table(str);
+    RAPIDJSON_ASSERT(flag);
+    (void)flag;
     power_ = power; // Base units do not have powers
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
     (void)str;
@@ -893,8 +895,9 @@ private:
 template<typename Encoding>
 inline std::ostream & operator << (std::ostream& os, const GenericUnit<Encoding> &x) {
   RAPIDJSON_ASSERT(x.abbrs_.size() > 0);
-  os << x.prefix_
-     << convert_chars<Encoding,UTF8<char> >(x.abbrs_[0]);
+  os << x.prefix_;
+  if (x.abbrs_.size() > 0)
+    os << convert_chars<Encoding,UTF8<char> >(x.abbrs_[0]);
   if (x.has_power()) os << "**" << x.power_;
   return os;
 }
@@ -955,7 +958,7 @@ public:
   //! \param verbose If true, verbose information is displayed when
   //!   parsing the units string.
   static GenericUnits parse_units(const Ch* str, const size_t len,
-			   const bool verbose=false);  // Forward declaration
+				  const bool verbose=false);  // Forward declaration
   //! \brief Add a unit to the unit set from a string.
   //! \param str Unit string.
   void add_unit(const std::basic_string<Ch> str) {
@@ -1102,9 +1105,14 @@ private:
 template<typename Encoding>
 inline std::ostream & operator << (std::ostream &os, const GenericUnits<Encoding> &x) {
     size_t i = 0;
+    size_t N = x.units_.size();
     for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = x.units_.begin(); it != x.units_.end(); it++, i++) {
       if (i != 0) os << "*";
-      os << "(" << *it << ")";
+      if ((N > 1) && it->has_power())
+	os << "(";
+      os << *it;
+      if ((N > 1) && it->has_power())
+	os << ")";
     }
     return os;
 }
@@ -1615,8 +1623,8 @@ public:
 
 template<typename Encoding>
 GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encoding::Ch* str,
-					     const size_t len,
-					     const bool verbose) {
+							   const size_t len,
+							   const bool verbose) {
   if (verbose)
     std::cout << "parse_units(\"" << convert_chars<Encoding,UTF8<char> >(str) << "\")" << std::endl;
   size_t i = 0;
