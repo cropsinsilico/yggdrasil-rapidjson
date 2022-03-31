@@ -54,8 +54,8 @@ TEST(Value, Size) {
 
 #define YGGDRASIL_SCALAR_UNIT_TEST(type, value)				\
   {									\
-    units::Quantity<type, Value::EncodingType> q1(value, "g");		\
-    units::Quantity<type, Value::EncodingType> q2(1000000 * value, "ug"); \
+    units::GenericQuantity<type, Value::EncodingType> q1(value, "g");	\
+    units::GenericQuantity<type, Value::EncodingType> q2(1000000 * value, "ug"); \
     EXPECT_TRUE(q1.equivalent_to(q2));					\
     Value zq1(value, "g");						\
     Value zq2(q2);							\
@@ -80,8 +80,8 @@ TEST(Value, Size) {
   {									\
     type value1[] = {0 * value, value, 2 * value, 3 * value};		\
     type value2[] = {0 * value, 1000000 * value, 2000000 * value, 3000000 * value}; \
-    units::QuantityArray<type, Value::EncodingType> q1(value1, "g");	\
-    units::QuantityArray<type, Value::EncodingType> q2(value2, "ug");	\
+    units::GenericQuantityArray<type, Value::EncodingType> q1(value1, "g"); \
+    units::GenericQuantityArray<type, Value::EncodingType> q2(value2, "ug"); \
     EXPECT_TRUE(q1.equivalent_to(q2));					\
     Value zq1(value1, "g");						\
     Value zq2(q2);							\
@@ -117,8 +117,8 @@ TEST(Value, Size) {
 			 {3000000 * value, 4000000 * value, 5000000 * value}}; \
     SizeType shape1[] = {2u, 3u};					\
     SizeType shape2[] = {2u, 3u};					\
-    units::QuantityArray<type, Value::EncodingType> q1(value1, "g");	\
-    units::QuantityArray<type, Value::EncodingType> q2(value2, "ug");	\
+    units::GenericQuantityArray<type, Value::EncodingType> q1(value1, "g"); \
+    units::GenericQuantityArray<type, Value::EncodingType> q2(value2, "ug"); \
     EXPECT_TRUE(q1.equivalent_to(q2));					\
     Value zq1(value1, "g");						\
     Value zq2(q2);							\
@@ -1326,8 +1326,8 @@ TEST(Value, ScalarComplex) {
   EXPECT_FALSE(x.IsObject());
   EXPECT_FALSE(x.IsArray());
 
-  units::Quantity<std::complex<double>,Value::EncodingType> q1(std::complex<double>(2.2, 3.4), "g");
-  units::Quantity<std::complex<double>,Value::EncodingType> q2(std::complex<double>(2.2e6, 3.4e6), "ug");
+  units::GenericQuantity<std::complex<double>,Value::EncodingType> q1(std::complex<double>(2.2, 3.4), "g");
+  units::GenericQuantity<std::complex<double>,Value::EncodingType> q2(std::complex<double>(2.2e6, 3.4e6), "ug");
   EXPECT_TRUE(q1.equivalent_to(q2));
   Value zq1(std::complex<double>(2.2, 3.4), "g");
   Value zq2(q2);

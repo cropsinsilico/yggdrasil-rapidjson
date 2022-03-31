@@ -572,6 +572,7 @@ class GenericNormalizedDocument {
   typedef typename ValueType::MemberIterator MemberIterator;
   typedef typename ValueType::ConstMemberIterator ConstMemberIterator;
   friend class TemporaryMemory<GenericNormalizedDocument<SchemaDocumentType, StackAllocator> >;
+  typedef units::GenericUnits<EncodingType> UnitsType;
 public:
   GenericNormalizedDocument(AllocatorType* allocator = 0,
 			    StackAllocator* stackAllocator = 0,
@@ -877,12 +878,12 @@ public:
       // Units
       if (unitsV != valueSchema.MemberEnd()) {
 	if (schema.units_.IsString() && (unitsV->value != schema.units_.IsString())) {
-	  units::Units<EncodingType> src_units(unitsV->value.GetString(),
-					       unitsV->value.GetStringLength(),
-					       false);
-	  units::Units<EncodingType> dst_units(schema.units_.GetString(),
-					       schema.units_.GetStringLength(),
-					       false);
+	  UnitsType src_units(unitsV->value.GetString(),
+			      unitsV->value.GetStringLength(),
+			      false);
+	  UnitsType dst_units(schema.units_.GetString(),
+			      schema.units_.GetStringLength(),
+			      false);
 	  if ((src_units != dst_units) && (src_units.is_compatible(dst_units))) {
 	    modified_ = true;
 	    changeUnits((YggSubType)subtype, precision,
@@ -1363,6 +1364,7 @@ public:
     friend class GenericSchemaDocument<ValueType, AllocatorType>;
 #ifdef RAPIDJSON_YGGDRASIL
     friend class GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR>;
+    typedef units::GenericUnits<EncodingType> UnitsType;
 #endif // RAPIDJSON_YGGDRASIL
 
     Schema(SchemaDocumentType* schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document, AllocatorType* allocator, const UriType& id = UriType()
@@ -3078,12 +3080,12 @@ protected:
   bool CheckUnits(Context& context, const ValueType* actual, const bool&) const {
     if (units_.IsNull())
       return true;
-    units::Units<EncodingType> expected_units(units_.GetString(),
-					      units_.GetStringLength(),
-					      false);
-    units::Units<EncodingType> actual_units(actual->GetString(),
-					    actual->GetStringLength(),
-					    false);
+    UnitsType expected_units(units_.GetString(),
+			     units_.GetStringLength(),
+			     false);
+    UnitsType actual_units(actual->GetString(),
+			   actual->GetStringLength(),
+			   false);
     if (!(actual_units.is_compatible(expected_units))) {
       context.error_handler.IncorrectUnits(*actual, units_);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValdiateErrorUnits);
