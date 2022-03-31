@@ -2325,13 +2325,13 @@ YGGDRASIL_CREATE_QUANTITY_ARRAY(QuantityArray, UTF8<char>, );
 		   const SizeType nbytes,
 		   SizeType nelements=0) {
     if (nelements == 0)
-      nelements = nbytes / sizeof(T);
+      nelements = nbytes / (SizeType)sizeof(T);
     else
-      RAPIDJSON_ASSERT(nelements == (nbytes / sizeof(T)));
-    RAPIDJSON_ASSERT(!(nbytes % sizeof(T)));
+      RAPIDJSON_ASSERT(nelements == (nbytes / (SizeType)sizeof(T)));
+    RAPIDJSON_ASSERT(!(nbytes % (SizeType)sizeof(T)));
     GenericQuantityArray<T, Encoding> qa((T*)src_bytes, nelements, src_units);
     qa.convert_to(dst_units);
-    memcpy(dst_bytes, qa.value(), nelements * sizeof(T));
+    memcpy(dst_bytes, qa.value(), (size_t)nelements * sizeof(T));
   }
 
 
