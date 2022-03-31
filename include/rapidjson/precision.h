@@ -94,8 +94,7 @@ RAPIDJSON_NAMESPACE_BEGIN
   CASE_FLOAT_SUBTYPE(precision, function, param, args, error);	        \
   CASE_COMPLEX_SUBTYPE(precision, function, param, args, error) 	\
   default: { error; }							\
-  }									\
-  error
+  }
 
 
 template <typename T1, typename T2>
