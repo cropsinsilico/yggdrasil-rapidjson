@@ -41,11 +41,19 @@ RAPIDJSON_NAMESPACE_BEGIN
 namespace units {
 
   template<typename T>
-  inline bool compare_values(const T& a, const T& b) {
-    return compare_values(static_cast<double>(a), static_cast<double>(b));
+  inline bool values_eq(const T& a, const T& b) {
+    return values_eq(static_cast<double>(a), static_cast<double>(b));
+  }
+  template<typename T>
+  inline bool values_lt(const T& a, const T& b) {
+    return values_lt(static_cast<double>(a), static_cast<double>(b));
+  }
+  template<typename T>
+  inline bool values_gt(const T& a, const T& b) {
+    return values_gt(static_cast<double>(a), static_cast<double>(b));
   }
   template<>
-  inline bool compare_values(const double &a, const double &b) {    
+  inline bool values_eq(const double &a, const double &b) {    
     // double abs_precision = 1.0e-13; // std::numeric_limits<double>::epsilon();
     double abs_precision = std::numeric_limits<double>::epsilon();
     double rel_precision = std::numeric_limits<double>::epsilon();
@@ -54,24 +62,37 @@ namespace units {
     return (std::abs(((a - b)*(b - a)) / (a * b)) <= rel_precision);
   }
   template<>
-  inline bool compare_values(const std::complex<float>& a,
-			     const std::complex<float>& b) {
-    if (!compare_values(a.real(), b.real())) return false;
-    return compare_values(a.imag(), b.imag());
-  }
+  inline bool values_lt(const double &a, const double &b) { return (a < b); }
   template<>
-  inline bool compare_values(const std::complex<double>& a,
-			     const std::complex<double>& b) {
-    if (!compare_values(a.real(), b.real())) return false;
-    return compare_values(a.imag(), b.imag());
+  inline bool values_gt(const double &a, const double &b) { return (a > b); }
+  template<typename T>
+  inline bool values_eq_complex(const std::complex<T>& a,
+				const std::complex<T>& b) {
+    if (!values_eq(a.real(), b.real())) return false;
+    return values_eq(a.imag(), b.imag());
   }
+  template<typename T>
+  inline bool values_lt_complex(const std::complex<T>& a,
+				const std::complex<T>& b)
+  { return values_lt(std::abs(a), std::abs(b)); }
+  template<typename T>
+  inline bool values_gt_complex(const std::complex<T>& a,
+				const std::complex<T>& b)
+  { return values_gt(std::abs(a), std::abs(b)); }
+#define COMPLEX_COMPARE(op, type)				\
+  template<>							\
+  inline bool values_ ## op(const std::complex<type>& a,	\
+			    const std::complex<type>& b)	\
+  { return values_ ## op ## _complex<type>(a, b); }
+#define COMPLEX_COMPARE_ALL(type)		\
+  COMPLEX_COMPARE(eq, type)			\
+  COMPLEX_COMPARE(lt, type)			\
+  COMPLEX_COMPARE(gt, type)
+
+  COMPLEX_COMPARE_ALL(float)
+  COMPLEX_COMPARE_ALL(double)
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-  template<>
-  inline bool compare_values(const std::complex<long double>& a,
-			     const std::complex<long double>& b) {
-    if (!compare_values(a.real(), b.real())) return false;
-    return compare_values(a.imag(), b.imag());
-  }
+  COMPLEX_COMPARE_ALL(long double)
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 
   namespace constants {
@@ -256,8 +277,7 @@ namespace units {
     va_start(args, first);
     while (true) {
       Ch* i = va_arg(args, Ch*);
-      if (!i) break;
-      if (i[0] == '\0') break;
+      if (i == nullptr) break;
       out.push_back(i);
     }
     va_end(args);
@@ -401,22 +421,24 @@ public:
   }
   bool operator==(const Dimension& x) const {
     for (size_t i = 0; i < 8; i++)
-      if (!(compare_values(powers_.values[i], x.powers_.values[i])))
+      if (!(values_eq(powers_.values[i], x.powers_.values[i])))
 	return false;
     return true;
   }
   bool operator!=(const Dimension& x) const { return (!(*this == x)); }
-  bool is_irreducible() const {
+  int ndim() const {
     int ndim = 0;
     for (size_t i = 0; i < 8; i++)
-      if (!(compare_values(powers_.values[i], 0.0)))
+      if (!(values_eq(powers_.values[i], 0.0)))
 	ndim++;
-    return (ndim == 1);
+    return ndim;
   }
+  bool is_irreducible() const { return (ndim() == 1); }
+  bool is_dimensionless() const { return (ndim() == 0); }
   std::vector<Dimension> reduced() const {
     std::vector<Dimension> out;
     for (size_t i = 0; i < 8; i++)
-      if (!(compare_values(powers_.values[i], 0.0)))
+      if (!(values_eq(powers_.values[i], 0.0)))
 	out.push_back(Dimension((BaseDimension)i, powers_.values[i]));
     return out;
   }
@@ -545,7 +567,7 @@ public:
   //! \return true if the unit prefixes are identical.
   bool operator==(const GenericUnitPrefix& x) const {
     if (abbr != x.abbr) return false;
-    return compare_values(factor, x.factor);
+    return values_eq(factor, x.factor);
   }
   //! \brief Determine if this unit prefix is not identical to another.
   //! \param x Unit prefix for comparison.
@@ -636,6 +658,8 @@ public:
     names_(x.names_), abbrs_(x.abbrs_), dim_(x.dim_), factor_(x.factor_), offset_(x.offset_), power_(x.power_), prefix_() {
     prefix_ = prefix;
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
+    if ((names_.size() > 0) && (names_[0].size() == 0))
+      power_ = 1.0;
   }
   //! \brief Construct from a single name/abbreviation.
   //! \param name Name.
@@ -670,7 +694,11 @@ public:
 	      const double power=1.0,
 	      const GenericUnitPrefix<Encoding>& prefix=GenericUnitPrefix<Encoding>(),
 	      const bool& no_plural=false) :
-    names_(names), abbrs_(abbrs), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) { if (!no_plural) _add_plural(); }
+    names_(names), abbrs_(abbrs), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
+    if (!no_plural) _add_plural();
+    if ((names_.size() > 0) && (names_[0].size() == 0))
+      power_ = 1.0;
+  }
   //! \brief Construct a unit by looking up a string in the tables of
   //!   recognized units.
   //! \param str Unit string.
@@ -684,6 +712,8 @@ public:
     power_ = power; // Base units do not have powers
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
     (void)str;
+    if ((names_.size() > 0) && (names_[0].size() == 0))
+      power_ = 1.0;
   }
   //! \brief Set instance attributes based on an entry from one of the lookup
   //!   tables.
@@ -715,6 +745,9 @@ public:
   //! \brief Get the dimensions of the unit, including the power.
   //! \return The dimensions of the unit.
   Dimension dimension() const { return dim_.pow(power_); }
+  //! \brief Determine if the unit is dimensionless.
+  //! \return true if the unit is dimensionless, false otherwise.
+  bool is_dimensionless() const { return dim_.is_dimensionless(); }
   //! \brief Check if this unit is equal to another.
   //! \param x Unit to check against.
   //! \return true if this unit is equal to x.
@@ -722,9 +755,9 @@ public:
     if (names_ != x.names_) return false;
     if (abbrs_ != x.abbrs_) return false;
     if (dim_ != x.dim_) return false;
-    if (!(compare_values(factor_, x.factor_))) return false;
-    if (!(compare_values(offset_, x.offset_))) return false;
-    if (!(compare_values(power_, x.power_))) return false;
+    if (!(values_eq(factor_, x.factor_))) return false;
+    if (!(values_eq(offset_, x.offset_))) return false;
+    if (!(values_eq(power_, x.power_))) return false;
     if (prefix_ != x.prefix_) return false;
     return true;
   }
@@ -748,8 +781,11 @@ public:
   //! \brief Perform power operation in place.
   //! \param x Power to raise this unit to.
   void inplace_pow(const double x) {
-    RAPIDJSON_ASSERT(!(has_offset() && (!(compare_values(x, 1.0)))));
-    power_ = power_ * x;
+    RAPIDJSON_ASSERT(!(has_offset() && (!(values_eq(x, 1.0)))));
+    if ((names_.size() > 0) && (names_[0].size() == 0))
+      power_ = 1.0;
+    else
+      power_ = power_ * x;
   }
   //! \brief Raise this unit to a power.
   //! \param x Power to raise this unit to.
@@ -821,10 +857,10 @@ public:
   }
   //! \brief Check if this unit has a non-zero offset.
   //! \return true if this unit has a non-zero offset.
-  bool has_offset() const { return (!(compare_values(offset_, 0.0))); }
+  bool has_offset() const { return (!(values_eq(offset_, 0.0))); }
   //! \brief Check if this unit has a power other than 1.
   //! \return true if this unit has a power other than 1.
-  bool has_power() const { return (!(compare_values(power_, 1.0))); }
+  bool has_power() const { return (!(values_eq(power_, 1.0))); }
   //! \brief Check if this unit is irreducible or a product of more than
   //!   one irreducible unit.
   //! \return true if the unit is irreducible.
@@ -975,6 +1011,10 @@ public:
       units_.clear();
       return false;
     }
+    if ((units_.end() - 1)->names_[0].size() == 0) {
+      if (units_.size() > 1)
+	units_.pop_back();
+    }
     return true;
   }
   //! \brief Display the units instance.
@@ -1002,6 +1042,14 @@ public:
     for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++)
       out = out * it->dimension();
     return out;
+  }
+  //! \brief Determine if the units are dimensionless.
+  //! \return true if the units are dimensionless, false otherwise.
+  bool is_dimensionless() const {
+    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++)
+      if (!it->is_dimensionless())
+	return false;
+    return true;
   }
   //! \brief Determine if another set of units are compatible and share the
   //!   same dimensions.
@@ -1274,6 +1322,7 @@ typedef GenericUnits<UTF8<char> > Units;
     PACK_UNIT("acre", "ac", dimensions::area, 4046.86),
     PACK_UNIT("are", "a", dimensions::area, 100.0),
     PACK_UNIT("hectare", "ha", dimensions::area, 10000.0),
+    PACK_UNIT(VSTR(""), VSTR("", "n/a"), dimensions::dimensionless, 1.0),
     (void*)nullptr
   );
 
@@ -1287,7 +1336,11 @@ bool GenericUnit<Encoding>::from_table(const std::basic_string<typename Encoding
   idx_beg = str.find_first_not_of(whitespace);
   idx_end = str.find_last_not_of(whitespace);
   RAPIDJSON_ASSERT(idx_end != std::string::npos);
-  std::basic_string<Ch> substr = str.substr(idx_beg, idx_end + 1);
+  std::basic_string<Ch> substr;
+  if (str.size() == 0)
+    substr = str;
+  else
+    substr = str.substr(idx_beg, idx_end + 1);
   std::vector<const GenericUnit<Encoding>*> possibilities;
   const std::vector<GenericUnit<Encoding> >* prefix_units = _prefixable_units.template get<GenericUnit<Encoding> >();
   for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = prefix_units->begin(); it != prefix_units->end(); it++) {
@@ -1686,6 +1739,18 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
 	word->finalize();
       break;
     }
+    case 'n': {
+      // Special case of n/a
+      if (((i + 2) < len) && (str[i + 1] == '/') && (str[i + 2] == 'a')) {
+	parser::TokenBase<Encoding>* curr = token.current_token();
+	if ((curr->t == parser::kGroupToken) || curr->finalized) {
+	  token.append(str[i++]);
+	  token.append(str[i++]);
+	  token.append(str[i++]);
+	  break;
+	}
+      }
+    }
     default:
       token.append(c);
     }
@@ -1698,6 +1763,10 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
       break;
   }
   GenericUnits<Encoding> out = token.finalize();
+  if (len == 0) {
+    RAPIDJSON_ASSERT(!token.errorFlag);
+    token.errorFlag = (!out.add_unit(std::basic_string<Ch>()));
+  }
   if (token.errorFlag)
     out = GenericUnits<Encoding>();
   return out;
@@ -1714,6 +1783,9 @@ public:
   typedef GenericUnits<Encoding> UnitsType; //!< Units type.
   //! \brief Empty constructor.
   GenericQuantity() : value_(_initialize_value<T>()), units_() {}
+  //! \brief Copy constructor.
+  GenericQuantity(const GenericQuantity& rhs) :
+    value_(rhs.value_), units_(rhs.units_) {}
   //! \brief Create a quantity without units.
   //! \param value Scalar value.
   GenericQuantity(const T& value) :
@@ -1734,6 +1806,13 @@ public:
     os << "GenericQuantity(" << value_ << ", ";
     units_.display(os);
     os << ")";
+  }
+  //! \brief Get the quantity as a string.
+  //! \return Quantity string.
+  std::basic_string<Ch> str() const {
+    std::basic_stringstream<Ch> ss;
+    ss << *this;
+    return ss.str();
   }
 private:
   GenericQuantity raw_add(const GenericQuantity& x, double factor=1.0) const {
@@ -1762,12 +1841,36 @@ public:
   bool operator==(const GenericQuantity& x) const {
     if (units_ != x.units_)
       return false;
-    return compare_values(value_, x.value_);
+    return values_eq(value_, x.value_);
   }
   //! \brief Check if two quantities are not identical.
   //! \param x Quantity for comparison.
   //! \return true if the two quantities are not identical, false otherwise.
   bool operator!=(const GenericQuantity& x) const { return (!(*this==x)); }
+  //! \brief Less than comparison operator.
+  //! \param x Quantity for comparison.
+  //! \return true if less than, false otherwise.
+  bool operator<(const GenericQuantity& x) const {
+    if (units_ != x.units_)
+      return false;
+    return values_lt(value_, x.value_);
+  }
+  //! \brief Greater than comparison operator.
+  //! \param x Quantity for comparison.
+  //! \return true if greater than, false otherwise.
+  bool operator>(const GenericQuantity& x) const {
+    if (units_ != x.units_)
+      return false;
+    return values_gt(value_, x.value_);
+  }
+  //! \brief Less than or equal to comparison operator.
+  //! \param x Quantity for comparison.
+  //! \return true if less than or equal to, false otherwise.
+  bool operator<=(const GenericQuantity& x) const { return (!(*this > x)); }
+  //! \brief Greater than or equal to comparison operator.
+  //! \param x Quantity for comparison.
+  //! \return true if greater than or equal to, false otherwise.
+  bool operator>=(const GenericQuantity& x) const { return (!(*this < x)); }
   //! \brief Multiply by another quantity.
   //! \param x Quantity to multiply by.
   //! \return Result of multiplication.
@@ -1806,6 +1909,14 @@ public:
     if (units_ != x.units_)
       return (*this - x.as(units_));
     return raw_add(x, -1.0); }
+  //! \brief Explicity copy.
+  //! \return Copy.
+  GenericQuantity<T, Encoding>* copy() const {
+    return new GenericQuantity<T, Encoding>(*this);
+  }
+  //! \brief Explicity copy and cast to void pointer.
+  //! \return Copy.
+  void* copy_void() const { return (void*)copy(); }
   //! \brief Perform power operation in place.
   //! \param x Power to raise this quantity to.
   void inplace_pow(const double& x) {
@@ -1823,11 +1934,20 @@ public:
   //! \brief Get the dimensions of this quantity's units.
   //! \return The dimensions of the units.
   Dimension dimension() const { return units_.dimension(); }
+  //! \brief Determine if the quantity's units are dimensionless.
+  //! \return true if the units are dimensionless, false otherwise.
+  bool is_dimensionless() const { return units_.is_dimensionless(); }
   //! \brief Check if another quantity has compatible units with the same
   //!   dimensions.
   //! \param x Quantity for comparison.
   //! \return true if the units are compatible, false otherwise.
   bool is_compatible(const GenericQuantity& x) const {
+    return (dimension() == x.dimension());
+  }
+  //! \brief Check if a set of units is compatible.
+  //! \param x Units for comparison.
+  //! \return true if the units are compatible, false otherwise.
+  bool is_compatible(const GenericUnits<Encoding>& x) const {
     return (dimension() == x.dimension());
   }
   //! \brief Check if another quantity is equivalent to this one, allowing
@@ -2046,6 +2166,11 @@ public:
     _init(other.value_, other.shape_);
     return *this;
   }
+  //! \brief Explicity copy.
+  //! \return Copy.
+  GenericQuantityArray<T, Encoding>* copy() const {
+    return new GenericQuantityArray<T, Encoding>(*this);
+  }
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
   void display(std::ostream& os) const {
@@ -2054,6 +2179,13 @@ public:
     os << ", ";
     units_.display(os);
     os << ")";
+  }
+  //! \brief Get the quantity array as a string.
+  //! \return QuantityArray string.
+  std::basic_string<Ch> str() const {
+    std::basic_stringstream<Ch> ss;
+    ss << *this;
+    return ss.str();
   }
   //! \brief Get the total number of elements in the array.
   //! \return The number of elements.
@@ -2172,7 +2304,7 @@ public:
     if (units_ != x.units_) return false;
     if (!is_same_shape(x)) return false;
     for (SizeType i = 0; i < nelements(); i++)
-      if (!(compare_values(value_[i], x.value_[i]))) return false;
+      if (!(values_eq(value_[i], x.value_[i]))) return false;
     return true;
   }
   //! \brief Check if two quantities are not identical.
@@ -2230,11 +2362,20 @@ public:
   //! \brief Get the dimensions of this quantity's units.
   //! \return The dimensions of the units.
   Dimension dimension() const { return units_.dimension(); }
+  //! \brief Determine if the quantity's units are dimensionless.
+  //! \return true if the units are dimensionless, false otherwise.
+  bool is_dimensionless() const { return units_.is_dimensionless(); }
   //! \brief Check if another quantity has compatible units with the same
   //!   dimensions.
   //! \param x QuantityArray for comparison.
   //! \return true if the units are compatible, false otherwise.
   bool is_compatible(const GenericQuantityArray& x) const {
+    return (dimension() == x.dimension());
+  }
+  //! \brief Check if a set of units is compatible.
+  //! \param x Units for comparison.
+  //! \return true if the units are compatible, false otherwise.
+  bool is_compatible(const GenericUnits<Encoding>& x) const {
     return (dimension() == x.dimension());
   }
   //! \brief Check if another quantity is equivalent to this one, allowing
