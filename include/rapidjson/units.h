@@ -1800,6 +1800,14 @@ public:
   //! \param units Units instance.
   GenericQuantity(const T& value, const UnitsType& units) :
     value_(value), units_(units) {}
+  //! \brief Copy assignment.
+  //! \param other Quantity to copy.
+  //! \return Copy.
+  GenericQuantity<T, Encoding>& operator=(const GenericQuantity<T, Encoding>& rhs) {
+    value_ = rhs.value_;
+    units_ = rhs.units_;
+    return *this;
+  }
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
   void display(std::ostream& os) const {
@@ -1815,9 +1823,23 @@ public:
     return ss.str();
   }
 private:
-  GenericQuantity raw_add(const GenericQuantity& x, double factor=1.0) const {
+  template<typename T2>
+  GenericQuantity raw_add(const GenericQuantity<T2, Encoding>& x, double factor=1.0,
+			  RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
+					      YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) const {
     // Assumes units have already been matched
-    return GenericQuantity(value_ + (factor * x.value_), units_); }
+    if (factor < 0)
+      return GenericQuantity<T, Encoding>(value_ - castPrecision<T2, T>(x.value()), units_);
+    else
+      return GenericQuantity<T, Encoding>(value_ + castPrecision<T2, T>(x.value()), units_);
+  }
+  template<typename T2>
+  GenericQuantity raw_add(const GenericQuantity<T2, Encoding>& x, double factor=1.0,
+			  RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
+					      internal::NotExpr<YGGDRASIL_IS_COMPLEX_TYPE(T2)> >))) const {
+    // Assumes units have already been matched
+    return GenericQuantity<T, Encoding>(value_ + (factor * x.value()), units_);
+  }
   template<typename T1>
   static T1 _initialize_value(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
   { return (T1)(0); }
@@ -1874,39 +1896,43 @@ public:
   //! \brief Multiply by another quantity.
   //! \param x Quantity to multiply by.
   //! \return Result of multiplication.
-  GenericQuantity operator*(const GenericQuantity& x) const {
-    return GenericQuantity(value_ * x.value_, units_ * x.units_); }
+  template<typename T2>
+  GenericQuantity operator*(const GenericQuantity<T2, Encoding>& x) const {
+    return GenericQuantity<T, Encoding>(value_ * castPrecision<T2,T>(x.value()), units_ * x.units()); }
   //! \brief Divide by another quantity.
   //! \param x Quantity to divide by.
   //! \return Result of division.
-  GenericQuantity operator/(const GenericQuantity& x) const {
-    return GenericQuantity(value_ / x.value_, units_ / x.units_); }
+  template<typename T2>
+  GenericQuantity operator/(const GenericQuantity<T2, Encoding>& x) const {
+    return GenericQuantity<T, Encoding>(value_ / castPrecision<T2,T>(x.value()), units_ / x.units()); }
   //! \brief Multiply by a scalar.
   //! \tparam T2 Scalar type.
   //! \param x Scalar to multiply by.
   //! \return Result of multiplication.
   template<typename T2>
   GenericQuantity operator*(const T2& x) const {
-    return GenericQuantity(value_ * x, units_); }
+    return GenericQuantity<T, Encoding>(value_ * x, units_); }
   //! \brief Divide by a scalar.
   //! \tparam T2 Scalar type.
   //! \param x Scalar to divide by.
   //! \return Result of division.
   template<typename T2>
   GenericQuantity operator/(const T2& x) const {
-    return GenericQuantity(value_ / x, units_); }
+    return GenericQuantity<T, Encoding>(value_ / x, units_); }
   //! \brief Add a quantity with compatible units.
   //! \param x Quantity to add.
   //! \return Result of addition.
-  GenericQuantity operator+(const GenericQuantity& x) const {
-    if (units_ != x.units_)
+  template<typename T2>
+  GenericQuantity operator+(const GenericQuantity<T2, Encoding>& x) const {
+    if (units_ != x.units())
       return (*this + x.as(units_));
     return raw_add(x); }
   //! \brief Subtract a quantity with compatible units.
   //! \param x Quantity to subtract.
   //! \return Result of subtraction.
-  GenericQuantity operator-(const GenericQuantity& x) const {
-    if (units_ != x.units_)
+  template<typename T2>
+  GenericQuantity operator-(const GenericQuantity<T2, Encoding>& x) const {
+    if (units_ != x.units())
       return (*this - x.as(units_));
     return raw_add(x, -1.0); }
   //! \brief Explicity copy.
@@ -1941,7 +1967,8 @@ public:
   //!   dimensions.
   //! \param x Quantity for comparison.
   //! \return true if the units are compatible, false otherwise.
-  bool is_compatible(const GenericQuantity& x) const {
+  template<typename T2>
+  bool is_compatible(const GenericQuantity<T2, Encoding>& x) const {
     return (dimension() == x.dimension());
   }
   //! \brief Check if a set of units is compatible.
