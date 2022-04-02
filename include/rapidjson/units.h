@@ -40,16 +40,16 @@ RAPIDJSON_NAMESPACE_BEGIN
 
 namespace units {
 
-  template<typename T>
-  inline bool values_eq(const T& a, const T& b) {
+  template<typename Ta, typename Tb>
+  inline bool values_eq(const Ta& a, const Tb& b) {
     return values_eq(static_cast<double>(a), static_cast<double>(b));
   }
-  template<typename T>
-  inline bool values_lt(const T& a, const T& b) {
+  template<typename Ta, typename Tb>
+  inline bool values_lt(const Ta& a, const Tb& b) {
     return values_lt(static_cast<double>(a), static_cast<double>(b));
   }
-  template<typename T>
-  inline bool values_gt(const T& a, const T& b) {
+  template<typename Ta, typename Tb>
+  inline bool values_gt(const Ta& a, const Tb& b) {
     return values_gt(static_cast<double>(a), static_cast<double>(b));
   }
   template<>
@@ -65,29 +65,39 @@ namespace units {
   inline bool values_lt(const double &a, const double &b) { return (a < b); }
   template<>
   inline bool values_gt(const double &a, const double &b) { return (a > b); }
-  template<typename T>
-  inline bool values_eq_complex(const std::complex<T>& a,
-				const std::complex<T>& b) {
+  template<typename Ta, typename Tb>
+  inline bool values_eq_complex(const std::complex<Ta>& a,
+				const std::complex<Tb>& b) {
     if (!values_eq(a.real(), b.real())) return false;
     return values_eq(a.imag(), b.imag());
   }
-  template<typename T>
-  inline bool values_lt_complex(const std::complex<T>& a,
-				const std::complex<T>& b)
+  template<typename Ta, typename Tb>
+  inline bool values_lt_complex(const std::complex<Ta>& a,
+				const std::complex<Tb>& b)
   { return values_lt(std::abs(a), std::abs(b)); }
-  template<typename T>
-  inline bool values_gt_complex(const std::complex<T>& a,
-				const std::complex<T>& b)
+  template<typename Ta, typename Tb>
+  inline bool values_gt_complex(const std::complex<Ta>& a,
+				const std::complex<Tb>& b)
   { return values_gt(std::abs(a), std::abs(b)); }
-#define COMPLEX_COMPARE(op, type)				\
+#define COMPLEX_COMPARE(op, type1, type2)			\
   template<>							\
-  inline bool values_ ## op(const std::complex<type>& a,	\
-			    const std::complex<type>& b)	\
-  { return values_ ## op ## _complex<type>(a, b); }
-#define COMPLEX_COMPARE_ALL(type)		\
-  COMPLEX_COMPARE(eq, type)			\
-  COMPLEX_COMPARE(lt, type)			\
-  COMPLEX_COMPARE(gt, type)
+  inline bool values_ ## op(const std::complex<type1>& a,	\
+			    const std::complex<type2>& b)	\
+  { return values_ ## op ## _complex<type1, type2>(a, b); }
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#define COMPLEX_COMPARE_ITER(op, type)		\
+  COMPLEX_COMPARE(op, type, float)		\
+  COMPLEX_COMPARE(op, type, double)		\
+  COMPLEX_COMPARE(op, type, long double)
+#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#define COMPLEX_COMPARE_ITER(op, type)		\
+  COMPLEX_COMPARE(op, type, float)		\
+  COMPLEX_COMPARE(op, type, double)
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#define COMPLEX_COMPARE_ALL(type)			\
+  COMPLEX_COMPARE_ITER(eq, type)			\
+  COMPLEX_COMPARE_ITER(lt, type)			\
+  COMPLEX_COMPARE_ITER(gt, type)
 
   COMPLEX_COMPARE_ALL(float)
   COMPLEX_COMPARE_ALL(double)
@@ -1750,6 +1760,8 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
 	  break;
 	}
       }
+      // fall through to default
+      RAPIDJSON_DELIBERATE_FALLTHROUGH;
     }
     default:
       token.append(c);
@@ -1860,39 +1872,45 @@ public:
   //!   identical, not just compatible.
   //! \param x Quantity for comparison.
   //! \return true if the two quantities are identical, false otherwise.
-  bool operator==(const GenericQuantity& x) const {
-    if (units_ != x.units_)
+  template<typename T2>
+  bool operator==(const GenericQuantity<T2, Encoding>& x) const {
+    if (units_ != x.units())
       return false;
-    return values_eq(value_, x.value_);
+    return values_eq(value_, x.value());
   }
   //! \brief Check if two quantities are not identical.
   //! \param x Quantity for comparison.
   //! \return true if the two quantities are not identical, false otherwise.
-  bool operator!=(const GenericQuantity& x) const { return (!(*this==x)); }
+  template<typename T2>
+  bool operator!=(const GenericQuantity<T2, Encoding>& x) const { return (!(*this==x)); }
   //! \brief Less than comparison operator.
   //! \param x Quantity for comparison.
   //! \return true if less than, false otherwise.
-  bool operator<(const GenericQuantity& x) const {
-    if (units_ != x.units_)
+  template<typename T2>
+  bool operator<(const GenericQuantity<T2, Encoding>& x) const {
+    if (units_ != x.units())
       return false;
-    return values_lt(value_, x.value_);
+    return values_lt(value_, x.value());
   }
   //! \brief Greater than comparison operator.
   //! \param x Quantity for comparison.
   //! \return true if greater than, false otherwise.
-  bool operator>(const GenericQuantity& x) const {
-    if (units_ != x.units_)
+  template<typename T2>
+  bool operator>(const GenericQuantity<T2, Encoding>& x) const {
+    if (units_ != x.units())
       return false;
-    return values_gt(value_, x.value_);
+    return values_gt(value_, x.value());
   }
   //! \brief Less than or equal to comparison operator.
   //! \param x Quantity for comparison.
   //! \return true if less than or equal to, false otherwise.
-  bool operator<=(const GenericQuantity& x) const { return (!(*this > x)); }
+  template<typename T2>
+  bool operator<=(const GenericQuantity<T2, Encoding>& x) const { return (!(*this > x)); }
   //! \brief Greater than or equal to comparison operator.
   //! \param x Quantity for comparison.
   //! \return true if greater than or equal to, false otherwise.
-  bool operator>=(const GenericQuantity& x) const { return (!(*this < x)); }
+  template<typename T2>
+  bool operator>=(const GenericQuantity<T2, Encoding>& x) const { return (!(*this < x)); }
   //! \brief Multiply by another quantity.
   //! \param x Quantity to multiply by.
   //! \return Result of multiplication.
@@ -1981,7 +1999,8 @@ public:
   //!    for the possibility that it has different, but compatible, units.
   //! \param x Quantity for comparison.
   //! \return true if the two quantities are equivalent, false otherwise.
-  bool equivalent_to(const GenericQuantity& x) {
+  template<typename T2>
+  bool equivalent_to(const GenericQuantity<T2, Encoding>& x) {
     if (!(is_compatible(x)))
       return false;
     return (*this==x.as(units_));
