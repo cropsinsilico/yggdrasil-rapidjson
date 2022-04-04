@@ -26,7 +26,12 @@
 #include <typeindex>
 #include <map>
 #include <vector>
+#include <set>
 #include <iostream>
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
+#include <cmath>
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -40,6 +45,15 @@ RAPIDJSON_NAMESPACE_BEGIN
 
 namespace units {
 
+  template<typename T>
+  inline T value_floor(const T& x) {
+    return static_cast<T>(std::floor(static_cast<double>(x)));
+  }
+  template<typename T>
+  inline std::complex<T> value_floor(const std::complex<T>& x) {
+    return std::complex<T>(value_floor(x.real()), value_floor(x.imag()));
+  }
+  
   template<typename Ta, typename Tb>
   inline bool values_eq(const Ta& a, const Tb& b) {
     return values_eq(static_cast<double>(a), static_cast<double>(b));
@@ -668,8 +682,10 @@ public:
     names_(x.names_), abbrs_(x.abbrs_), dim_(x.dim_), factor_(x.factor_), offset_(x.offset_), power_(x.power_), prefix_() {
     prefix_ = prefix;
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
-    if ((names_.size() > 0) && (names_[0].size() == 0))
+    if (is_null()) {
+      factor_ = std::pow(factor_, power_);
       power_ = 1.0;
+    }
   }
   //! \brief Construct from a single name/abbreviation.
   //! \param name Name.
@@ -706,8 +722,10 @@ public:
 	      const bool& no_plural=false) :
     names_(names), abbrs_(abbrs), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
     if (!no_plural) _add_plural();
-    if ((names_.size() > 0) && (names_[0].size() == 0))
+    if (is_null()) {
+      factor_ = std::pow(factor_, power_);
       power_ = 1.0;
+    }
   }
   //! \brief Construct a unit by looking up a string in the tables of
   //!   recognized units.
@@ -722,8 +740,10 @@ public:
     power_ = power; // Base units do not have powers
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
     (void)str;
-    if ((names_.size() > 0) && (names_[0].size() == 0))
+    if (is_null()) {
+      factor_ = std::pow(factor_, power_);
       power_ = 1.0;
+    }
   }
   //! \brief Set instance attributes based on an entry from one of the lookup
   //!   tables.
@@ -790,17 +810,19 @@ public:
   }
   //! \brief Perform power operation in place.
   //! \param x Power to raise this unit to.
-  void inplace_pow(const double x) {
+  template<typename T>
+  void inplace_pow(const T x) {
     RAPIDJSON_ASSERT(!(has_offset() && (!(values_eq(x, 1.0)))));
-    if ((names_.size() > 0) && (names_[0].size() == 0))
-      power_ = 1.0;
+    if (is_null())
+      factor_ = std::pow(factor_, x);
     else
       power_ = power_ * x;
   }
   //! \brief Raise this unit to a power.
   //! \param x Power to raise this unit to.
   //! \return Resulting unit.
-  GenericUnit pow(const double x) const {
+  template<typename T>
+  GenericUnit pow(const T x) const {
     GenericUnit new_unit(*this);
     new_unit.inplace_pow(x);
     return new_unit;
@@ -871,6 +893,9 @@ public:
   //! \brief Check if this unit has a power other than 1.
   //! \return true if this unit has a power other than 1.
   bool has_power() const { return (!(values_eq(power_, 1.0))); }
+  //! \brief Check if this unit has a factor other than 1.
+  //! \return true if this unit has a factor other than 1.
+  bool has_factor() const { return (!(values_eq(factor_, 1.0))); }
   //! \brief Check if this unit is irreducible or a product of more than
   //!   one irreducible unit.
   //! \return true if the unit is irreducible.
@@ -878,6 +903,10 @@ public:
   //! \brief Check if the unit definition is empty.
   //! \return true if there arn't any units, false otherwise.
   bool is_empty() const { return (names_.size() == 0); }
+  //! \brief Check if the unit is the dimensionless null unit.
+  //! \return true if the unit is null, false otherwise.
+  bool is_null() const { return ((names_.size() > 0) && (names_[0].size() == 0)); }
+  
   //! \brief Get the conversion factors necessary to convert from this
   //!   unit to another.
   //! \param x Unit to convert to.
@@ -943,11 +972,16 @@ private:
 };
 template<typename Encoding>
 inline std::ostream & operator << (std::ostream& os, const GenericUnit<Encoding> &x) {
+  bool has_factor = x.has_factor();
+  bool has_power = x.has_power();
   RAPIDJSON_ASSERT(x.abbrs_.size() > 0);
+  if (has_factor && (x.abbrs_.size() > 0) && (x.abbrs_[0].size() == 0))
+    os << x.factor_;
   os << x.prefix_;
   if (x.abbrs_.size() > 0)
     os << convert_chars<Encoding,UTF8<char> >(x.abbrs_[0]);
-  if (x.has_power()) os << "**" << x.power_;
+  if (has_power)
+    os << "**" << x.power_;
   return os;
 }
 
@@ -1021,10 +1055,8 @@ public:
       units_.clear();
       return false;
     }
-    if ((units_.end() - 1)->names_[0].size() == 0) {
-      if (units_.size() > 1)
-	units_.pop_back();
-    }
+    if (((units_.end() - 1)->is_null()) && (units_.size() > 1))
+      units_.pop_back();
     return true;
   }
   //! \brief Display the units instance.
@@ -1083,53 +1115,128 @@ public:
   //! \param x Units for comparison.
   //! \return true if the units are not identical.
   bool operator!=(const GenericUnits& x) const { return (!(*this == x)); }
-  //! \brief Perform multiplication with another set of units.
+  //! \brief Perform multiplication with another set of units in place.
   //! \param x Units for multiplication.
   //! \return Multiplied units.
-  GenericUnits operator*(const GenericUnits& x) const {
+  GenericUnits& operator*=(const GenericUnits& x) {
     RAPIDJSON_ASSERT(!(x.has_offset() || has_offset()));
-    std::vector<GenericUnit<Encoding> > new_units(units_);
+    double factor = 1.0;
+    size_t old_size = units_.size();
+    std::set<size_t> idx_remove;
     for (typename std::vector<GenericUnit<Encoding> >::const_iterator it2 = x.units_.begin(); it2 != x.units_.end(); it2++) {
       size_t i = 0;
-      for (i = 0; i < units_.size(); i++)
-	if (it2->is_same_base(new_units[i]))
+      for (i = 0; i < old_size; i++)
+	if (it2->is_same_base(units_[i]))
 	  break;
-      if (i < units_.size()) {
+      if (i < old_size) {
 	// (a1*ap*x)**a2 * (b1*bp*x)**b2
 	//     = (a1**a2)*(b1**b2)*(ap**a2)*(bp**b2)*(x**(a2+b2))
 	//     = (a1**a2)*(b1**b2)*(ap**-b2)*(bp**b2)*((ap*x)**(a2+b2))
-	double new_power = new_units[i].power_ + it2->power_;
-	new_units[i].factor_ = std::pow(std::pow(new_units[i].factor_,
-						 new_units[i].power_) *
-					std::pow(it2->factor_ * it2->prefix_.factor / new_units[i].prefix_.factor,
-						 it2->power_),
-					1.0 / new_power);
-	new_units[i].power_ = new_power;
+	//     = (a1**-b2)*(b1**b2)*(ap**-b2)*(bp**b2)*((a1*ap*x)**(a2+b2))
+	//     = (a1*ap)**-b2 * (b1*bp)**b2 * (a1*ap*x)**(a2+b2)
+	if (it2->is_null()) {
+	  factor *= std::pow(it2->factor_, it2->power_);
+	} else {
+	  double new_power = units_[i].power_ + it2->power_;
+	  factor *= std::pow((it2->factor_ * it2->prefix_.factor) /
+			     (units_[i].factor_ * units_[i].prefix_.factor),
+			     it2->power_);
+	  if (values_eq(new_power, 0))
+	    idx_remove.insert(i);
+	//   double factor = std::pow(units_[i].factor_ * units_[i].prefix_.factor, units_[i].power_) * std::pow(it2->factor_ * it2->prefix_.factor, it2->power_);
+	//   std::basic_string<Ch> empty;
+	//   units_[i] = GenericUnit<Encoding>(empty);
+	//   units_[i].factor_ = factor;
+	//   new_power = 1.0;
+	// } else {
+	//   units_[i].factor_ = std::pow(std::pow(units_[i].factor_,
+	// 					units_[i].power_) *
+	// 			       std::pow(it2->factor_ * it2->prefix_.factor / units_[i].prefix_.factor,
+	// 					it2->power_),
+	// 			       1.0 / new_power);
+	// }
+	  units_[i].power_ = new_power;
+	}
       } else {
 #if RAPIDJSON_HAS_CXX11
-	new_units.emplace_back(*it2);
+	units_.emplace_back(*it2);
 #else // RAPIDJSON_HAS_CXX11
-	new_units.push_back(GenericUnit<Encoding>(*it2));
+	units_.push_back(GenericUnit<Encoding>(*it2));
 #endif // RAPIDJSON_HAS_CXX11
       }
     }
-    return GenericUnits(new_units);
+    for (typename std::set<size_t>::reverse_iterator it = idx_remove.rbegin(); it != idx_remove.rend(); it++)
+      units_.erase(units_.begin() + (int)(*it));
+    if (!values_eq(factor, 1.0)) {
+      typename std::vector<GenericUnit<Encoding> >::iterator nodim = units_.end();
+      for (typename std::vector<GenericUnit<Encoding> >::iterator it = units_.begin(); it != units_.end(); it++) {
+	if (it->is_null()) {
+	  nodim = it;
+	  break;
+	}
+      }
+      if (nodim == units_.end()) {
+	std::basic_string<Ch> empty;
+#if RAPIDJSON_HAS_CXX11
+	units_.emplace_back(empty);
+#else // RAPIDJSON_HAS_CXX11
+	units_.push_back(GenericUnit<Encoding>(empty));
+#endif // RAPIDJSON_HAS_CXX11
+	nodim = (units_.end() - 1);
+      }
+      RAPIDJSON_ASSERT(values_eq(nodim->power_, 1.0));
+      nodim->factor_ *= factor;
+      if (!nodim->has_factor() && (units_.size() > 1))
+	units_.erase(nodim);
+    }
+    return *this;
+  }
+  double pull_factor() {
+    double factor = 1.0;
+    std::vector<size_t> idx_remove;
+    size_t i = 0;
+    for (typename std::vector<GenericUnit<Encoding> >::iterator it = units_.begin(); it != units_.end(); it++, i++) {
+      factor *= std::pow(it->factor_, it->power_);
+      it->factor_ = 1.0;
+      if (it->is_null() && (units_.size() > 1))
+	idx_remove.push_back(i);
+    }
+    for (typename std::vector<size_t>::reverse_iterator it = idx_remove.rbegin(); it != idx_remove.rend(); it++)
+      units_.erase(units_.begin() + (int)(*it));
+    return factor;
+  }
+  //! \brief Perform multiplication with another set of units.
+  //! \param x Units for multiplication.
+  //! \return Multiplied units.
+  friend GenericUnits operator*(GenericUnits lhs, const GenericUnits& rhs) {
+    lhs *= rhs;
+    return lhs;
+  }
+  //! \brief Perform division with another set of units in place
+  //! \param x Units for division.
+  //! \return Divided units.
+  GenericUnits& operator/=(const GenericUnits& x) {
+    return *this *= x.pow(-1);
   }
   //! \brief Perform division with another set of units.
   //! \param x Units for division.
   //! \return Divided units.
-  GenericUnits operator/(const GenericUnits& x) const {
-    return (*this) * (x.pow(-1)); }
+  friend GenericUnits operator/(GenericUnits lhs, const GenericUnits& rhs) {
+    lhs /= rhs;
+    return lhs;
+  }
   //! \brief Raise these units to a power without creating a new instance.
   //! \param x Power.
-  void inplace_pow(const double x) {
+  template<typename T>
+  void inplace_pow(const T x) {
     for (typename std::vector<GenericUnit<Encoding> >::iterator it = units_.begin(); it != units_.end(); it++)
       it->inplace_pow(x);
   }
   //! \brief Raise these units to a power.
   //! \param x Power.
   //! \return Resulting units.
-  GenericUnits pow(const double x) const {
+  template<typename T>
+  GenericUnits pow(const T x) const {
     GenericUnits out(*this);
     out.inplace_pow(x);
     return out;
@@ -1823,9 +1930,9 @@ public:
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
   void display(std::ostream& os) const {
-    os << "GenericQuantity(" << value_ << ", ";
-    units_.display(os);
-    os << ")";
+    os << "GenericQuantity(" << value_ << ", \"";
+    os << units_;
+    os << "\")";
   }
   //! \brief Get the quantity as a string.
   //! \return Quantity string.
@@ -1836,21 +1943,21 @@ public:
   }
 private:
   template<typename T2>
-  GenericQuantity raw_add(const GenericQuantity<T2, Encoding>& x, double factor=1.0,
-			  RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
-					      YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) const {
+  void raw_add_inplace(const GenericQuantity<T2, Encoding>& x, double factor=1.0,
+		       RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
+					   YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) {
     // Assumes units have already been matched
     if (factor < 0)
-      return GenericQuantity<T, Encoding>(value_ - castPrecision<T2, T>(x.value()), units_);
+      value_ -= castPrecision<T2, T>(x.value());
     else
-      return GenericQuantity<T, Encoding>(value_ + castPrecision<T2, T>(x.value()), units_);
+      value_ += castPrecision<T2, T>(x.value());
   }
   template<typename T2>
-  GenericQuantity raw_add(const GenericQuantity<T2, Encoding>& x, double factor=1.0,
-			  RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
-					      internal::NotExpr<YGGDRASIL_IS_COMPLEX_TYPE(T2)> >))) const {
+  void raw_add_inplace(const GenericQuantity<T2, Encoding>& x, double factor=1.0,
+		       RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
+					   internal::NotExpr<YGGDRASIL_IS_COMPLEX_TYPE(T2)> >))) {
     // Assumes units have already been matched
-    return GenericQuantity<T, Encoding>(value_ + (factor * x.value()), units_);
+    value_ += (factor * x.value());
   }
   template<typename T1>
   static T1 _initialize_value(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
@@ -1911,48 +2018,147 @@ public:
   //! \return true if greater than or equal to, false otherwise.
   template<typename T2>
   bool operator>=(const GenericQuantity<T2, Encoding>& x) const { return (!(*this < x)); }
-  //! \brief Multiply by another quantity.
+  //! \brief Multiply by another quantity in place.
   //! \param x Quantity to multiply by.
   //! \return Result of multiplication.
   template<typename T2>
-  GenericQuantity operator*(const GenericQuantity<T2, Encoding>& x) const {
-    return GenericQuantity<T, Encoding>(value_ * castPrecision<T2,T>(x.value()), units_ * x.units()); }
-  //! \brief Divide by another quantity.
-  //! \param x Quantity to divide by.
-  //! \return Result of division.
-  template<typename T2>
-  GenericQuantity operator/(const GenericQuantity<T2, Encoding>& x) const {
-    return GenericQuantity<T, Encoding>(value_ / castPrecision<T2,T>(x.value()), units_ / x.units()); }
-  //! \brief Multiply by a scalar.
+  GenericQuantity& operator*=(const GenericQuantity<T2, Encoding>& x) {
+    units_ *= x.units();
+    value_ *= castPrecision<T2,T>(x.value()) * castPrecision<double,T>(units_.pull_factor());
+    return *this;
+  }
+  //! \brief Multiply by a scalar in place.
   //! \tparam T2 Scalar type.
   //! \param x Scalar to multiply by.
   //! \return Result of multiplication.
   template<typename T2>
-  GenericQuantity operator*(const T2& x) const {
-    return GenericQuantity<T, Encoding>(value_ * x, units_); }
-  //! \brief Divide by a scalar.
+  GenericQuantity& operator*=(const T2& x) {
+    value_ *= castPrecision<T2,T>(x);
+    return *this;
+  }
+  //! \brief Multiply by a quantity or scalar.
+  //! \tparam T2 Quantity or scalar type.
+  //! \param x Scalar to multiply by.
+  //! \return Result of multiplication.
+  template<typename T2>
+  friend GenericQuantity<T, Encoding> operator*(GenericQuantity<T, Encoding> lhs,
+						const T2& rhs) {
+    lhs *= rhs;
+    return lhs;
+  }
+  //! \brief Divide by another quantity in place.
+  //! \param x Quantity to divide by.
+  //! \return Result of division.
+  template<typename T2>
+  GenericQuantity& operator/=(const GenericQuantity<T2, Encoding>& x) {
+    value_ /= castPrecision<T2,T>(x.value());
+    units_ /= x.units();
+    value_ *= castPrecision<double,T>(units_.pull_factor());
+    return *this;
+  }
+  //! \brief Divide by a scalar in place.
   //! \tparam T2 Scalar type.
   //! \param x Scalar to divide by.
   //! \return Result of division.
   template<typename T2>
-  GenericQuantity operator/(const T2& x) const {
-    return GenericQuantity<T, Encoding>(value_ / x, units_); }
+  GenericQuantity& operator/=(const T2& x) {
+    value_ /= x;
+    return *this;
+  }
+  //! \brief Divide by a scalar or Quantity.
+  //! \tparam T2 Scalar or Quantity type.
+  //! \param x Scalar or Quantity to divide by.
+  //! \return Result of division.
+  template<typename T2>
+  friend GenericQuantity<T, Encoding> operator/(GenericQuantity<T, Encoding> lhs,
+						const T2& rhs) {
+    lhs /= rhs;
+    return lhs;
+  }
+  //! \brief Modulo by another quantity in place.
+  //! \param x Quantity to modulo by.
+  //! \return Result of modulo.
+  template<typename T2>
+  GenericQuantity& operator%=(const GenericQuantity<T2, Encoding>& x) {
+    GenericQuantity<T, Encoding> val = *this / x;
+    val.floor_inplace();
+    val *= x;
+    *this -= val;
+    return *this;
+  }
+  //! \brief Modulo by a scalar in place.
+  //! \tparam T2 Scalar type.
+  //! \param x Scalar to modulo by.
+  //! \return Result of division.
+  template<typename T2>
+  GenericQuantity& operator%=(const T2& x) {
+    value_ %= x;
+    return *this;
+  }
+  //! \brief Modulo by a scalar or Quantity.
+  //! \tparam T2 Scalar or Quantity type.
+  //! \param x Scalar or Quantity to modulo by.
+  //! \return Result of division.
+  template<typename T2>
+  friend GenericQuantity<T, Encoding> operator%(GenericQuantity<T, Encoding> lhs,
+						const T2& rhs) {
+    lhs %= rhs;
+    return lhs;
+  }
+  //! \brief Add a quantity with compatible units to this quantity.
+  //! \param x Quantity to add.
+  //! \return Result of addition.
+  template<typename T2>
+  GenericQuantity& operator+=(const GenericQuantity<T2, Encoding>& x) {
+    if (units_ != x.units())
+      return operator+=(x.as(units_));
+    raw_add_inplace(x);
+    return *this;
+  }
   //! \brief Add a quantity with compatible units.
   //! \param x Quantity to add.
   //! \return Result of addition.
   template<typename T2>
-  GenericQuantity operator+(const GenericQuantity<T2, Encoding>& x) const {
-    if (units_ != x.units())
-      return (*this + x.as(units_));
-    return raw_add(x); }
-  //! \brief Subtract a quantity with compatible units.
+  friend GenericQuantity<T, Encoding> operator+(GenericQuantity<T, Encoding> lhs,
+						const GenericQuantity<T2, Encoding>& rhs) {
+    lhs += rhs;
+    return lhs;
+  }
+  //! \brief Subtract a quantity with compatible units from this quantity.
   //! \param x Quantity to subtract.
   //! \return Result of subtraction.
   template<typename T2>
-  GenericQuantity operator-(const GenericQuantity<T2, Encoding>& x) const {
+  GenericQuantity& operator-=(const GenericQuantity<T2, Encoding>& x) {
     if (units_ != x.units())
-      return (*this - x.as(units_));
-    return raw_add(x, -1.0); }
+      return operator-=(x.as(units_));
+    raw_add_inplace(x, -1.0);
+    return *this;
+  }
+  //! \brief Subtract a quantity with compatible units.
+  //! \param lhs Left side of subtraction operation.
+  //! \param rhs Right side of subtraction operation.
+  //! \return Result of subtraction.
+  template<typename T2>
+  friend GenericQuantity<T, Encoding> operator-(GenericQuantity<T, Encoding> lhs,
+						const GenericQuantity<T2, Encoding>& rhs) {
+    lhs -= rhs;
+    return lhs;
+  }
+  //! \brief Perform floor operation in place.
+  //! \return Resulut of floor.
+  GenericQuantity& floor_inplace() {
+    if (YGGDRASIL_IS_FLOAT_TYPE(T)::Value)
+      value_ = value_floor(value_);
+    return *this;
+  }
+  //! \brief Perform floor operation in place.
+  //! \return Resulut of floor.
+  GenericQuantity floor() {
+    GenericQuantity<T, Encoding> cpy(*this);
+    cpy.floor_inplace();
+    return cpy;
+  }
+  
   //! \brief Explicity copy.
   //! \return Copy.
   GenericQuantity<T, Encoding>* copy() const {
@@ -1963,14 +2169,19 @@ public:
   void* copy_void() const { return (void*)copy(); }
   //! \brief Perform power operation in place.
   //! \param x Power to raise this quantity to.
-  void inplace_pow(const double& x) {
+  template<typename T2>
+  void inplace_pow(const T2& x,
+		   RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
     value_ = std::pow(value_, x);
     units_.inplace_pow(x);
+    value_ *= castPrecision<double,T>(units_.pull_factor());
   }
   //! \brief Raise this quantity to a power.
   //! \param x Power to raise this quantity to.
   //! \return Resulting quantity.
-  GenericQuantity pow(const double& x) const {
+  template<typename T2>
+  GenericQuantity pow(const T2& x,
+		      RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) const {
     GenericQuantity out(*this);
     out.inplace_pow(x);
     return out;
