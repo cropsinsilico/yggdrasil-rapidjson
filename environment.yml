@@ -5,5 +5,5 @@ dependencies:
   - numpy
   - c-compiler
   - cxx-compiler
-  - gcovr
+  - gcovr < 5.1.0
   - Jinja2 < 3.1.0
