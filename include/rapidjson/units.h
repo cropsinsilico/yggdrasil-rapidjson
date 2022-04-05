@@ -1891,6 +1891,18 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
   return out;
 }
 
+#if RAPIDJSON_HAS_CXX11
+#define ADD_QUANTITY_OPERATOR(op)
+#else
+#define ADD_QUANTITY_OPERATOR(op)					\
+  template<typename T2>							\
+  GenericQuantity& operator op (const Quantity<T2>& x) {		\
+    if (internal::IsSame<Encoding,UTF8<char> >::Value)			\
+      return *this op *((GenericQuantity<T2, Encoding>*)(&x));		\
+    return *this op GenericQuantity<T2, Encoding>(x.value(), x.units()); \
+  }
+#endif
+
 //! Scalar quantity with units.
 //! \tparam T Type of the underlying scalar.
 //! \tparam Encoding Encoding used to store the unit strings.
@@ -2036,6 +2048,7 @@ public:
     value_ *= castPrecision<T2,T>(x.value()) * castPrecision<double,T>(units_.pull_factor());
     return *this;
   }
+  ADD_QUANTITY_OPERATOR(*=)
   //! \brief Multiply by a quantity or scalar.
   //! \tparam T2 Quantity or scalar type.
   //! \param x Scalar to multiply by.
@@ -2065,6 +2078,7 @@ public:
     value_ /= x;
     return *this;
   }
+  ADD_QUANTITY_OPERATOR(/=)
   //! \brief Divide by a scalar or Quantity.
   //! \tparam T2 Scalar or Quantity type.
   //! \param x Scalar or Quantity to divide by.
@@ -2095,6 +2109,7 @@ public:
     value_ %= x;
     return *this;
   }
+  ADD_QUANTITY_OPERATOR(%=)
   //! \brief Modulo by a scalar or Quantity.
   //! \tparam T2 Scalar or Quantity type.
   //! \param x Scalar or Quantity to modulo by.
@@ -2115,6 +2130,7 @@ public:
     raw_add_inplace(x);
     return *this;
   }
+  ADD_QUANTITY_OPERATOR(+=)
   //! \brief Add a quantity with compatible units.
   //! \param x Quantity to add.
   //! \return Result of addition.
@@ -2144,6 +2160,7 @@ public:
     lhs -= rhs;
     return lhs;
   }
+  ADD_QUANTITY_OPERATOR(-=)
   //! \brief Perform floor operation in place.
   //! \return Resulut of floor.
   GenericQuantity& floor_inplace() {
@@ -2294,14 +2311,8 @@ inline std::ostream & operator << (std::ostream &os, const GenericQuantity<T, En
     operator GenericQuantity<T, Encoding>() const {			\
       return GenericQuantity<T, Encoding>(this->value_, this->units_);	\
     }									\
-    name<T> operator*(const name<T>& x) const {				\
-      return name(this->value_ * x.value_, this->units_ * x.units_);	\
-    }									\
-    name<T> operator/(const name<T>& x) const {				\
-      return name(this->value_ / x.value_, this->units_ / x.units_);	\
-    }									\
   }
-  
+
 //! GenericQuantity with UTF8 encoding
 #if RAPIDJSON_HAS_CXX11
 template<typename T>
