@@ -107,6 +107,6 @@ if __name__ == "__main__":
                     "\"", "\\\"").replace('\n', "\"\n    L\"") + "\";",
                 "  return out;",
                 "}", "",
-                "", "#endif // METASCHEMA_H_"]
+                "", "#endif // METASCHEMA_H_", ""]
     with open(args.dest, 'w') as fd:
         fd.write('\n'.join(contents))

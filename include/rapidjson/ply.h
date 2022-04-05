@@ -150,7 +150,7 @@ private:
     kUint32Flag     = 0x0100,
     kFloatFlag      = 0x0200,
     kDoubleFlag     = 0x0400,
-    kListFlag       = 0x0800,
+    kListFlag       = 0x0800
   };
   struct Number {
     int64_t i64;

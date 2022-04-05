@@ -2018,15 +2018,6 @@ public:
   //! \return true if greater than or equal to, false otherwise.
   template<typename T2>
   bool operator>=(const GenericQuantity<T2, Encoding>& x) const { return (!(*this < x)); }
-  //! \brief Multiply by another quantity in place.
-  //! \param x Quantity to multiply by.
-  //! \return Result of multiplication.
-  template<typename T2>
-  GenericQuantity& operator*=(const GenericQuantity<T2, Encoding>& x) {
-    units_ *= x.units();
-    value_ *= castPrecision<T2,T>(x.value()) * castPrecision<double,T>(units_.pull_factor());
-    return *this;
-  }
   //! \brief Multiply by a scalar in place.
   //! \tparam T2 Scalar type.
   //! \param x Scalar to multiply by.
@@ -2034,6 +2025,15 @@ public:
   template<typename T2>
   GenericQuantity& operator*=(const T2& x) {
     value_ *= castPrecision<T2,T>(x);
+    return *this;
+  }
+  //! \brief Multiply by another quantity in place.
+  //! \param x Quantity to multiply by.
+  //! \return Result of multiplication.
+  template<typename T2>
+  GenericQuantity& operator*=(const GenericQuantity<T2, Encoding>& x) {
+    units_ *= x.units();
+    value_ *= castPrecision<T2,T>(x.value()) * castPrecision<double,T>(units_.pull_factor());
     return *this;
   }
   //! \brief Multiply by a quantity or scalar.

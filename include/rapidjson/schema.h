@@ -20,6 +20,9 @@
 #include "stringbuffer.h"
 #include "error/en.h"
 #include "uri.h"
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
 #include <cmath> // abs, floor
 #ifdef RAPIDJSON_YGGDRASIL
 #include "units.h"
@@ -491,7 +494,7 @@ enum SingularFlag {
   kSingularArray = 1,
   kSingularItem = 2,
   kSingularObject = 3,
-  kSingularValue = 4,
+  kSingularValue = 4
 };
 
 // template<typename ValueType>
