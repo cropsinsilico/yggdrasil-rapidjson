@@ -12,6 +12,7 @@
 #define BASE64_H_
 
 #include "encodings.h"
+#include "stream.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -479,6 +480,75 @@ private:
   size_t buffer_pos_;
   
 };
+
+template<typename Ch>
+bool isYggdrasilString(const Ch* str, SizeType length, bool) {
+    const Ch ygg[5] = {'-', 'Y', 'G', 'G', '-'};
+    SizeType len_ygg = 5;
+    return ((memcmp(ygg, str, sizeof(ygg)) == 0) &&
+	    (memcmp(ygg, str + (length - len_ygg), sizeof(ygg)) == 0));
+}
+
+
+template<typename Encoding, typename BufferType>
+bool parseYggdrasilString(const typename Encoding::Ch* str, SizeType length, bool copy,
+			  BufferType& os_body, BufferType& os_schema) {
+    if (!isYggdrasilString(str, length, copy))
+      return false;
+    const typename Encoding::Ch ygg[5] = {'-', 'Y', 'G', 'G', '-'};
+    SizeType len_ygg = 5;
+    // Locate -ygg- markers
+    SizeType i = len_ygg, beg_schema = len_ygg, end_schema, len_schema, elen_schema, beg_body, end_body, len_body, elen_body;
+    beg_schema = len_ygg;
+    while ((i < length) && (memcmp(ygg, str + i, sizeof(ygg)) != 0)) i++;
+    end_schema = i;
+    len_schema = end_schema - beg_schema;
+    elen_schema = len_schema * 3 / 4;
+    beg_body = end_schema + len_ygg;
+    end_body = length - len_ygg;
+    len_body = end_body - beg_body;
+    elen_body = len_body * 3 / 4;
+    RAPIDJSON_ASSERT((end_body + len_ygg) == length);
+    // Add stream
+    GenericStringStream<Encoding> is(str);
+    is.src_ += len_ygg;
+    Base64InputStreamWrapper<GenericStringStream<Encoding> > is64(is);
+    // Extract the schema
+    // std::cerr << "Reading schema (encoded_len = " << len_schema
+    // 	  << ", decoded_len = " << elen_schema
+    // 	  << ")" << std::endl;
+    SizeType nempty_schema = 0;
+    for (SizeType j = 0; j < elen_schema; j++) {
+      // std::cerr << "    char " << j << " " << is64.Peek() << std::endl;
+      if (is64.Peek() != '\0') {
+	os_schema.Put(is64.Take());
+      } else { 
+	is64.Take();
+	nempty_schema++;
+      }
+    }
+    is.src_ += len_ygg;
+    // Extract the body
+    // std::cerr << "Reading body (encoded_len = " << len_body
+    // 	  <<", decoded_len = " << elen_body
+    // 	  << ")" << std::endl;
+    SizeType nempty_body = 0;
+    for (SizeType j = 0; j < elen_body; j++) {
+      // std::cerr << "    char " << j << " " << is64.Peek() << std::endl;
+      if (!(is64.PeekEmpty())) {
+	os_body.Put(is64.Take());
+      } else {
+	is64.Take();
+	nempty_body++;
+      }
+    }
+    elen_body = elen_body - nempty_body;
+    is.src_ += len_ygg;
+    RAPIDJSON_ASSERT(is.Tell() == (size_t)length);
+    // std::cerr << "schema: \"" << os_schema.GetString() << "\"" << std::endl;
+    // std::cerr << "body: \"" << os_body.GetString() << "\"" << std::endl;
+    return true;
+}
 
 RAPIDJSON_NAMESPACE_END
 

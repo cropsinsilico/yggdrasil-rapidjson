@@ -3547,9 +3547,11 @@ public:
       return false;
     PyObject* x_attr = PyObject_GetAttrString(x, reinterpret_cast<const char*>(attr));
     RAPIDJSON_ASSERT(x_attr != NULL);
-    out.SetPythonObjectRaw(x_attr, &allocator);
+    if (x_attr == NULL)
+      return false;
+    bool ret = out.SetPythonObjectRaw(x_attr, &allocator);
     Py_DECREF(x_attr);
-    return true;
+    return ret;
   }
   PyObject* GetPythonObjectRaw() const {
     PyObject* out = NULL;
@@ -3608,7 +3610,8 @@ public:
     }
     return out;
   }
-  void SetPythonObjectRaw(PyObject* x, Allocator* allocator = 0) {
+  bool SetPythonObjectRaw(PyObject* x, Allocator* allocator = 0) {
+    bool out = true;
     if (PyList_CheckExact(x)) {
       RAPIDJSON_ASSERT(allocator);
       SetArray();
@@ -3646,7 +3649,7 @@ public:
       //                        (size_t)(PyBytes_Size(x))),
       //              *allocator);
       PyObject* x_bytes = PyUnicode_AsUTF8String(x);
-      SetPythonObjectRaw(x_bytes, allocator);
+      out = SetPythonObjectRaw(x_bytes, allocator);
       Py_DECREF(x_bytes);
     } else if (PyLong_Check(x)) {
       int overflow = 0;
@@ -3706,6 +3709,8 @@ public:
 	if (GetPythonObjectClassAttr(x, kwargs_keys[i], schema_->GetAllocator(), kwargs))
 	  break;
       }
+      if (args.IsNull() && kwargs.IsNull())
+	return false;
       if (!(args.IsNull())) {
 	AddMember(GetArgsString(), args, schema_->GetAllocator());
 	if (args.HasSchemaNested())
@@ -3719,6 +3724,7 @@ public:
 			  kwargs.GetSchemaNested(schema_->GetAllocator()));
       }
     }
+    return out;
   }
   void SetObjRaw(ObjWavefront x, Allocator* allocator = 0) {
     std::stringstream ss;
@@ -4172,12 +4178,6 @@ public:
     unsigned char* decoded_bytes = (unsigned char*)allocator.Malloc(length);
     RAPIDJSON_ASSERT(decoded_bytes != NULL);
     memcpy(decoded_bytes, GetString(), length);
-    // std::cerr << "length = " << length << std::endl;
-    // reinterpret_cast<const unsigned char*>(GetString()) ?
-    // unsigned char* decoded_bytes = base64_decode((const unsigned char*)GetString(),
-    // 						 (size_t)GetStringLength(),
-    // 						 &length);
-    // RAPIDJSON_ASSERT(decoded_bytes != NULL);
     return decoded_bytes;
   }
 
@@ -4707,65 +4707,13 @@ public:
         return true;
     }
 #ifdef RAPIDJSON_YGGDRASIL
-  bool FromYggdrasilString(const Ch* str, SizeType length, bool) {
-    const Ch ygg[5] = {'-', 'Y', 'G', 'G', '-'};
-    SizeType len_ygg = 5;
-    if ((memcmp(ygg, str, sizeof(ygg)) != 0)
-	|| (memcmp(ygg, str + (length - len_ygg), sizeof(ygg)) != 0)) {
+  bool FromYggdrasilString(const Ch* str, SizeType length, bool copy) {
+    if (!isYggdrasilString(str, length, copy))
       return false;
-    }
-    // Locate -ygg- markers
-    SizeType i = len_ygg, beg_schema = len_ygg, end_schema, len_schema, elen_schema, beg_body, end_body, len_body, elen_body;
-    beg_schema = len_ygg;
-    while ((i < length) && (memcmp(ygg, str + i, sizeof(ygg)) != 0)) i++;
-    end_schema = i;
-    len_schema = end_schema - beg_schema;
-    elen_schema = len_schema * 3 / 4;
-    beg_body = end_schema + len_ygg;
-    end_body = length - len_ygg;
-    len_body = end_body - beg_body;
-    elen_body = len_body * 3 / 4;
-    RAPIDJSON_ASSERT((end_body + len_ygg) == length);
-    // Add stream
-    GenericStringStream<Encoding> is(str);
-    is.src_ += len_ygg;
-    Base64InputStreamWrapper<GenericStringStream<Encoding> > is64(is);
     GenericStringBuffer<Encoding, Allocator> os_body(&GetAllocator());
     GenericStringBuffer<Encoding, Allocator> os_schema(&GetAllocator());
-    // Extract the schema
-    // std::cerr << "Reading schema (encoded_len = " << len_schema
-    // 	  << ", decoded_len = " << elen_schema
-    // 	  << ")" << std::endl;
-    SizeType nempty_schema = 0;
-    for (SizeType j = 0; j < elen_schema; j++) {
-      // std::cerr << "    char " << j << " " << is64.Peek() << std::endl;
-      if (is64.Peek() != '\0') {
-	os_schema.Put(is64.Take());
-      } else { 
-	is64.Take();
-	nempty_schema++;
-      }
-    }
-    is.src_ += len_ygg;
-    // Extract the body
-    // std::cerr << "Reading body (encoded_len = " << len_body
-    // 	  <<", decoded_len = " << elen_body
-    // 	  << ")" << std::endl;
-    SizeType nempty_body = 0;
-    for (SizeType j = 0; j < elen_body; j++) {
-      // std::cerr << "    char " << j << " " << is64.Peek() << std::endl;
-      if (!(is64.PeekEmpty())) {
-	os_body.Put(is64.Take());
-      } else {
-	is64.Take();
-	nempty_body++;
-      }
-    }
-    elen_body = elen_body - nempty_body;
-    is.src_ += len_ygg;
-    RAPIDJSON_ASSERT(is.Tell() == (size_t)length);
-    // std::cerr << "schema: \"" << os_schema.GetString() << "\"" << std::endl;
-    // std::cerr << "body: \"" << os_body.GetString() << "\"" << std::endl;
+    if (!parseYggdrasilString<Encoding, GenericStringBuffer<Encoding, Allocator> >(str, length, copy, os_body, os_schema))
+      return false;
     ValueType* x = new (stack_.template Push<ValueType>()) ValueType(
 	os_body.GetString(), (SizeType)(os_body.GetLength()),
 	GetAllocator(),

@@ -5,13 +5,18 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Yggdrasil Specific
 
 ### TODO
-* Add docstrings to new methods
 * Add namespaces for ply, obj, base64?
 * Add "encoding" property for bytes
 * Remove use of standard libraries (std::basic_string, std::vector, std::map)?
 * Use explicit allocator for QuantityArray?
+* Make validation/normalization errors more verbose to match jsonschema
+* Add Python wrapper for obj & ply w/ interop to other classes
+* Python wrapper for QuantityArray
+* Support for numpy arrays
 
 ### IN PROGRESS
+* Add docstrings to new methods
+* Support for python classes/instances from the python wrapper
 
 ### COMPLETE
 * Added schema to document class
