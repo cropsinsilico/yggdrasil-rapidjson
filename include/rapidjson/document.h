@@ -4219,10 +4219,12 @@ public:
     RAPIDJSON_ASSERT(py_class);
     RAPIDJSON_ASSERT(py_args);
     RAPIDJSON_ASSERT(py_kwargs);
-    PyObject* py_inst = PyObject_Call(py_class, py_args, py_kwargs);
-    Py_DECREF(py_class);
-    Py_DECREF(py_args);
-    Py_DECREF(py_kwargs);
+    PyObject* py_inst = NULL;
+    if (py_class && py_args && py_kwargs)
+      py_inst = PyObject_Call(py_class, py_args, py_kwargs);
+    Py_XDECREF(py_class);
+    Py_XDECREF(py_args);
+    Py_XDECREF(py_kwargs);
     return py_inst;
   }
   void GetObjWavefront(ObjWavefront &o) const {

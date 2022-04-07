@@ -1837,7 +1837,7 @@ TEST(SchemaValidator, PythonInstance) { // 31
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImludmFsaWQiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
 	       "", "schema", "",
 	       "{ \"schema\": {"
-	       "    \"errorCode\": 32,"
+	       "    \"errorCode\": 33,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"errors\": {"
 	       "        \"anyOf\": {"
@@ -1863,7 +1863,50 @@ TEST(SchemaValidator, PythonInstance) { // 31
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOltdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"", true);
 }
 
-TEST(SchemaValidator, Schema) { // 32
+TEST(SchemaValidator, PythonInstanceClass) { // 32
+  CREATE_PYTHON_INSTANCE(OtherClass, pyinst)
+  Value x(pyinst);
+  DISPLAY_STRING("other: ", x);
+  CREATE_PYTHON_INSTANCE(ExampleSubClass, pysub)
+  Value y(pysub);
+  DISPLAY_STRING("sub: ", y);
+  //
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"instance\","
+	"  \"class\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\""
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", true);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOk90aGVyQ2xhc3MiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
+	       "", "schema", "",
+	       "{ \"schema\": {"
+	       "    \"errorCode\": 33,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"errors\": {"
+	       "        \"anyOf\": {"
+	       "            \"errorCode\": 24,"
+	       "            \"instanceRef\": \"#/class\","
+	       "            \"schemaRef\": \"#/properties/class\","
+	       "            \"errors\": ["
+	       "                { \"class\" : {"
+	       "                  \"errorCode\": 32,"
+	       "                  \"instanceRef\": \"#\", "
+	       "                  \"schemaRef\": \"#/properties/class/anyOf/0\","
+	       "                  \"expected\": \"example_python:ExampleClass\","
+	       "                  \"actual\": \"example_python:OtherClass\"}}, "
+	       "                { \"type\" : {"
+	       "                  \"expected\": [ \"array\" ],"
+	       "                  \"actual\": \"string\","
+	       "                  \"errorCode\": 20,"
+	       "                  \"instanceRef\": \"#/class\", "
+	       "                  \"schemaRef\": \"#/properties/class/anyOf/1\"}}]"
+	       "}}}}");
+}
+
+TEST(SchemaValidator, Schema) { // 33
   Document sd;
   sd.Parse(
         "{"
@@ -1875,7 +1918,7 @@ TEST(SchemaValidator, Schema) { // 32
   INVALIDATE(s, "{\"type\": \"invalid\"}",
 	     "", "schema", "",
 	     "{ \"schema\": {"
-	     "    \"errorCode\": 32,"
+	     "    \"errorCode\": 33,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	     "    \"errors\": {"
 	     "        \"anyOf\": {"
@@ -1890,7 +1933,7 @@ TEST(SchemaValidator, Schema) { // 32
   INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW52YWxpZCJ9-YGG-\"",
 	     "", "schema", "",
 	     "{ \"schema\": {"
-	     "    \"errorCode\": 32,"
+	     "    \"errorCode\": 33,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	     "    \"errors\": {"
 	     "        \"anyOf\": {"
@@ -1965,7 +2008,7 @@ TEST(SchemaValidator, SingularArraySchema) {
   INVALIDATE(s, "{\"type\": \"invalid\"}",
 	     "", "schema", "",
 	     "{ \"schema\": {"
-	     "    \"errorCode\": 32,"
+	     "    \"errorCode\": 33,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#/items\","
 	     "    \"errors\": {"
 	     "        \"anyOf\": {"
@@ -2031,7 +2074,7 @@ TEST(SchemaValidator, SingularObjectSchema) {
   INVALIDATE(s, "{\"type\": \"invalid\"}",
 	     "", "schema", "",
 	     "{ \"schema\": {"
-	     "    \"errorCode\": 32,"
+	     "    \"errorCode\": 33,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#/properties/key\","
 	     "    \"errors\": {"
 	     "        \"anyOf\": {"
@@ -2061,7 +2104,7 @@ TEST(SchemaValidator, CircularAliases) {
   INVALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }",
 	     "", "aliases", "/street",
 	     "{ \"aliases\": {"
-	     "    \"errorCode\": 34,"
+	     "    \"errorCode\": 35,"
 	     "    \"instanceRef\": \"#\","
 	     "    \"schemaRef\": \"#\","
 	     "    \"circular\": [\"street\", \"street_address\"]"
@@ -2084,7 +2127,7 @@ TEST(SchemaValidator, ConflictingAliases) {
   INVALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }",
 	     "", "aliases", "/street",
 	     "{ \"aliases\": {"
-	     "    \"errorCode\": 35,"
+	     "    \"errorCode\": 36,"
 	     "    \"instanceRef\": \"#\","
 	     "    \"schemaRef\": \"#\","
 	     "    \"conflicting\": \"street\","
@@ -2109,7 +2152,7 @@ TEST(SchemaValidator, Deprecating) {
   VALIDATE_WARNING(s, "{\"deprecated\": \"string\", \"valid\": 0}",
 		   "", "warnings", "",
 		   "{ \"deprecated\": {"
-		   "    \"errorCode\": 38,"
+		   "    \"errorCode\": 39,"
 		   "    \"instanceRef\": \"#/deprecated\","
 		   "    \"schemaRef\": \"#/properties/deprecated\","
 		   "    \"warning\": \"Deprecation message\""

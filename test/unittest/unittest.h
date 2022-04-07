@@ -156,6 +156,39 @@ public:
     RAPIDJSON_ASSERT(container.Accept(writer));				\
     std::cerr << name << ": " << buffer.GetString() << std::endl;	\
   }
+#define CREATE_PYTHON_INSTANCE(cls, var)				\
+  PyObject* var;							\
+  {									\
+    PyObject* pyclass = import_python_class("example_python", #cls);	\
+    RAPIDJSON_ASSERT(pyclass);						\
+    PyObject* pyargs_list = PyList_New(0);				\
+    RAPIDJSON_ASSERT(pyargs_list);					\
+    PyObject* pyargs_item1 = PyUnicode_FromString("hello");		\
+    PyObject* pyargs_item2 = PyFloat_FromDouble(0.5);			\
+    RAPIDJSON_ASSERT(PyList_Append(pyargs_list, pyargs_item1) == 0);	\
+    RAPIDJSON_ASSERT(PyList_Append(pyargs_list, pyargs_item2) == 0);	\
+    PyObject* pyargs = PyList_AsTuple(pyargs_list);			\
+    RAPIDJSON_ASSERT(pyargs);						\
+    Py_DECREF(pyargs_list);						\
+    Py_DECREF(pyargs_item1);						\
+    Py_DECREF(pyargs_item2);						\
+    PyObject* pykwargs = PyDict_New();					\
+    RAPIDJSON_ASSERT(pykwargs);						\
+    PyObject* pykwargs_key1 = PyUnicode_FromString("a");		\
+    PyObject* pykwargs_key2 = PyUnicode_FromString("b");		\
+    PyObject* pykwargs_val1 = PyUnicode_FromString("world");		\
+    PyObject* pykwargs_val2 = PyLong_FromLong(1);			\
+    RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, pykwargs_key1, pykwargs_val1) == 0); \
+    RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, pykwargs_key2, pykwargs_val2) == 0); \
+    Py_DECREF(pykwargs_key1);						\
+    Py_DECREF(pykwargs_key2);						\
+    Py_DECREF(pykwargs_val1);						\
+    Py_DECREF(pykwargs_val2);						\
+    var = PyObject_Call(pyclass, pyargs, pykwargs);			\
+    RAPIDJSON_ASSERT(pyinst);						\
+    Py_DECREF(pyargs);							\
+    Py_DECREF(pykwargs);						\
+  }
 #endif // RAPIDJSON_YGGDRASIL
 
 class Random {

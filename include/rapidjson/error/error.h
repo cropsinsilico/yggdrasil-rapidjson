@@ -200,6 +200,7 @@ enum ValidateErrorCode {
     kValdiateErrorUnits,                       //!< Property has units that are compatible with the schema.
     kValidateErrorShape,                       //!< Property has a shape that does not match the schema.
     kValidateErrorPythonImport,                //!< Property is not an importable Python object.
+    kValidateErrorPythonClass,                 //!< Property is not a Python instance of the class specified in the schema.
     kValidateErrorInvalidSchema,               //!< Property is not a valid JSON schema.
     kNormalizeErrorAliasDuplicate,             //!< Aliased property already exists in the normalized document.
     kNormalizeErrorCircularAlias,              //!< Property has circular aliases.

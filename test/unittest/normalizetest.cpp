@@ -166,7 +166,7 @@ TEST(SchemaNormalizer, MergeConflict) {
     SchemaDocument s(sd);
     FAILED_NORMALIZE(s, "{}", "", "normalization", "",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 36,"
+		     "    \"errorCode\": 37,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/allOf/1\","
 		     "    \"conflicting\": \"string\""
@@ -197,7 +197,7 @@ TEST(SchemaNormalizer, MergeConflictNested) {
     FAILED_NORMALIZE(s, "{ \"client\": {} }",
 		     "/properties/client", "normalization", "/client",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 36,"
+		     "    \"errorCode\": 37,"
 		     "    \"instanceRef\": \"#/client/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/client/allOf/1\","
 		     "    \"conflicting\": \"string\""
@@ -280,7 +280,7 @@ TEST(SchemaNormalizer, Alias) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address/street_address",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 33,"
+		     "    \"errorCode\": 34,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"duplicates\": [\"street\", \"street_address\"]"
@@ -359,7 +359,7 @@ TEST(SchemaNormalizer, AliasCircular) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address/street",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 34,"
+		     "    \"errorCode\": 35,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"circular\": [\"street\", \"street_address\"]"
@@ -399,7 +399,7 @@ TEST(SchemaNormalizer, AliasConflicting) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address/street",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 35,"
+		     "    \"errorCode\": 36,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"conflicting\": \"street\","
@@ -456,7 +456,7 @@ TEST(SchemaNormalizer, AliasNested) {
 		     "{ \"allOf\": {"
 		     "    \"errors\": ["
 		     "       { \"aliases\": {"
-		     "           \"errorCode\": 33,"
+		     "           \"errorCode\": 34,"
 		     "           \"instanceRef\": \"#/shipping_address\","
 		     "           \"schemaRef\": \"#/definitions/address\","
 		     "           \"duplicates\": [\"street\", \"street_address\"]"
@@ -513,7 +513,7 @@ TEST(SchemaNormalizer, AliasNestedCircular) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 34,"
+		     "    \"errorCode\": 35,"
 		     "    \"instanceRef\": \"#\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"circular\": [\"street\", \"street_address\"]"
@@ -565,7 +565,7 @@ TEST(SchemaNormalizer, AliasNestedConflicting) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 35,"
+		     "    \"errorCode\": 36,"
 		     "    \"instanceRef\": \"#\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "  \"conflicting\": \"street\","

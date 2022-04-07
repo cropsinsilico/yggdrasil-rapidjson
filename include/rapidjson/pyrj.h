@@ -65,6 +65,7 @@ void init_numpy_API() {
  */
 static inline
 void init_python_API() {
+#ifndef RAPIDJSON_YGGDRASIL_PYTHON
   std::string err = "";
 #ifdef _OPENMP
 #pragma omp critical (python)
@@ -99,6 +100,7 @@ void init_python_API() {
 #endif
   if (err.length() > 0)
     throw std::runtime_error(err); // GCOVR_EXCL_LINE
+#endif // RAPIDJSON_YGGDRASIL_PYTHON
 }
 
 /*!
@@ -121,12 +123,14 @@ void initialize_python(const std::string error_prefix="") {
  */
 inline
 void finalize_python(const std::string error_prefix="") {
+#ifndef RAPIDJSON_YGGDRASIL_PYTHON
   try {
     if (Py_IsInitialized())
       Py_Finalize();
   } catch (std::exception& e) {
     throw std::runtime_error(error_prefix + "finalize_python: " + e.what()); // GCOVR_EXCL_LINE
   }
+#endif // RAPIDJSON_YGGDRASIL_PYTHON
 }
 
 
@@ -143,12 +147,16 @@ PyObject* import_python_module(const char* module_name,
 			       const std::string error_prefix="",
 			       const bool ignore_error=false) {
   initialize_python(error_prefix);
-  PyGILState_STATE gstate;
-  gstate = PyGILState_Ensure();
-  PyObject* out = PyImport_ImportModule(module_name);
-  PyGILState_Release(gstate);
+  PyObject* out = NULL;
+  PyObject* name = PyUnicode_FromString(module_name);
+  if (name != NULL) {
+    out = PyImport_Import(name);
+    Py_DECREF(name);
+  }
   if (out == NULL) { // GCOVR_EXCL_START
+#ifndef RAPIDJSON_YGGDRASIL_PYTHON
     PyErr_Print();
+#endif // RAPIDJSON_YGGDRASIL_PYTHON
     if (!(ignore_error))
       throw std::runtime_error(error_prefix + "import_python_module: Failed to import Python model '" + module_name + "'");
   } // GCOVR_EXCL_STOP
@@ -178,7 +186,9 @@ PyObject* import_python_class(const char* module_name,
   PyObject *out = PyObject_GetAttrString(py_module, class_name);
   Py_DECREF(py_module);
   if (out == NULL) { // GCOVR_EXCL_START
+#ifndef RAPIDJSON_YGGDRASIL_PYTHON
     PyErr_Print();
+#endif // RAPIDJSON_YGGDRASIL_PYTHON
     if (!(ignore_error))
       throw std::runtime_error(error_prefix + "import_python_class: Failed to import Python class/function/object '" + class_name + "'");
   } // GCOVR_EXCL_STOP

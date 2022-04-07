@@ -115,6 +115,7 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
         case kValdiateErrorUnits:                       return RAPIDJSON_ERROR_STRING("Property has units that are not compatible with the schema.");
         case kValidateErrorShape:                       return RAPIDJSON_ERROR_STRING("Property has a shape that does not match the schema.");
         case kValidateErrorPythonImport:                return RAPIDJSON_ERROR_STRING("Property is not an importable Python object.");
+        case kValidateErrorPythonClass:                 return RAPIDJSON_ERROR_STRING("Property is not a Python instance of the class specified in the schema.");
         case kValidateErrorInvalidSchema:               return RAPIDJSON_ERROR_STRING("Property is not a valid JSON schema.");
         case kNormalizeErrorAliasDuplicate:             return RAPIDJSON_ERROR_STRING("Aliased property already exists in the normalized document.");
         case kNormalizeErrorCircularAlias:              return RAPIDJSON_ERROR_STRING("Property has circular aliases.");
