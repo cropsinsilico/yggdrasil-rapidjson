@@ -1413,7 +1413,7 @@ public:
         defaultValueLength_(0)
 #ifdef RAPIDJSON_YGGDRASIL
 	,
-	yggtype_(kYggNullSchemaType),
+	yggtype_((1 << kYggTotalSchemaType) - 1),
 	subtype_(kYggNullSubType),
 	precision_(),
 	units_(),
@@ -1476,7 +1476,7 @@ public:
 	  SingularFlag kSingular = kSingularNoFlags;
 	  if (type_ & (1 << kArraySchemaType))
 	    kSingular = kSingularArray;
-	  else if (type_ & (1 << kObjectSchemaType))
+	  else if ((type_ & (1 << kObjectSchemaType)))
 	    kSingular = kSingularObject;
 	  AssignSingularIfExist(*schemaDocument, p, value, GetAllowSingularString(), document, kSingular);
 	  if ((allowSingular_) && (!allowSingularSchema_.schemas)) {
@@ -1501,7 +1501,7 @@ public:
 	    // Reset types so that they are only evaluated within the nested
 	    // schema
 	    type_ = (1 << kTotalSchemaType) - 1;
-	    yggtype_ = kYggNullSchemaType;
+	    yggtype_ = (1 << kYggTotalSchemaType) - 1;
 	    return;
 	  }
 	}
@@ -1539,8 +1539,10 @@ public:
             }
 
 #ifdef RAPIDJSON_YGGDRASIL
-	    if (yggtype_ & ((1 << kYggSchemaSchemaType) | (1 << kYggPythonInstanceSchemaType))) {
-	      schemaDocument->CreateMetaSchema(&metaschema_, (yggtype_ & (1 << kYggPythonInstanceSchemaType)));
+	    if ((yggtype_ & ((1 << kYggSchemaSchemaType) |
+			     (1 << kYggPythonInstanceSchemaType))) &&
+		!(type_ & (1 << kObjectSchemaType))) {
+	      schemaDocument->CreateMetaSchema(&metaschema_, ((yggtype_ & (1 << kYggSchemaSchemaType)) == 0));
 	      metaschemaValidatorIndex_ = validatorCount_;
 	      validatorCount_++;
 	    }
@@ -2146,7 +2148,12 @@ public:
     bool String(Context& context, const Ch* str, SizeType length, bool copy) const {
         RAPIDJSON_NORMALIZER_(String, str, length, copy);
 	(void)copy;
+#ifdef RAPIDJSON_YGGDRASIL
+        if (!((type_ & (1 << kStringSchemaType)) ||
+	      (yggtype_ & (1 << kYggPythonImportSchemaType)))) {
+#else // RAPIDJSON_YGGDRASIL
         if (!(type_ & (1 << kStringSchemaType))) {
+#endif // RAPIDJSON_YGGDRASIL
             DisallowedType(context, GetStringString());
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
@@ -2171,7 +2178,8 @@ public:
         }
 
 #ifdef RAPIDJSON_YGGDRASIL
-	if (yggtype_ & (1 << kYggPythonImportSchemaType))
+	if ((yggtype_ & (1 << kYggPythonImportSchemaType)) &&
+	    !(type_ & (1 << kStringSchemaType)))
 	  if (!CheckPythonImport(context, str, length))
 	    return false;
 #endif // RAPIDJSON_YGGDRASIL
@@ -2245,7 +2253,13 @@ public:
 
     bool StartObject(Context& context) const {
         RAPIDJSON_NORMALIZER_NOARG_(StartObject);
+#ifdef RAPIDJSON_YGGDRASIL
+        if (!((type_ & (1 << kObjectSchemaType)) ||
+	      (yggtype_ & ((1 << kYggPythonInstanceSchemaType) |
+			   (1 << kYggSchemaSchemaType))))) {
+#else // RAPIDJSON_YGGDRASIL
         if (!(type_ & (1 << kObjectSchemaType))) {
+#endif // RAPIDJSON_YGGDRASIL
             DisallowedType(context, GetObjectString());
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
@@ -2739,28 +2753,19 @@ protected:
         else if (type == GetNumberString() ) type_ |= (1 << kNumberSchemaType) | (1 << kIntegerSchemaType);
 #ifdef RAPIDJSON_YGGDRASIL
 	// yggdrasil types
-	else if (type == GetScalarString() ) yggtype_ |= 1 << kYggScalarSchemaType;
+	else if (type == GetScalarString()  ) yggtype_ |= 1 << kYggScalarSchemaType;
 	else if (type == Get1DArrayString() ) yggtype_ |= 1 << kYggNDArraySchemaType;
 	else if (type == GetNDArrayString() ) yggtype_ |= 1 << kYggNDArraySchemaType;
-	else if (type == GetPythonClassString() ) {
-	  type_ |= 1 << kStringSchemaType;
-	  yggtype_ |= 1 << kYggPythonImportSchemaType;
+	else if (type == GetPythonClassString()    ) yggtype_ |= 1 << kYggPythonImportSchemaType;
+	else if (type == GetPythonFunctionString() ) yggtype_ |= 1 << kYggPythonImportSchemaType;
+	else if (type == GetPythonInstanceString() ) yggtype_ |= 1 << kYggPythonInstanceSchemaType;
+	else if (type == GetObjString()    ) yggtype_ |= 1 << kYggObjSchemaType;
+	else if (type == GetPlyString()    ) yggtype_ |= 1 << kYggPlySchemaType;
+	else if (type == GetSchemaString() ) yggtype_ |= 1 << kYggSchemaSchemaType;
+	else if (type == GetAnyString()    ) {
+	  type_ |= ((1 << kTotalSchemaType) - 1);
+	  yggtype_ |= ((1 << kYggTotalSchemaType) - 1);
 	}
-	else if (type == GetPythonFunctionString() ) {
-	  type_ |= 1 << kStringSchemaType;
-	  yggtype_ |= 1 << kYggPythonImportSchemaType;
-	}
-	else if (type == GetPythonInstanceString() ) {
-	  type_ |= 1 << kObjectSchemaType;
-	  yggtype_ |= 1 << kYggPythonInstanceSchemaType;
-	}
-	else if (type == GetObjString() ) yggtype_ |= 1 << kYggObjSchemaType;
-	else if (type == GetPlyString() ) yggtype_ |= 1 << kYggPlySchemaType;
-	else if (type == GetSchemaString() ) {
-	  type_ |= 1 << kObjectSchemaType;
-	  yggtype_ |= 1 << kYggSchemaSchemaType;
-	}
-	else if (type == GetAnyString() ) yggtype_ |= ((1 << kYggTotalSchemaType) - 1);
 #endif // RAPIDJSON_YGGDRASIL
     }
 
