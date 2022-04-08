@@ -29,7 +29,9 @@ extern "C" {
 }
 #endif
 
-#include <iostream>
+#include <string>
+#include <stdexcept>
+// #include <iostream>
 #ifdef WIN32
 #include <stdlib.h>
 #endif // WIN32
@@ -65,8 +67,8 @@ void init_numpy_API() {
  */
 static inline
 void init_python_API() {
-#ifndef RAPIDJSON_YGGDRASIL_PYTHON
   std::string err = "";
+#ifndef RAPIDJSON_YGGDRASIL_PYTHON
 #ifdef _OPENMP
 #pragma omp critical (python)
   {
@@ -90,10 +92,12 @@ void init_python_API() {
       Py_Initialize();
       if (!(Py_IsInitialized()))
 	err = "Failed to initialize Python"; // GCOVR_EXCL_LINE
+      else {
+	std::cerr << "Before init_numpy_API" << std::endl;
+	init_numpy_API();
+	std::cerr << "After init_numpy_API" << std::endl;
+      }
     }
-    // if (err.length() == 0) {
-    //   init_numpy_API();
-    // }
   }
 #ifdef _OPENMP
   }

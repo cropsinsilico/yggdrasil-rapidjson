@@ -17,6 +17,11 @@
 
 #include "rapidjson.h"
 
+#ifdef RAPIDJSON_YGGDRASIL
+#include "internal/meta.h"
+#include "pyrj.h"
+#endif // RAPIDJSON_YGGDRASIL
+
 #if defined(_MSC_VER) && !defined(__clang__)
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(4244) // conversion from 'type1' to 'type2', possible loss of data
@@ -706,6 +711,47 @@ struct Transcoder<Encoding, Encoding> {
         return Encoding::Validate(is, os);  // source/target encoding are the same
     }
 };
+
+#ifdef RAPIDJSON_YGGDRASIL
+
+template<typename Encoding, typename Allocator>
+typename Encoding::Ch* PyUnicode_AsEncoding(PyObject* x, SizeType& length,
+					    Allocator& allocator) {
+  PyObject* x2 = NULL;
+  typename Encoding::Ch* free_orig = NULL;
+  const typename Encoding::Ch* orig = NULL;
+  Py_ssize_t py_len = 0;
+#define ENCODING_BRANCH(enc)						\
+  else if (internal::IsSame<Encoding, enc<typename Encoding::Ch> >::Value) { \
+    x2 = PyUnicode_As ## enc ## String(x);				\
+    if (x2 != NULL) {							\
+      py_len = PyBytes_Size(x2);					\
+      orig = PyBytes_AsString(x2);					\
+    }									\
+  }
+  if (internal::IsSame<typename Encoding::Ch, wchar_t>::Value) {
+    free_orig = PyUnicode_AsWideCharString(x, &py_len);
+    orig = free_orig;
+  }
+  else if (internal::IsSame<Encoding, UTF8<typename Encoding::Ch> >::Value)
+    orig = PyUnicode_AsUTF8AndSize(x, &py_len);
+  ENCODING_BRANCH(UTF16)
+  ENCODING_BRANCH(UTF32)
+  ENCODING_BRANCH(ASCII)
+#undef ENCODING_BRANCH
+  length = (SizeType)py_len;
+  typename Encoding::Ch* out = nullptr;
+  if (orig != NULL) {
+    out = (typename Encoding::Ch*)allocator.Malloc(length * sizeof(typename Encoding::Ch));
+    memcpy(out, orig, length * sizeof(typename Encoding::Ch));
+    if (free_orig)
+      PyMem_Free(free_orig);
+  }
+  Py_XDECREF(x2);
+  return out;
+}
+
+#endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_NAMESPACE_END
 
