@@ -12,10 +12,14 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
+#ifdef RAPIDJSON_YGGDRASIL
+#define RAPIDJSON_FORCE_IMPORT_ARRAY
+#endif // RAPIDJSON_YGGDRASIL
 #include "unittest.h"
 #include "rapidjson/rapidjson.h"
 #ifdef RAPIDJSON_YGGDRASIL
 #include "rapidjson/pyrj.h"
+#undef RAPIDJSON_PRIMARY
 #endif // RAPIDJSON_YGGDRASIL
 
 #ifdef __clang__

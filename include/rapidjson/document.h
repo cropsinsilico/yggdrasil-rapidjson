@@ -3570,7 +3570,9 @@ public:
     return ret;
   }
   PyObject* GetPythonObjectRaw() const {
-    initialize_python("SetPythonObjectRaw");
+    RAPIDJSON_ASSERT(isPythonInitialized());
+    if (!isPythonInitialized())
+      return NULL;
     PyObject* out = NULL;
     switch (GetType()) {
     case kNullType:
@@ -3628,9 +3630,13 @@ public:
     return out;
   }
   bool SetPythonObjectRaw(PyObject* x, Allocator* allocator = 0) {
-    initialize_python("SetPythonObjectRaw");
+    RAPIDJSON_ASSERT(isPythonInitialized());
+    if (!isPythonInitialized())
+      return false;
     bool out = true;
-    if (PyList_CheckExact(x)) {
+    if (x == NULL)
+      return false;
+    else if (PyList_CheckExact(x)) {
       RAPIDJSON_ASSERT(allocator);
       SetArray();
       for (SizeType i = 0; i < PyList_Size(x); i++) {
@@ -3700,9 +3706,15 @@ public:
       else
 	AddSchemaMember(GetTypeString(), GetPythonFunctionString());
       SetStringRaw(mod_cls);
-    // } else if (PyArray_Check(x)) {
-    //   std::cerr << "Found array" << std::endl;
-    //   return false;
+    } else if (PyArray_CheckScalar(x)) {
+      // char* data = PyArray_BYTES(x);
+      // npy_intp *PyArray_SHAPE(x);
+      std::cerr << "Found scalar" << std::endl;
+      return false;
+    } else if (PyArray_Check(x)) {
+      // TODO: Check contiguous
+      std::cerr << "Found array" << std::endl;
+      return false;
     } else {
       SetObject();
       ResetSchema(allocator);
@@ -4218,7 +4230,6 @@ public:
   }
 
   PyObject* GetPythonClass() const {
-    initialize_python("GetPythonClass");
     const char *mod_class;
     if (IsPythonInstance()) {
       ConstMemberIterator m = FindMember(GetPythonClassString());

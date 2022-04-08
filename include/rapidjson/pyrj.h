@@ -5,11 +5,15 @@
 #include <omp.h>
 #endif
 
+#ifndef RAPIDJSON_FORCE_IMPORT_ARRAY
+#define NO_IMPORT_ARRAY
+#endif // RAPIDJSON_FORCE_IMPORT_ARRAY
+#define PY_ARRAY_UNIQUE_SYMBOL rapidjson_ARRAY_API
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 extern "C" {
 #endif
-
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
 #ifdef _DEBUG
 #undef _DEBUG
@@ -31,7 +35,7 @@ extern "C" {
 
 #include <string>
 #include <stdexcept>
-// #include <iostream>
+#include <iostream>
 #ifdef WIN32
 #include <stdlib.h>
 #endif // WIN32
@@ -43,22 +47,22 @@ RAPIDJSON_NAMESPACE_BEGIN
  */
 static inline
 void init_numpy_API() {
+#ifdef RAPIDJSON_FORCE_IMPORT_ARRAY
   std::string err = "";
 #ifdef _OPENMP
 #pragma omp critical (numpy)
   {
 #endif
-  if (PyArray_API == NULL) { // GCOVR_EXCL_START
-    if (_import_array() < 0) {
+  if (PY_ARRAY_UNIQUE_SYMBOL == NULL) { // GCOVR_EXCL_START
+    if (_import_array() < 0)
       PyErr_Print();
-      err = "Failed to _import_array";
-    }
   } // GCOVR_EXCL_STOP
 #ifdef _OPENMP
   }
 #endif
   if (err.length() > 0)
     throw std::runtime_error(err); // GCOVR_EXCL_LINE
+#endif // RAPIDJSON_FORCE_IMPORT_ARRAY
 }
 
 
@@ -92,11 +96,8 @@ void init_python_API() {
       Py_Initialize();
       if (!(Py_IsInitialized()))
 	err = "Failed to initialize Python"; // GCOVR_EXCL_LINE
-      else {
-	std::cerr << "Before init_numpy_API" << std::endl;
+      else
 	init_numpy_API();
-	std::cerr << "After init_numpy_API" << std::endl;
-      }
     }
   }
 #ifdef _OPENMP
@@ -106,6 +107,21 @@ void init_python_API() {
     throw std::runtime_error(err); // GCOVR_EXCL_LINE
 #endif // RAPIDJSON_YGGDRASIL_PYTHON
 }
+
+
+inline
+bool isPythonInitialized() {
+  bool out = false;
+#ifdef RAPIDJSON_FORCE_IMPORT_ARRAY
+  out = (Py_IsInitialized() && (PY_ARRAY_UNIQUE_SYMBOL != NULL));
+#else
+  out = (Py_IsInitialized());
+#endif
+  if (!out)
+    std::cerr << "Python is not initialized." << std::endl;
+  return out;
+}
+
 
 /*!
   @brief Initialize Python if it is not initialized.
@@ -150,7 +166,9 @@ inline
 PyObject* import_python_module(const char* module_name,
 			       const std::string error_prefix="",
 			       const bool ignore_error=false) {
-  initialize_python(error_prefix);
+  RAPIDJSON_ASSERT(isPythonInitialized());
+  if (!isPythonInitialized())
+    return NULL;
   PyObject* out = NULL;
   PyObject* name = PyUnicode_FromString(module_name);
   if (name != NULL) {
