@@ -2058,8 +2058,6 @@ public:
 		  context.error_handler.AddWarnings(&context.validators[i], 1);
 		  break;
 		}
-	    
-		    
 #endif // RAPIDJSON_YGGDRASIL
 	    
         }
@@ -3197,11 +3195,12 @@ protected:
       PyObject* pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
 					     "CheckPythonImport", true);
       if (pycls && (PyObject_IsSubclass(pyobj, pycls) <= 0)) {
+	Py_DECREF(pyobj);
+	Py_DECREF(pycls);
 	context.error_handler.InvalidPythonClass(str, length, class_);
 	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonClass);
       }
-      if (pycls)
-	Py_DECREF(pycls);
+      Py_XDECREF(pycls);
     }
     Py_DECREF(pyobj);
     return true;

@@ -1864,13 +1864,6 @@ TEST(SchemaValidator, PythonInstance) { // 31
 }
 
 TEST(SchemaValidator, PythonInstanceClass) { // 32
-  CREATE_PYTHON_INSTANCE(OtherClass, pyinst)
-  Value x(pyinst);
-  DISPLAY_STRING("other: ", x);
-  CREATE_PYTHON_INSTANCE(ExampleSubClass, pysub)
-  Value y(pysub);
-  DISPLAY_STRING("sub: ", y);
-  //
     Document sd;
     sd.Parse(
         "{"
