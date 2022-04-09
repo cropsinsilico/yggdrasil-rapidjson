@@ -854,10 +854,11 @@ public:
     PutReserve(*this->os_, length);
     GenericStringStream<SourceEncoding> is(json);
     while (RAPIDJSON_LIKELY(is.Tell() < length)) {
-      if (RAPIDJSON_UNLIKELY(!(writeFlags & kWriteValidateEncodingFlag ? 
-			       Transcoder<SourceEncoding, TargetEncoding>::Validate(is, *this->os_) :
-			       Transcoder<SourceEncoding, TargetEncoding>::TranscodeUnsafe(is, *this->os_))))
-	return false;
+      // Do this directly instead of via the transcoder as the base64
+      // encoding will handle any set of bytes, even those that cannot be
+      // decoded via the source encoding
+      Ch c = is.Take();
+      this->os_->Put(c);
     }
     return true;
   }

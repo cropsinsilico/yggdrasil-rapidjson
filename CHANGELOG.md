@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Make validation/normalization errors more verbose to match jsonschema
 * Add Python wrapper for obj & ply w/ interop to other classes
 * Python wrapper for QuantityArray
-* Support for numpy arrays
+* Support for numpy bytes/unitcode scalars arrays
 
 ### IN PROGRESS
 * Add docstrings to new methods
@@ -23,7 +23,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Scalars w/ variable precision
 * ND arrays (1+)
 * Python import
-* Python class
+* Python class (including numpy scalars & arrays)
 * Python function
 * Python instance
 * Coverage (via gcov/llvm-cov gcovr and cmake)

@@ -39,6 +39,7 @@ extern "C" {
 #ifdef WIN32
 #include <stdlib.h>
 #endif // WIN32
+#include "rapidjson.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
 

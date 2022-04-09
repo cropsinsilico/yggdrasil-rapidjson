@@ -3575,13 +3575,21 @@ public:
       return NULL;
     PyObject* out = NULL;
     switch (GetType()) {
-    case kNullType:
+    case kNullType: {
+      Py_INCREF(Py_None);
       return Py_None;
-    case kFalseType:
+    }
+    case kFalseType: {
+      Py_INCREF(Py_False);
       return Py_False;
-    case kTrueType:
+    }
+    case kTrueType: {
+      Py_INCREF(Py_True);
       return Py_True;
+    }
     case kObjectType: {
+      if (IsPythonInstance())
+	return GetPythonInstance();
       out = PyDict_New();
       RAPIDJSON_ASSERT(out);
       ConstMemberIterator item;
@@ -3612,6 +3620,43 @@ public:
       return out;
     }
     case kStringType: {
+      if (IsPythonClass())
+	return GetPythonClass();
+      else if (IsPythonFunction())
+	return GetPythonFunction();
+      else if (IsScalar()) {
+	int typenum = GetSubTypeNumpyType();
+	if (typenum < 0)
+	  return NULL;
+	PyArray_Descr* desc = PyArray_DescrNewFromType(typenum);
+	if (desc == NULL)
+	  return NULL;
+	out = PyArray_Scalar((void*)GetString(), desc, NULL);
+	return out;
+      } else if (IsNDArray()) {
+	int typenum = GetSubTypeNumpyType();
+	if (typenum < 0)
+	  return NULL;
+	SizeType ndim = 0;
+	SizeType* shape = GetShape(ndim, schema_->GetAllocator());
+	if (!shape)
+	  return NULL;
+	npy_intp* np_shape = (npy_intp*)(schema_->GetAllocator().Malloc(sizeof(npy_intp) * ndim));
+	if (!np_shape)
+	  return NULL;
+	for (SizeType i = 0; i < ndim; i++)
+	  np_shape[i] = (npy_intp)shape[i];
+	PyObject* tmp = PyArray_SimpleNewFromData((int)ndim, np_shape, typenum,
+						  (void*)GetString());
+	schema_->GetAllocator().Free(shape);
+	schema_->GetAllocator().Free(np_shape);
+	if (tmp == NULL)
+	  return NULL;
+	// Create copy since PyArray_SimpleNewFromData dosn't copy
+	out = PyArray_NewCopy((PyArrayObject*)tmp, NPY_CORDER);
+	Py_DECREF(tmp);
+	return out;
+      }
       return PyUnicode_FromString(GetString());
     }
     case kNumberType: {
@@ -3638,18 +3683,24 @@ public:
       return false;
     else if (PyList_CheckExact(x)) {
       RAPIDJSON_ASSERT(allocator);
+      if (!allocator)
+	return false;
       SetArray();
       for (SizeType i = 0; i < PyList_Size(x); i++) {
         PushBack(ValueType(PyList_GetItem(x, i), *allocator).Move(), *allocator);
       }
     } else if (PyTuple_CheckExact(x)) {
       RAPIDJSON_ASSERT(allocator);
+      if (!allocator)
+	return false;
       SetArray();
       for (SizeType i = 0; i < PyTuple_Size(x); i++) {
         PushBack(ValueType(PyTuple_GetItem(x, i), *allocator).Move(), *allocator);
       }
     } else if (PyDict_CheckExact(x)) {
       RAPIDJSON_ASSERT(allocator);
+      if (!allocator)
+	return false;
       SetObject();
       PyObject* keys = PyDict_Keys(x);
       PyObject* ikey;
@@ -3661,17 +3712,15 @@ public:
       }
       Py_DECREF(keys);
     } else if (PyBytes_CheckExact(x)) {
-      // TODO: Encode as yggdrasil?
       RAPIDJSON_ASSERT(allocator);
+      if (!allocator)
+	return false;
+      // TODO: Encode as yggdrasil?
       SetStringRaw(StringRef(PyBytes_AsString(x),
                              (size_t)(PyBytes_Size(x))),
-                   *allocator);
+		   *allocator);
     } else if (PyUnicode_CheckExact(x)) {
       // TODO: Pass encoding?
-      // RAPIDJSON_ASSERT(allocator);
-      // SetStringRaw(StringRef(PyUnicode_AsUTF8(x),
-      //                        (size_t)(PyBytes_Size(x))),
-      //              *allocator);
       PyObject* x_bytes = PyUnicode_AsUTF8String(x);
       out = SetPythonObjectRaw(x_bytes, allocator);
       Py_DECREF(x_bytes);
@@ -3707,14 +3756,65 @@ public:
 	AddSchemaMember(GetTypeString(), GetPythonFunctionString());
       SetStringRaw(mod_cls);
     } else if (PyArray_CheckScalar(x)) {
-      // char* data = PyArray_BYTES(x);
-      // npy_intp *PyArray_SHAPE(x);
-      std::cerr << "Found scalar" << std::endl;
-      return false;
+      // TODO: Handle string/bytes, PyArray_ScalarAsCtype is different
+      //   and elsize will be 0
+      ResetSchema(allocator);
+      PyArray_Descr* desc = PyArray_DescrFromScalar(x);
+      if (desc == NULL)
+	return false;
+      SizeType precision;
+      ValueType subtype;
+      if (!NumpyType2SubType(desc, subtype, precision,
+			     schema_->GetAllocator()))
+	return false;
+      void* data = schema_->GetAllocator().Malloc(precision);
+      if (!data)
+	return false;
+      PyArray_ScalarAsCtype(x, data);
+      SetStringRaw(StringRef(static_cast<Ch*>(data), precision),
+		   schema_->GetAllocator());
+      schema_->GetAllocator().Free(data);
+      schema_->MemberReserve(5, schema_->GetAllocator());
+      AddSchemaMember(GetTypeString(), GetScalarString());
+      AddSchemaMember(GetSubTypeString(), subtype);
+      AddSchemaMember(GetPrecisionString(), precision);
+      return true;
     } else if (PyArray_Check(x)) {
-      // TODO: Check contiguous
-      std::cerr << "Found array" << std::endl;
-      return false;
+      ResetSchema(allocator);
+      PyArray_Descr* desc = PyArray_DESCR((PyArrayObject*)x);
+      if (desc == NULL)
+	return false;
+      SizeType precision;
+      ValueType subtype;
+      if (!NumpyType2SubType(desc, subtype, precision,
+			     schema_->GetAllocator()))
+	return false;
+      SizeType nelements = (SizeType)PyArray_SIZE((PyArrayObject*)x);
+      ValueType shape(kArrayType);
+      int ndim = PyArray_NDIM((PyArrayObject*)x);
+      npy_intp* np_shape = PyArray_SHAPE((PyArrayObject*)x);
+      if (np_shape == NULL)
+	return false;
+      for (int i = 0; i < ndim; i++)
+	shape.PushBack((SizeType)np_shape[i], schema_->GetAllocator());
+      PyArrayObject* cpy = PyArray_GETCONTIGUOUS((PyArrayObject*)x);
+      if (cpy == NULL)
+	return false;
+      void* data;
+      data = (void*)PyArray_BYTES(cpy);
+      if (data == NULL) {
+	Py_DECREF(cpy);
+	return false;
+      }
+      SetStringRaw(StringRef(static_cast<Ch*>(data), precision * nelements),
+		   schema_->GetAllocator());
+      Py_DECREF(cpy);
+      schema_->MemberReserve(5, schema_->GetAllocator());
+      AddSchemaMember(GetTypeString(), GetNDArrayString());
+      AddSchemaMember(GetSubTypeString(), subtype);
+      AddSchemaMember(GetPrecisionString(), precision);
+      AddSchemaMember(GetShapeString(), shape);
+      return true;
     } else {
       SetObject();
       ResetSchema(allocator);
@@ -3880,6 +3980,87 @@ public:
     else if (subtype == GetStringSubTypeString()) return kYggStringSubType;
     RAPIDJSON_ASSERT(false);
     return kYggNullSubType;
+  }
+
+  static bool NumpyType2SubType(PyArray_Descr* desc,
+				ValueType& subtype,
+				SizeType& precision,
+				Allocator& allocator) {
+    // TODO: handle string/bytes, elsize will be 0
+    if (!(PyDataType_ISNUMBER(desc)))
+      return false;
+    precision = (SizeType)(desc->elsize);
+    if (PyDataType_ISUNSIGNED(desc))
+      subtype.CopyFrom(GetUintSubTypeString(), allocator);
+    else if (PyDataType_ISSIGNED(desc))
+      subtype.CopyFrom(GetIntSubTypeString(), allocator);
+    else if (PyDataType_ISFLOAT(desc))
+      subtype.CopyFrom(GetFloatSubTypeString(), allocator);
+    else if (PyDataType_ISCOMPLEX(desc))
+      subtype.CopyFrom(GetComplexSubTypeString(), allocator);
+    else
+      return false;
+    return true;
+  }
+
+  int GetSubTypeNumpyType() const {
+    switch (GetSubTypeCode()) {
+    case (kYggIntSubType): {
+      switch (GetPrecision()) {
+      case (1):
+	return NPY_INT8;
+      case (2):
+	return NPY_INT16;
+      case (4):
+	return NPY_INT32;
+      case (8):
+	return NPY_INT64;
+      default:
+	return -1;
+      }
+    }
+    case (kYggUintSubType): {
+      switch (GetPrecision()) {
+      case (1):
+	return NPY_UINT8;
+      case (2):
+	return NPY_UINT16;
+      case (4):
+	return NPY_UINT32;
+      case (8):
+	return NPY_UINT64;
+      default:
+	return -1;
+      }
+    }
+    case (kYggFloatSubType): {
+      switch (GetPrecision()) {
+      case (2):
+	return NPY_FLOAT16;
+      case (4):
+	return NPY_FLOAT32;
+      case (8):
+	return NPY_FLOAT64;
+      default:
+	return -1;
+      }
+    }
+    case (kYggComplexSubType): {
+      switch (GetPrecision()) {
+      case (8):
+	return NPY_COMPLEX64;
+      case (16):
+	return NPY_COMPLEX128;
+      default:
+	return -1;
+      }
+    }
+    case (kYggStringSubType): {
+      return -1;
+    }
+    default: 
+      return -1;
+    }
   }
 
   const ValueType& GetSubType() const {
