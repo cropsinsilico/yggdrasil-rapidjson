@@ -3444,33 +3444,35 @@ public:
   void SetValueSchemaRaw(const Ch* s, SizeType,
 		    Allocator* allocator = 0) {
     ResetSchema(allocator);
-    // GenericStringStream<Encoding> ss(s);
-    // Base64StreamWrapper<GenericStringStream<Encoding> > s64(ss);
-    // schema_->ParseStream(s64);
-    // schema_->ParseStream(ss);
     schema_ = &(schema_->Parse(s));
   }
   template <typename T>
-  void SetNDArrayRaw(const units::GenericQuantity<T, EncodingType>* x,
+  bool SetNDArrayRaw(const units::GenericQuantity<T, EncodingType>* x,
 		     const SizeType* shape, const SizeType ndim,
 		     Allocator* allocator = 0,
 		     RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
     SizeType nelements = 1;
     for (SizeType i = 0; i < ndim; i++)
       nelements = nelements * shape[i];
-    RAPIDJSON_ASSERT((ndim > 0) && (nelements > 0));
+    RAPIDJSON_ASSERT(nelements > 0);
+    if (nelements == 0)
+      return false;
     std::basic_string<Ch> units_str = x[0].unitsStr();
     T* temp = (T*)malloc(nelements * sizeof(T));
     RAPIDJSON_ASSERT(temp);
+    if (!temp)
+      return false;
     for (SizeType i = 0; i < nelements; i++)
       temp[i] = x[i].value();
-    SetNDArrayRaw(temp, shape, ndim,
-		  units_str.c_str(), static_cast<SizeType>(units_str.size()),
-		  allocator);
+    bool out = SetNDArrayRaw(temp, shape, ndim,
+			     units_str.c_str(),
+			     static_cast<SizeType>(units_str.size()),
+			     allocator);
     free(temp);
+    return out;
   }
   template <typename T>
-  void SetNDArrayRaw(const T* data,
+  bool SetNDArrayRaw(const T* data,
 		     const SizeType* shape, const SizeType& ndim,
 		     const Ch* units_str=nullptr, const SizeType units_len=0,
 		     Allocator* allocator = 0, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
@@ -3486,15 +3488,6 @@ public:
     }
     SetStringRaw(StringRef(reinterpret_cast<const Ch*>(data), nbytes),
 		 schema_->GetAllocator());
-    // size_t length_siz = 0;
-    // unsigned char* encoded_bytes = base64_encode(reinterpret_cast<unsigned char*>(data),
-    // 						 nbytes, &length_siz);
-    // RAPIDJSON_ASSERT(encoded_bytes != NULL);
-    // length = (SizeType)(length_siz * sizeof(unsigned char) / sizeof(Ch));
-    // Copy so that freeing is handled by the allocator
-    // SetStringRaw(StringRef(reinterpret_cast<Ch*>(encoded_bytes), length),
-    // 		 schema_->GetAllocator());
-    // free(encoded_bytes);
     // Update schema
     schema_->MemberReserve(5, schema_->GetAllocator());
     if (ndim == 0) {
@@ -3514,13 +3507,15 @@ public:
     if (ndim > 0) {
       AddSchemaMember(GetShapeString(), shape_array);
     }
+    return true;
   }
-  void SetNDArrayRaw(const Ch* data, const SizeType precision,
+  bool SetNDArrayRaw(const Ch* data, const SizeType precision,
 		     const SizeType* shape, const SizeType ndim,
 		     const Ch* units_str=nullptr, const SizeType units_len=0,
 		     Allocator* allocator = 0) {
-    SetNDArrayRaw(data, shape, ndim, units_str, units_len, allocator);
+    bool out = SetNDArrayRaw(data, shape, ndim, units_str, units_len, allocator);
     schema_->FindMember(GetPrecisionString())->Set(precision);
+    return out;
   }
   bool GetPythonObjectClassName(PyObject* x, StringRefType& ref, Allocator& allocator) {
     // TODO: Handle change in encoding

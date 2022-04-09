@@ -1987,6 +1987,9 @@ public:
   //! \brief Get the units string.
   //! \return Units string.
   std::basic_string<Ch> unitsStr() const { return units_.str(); }
+  //! \brief Set the quantity value.
+  //! \param new_value New quantity value.
+  void set_value(const T& new_value) { value_ = new_value; }
   //! \brief Check if two quantities are identical. The units must be
   //!   identical, not just compatible.
   //! \param x Quantity for comparison.
@@ -2538,6 +2541,14 @@ public:
   //! \brief Get the size of the array in each dimension.
   //! \return Array shape.
   const SizeType* shape() const { return shape_; }
+  //! \brief Set the quantity value.
+  //! \param new_value New quantity value.
+  void set_value(const T* new_value, SizeType ndim, SizeType* shape) {
+    if (value_ != nullptr) free(value_);
+    if (shape_ != nullptr) free(shape_);
+    ndim_ = ndim;
+    _init(value_, shape_);
+  }
   //! \brief Return the pointer to the value and then reset it.
   //! \return Value.
   T* pop_value() {
