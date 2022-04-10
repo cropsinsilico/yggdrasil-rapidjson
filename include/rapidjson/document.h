@@ -2991,13 +2991,8 @@ public:
   explicit GenericValue(const units::GenericQuantityArray<T, EncodingType>& x,
 			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT {
-    SetNDArrayRaw(x.value(), x.shape(), x.ndim(), nullptr, 0, allocator);
-    std::basic_string<Ch> units_str = x.unitsStr();
-    if (units_str.size() > 0)
-      AddSchemaMember(GetUnitsString(), units_str.c_str(),
-		      static_cast<SizeType>(units_str.size()));
-  }
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  { SetNDArrayRaw(&x, allocator); }
   template <typename T>
   explicit GenericValue(const units::GenericQuantity<T, EncodingType>* x,
 			const SizeType* shape, const SizeType ndim,
@@ -3445,6 +3440,22 @@ public:
 		    Allocator* allocator = 0) {
     ResetSchema(allocator);
     schema_ = &(schema_->Parse(s));
+  }
+  template <typename T>
+  bool SetNDArrayRaw(const units::GenericQuantityArray<T, EncodingType>* x,
+		     Allocator* allocator = 0,
+		     RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
+    std::basic_string<Ch> units_str = x->unitsStr();
+    bool out = false;
+    if (units_str.size() > 0)
+      SetNDArrayRaw(x->value(), x->shape(), x->ndim(),
+		    units_str.c_str(),
+		    static_cast<SizeType>(units_str.size()),
+		    allocator);
+    else
+      SetNDArrayRaw(x->value(), x->shape(), x->ndim(),
+		    nullptr, 0, allocator);
+    return out;
   }
   template <typename T>
   bool SetNDArrayRaw(const units::GenericQuantity<T, EncodingType>* x,

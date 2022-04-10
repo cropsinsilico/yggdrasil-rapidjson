@@ -1903,6 +1903,48 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
   }
 #endif
 
+#define QUANTITY_OPERATOR_INPLACE(op)					\
+  template<typename T2>							\
+  GenericQuantity& operator op(const GenericQuantity<T2, Encoding>& x) { \
+    units_ op x.units();						\
+    value_ op castPrecision<T2,T>(x.value());				\
+    value_ *= castPrecision<double,T>(units_.pull_factor());		\
+    return *this;							\
+  }									\
+  ADD_QUANTITY_OPERATOR(op)
+#define QUANTITY_OPERATOR_INPLACE_SCALAR(op)	\
+  QUANTITY_OPERATOR_INPLACE(op)			\
+  template<typename T2>				\
+  GenericQuantity& operator op(const T2& x) {	\
+    value_ op castPrecision<T2,T>(x);		\
+    return *this;				\
+  }
+#define QUANTITY_OPERATOR_INPLACE_COMPAT(op, body)			\
+  template<typename T2>							\
+  GenericQuantity& operator op(const GenericQuantity<T2, Encoding>& x) { \
+    if (units_ != x.units())						\
+      return *this op x.as(units_);					\
+    body;								\
+    return *this;							\
+  }									\
+  ADD_QUANTITY_OPERATOR(op)
+#define QX_MODULO_OPERATOR(cls)					\
+  template<typename T2>						\
+  cls<T, Encoding>& operator%=(const cls<T2, Encoding>& x) {	\
+    cls<T, Encoding> val = *this / x;				\
+    val.floor_inplace();					\
+    val *= x;							\
+    *this -= val;						\
+    return *this;						\
+  }								\
+  template<typename T2>						\
+  friend cls<T, Encoding> operator%(cls<T, Encoding> lhs,	\
+				    const T2& rhs) {		\
+    lhs %= rhs;							\
+    return lhs;							\
+  }
+  
+
 //! Scalar quantity with units.
 //! \tparam T Type of the underlying scalar.
 //! \tparam Encoding Encoding used to store the unit strings.
@@ -1989,7 +2031,10 @@ public:
   std::basic_string<Ch> unitsStr() const { return units_.str(); }
   //! \brief Set the quantity value.
   //! \param new_value New quantity value.
-  void set_value(const T& new_value) { value_ = new_value; }
+  template<typename T2>
+  void set_value(const T2& new_value,
+		 RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, T))))
+  { value_ = castPrecision<T2,T>(new_value); }
   //! \brief Check if two quantities are identical. The units must be
   //!   identical, not just compatible.
   //! \param x Quantity for comparison.
@@ -2033,25 +2078,11 @@ public:
   //! \return true if greater than or equal to, false otherwise.
   template<typename T2>
   bool operator>=(const GenericQuantity<T2, Encoding>& x) const { return (!(*this < x)); }
-  //! \brief Multiply by a scalar in place.
-  //! \tparam T2 Scalar type.
-  //! \param x Scalar to multiply by.
+  //! \brief Multiply by a scalar or quantity in place.
+  //! \tparam T2 Scalar or quantity type.
+  //! \param x Scalar or quantity to multiply by.
   //! \return Result of multiplication.
-  template<typename T2>
-  GenericQuantity& operator*=(const T2& x) {
-    value_ *= castPrecision<T2,T>(x);
-    return *this;
-  }
-  //! \brief Multiply by another quantity in place.
-  //! \param x Quantity to multiply by.
-  //! \return Result of multiplication.
-  template<typename T2>
-  GenericQuantity& operator*=(const GenericQuantity<T2, Encoding>& x) {
-    units_ *= x.units();
-    value_ *= castPrecision<T2,T>(x.value()) * castPrecision<double,T>(units_.pull_factor());
-    return *this;
-  }
-  ADD_QUANTITY_OPERATOR(*=)
+  QUANTITY_OPERATOR_INPLACE_SCALAR(*=)
   //! \brief Multiply by a quantity or scalar.
   //! \tparam T2 Quantity or scalar type.
   //! \param x Scalar to multiply by.
@@ -2062,26 +2093,11 @@ public:
     lhs *= rhs;
     return lhs;
   }
-  //! \brief Divide by another quantity in place.
-  //! \param x Quantity to divide by.
+  //! \brief Divide by a scalar or quantity in place.
+  //! \tparam T2 Quantity or scalar type.
+  //! \param x Scalar or quantity to divide by.
   //! \return Result of division.
-  template<typename T2>
-  GenericQuantity& operator/=(const GenericQuantity<T2, Encoding>& x) {
-    value_ /= castPrecision<T2,T>(x.value());
-    units_ /= x.units();
-    value_ *= castPrecision<double,T>(units_.pull_factor());
-    return *this;
-  }
-  //! \brief Divide by a scalar in place.
-  //! \tparam T2 Scalar type.
-  //! \param x Scalar to divide by.
-  //! \return Result of division.
-  template<typename T2>
-  GenericQuantity& operator/=(const T2& x) {
-    value_ /= x;
-    return *this;
-  }
-  ADD_QUANTITY_OPERATOR(/=)
+  QUANTITY_OPERATOR_INPLACE_SCALAR(/=)
   //! \brief Divide by a scalar or Quantity.
   //! \tparam T2 Scalar or Quantity type.
   //! \param x Scalar or Quantity to divide by.
@@ -2095,14 +2111,7 @@ public:
   //! \brief Modulo by another quantity in place.
   //! \param x Quantity to modulo by.
   //! \return Result of modulo.
-  template<typename T2>
-  GenericQuantity& operator%=(const GenericQuantity<T2, Encoding>& x) {
-    GenericQuantity<T, Encoding> val = *this / x;
-    val.floor_inplace();
-    val *= x;
-    *this -= val;
-    return *this;
-  }
+  QX_MODULO_OPERATOR(GenericQuantity)
   //! \brief Modulo by a scalar in place.
   //! \tparam T2 Scalar type.
   //! \param x Scalar to modulo by.
@@ -2113,27 +2122,10 @@ public:
     return *this;
   }
   ADD_QUANTITY_OPERATOR(%=)
-  //! \brief Modulo by a scalar or Quantity.
-  //! \tparam T2 Scalar or Quantity type.
-  //! \param x Scalar or Quantity to modulo by.
-  //! \return Result of division.
-  template<typename T2>
-  friend GenericQuantity<T, Encoding> operator%(GenericQuantity<T, Encoding> lhs,
-						const T2& rhs) {
-    lhs %= rhs;
-    return lhs;
-  }
   //! \brief Add a quantity with compatible units to this quantity.
   //! \param x Quantity to add.
   //! \return Result of addition.
-  template<typename T2>
-  GenericQuantity& operator+=(const GenericQuantity<T2, Encoding>& x) {
-    if (units_ != x.units())
-      return operator+=(x.as(units_));
-    raw_add_inplace(x);
-    return *this;
-  }
-  ADD_QUANTITY_OPERATOR(+=)
+  QUANTITY_OPERATOR_INPLACE_COMPAT(+=, raw_add_inplace(x))
   //! \brief Add a quantity with compatible units.
   //! \param x Quantity to add.
   //! \return Result of addition.
@@ -2146,13 +2138,7 @@ public:
   //! \brief Subtract a quantity with compatible units from this quantity.
   //! \param x Quantity to subtract.
   //! \return Result of subtraction.
-  template<typename T2>
-  GenericQuantity& operator-=(const GenericQuantity<T2, Encoding>& x) {
-    if (units_ != x.units())
-      return operator-=(x.as(units_));
-    raw_add_inplace(x, -1.0);
-    return *this;
-  }
+  QUANTITY_OPERATOR_INPLACE_COMPAT(-=, raw_add_inplace(x, -1.0))
   //! \brief Subtract a quantity with compatible units.
   //! \param lhs Left side of subtraction operation.
   //! \param rhs Right side of subtraction operation.
@@ -2163,7 +2149,6 @@ public:
     lhs -= rhs;
     return lhs;
   }
-  ADD_QUANTITY_OPERATOR(-=)
   //! \brief Perform floor operation in place.
   //! \return Resulut of floor.
   GenericQuantity& floor_inplace() {
@@ -2178,15 +2163,6 @@ public:
     cpy.floor_inplace();
     return cpy;
   }
-  
-  //! \brief Explicity copy.
-  //! \return Copy.
-  GenericQuantity<T, Encoding>* copy() const {
-    return new GenericQuantity<T, Encoding>(*this);
-  }
-  //! \brief Explicity copy and cast to void pointer.
-  //! \return Copy.
-  void* copy_void() const { return (void*)copy(); }
   //! \brief Perform power operation in place.
   //! \param x Power to raise this quantity to.
   template<typename T2>
@@ -2206,6 +2182,14 @@ public:
     out.inplace_pow(x);
     return out;
   }
+  //! \brief Explicity copy.
+  //! \return Copy.
+  GenericQuantity<T, Encoding>* copy() const {
+    return new GenericQuantity<T, Encoding>(*this);
+  }
+  //! \brief Explicity copy and cast to void pointer.
+  //! \return Copy.
+  void* copy_void() const { return (void*)copy(); }
   //! \brief Get the dimensions of this quantity's units.
   //! \return The dimensions of the units.
   Dimension dimension() const { return units_.dimension(); }
@@ -2324,25 +2308,69 @@ using Quantity = GenericQuantity<T, UTF8<char> >;
 YGGDRASIL_CREATE_QUANTITY(Quantity, UTF8<char>, );
 #endif // RAPIDJSON_HAS_CXX11
 
-#define ARRAY_ARRAY_OP(op)						\
-  GenericQuantityArray operator op(const GenericQuantityArray& x) const {		\
-    RAPIDJSON_ASSERT(is_same_shape(x));					\
-    SizeType N = nelements();						\
-    GenericQuantityArray out(value_, ndim_, shape_, units_ op x.units_);	\
-    for (SizeType i = 0; i < N; i++)					\
-      out.value_[i] = value_[i] op x.value_[i];				\
-    return out;								\
-  }
-#define ARRAY_SCALAR_OP(op)						\
+#if RAPIDJSON_HAS_CXX11
+#define ADD_QUANTITY_ARRAY_OPERATOR(op)
+#else
+#define ADD_QUANTITY_ARRAY_OPERATOR(op)					\
   template<typename T2>							\
-  GenericQuantityArray operator op(const T2& x) const {			\
-    SizeType N = nelements();						\
-    GenericQuantityArray out(value_, ndim_, shape_, units_ op x);		\
-    for (SizeType i = 0; i < N; i++)					\
-      out.value_[i] = value_[i] op x;					\
-    return out;								\
+  GenericQuantityArray& operator op (const QuantityArray<T2>& x) {	\
+    if (internal::IsSame<Encoding,UTF8<char> >::Value)			\
+      return *this op *((GenericQuantityArray<T2, Encoding>*)(&x));	\
+    return *this op GenericQuantityArray<T2, Encoding>(x.value(), x.ndim(), x.shape(), x.units()); \
   }
-  
+#endif
+
+#define QUANTITY_ARRAY_OPERATOR_INPLACE(op)				\
+  template<typename T2>							\
+  GenericQuantityArray& operator op(const GenericQuantityArray<T2, Encoding>& x) { \
+    RAPIDJSON_ASSERT(is_same_shape(x) || (nelements() == 1) || (x.nelements() == 1)); \
+    if (nelements() == 1) {						\
+      T value0 = value_[0];						\
+      if (value_ != nullptr) free(value_);				\
+      if (shape_ != nullptr) free(shape_);				\
+      ndim_ = x.ndim();							\
+      _init(x.value(), x.shape());					\
+      for (SizeType i = 0; i < nelements(); i++) {			\
+        value_[i] = value0;						\
+      }									\
+    }									\
+    units_ op x.units();						\
+    double factor = units_.pull_factor();				\
+    SizeType N = nelements();						\
+    if (is_same_shape(x)) {						\
+      for (SizeType i = 0; i < N; i++) {				\
+	value_[i] op castPrecision<T2,T>(x.value()[i]);			\
+	value_[i] *= castPrecision<double,T>(factor);			\
+      }									\
+    } else if (x.nelements() == 1) {					\
+      for (SizeType i = 0; i < N; i++) {				\
+	value_[i] op castPrecision<T2,T>(x.value()[0]);			\
+	value_[i] *= castPrecision<double,T>(factor);			\
+      }									\
+    }									\
+    return *this;							\
+  }									\
+  ADD_QUANTITY_ARRAY_OPERATOR(op)
+#define QUANTITY_ARRAY_OPERATOR_INPLACE_SCALAR(op)	\
+  QUANTITY_ARRAY_OPERATOR_INPLACE(op)			\
+  template<typename T2>					\
+  GenericQuantityArray& operator op(const T2& x) {	\
+    SizeType N = nelements();				\
+    for (SizeType i = 0; i < N; i++) {			\
+      value_[i] op castPrecision<T2,T>(x);		\
+    }							\
+    return *this;					\
+  }
+#define QUANTITY_ARRAY_OPERATOR_INPLACE_COMPAT(op, body)		\
+  template<typename T2>							\
+  GenericQuantityArray& operator op(const GenericQuantityArray<T2, Encoding>& x) { \
+    if (units_ != x.units())						\
+      return *this op x.as(units_);					\
+    body;								\
+    return *this;							\
+  }									\
+  ADD_QUANTITY_ARRAY_OPERATOR(op)
+
 
 //! Array quantity with units.
 //! \tparam T Type of the underlying scalar.
@@ -2437,18 +2465,13 @@ public:
     _init(other.value_, other.shape_);
     return *this;
   }
-  //! \brief Explicity copy.
-  //! \return Copy.
-  GenericQuantityArray<T, Encoding>* copy() const {
-    return new GenericQuantityArray<T, Encoding>(*this);
-  }
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
   void display(std::ostream& os) const {
     os << "GenericQuantityArray(";
     _write_array(os);
     os << ", ";
-    units_.display(os);
+    os << units_;
     os << ")";
   }
   //! \brief Get the quantity array as a string.
@@ -2481,7 +2504,8 @@ private:
     out.push_back(idx - prev);
     return out;
   }
-  void _init(const T* value, const SizeType* shape) {
+  template<typename T2>
+  void _init(const T2* value, const SizeType* shape) {
     RAPIDJSON_ASSERT(ndim_ > 0);
     _init_shape(shape);
     _init_value(value);
@@ -2492,11 +2516,18 @@ private:
     for (SizeType i = 0; i < ndim_; i++)
       shape_[i] = shape[i];
   }
-  void _init_value(const T* value) {
+  template<typename T2>
+  void _init_value(const T2*,
+		   RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T2, T)))) {
+    RAPIDJSON_ASSERT(((YGGDRASIL_IS_CASTABLE(T2, T)::Value)));
+  }
+  template<typename T2>
+  void _init_value(const T2* value,
+		   RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, T)))) {
     SizeType N = nelements();
     value_ = (T*)malloc(N * sizeof(T));
     for (SizeType i = 0; i < N; i++)
-      value_[i] = value[i];
+      value_[i] = castPrecision<T2,T>(value[i]);
   }
   void _write_array(std::ostream& os) const {
     SizeType N = nelements();
@@ -2505,7 +2536,10 @@ private:
       idx = _index(i);
       for (SizeType j = 0; j < ndim_; j++) {
 	if (idx[j] == 0) {
-	  if ((j == 0) || (idx[j - 1] == 0)) {
+	  if (j == 0) {
+	    if (i == 0)
+	      os << "[";
+	  } else if (idx[j - 1] == 0) {
 	    os << "[";
 	  } else {
 	    os << "], [";
@@ -2519,14 +2553,52 @@ private:
     for (SizeType i = 0; i < ndim_; i++)
       os << "]";
   }
-  GenericQuantityArray raw_add(const GenericQuantityArray& x, double factor=1.0) const {
+  template<typename T2>
+  void raw_add_inplace(const GenericQuantityArray<T2, Encoding>& x, double factor=1.0,
+		       RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
+					   YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) {
     // Assumes units have already been matched
-    RAPIDJSON_ASSERT(is_same_shape(x));
-    GenericQuantityArray out(value_, ndim_, shape_, units_);
+    RAPIDJSON_ASSERT(is_same_shape(x) || (nelements() == 1) || (x.nelements() == 1));
+    if (nelements() == 1) {
+      T value0 = value_[0];
+      if (value_ != nullptr) free(value_);
+      if (shape_ != nullptr) free(shape_);
+      ndim_ = x.ndim();
+      _init(x.value(), x.shape());
+      for (SizeType i = 0; i < nelements(); i++)
+	value_[i] = value0;
+    }
     SizeType N = nelements();
-    for (SizeType i = 0; i < N; i++)
-      out.value_[i] = value_[i] + (factor * x.value_[i]);
-    return out;
+    if (is_same_shape(x)) {
+      if (factor < 0)
+	for (SizeType i = 0; i < N; i++)
+	  value_[i] -= castPrecision<T2, T>(x.value()[i]);
+      else
+	for (SizeType i = 0; i < N; i++)
+	  value_[i] += castPrecision<T2, T>(x.value()[i]);
+    } else if (x.nelements() == 1) {
+      if (factor < 0)
+	for (SizeType i = 0; i < N; i++)
+	  value_[i] -= castPrecision<T2, T>(x.value()[0]);
+      else
+	for (SizeType i = 0; i < N; i++)
+	  value_[i] += castPrecision<T2, T>(x.value()[0]);
+    }
+  }
+  template<typename T2>
+  void raw_add_inplace(const GenericQuantityArray<T2, Encoding>& x, double factor=1.0,
+		       RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
+					   internal::NotExpr<YGGDRASIL_IS_COMPLEX_TYPE(T2)> >))) {
+    // Assumes units have already been matched
+    RAPIDJSON_ASSERT(is_same_shape(x) || (x.nelements() == 1));
+    SizeType N = nelements();
+    if (is_same_shape(x)) {
+      for (SizeType i = 0; i < N; i++)
+	value_[i] += (factor * x.value()[i]);
+    } else if (x.nelements() == 1) {
+      for (SizeType i = 0; i < N; i++)
+	value_[i] += (factor * x.value()[0]);
+    }
   }
 public:
   //! \brief Get the quantity value without units.
@@ -2543,11 +2615,12 @@ public:
   const SizeType* shape() const { return shape_; }
   //! \brief Set the quantity value.
   //! \param new_value New quantity value.
-  void set_value(const T* new_value, SizeType ndim, SizeType* shape) {
+  template<typename T2>
+  void set_value(const T2* new_value, SizeType ndim, SizeType* shape) {
     if (value_ != nullptr) free(value_);
     if (shape_ != nullptr) free(shape_);
     ndim_ = ndim;
-    _init(value_, shape_);
+    _init(new_value, shape);
   }
   //! \brief Return the pointer to the value and then reset it.
   //! \return Value.
@@ -2569,75 +2642,174 @@ public:
   //! \brief Check if another quantity array has the same shape.
   //! \param x QuantityArray for comparison.
   //! \return true if the shapes are equivalent, false otherwise.
-  bool is_same_shape(const GenericQuantityArray& x) const {
-    if (ndim_ != x.ndim_) return false;
+  template<typename T2>
+  bool is_same_shape(const GenericQuantityArray<T2, Encoding>& x) const {
+    if (ndim_ != x.ndim()) return false;
     for (SizeType i = 0; i < ndim_; i++)
-      if (shape_[i] != x.shape_[i]) return false;
+      if (shape_[i] != x.shape()[i]) return false;
     return true;
   }
   //! \brief Check if two quantities are identical. The units must be
   //!   identical, not just compatible.
   //! \param x QuantityArray for comparison.
   //! \return true if the two quantities are identical, false otherwise.
-  bool operator==(const GenericQuantityArray& x) const {
-    if (units_ != x.units_) return false;
+  template<typename T2>
+  bool operator==(const GenericQuantityArray<T2, Encoding>& x) const {
+    if (units_ != x.units()) return false;
     if (!is_same_shape(x)) return false;
     for (SizeType i = 0; i < nelements(); i++)
-      if (!(values_eq(value_[i], x.value_[i]))) return false;
+      if (!(values_eq(value_[i], x.value()[i]))) return false;
     return true;
   }
   //! \brief Check if two quantities are not identical.
   //! \param x QuantityArray for comparison.
   //! \return true if the two quantities are not identical, false otherwise.
-  bool operator!=(const GenericQuantityArray& x) const { return (!(*this==x)); }
-  //! \brief Multiply by another quantity element by element.
-  //! \param x QuantityArray to multiply by.
+  template<typename T2>
+  bool operator!=(const GenericQuantityArray<T2, Encoding>& x) const { return (!(*this==x)); }
+  //! \brief Less than comparison operator.
+  //! \param x Quantity for comparison.
+  //! \return true if less than, false otherwise.
+  template<typename T2>
+  bool operator<(const GenericQuantityArray<T2, Encoding>& x) const {
+    if (units_ != x.units()) return false;
+    if (!is_same_shape(x)) return false;
+    for (SizeType i = 0; i < nelements(); i++)
+      if (!(values_lt(value_[i], x.value()[i]))) return false;
+    return true;
+  }
+  //! \brief Greater than comparison operator.
+  //! \param x QuantityArray for comparison.
+  //! \return true if greater than, false otherwise.
+  template<typename T2>
+  bool operator>(const GenericQuantityArray<T2, Encoding>& x) const {
+    if (units_ != x.units()) return false;
+    if (!is_same_shape(x)) return false;
+    for (SizeType i = 0; i < nelements(); i++)
+      if (!(values_gt(value_[i], x.value()[i]))) return false;
+    return true;
+  }
+  //! \brief Less than or equal to comparison operator.
+  //! \param x QuantityArray for comparison.
+  //! \return true if less than or equal to, false otherwise.
+  template<typename T2>
+  bool operator<=(const GenericQuantityArray<T2, Encoding>& x) const { return (!(*this > x)); }
+  //! \brief Greater than or equal to comparison operator.
+  //! \param x QuantityArray for comparison.
+  //! \return true if greater than or equal to, false otherwise.
+  template<typename T2>
+  bool operator>=(const GenericQuantityArray<T2, Encoding>& x) const { return (!(*this < x)); }
+  //! \brief Multiply by a scalar or QuantityArray element by element inplace
+  //! \param x Scalar or QuantityArray to multiply by.
   //! \return Result of multiplication.
-  ARRAY_ARRAY_OP(*);
-  //! \brief Divide by another quantity.
-  //! \param x QuantityArray to divide by.
-  //! \return Result of division.
-  ARRAY_ARRAY_OP(/);
-  //! \brief Multiply by a scalar.
-  //! \tparam T2 Scalar type.
-  //! \param x Scalar to multiply by.
+  QUANTITY_ARRAY_OPERATOR_INPLACE_SCALAR(*=)
+  //! \brief Multiply by a scalar or another quantity element by element.
+  //! \param x Scalar or QuantityArray to multiply by.
   //! \return Result of multiplication.
-  ARRAY_SCALAR_OP(*)
-  //! \brief Divide by a scalar.
-  //! \tparam T2 Scalar type.
-  //! \param x Scalar to divide by.
+  template<typename T2>
+  friend GenericQuantityArray<T, Encoding> operator*(GenericQuantityArray<T, Encoding> lhs,
+						     const T2& rhs) {
+    lhs *= rhs;
+    return lhs;
+  }
+  //! \brief Divide by a scalar or QuantityArray element by element inplace.
+  //! \param x Scalar or QuantityArray to divide by.
   //! \return Result of division.
-  ARRAY_SCALAR_OP(/)
+  QUANTITY_ARRAY_OPERATOR_INPLACE_SCALAR(/=)
+  //! \brief Divide by a scalar or QuantityArray element by element.
+  //! \param x Scalar or QuantityArray to divide by.
+  //! \return Result of division.
+  template<typename T2>
+  friend GenericQuantityArray<T, Encoding> operator/(GenericQuantityArray<T, Encoding> lhs,
+						     const T2& rhs) {
+    lhs /= rhs;
+    return lhs;
+  }
+  //! \brief Modulo by another quantity in place element by element.
+  //! \param x QuantityArray to modulo by.
+  //! \return Result of modulo.
+  QX_MODULO_OPERATOR(GenericQuantityArray)
+  //! \brief Modulo by a scalar in place.
+  //! \tparam T2 Scalar type.
+  //! \param x Scalar to modulo by.
+  //! \return Result of division.
+  template<typename T2>
+  GenericQuantityArray& operator%=(const T2& x) {
+    SizeType N = nelements();
+    for (SizeType i = 0; i < N; i++) {
+      value_[i] %= castPrecision<T2,T>(x);
+    }
+    return *this;
+  }
+  ADD_QUANTITY_ARRAY_OPERATOR(%=)
   //! \brief Add a quantity with compatible units.
   //! \param x QuantityArray to add.
   //! \return Result of addition.
-  GenericQuantityArray operator+(const GenericQuantityArray& x) const {
-    if (units_ != x.units_)
-      return (*this + x.as(units_));
-    return raw_add(x); }
+  QUANTITY_ARRAY_OPERATOR_INPLACE_COMPAT(+=, raw_add_inplace(x))
+  template<typename T2>
+  friend GenericQuantityArray<T, Encoding> operator+(GenericQuantityArray<T, Encoding> lhs,
+						     const GenericQuantityArray<T2, Encoding>& rhs) {
+    lhs += rhs;
+    return lhs;
+  }
   //! \brief Subtract a quantity with compatible units.
   //! \param x QuantityArray to subtract.
   //! \return Result of subtraction.
-  GenericQuantityArray operator-(const GenericQuantityArray& x) const {
-    if (units_ != x.units_)
-      return (*this - x.as(units_));
-    return raw_add(x, -1.0); }
+  QUANTITY_ARRAY_OPERATOR_INPLACE_COMPAT(-=, raw_add_inplace(x, -1.0))
+  template<typename T2>
+  friend GenericQuantityArray<T, Encoding> operator-(GenericQuantityArray<T, Encoding> lhs,
+						     const GenericQuantityArray<T2, Encoding>& rhs) {
+    lhs -= rhs;
+    return lhs;
+  }
+  //! \brief Perform floor operation in place.
+  //! \return Resulut of floor.
+  GenericQuantityArray& floor_inplace() {
+    if (YGGDRASIL_IS_FLOAT_TYPE(T)::Value) {
+      SizeType N = nelements();
+      for (SizeType i = 0; i < N; i++) {
+	value_[i] = value_floor(value_[i]);
+      }
+    }
+    return *this;
+  }
+  //! \brief Perform floor operation in place.
+  //! \return Resulut of floor.
+  GenericQuantityArray floor() {
+    GenericQuantityArray<T, Encoding> cpy(*this);
+    cpy.floor_inplace();
+    return cpy;
+  }
   //! \brief Perform power operation in place.
   //! \param x Power to raise this quantity to.
-  void inplace_pow(const double& x) {
+  template<typename T2>
+  void inplace_pow(const T2& x,
+		   RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
     SizeType N = nelements();
-    for (SizeType i = 0; i < N; i++)
-      value_[i] = std::pow(value_[i], x);
     units_.inplace_pow(x);
+    double factor = units_.pull_factor();
+    for (SizeType i = 0; i < N; i++) {
+      value_[i] = std::pow(value_[i], x);
+      value_[i] *= castPrecision<double,T>(factor);
+    }
   }
   //! \brief Raise this quantity to a power.
   //! \param x Power to raise this quantity to.
   //! \return Resulting quantity.
-  GenericQuantityArray pow(const double& x) const {
+  template<typename T2>
+  GenericQuantityArray pow(const T2& x,
+			   RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) const {
     GenericQuantityArray out(*this);
     out.inplace_pow(x);
     return out;
   }
+  //! \brief Explicity copy.
+  //! \return Copy.
+  GenericQuantityArray<T, Encoding>* copy() const {
+    return new GenericQuantityArray<T, Encoding>(*this);
+  }
+  //! \brief Explicity copy and cast to void pointer.
+  //! \return Copy.
+  void* copy_void() const { return (void*)copy(); }
   //! \brief Get the dimensions of this quantity's units.
   //! \return The dimensions of the units.
   Dimension dimension() const { return units_.dimension(); }
@@ -2648,7 +2820,8 @@ public:
   //!   dimensions.
   //! \param x QuantityArray for comparison.
   //! \return true if the units are compatible, false otherwise.
-  bool is_compatible(const GenericQuantityArray& x) const {
+  template<typename T2>
+  bool is_compatible(const GenericQuantityArray<T2, Encoding>& x) const {
     return (dimension() == x.dimension());
   }
   //! \brief Check if a set of units is compatible.
@@ -2661,7 +2834,8 @@ public:
   //!    for the possibility that it has different, but compatible, units.
   //! \param x QuantityArray for comparison.
   //! \return true if the two quantities are equivalent, false otherwise.
-  bool equivalent_to(const GenericQuantityArray& x) {
+  template<typename T2>
+  bool equivalent_to(const GenericQuantityArray<T2, Encoding>& x) {
     if (!(is_compatible(x)))
       return false;
     return (*this==x.as(units_));
