@@ -3560,6 +3560,7 @@ public:
     RAPIDJSON_ASSERT(static_cast<SizeType>(res) <= mod_cls_siz);
     if ((res <= 0) || (static_cast<SizeType>(res) > mod_cls_siz))
       return false;
+    ref.~GenericStringRef();
     new (&ref) StringRefType(reinterpret_cast<Ch*>(mod_cls), static_cast<SizeType>(res));
     return true;
   }
