@@ -3448,13 +3448,13 @@ public:
     std::basic_string<Ch> units_str = x->unitsStr();
     bool out = false;
     if (units_str.size() > 0)
-      SetNDArrayRaw(x->value(), x->shape(), x->ndim(),
-		    units_str.c_str(),
-		    static_cast<SizeType>(units_str.size()),
-		    allocator);
+      out = SetNDArrayRaw(x->value(), x->shape(), x->ndim(),
+			  units_str.c_str(),
+			  static_cast<SizeType>(units_str.size()),
+			  allocator);
     else
-      SetNDArrayRaw(x->value(), x->shape(), x->ndim(),
-		    nullptr, 0, allocator);
+      out = SetNDArrayRaw(x->value(), x->shape(), x->ndim(),
+			  nullptr, 0, allocator);
     return out;
   }
   template <typename T>
