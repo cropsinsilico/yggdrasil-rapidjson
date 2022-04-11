@@ -185,7 +185,8 @@ public:
     Py_DECREF(pykwargs_val1);						\
     Py_DECREF(pykwargs_val2);						\
     var = PyObject_Call(pyclass, pyargs, pykwargs);			\
-    RAPIDJSON_ASSERT(pyinst);						\
+    RAPIDJSON_ASSERT(var);						\
+    Py_DECREF(pyclass);							\
     Py_DECREF(pyargs);							\
     Py_DECREF(pykwargs);						\
   }

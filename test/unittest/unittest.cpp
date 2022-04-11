@@ -19,7 +19,6 @@
 #include "rapidjson/rapidjson.h"
 #ifdef RAPIDJSON_YGGDRASIL
 #include "rapidjson/pyrj.h"
-#undef RAPIDJSON_PRIMARY
 #endif // RAPIDJSON_YGGDRASIL
 
 #ifdef __clang__

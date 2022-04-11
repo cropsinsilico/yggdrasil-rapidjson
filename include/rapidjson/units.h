@@ -2590,7 +2590,16 @@ private:
 		       RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
 					   internal::NotExpr<YGGDRASIL_IS_COMPLEX_TYPE(T2)> >))) {
     // Assumes units have already been matched
-    RAPIDJSON_ASSERT(is_same_shape(x) || (x.nelements() == 1));
+    RAPIDJSON_ASSERT(is_same_shape(x) || (nelements() == 1) || (x.nelements() == 1));
+    if (nelements() == 1) {
+      T value0 = value_[0];
+      if (value_ != nullptr) free(value_);
+      if (shape_ != nullptr) free(shape_);
+      ndim_ = x.ndim();
+      _init(x.value(), x.shape());
+      for (SizeType i = 0; i < nelements(); i++)
+	value_[i] = value0;
+    }
     SizeType N = nelements();
     if (is_same_shape(x)) {
       for (SizeType i = 0; i < N; i++)
