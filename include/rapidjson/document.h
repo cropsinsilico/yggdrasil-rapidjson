@@ -3759,7 +3759,7 @@ public:
       out = GetPythonObjectClassName(x, mod_cls, mod_cls_siz,
 				     schema_->GetAllocator());
       RAPIDJSON_ASSERT(out && (mod_cls != NULL));
-      if (!out or (mod_cls == NULL))
+      if (!out || (mod_cls == NULL))
 	return out;
       if (PyType_Check(x))
 	AddSchemaMember(GetTypeString(), GetPythonClassString());
