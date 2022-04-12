@@ -11,12 +11,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Use explicit allocator for QuantityArray?
 * Make validation/normalization errors more verbose to match jsonschema
 * Add Python wrapper for obj & ply w/ interop to other classes
-* Python wrapper for QuantityArray
 * Support for numpy bytes/unitcode scalars arrays
 
 ### IN PROGRESS
 * Add docstrings to new methods
-* Support for python classes/instances from the python wrapper
 
 ### COMPLETE
 * Added schema to document class

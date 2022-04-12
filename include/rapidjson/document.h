@@ -3528,40 +3528,42 @@ public:
     schema_->FindMember(GetPrecisionString())->Set(precision);
     return out;
   }
-  bool GetPythonObjectClassName(PyObject* x, StringRefType& ref, Allocator& allocator) {
-    // TODO: Handle change in encoding
+  bool GetPythonObjectClassName(PyObject* x, Ch*& mod_cls, SizeType& mod_cls_siz,
+				Allocator& allocator) {
     RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__module__"));
     RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__name__"));
     if (!(PyObject_HasAttrString(x, "__module__") && PyObject_HasAttrString(x, "__name__")))
       return false;
     PyObject *mod_py = PyObject_GetAttrString(x, "__module__");
-    PyObject *cls_py = PyObject_GetAttrString(x, "__name__");
-    RAPIDJSON_ASSERT((mod_py != NULL) && (cls_py != NULL));
-    if ((mod_py == NULL) || (cls_py == NULL))
+    RAPIDJSON_ASSERT(mod_py != NULL);
+    if (mod_py == NULL)
       return false;
-    // SizeType mod_len = 0;
-    // SizeType cls_len = 0;
-    // const Ch* mod = PyUnicode_AsEncoding<Encoding,Allocator>(mod_py, mod_len, allocator);
-    // const Ch* cls = PyUnicode_AsEncoding<Encoding,Allocator>(cls_py, cls_len, allocator);
-    const char* mod = PyUnicode_AsUTF8(mod_py);
-    const char* cls = PyUnicode_AsUTF8(cls_py);
+    PyObject *cls_py = PyObject_GetAttrString(x, "__name__");
+    RAPIDJSON_ASSERT(cls_py != NULL);
+    if (cls_py == NULL) {
+      Py_DECREF(mod_py);
+      return false;
+    }
+    SizeType mod_len = 0;
+    SizeType cls_len = 0;
+    Ch* mod = PyUnicode_AsEncoding<Encoding,Allocator>(mod_py, mod_len, allocator);
+    Ch* cls = PyUnicode_AsEncoding<Encoding,Allocator>(cls_py, cls_len, allocator);
     Py_DECREF(mod_py);
     Py_DECREF(cls_py);
     RAPIDJSON_ASSERT((mod != NULL) && (cls != NULL));
     if ((mod == NULL) || (cls == NULL))
       return false;
-    size_t mod_cls_siz = strlen(mod) + strlen(cls) + 2;
-    char* mod_cls = static_cast<char*>(allocator.Malloc(mod_cls_siz));
+    mod_cls_siz = mod_len + cls_len + 2;
+    mod_cls = static_cast<Ch*>(allocator.Malloc(mod_cls_siz * sizeof(Ch)));
     RAPIDJSON_ASSERT(mod_cls);
     if (!mod_cls)
       return false;
-    int res = snprintf(mod_cls, mod_cls_siz, "%s:%s", mod, cls);
-    RAPIDJSON_ASSERT(res > 0);
-    RAPIDJSON_ASSERT(static_cast<SizeType>(res) <= mod_cls_siz);
-    if ((res <= 0) || (static_cast<SizeType>(res) > mod_cls_siz))
-      return false;
-    ref.~GenericStringRef();
-    new (&ref) StringRefType(reinterpret_cast<Ch*>(mod_cls), static_cast<SizeType>(res));
+    memcpy(mod_cls, mod, mod_len * sizeof(Ch));
+    mod_cls[mod_len] = (Ch)(':');
+    memcpy(mod_cls + mod_len + 1, cls, cls_len);
+    mod_cls[mod_len + cls_len + 1] = '\0';
+    allocator.Free(mod);
+    allocator.Free(cls);
     return true;
   }
   bool GetPythonObjectClassAttr(PyObject* x, const Ch* attr,
@@ -3752,16 +3754,19 @@ public:
     } else if (PyType_Check(x) || PyFunction_Check(x)) {
       SetString("");
       ResetSchema(allocator);
-      StringRefType mod_cls("");
-      out = GetPythonObjectClassName(x, mod_cls, schema_->GetAllocator());
-      RAPIDJSON_ASSERT(out);
-      if (!out)
+      Ch* mod_cls = NULL;
+      SizeType mod_cls_siz = 0;
+      out = GetPythonObjectClassName(x, mod_cls, mod_cls_siz,
+				     schema_->GetAllocator());
+      RAPIDJSON_ASSERT(out && (mod_cls != NULL));
+      if (!out or (mod_cls == NULL))
 	return out;
       if (PyType_Check(x))
 	AddSchemaMember(GetTypeString(), GetPythonClassString());
       else
 	AddSchemaMember(GetTypeString(), GetPythonFunctionString());
-      SetStringRaw(mod_cls);
+      SetStringRaw(StringRefType(mod_cls, mod_cls_siz), schema_->GetAllocator());
+      schema_->GetAllocator().Free(mod_cls);
     } else if (PyArray_CheckScalar(x)) {
       // TODO: Handle string/bytes, PyArray_ScalarAsCtype is different
       //   and elsize will be 0
@@ -3833,14 +3838,16 @@ public:
       RAPIDJSON_ASSERT(inst_class);
       if (inst_class == NULL)
  	return false;
-      StringRefType mod_cls_ref("");
-      out = GetPythonObjectClassName(inst_class, mod_cls_ref,
+      Ch* mod_cls_ref = NULL;
+      SizeType mod_cls_siz = 0;
+      out = GetPythonObjectClassName(inst_class, mod_cls_ref, mod_cls_siz,
 				     schema_->GetAllocator());
       Py_DECREF(inst_class);
-      RAPIDJSON_ASSERT(out);
-      if (!out)
+      RAPIDJSON_ASSERT(out && (mod_cls_ref != NULL));
+      if (!out && (mod_cls_ref == NULL))
 	return false;
-      ValueType mod_cls(mod_cls_ref);
+      ValueType mod_cls(mod_cls_ref, mod_cls_siz, schema_->GetAllocator());
+      schema_->GetAllocator().Free(mod_cls_ref);
       AddMember(GetPythonClassString(), mod_cls, schema_->GetAllocator());
       ValueType args;
       ValueType kwargs;
