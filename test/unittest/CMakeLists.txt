@@ -97,6 +97,7 @@ set_tests_properties(unittest PROPERTIES
 option(RAPIDJSON_SKIP_VALGRIND_TESTS "Disable valgrind tests" OFF)
 if(NOT MSVC)
     find_program(VALGRIND_FOUND valgrind)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRAPIDJSON_DONT_IMPORT_NUMPY")
     if((NOT RAPIDJSON_SKIP_VALGRIND_TESTS) AND VALGRIND_FOUND)
         # Not running SIMD.* unit test cases for Valgrind
         add_test(NAME valgrind_unittest

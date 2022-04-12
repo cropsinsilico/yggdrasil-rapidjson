@@ -48,6 +48,7 @@ RAPIDJSON_NAMESPACE_BEGIN
  */
 static inline
 void init_numpy_API() {
+#ifndef RAPIDJSON_DONT_IMPORT_NUMPY
 #ifdef RAPIDJSON_FORCE_IMPORT_ARRAY
   std::string err = "";
 #ifdef _OPENMP
@@ -64,6 +65,7 @@ void init_numpy_API() {
   if (err.length() > 0)
     throw std::runtime_error(err); // GCOVR_EXCL_LINE
 #endif // RAPIDJSON_FORCE_IMPORT_ARRAY
+#endif // RAPIDJSON_DONT_IMPORT_NUMPY
 }
 
 

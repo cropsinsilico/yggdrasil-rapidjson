@@ -3633,6 +3633,7 @@ public:
 	return GetPythonClass();
       else if (IsPythonFunction())
 	return GetPythonFunction();
+#ifndef RAPIDJSON_DONT_IMPORT_NUMPY
       else if (IsScalar()) {
 	int typenum = GetSubTypeNumpyType();
 	if (typenum < 0)
@@ -3666,6 +3667,7 @@ public:
 	Py_DECREF(tmp);
 	return out;
       }
+#endif // RAPIDJSON_DONT_IMPORT_NUMPY
       return PyUnicode_FromString(GetString());
     }
     case kNumberType: {
@@ -3767,6 +3769,7 @@ public:
 	AddSchemaMember(GetTypeString(), GetPythonFunctionString());
       SetStringRaw(StringRefType(mod_cls, mod_cls_siz), schema_->GetAllocator());
       schema_->GetAllocator().Free(mod_cls);
+#ifndef RAPIDJSON_DONT_IMPORT_NUMPY
     } else if (PyArray_CheckScalar(x)) {
       // TODO: Handle string/bytes, PyArray_ScalarAsCtype is different
       //   and elsize will be 0
@@ -3827,6 +3830,7 @@ public:
       AddSchemaMember(GetPrecisionString(), precision);
       AddSchemaMember(GetShapeString(), shape);
       return true;
+#endif // RAPIDJSON_DONT_IMPORT_NUMPY
     } else {
       SetObject();
       ResetSchema(allocator);
@@ -3996,6 +4000,7 @@ public:
     return kYggNullSubType;
   }
 
+#ifndef RAPIDJSON_DONT_IMPORT_NUMPY
   static bool NumpyType2SubType(PyArray_Descr* desc,
 				ValueType& subtype,
 				SizeType& precision,
@@ -4076,6 +4081,7 @@ public:
       return -1;
     }
   }
+#endif // RAPIDJSON_DONT_IMPORT_NUMPY
 
   const ValueType& GetSubType() const {
     RAPIDJSON_ASSERT(IsYggdrasil());
