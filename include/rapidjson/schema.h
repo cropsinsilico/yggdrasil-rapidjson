@@ -4324,14 +4324,15 @@ public:
     AddCurrentError(kNormalizeErrorConflictingAliases, true);
   }
   ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) {
-    ISchemaValidator* subv = subvalidator[0];
-    if (static_cast<GenericSchemaValidator*>(subvalidator[1])->GetError().MemberBegin()->name != GetTypeString())
-      subv = subvalidator[1];
-    error_.CopyFrom(static_cast<GenericSchemaValidator*>(subv)->GetError(), GetStateAllocator());
+    error_.CopyFrom(static_cast<GenericSchemaValidator*>(subvalidator[0])->GetError(), GetStateAllocator());
     RAPIDJSON_ASSERT(error_.IsObject() && (error_.MemberCount() == 1));
     typename ValueType::ConstMemberIterator m = error_.MemberBegin();
     typename ValueType::ConstMemberIterator vcode = m->value.FindMember(GetErrorCodeString());
     RAPIDJSON_ASSERT(vcode != m->value.MemberEnd());
+    error_.AddMember(GetSingularString(),
+		     ValueType(static_cast<GenericSchemaValidator*>(subvalidator[1])->GetError(),
+			       GetStateAllocator()).Move(),
+		     GetStateAllocator());
     return static_cast<ValidateErrorCode>(vcode->value.GetUint());
   }
   void NormalizationMergeConflict(const typename SchemaType::ValueType& cond,
@@ -4384,6 +4385,7 @@ public:
     RAPIDJSON_STRING_(Type, 't', 'y', 'p', 'e')
     RAPIDJSON_STRING_(Warning, 'w', 'a', 'r', 'n', 'i', 'n', 'g')
     RAPIDJSON_STRING_(Warnings, 'w', 'a', 'r', 'n', 'i', 'n', 'g', 's')
+    RAPIDJSON_STRING_(Singular, 's', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
 #endif //RAPIDJSON_YGGDRASIL
 #undef RAPIDJSON_STRING_
 

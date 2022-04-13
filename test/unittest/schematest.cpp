@@ -19,6 +19,7 @@
 #include "rapidjson/schema.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "rapidjson/prettywriter.h"
 #include "rapidjson/error/error.h"
 #include "rapidjson/error/en.h"
 
@@ -135,7 +136,7 @@ TEST(SchemaValidator, Hasher) {
         validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);\
         printf("Invalid document: %s\n", sb.GetString());\
         sb.Clear();\
-        Writer<StringBuffer> w(sb);\
+        PrettyWriter<StringBuffer> w(sb);\
         validator.GetError().Accept(w);\
         printf("Validation error: %s\n", sb.GetString());\
     }\
@@ -181,9 +182,12 @@ TEST(SchemaValidator, Hasher) {
     e.Parse(error);\
     if (validator.GetError() != e) {\
         StringBuffer sb;\
-        Writer<StringBuffer> w(sb);\
+        PrettyWriter<StringBuffer> w(sb);\
         validator.GetError().Accept(w);\
-        printf("GetError() Expected: %s Actual: %s\n", error, sb.GetString());\
+        StringBuffer sb_e;\
+        PrettyWriter<StringBuffer> w_e(sb_e);\
+	e.Accept(w_e);\
+        printf("GetError() Expected: %s Actual: %s\n", sb_e.GetString(), sb.GetString()); \
         ADD_FAILURE();\
     }\
 }
@@ -1984,7 +1988,15 @@ TEST(SchemaValidator, SingularArrayError) {
 	     "    \"errorCode\": 20,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	     "    \"expected\": [\"array\"], \"actual\": \"object\""
-	     "}}");
+	     "  },"
+	     "  \"singular\": {"
+	     "    \"type\": {"
+	     "      \"errorCode\": 20,"
+	     "      \"instanceRef\": \"#\", \"schemaRef\": \"#/items/0\","
+	     "      \"expected\": [\"string\"], \"actual\": \"object\""
+	     "    }"
+	     "  }"
+	     "}");
   VALIDATE(s, "\"string\"", true);
 }
 
@@ -1999,8 +2011,14 @@ TEST(SchemaValidator, SingularArraySchema) {
   SchemaDocument s(sd);
   VALIDATE(s, "{\"type\": \"string\"}", true);
   INVALIDATE(s, "{\"type\": \"invalid\"}",
-	     "", "schema", "",
-	     "{ \"schema\": {"
+	     "", "type", "",
+	     "{"
+	     "  \"type\": {"
+	     "    \"errorCode\": 20,"
+	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	     "    \"expected\": [\"array\"], \"actual\": \"object\""
+	     "  },"
+	     "  \"singular\": { \"schema\": {"
 	     "    \"errorCode\": 33,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#/items\","
 	     "    \"errors\": {"
@@ -2012,7 +2030,8 @@ TEST(SchemaValidator, SingularArraySchema) {
 	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
 	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
 	     "            ]"
-	     "}}}}");
+	     "  }}}}"
+	     "}");
 }
 
 TEST(SchemaValidator, SingularObject) {
@@ -2049,7 +2068,22 @@ TEST(SchemaValidator, SingularObjectError) {
 	     "    \"errorCode\": 20,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	     "    \"expected\": [\"object\"], \"actual\": \"boolean\""
-	     "}}");
+	     "  },"
+	     "  \"singular\": {"
+	     "    \"type\": {"
+	     "      \"errorCode\": 20,"
+	     "      \"instanceRef\": \"#\", \"schemaRef\": \"#/properties/streets\","
+	     "      \"expected\": [\"array\"], \"actual\": \"boolean\""
+	     "    },"
+	     "    \"singular\": {"
+	     "      \"type\": {"
+	     "        \"errorCode\": 20,"
+	     "        \"instanceRef\": \"#\", \"schemaRef\": \"#/properties/streets/items\","
+	     "        \"expected\": [\"string\"], \"actual\": \"boolean\""
+	     "      }"
+	     "    }"
+	     "  }"
+	     "}");
   VALIDATE(s, "[ \"string\" ]", true);
 }
 
@@ -2065,8 +2099,15 @@ TEST(SchemaValidator, SingularObjectSchema) {
   SchemaDocument s(sd);
   VALIDATE(s, "{\"type\": \"string\"}", true);
   INVALIDATE(s, "{\"type\": \"invalid\"}",
-	     "", "schema", "",
-	     "{ \"schema\": {"
+	     "", "additionalProperties", "",
+	     "{"
+	     "  \"additionalProperties\": {"
+	     "    \"disallowed\": \"type\","
+	     "    \"errorCode\": 16,"
+	     "    \"instanceRef\": \"#\","
+	     "    \"schemaRef\": \"#\""
+	     "  },"
+	     "  \"singular\": { \"schema\": {"
 	     "    \"errorCode\": 33,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#/properties/key\","
 	     "    \"errors\": {"
@@ -2078,7 +2119,7 @@ TEST(SchemaValidator, SingularObjectSchema) {
 	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
 	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
 	     "            ]"
-	     "}}}}");
+	     "}}}}}");
 }
 
 TEST(SchemaValidator, CircularAliases) {
