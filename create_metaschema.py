@@ -1,3 +1,4 @@
+import copy
 import json
 import argparse
 from urllib.request import urlopen
@@ -13,7 +14,8 @@ if __name__ == "__main__":
                         help="JSON schema draft that should be used as a base")
     args = parser.parse_args()
     url = f'http://json-schema.org/{args.base_draft}/schema#'
-    base = json.loads(urlopen(url).read().decode('utf-8'))
+    standard = json.loads(urlopen(url).read().decode('utf-8'))
+    base = copy.deepcopy(standard)
     base['title'] = "Ygg meta-schema for data type schemas"
     base['definitions']['simpleTypes']['enum'] += [
         "1darray", "any", "bytes", "class", "complex", "float",
@@ -104,6 +106,22 @@ if __name__ == "__main__":
                 "inline const item_return<wchar_t>::type* get_metaschema<wchar_t>() {",
                 "  const wchar_t* out = L\""
                 + json.dumps(base, indent=1).replace(
+                    "\"", "\\\"").replace('\n', "\"\n    L\"") + "\";",
+                "  return out;",
+                "}", "",
+                "template<typename T>",
+                "inline const typename item_return<T>::type* get_standard_metaschema() { return nullptr; }", "",
+                "template<>",
+                "inline const item_return<char>::type* get_standard_metaschema<char>() {",
+                "  const char* out = \""
+                + json.dumps(standard, indent=1).replace(
+                    "\"", "\\\"").replace('\n', "\"\n    \"") + "\";",
+                "  return out;",
+                "}", "",
+                "template<>",
+                "inline const item_return<wchar_t>::type* get_standard_metaschema<wchar_t>() {",
+                "  const wchar_t* out = L\""
+                + json.dumps(standard, indent=1).replace(
                     "\"", "\\\"").replace('\n', "\"\n    L\"") + "\";",
                 "  return out;",
                 "}", "",

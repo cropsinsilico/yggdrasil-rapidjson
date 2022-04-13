@@ -5141,7 +5141,7 @@ public:
     return EndValue(2); // type & items
   }
   template <typename YggSchemaValueType>
-  bool YggdrasilString(const Ch* str, SizeType len, bool copy, YggSchemaValueType& schema) {
+  bool YggdrasilString(const Ch*, SizeType, bool, YggSchemaValueType& schema) {
     return schema.Accept(document_);
   }
   template <typename YggSchemaValueType>
