@@ -172,12 +172,7 @@ PyObject* import_python_module(const char* module_name,
   RAPIDJSON_ASSERT(isPythonInitialized());
   if (!isPythonInitialized())
     return NULL;
-  PyObject* out = NULL;
-  PyObject* name = PyUnicode_FromString(module_name);
-  if (name != NULL) {
-    out = PyImport_Import(name);
-    Py_DECREF(name);
-  }
+  PyObject* out = PyImport_ImportModule(module_name);
   if (out == NULL) { // GCOVR_EXCL_START
 #ifndef RAPIDJSON_YGGDRASIL_PYTHON
     PyErr_Print();

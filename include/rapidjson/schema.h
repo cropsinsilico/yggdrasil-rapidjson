@@ -5082,6 +5082,114 @@ public:
 
 typedef GenericSchemaNormalizer<SchemaDocument> SchemaNormalizer;
 
+///////////////////////////////////////////////////////////////////////////////
+// SchemaEncoder
+//
+//! Handler to encode schema from an object
+template<typename Encoding, typename Allocator = RAPIDJSON_DEFAULT_ALLOCATOR, typename StackAllocator = RAPIDJSON_DEFAULT_STACK_ALLOCATOR>
+class GenericSchemaEncoder {
+public:
+  typedef typename Encoding::Ch Ch;
+  typedef GenericValue<Encoding, Allocator> ValueType;
+  typedef GenericDocument<Encoding, Allocator> DocumentType;
+  typedef internal::Schema<GenericSchemaDocument<ValueType> > SchemaType;
+  GenericSchemaEncoder(Allocator* allocator = 0,
+		       StackAllocator* stackAllocator = 0,
+		       size_t stackCapacity = kDefaultStackCapacity) :
+    document_(allocator, stackCapacity, stackAllocator) {}
+#define ADD_TYPE_(method)						\
+  if (!AddKey(SchemaType::GetTypeString()))				\
+    return false;							\
+  if (!AddString(SchemaType::Get ## method ## String()))		\
+    return false
+#define BASIC_TYPE_(method, name, args)					\
+  bool method args {							\
+    if (!BeginValue()) return false;					\
+    ADD_TYPE_(name);							\
+    return EndValue(1);							\
+  }
+  BASIC_TYPE_(Null, Null, ())
+  BASIC_TYPE_(Bool, Boolean, (bool))
+  BASIC_TYPE_(Int, Integer, (int))
+  BASIC_TYPE_(Uint, Integer, (unsigned))
+  BASIC_TYPE_(Int64, Integer, (int64_t))
+  BASIC_TYPE_(Uint64, Integer, (uint64_t))
+  BASIC_TYPE_(Double, Number, (double))
+  BASIC_TYPE_(String, String, (const Ch*, SizeType, bool))
+#undef BASIC_TYPE_
+  bool StartObject() {
+    if (!BeginValue()) return false;
+    ADD_TYPE_(Object);
+    if (!AddKey(ValueType::GetPropertiesString())) return false;
+    return document_.StartObject();
+  }
+  bool Key(const Ch* str, SizeType len, bool copy) {
+    return document_.Key(str, len, copy);
+  }
+  bool EndObject(SizeType memberCount) {
+    if (!document_.EndObject(memberCount)) return false;
+    return EndValue(2); // type & properties
+  }
+  bool StartArray() {
+    if (!BeginValue()) return false;
+    ADD_TYPE_(Array);
+    if (!AddKey(ValueType::GetItemsString())) return false;
+    return document_.StartArray();
+  }
+  bool EndArray(SizeType elementCount) {
+    if (!document_.EndArray(elementCount)) return false;
+    return EndValue(2); // type & items
+  }
+  template <typename YggSchemaValueType>
+  bool YggdrasilString(const Ch* str, SizeType len, bool copy, YggSchemaValueType& schema) {
+    return schema.Accept(document_);
+  }
+  template <typename YggSchemaValueType>
+  bool YggdrasilStartObject(YggSchemaValueType& schema) {
+    if (!schema.Accept(document_)) return false;
+    return document_.StartObject();
+  }
+  bool YggdrasilEndObject(SizeType memberCount) {
+    if (!EndValue(memberCount)) return false;
+    document_.StackPop();
+    // ValueType* last = document_.StackPop();
+    // ValueType* top = document_.StackTop();
+    // if (!(top->IsObject() && last->IsObject())) return false;
+    // for (typename ValueType::MemberIterator it = last->MemberBegin(); it != last->MemberEnd(); it++) {
+    //   top->AddMember(it->name, it->value, document_.GetAllocator());
+    // }
+    return true;
+  }
+  template <typename Handler>
+  bool Accept(Handler& handler) {
+    document_.FinalizeFromStack();
+    return document_.Accept(handler);
+  }
+  DocumentType& GetSchema() {
+    document_.FinalizeFromStack();
+    return document_;
+  }
+  
+private:
+  bool AddKey(const ValueType& key) {
+    return document_.Key(key.GetString(), key.GetStringLength(), true);
+  }
+  bool AddString(const ValueType& str) {
+    return document_.String(str.GetString(), str.GetStringLength(), true);
+  }
+  bool BeginValue() {
+    return document_.StartObject();
+  }
+  bool EndValue(SizeType memberCount) {
+    return document_.EndObject(memberCount);
+  }
+  
+  static const size_t kDefaultStackCapacity = 1024;
+  DocumentType document_;
+};
+
+typedef GenericSchemaEncoder<UTF8<char> > SchemaEncoder;
+
 #endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_NAMESPACE_END

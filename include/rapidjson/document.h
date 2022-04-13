@@ -3917,6 +3917,38 @@ public:
     return type->value;
   }
 
+  bool RequiresPython() const {
+    switch(GetType()) {
+    case kStringType: {
+      if (IsYggdrasil()) {
+	const ValueType& type = GetYggType();
+	if ((type == GetPythonClassString()) ||
+	    (type == GetPythonFunctionString()))
+	  return true;
+      }
+      return false;
+    }
+    case kObjectType: {
+      if (IsYggdrasil()) {
+	const ValueType& type = GetYggType();
+	if (type == GetPythonInstanceString())
+	  return true;
+      }
+      for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m)
+	if (m->value.RequiresPython())
+	  return true;
+      return false;
+    }
+    case kArrayType: {
+      for (ConstValueIterator v = Begin(); v != End(); ++v)
+	if (v->RequiresPython())
+	  return true;
+      return false;
+    }
+    default:
+      return false;
+    }
+  }
   bool IsYggdrasil() const {
     if (!(IsString() || IsObject())) return false;
     return HasSchema();
@@ -4981,6 +5013,10 @@ public:
       RAPIDJSON_ASSERT(stack_.GetSize() == sizeof(ValueType)); // Got one and only one root object
       ValueType::operator=(*stack_.template Pop<ValueType>(1));// Move value from stack to document
     }
+  }
+  ValueType* StackPop() {
+    RAPIDJSON_ASSERT(!stack_.Empty());
+    return stack_.template Pop<ValueType>(1);
   }
   ValueType* StackTop() {
     RAPIDJSON_ASSERT(!stack_.Empty());

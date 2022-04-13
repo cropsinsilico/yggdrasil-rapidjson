@@ -1816,7 +1816,7 @@ TEST(SchemaValidator, PythonFunction) { // 31
         "  \"type\": \"function\""
         "}");
     SchemaDocument s(sd);
-    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", true);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9mdW5jdGlvbgA=-YGG-\"", true);
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
 	       "", "class", "",
 	       "{ \"class\" : {"
@@ -3457,6 +3457,113 @@ TEST(SchemaValidator, ContinueOnErrors_Issue2) {
 TEST(SchemaValidator, Schema_UnknownError) {
     ASSERT_TRUE(SchemaValidator::SchemaType::GetValidateErrorKeyword(kValidateErrors).GetString() == std::string("null"));
 }
+
+#ifdef RAPIDJSON_YGGDRASIL
+#define VALIDATE_ENCODED(obj, exp)					\
+  Document d_obj;							\
+  d_obj.Parse(obj);							\
+  EXPECT_FALSE(d_obj.HasParseError());					\
+  SchemaEncoder encoder;						\
+  EXPECT_TRUE(d_obj.Accept(encoder));					\
+  Document d_exp;							\
+  d_exp.Parse(exp);							\
+  EXPECT_FALSE(d_exp.HasParseError());					\
+  if (encoder.GetSchema() != d_exp) {					\
+    StringBuffer sb;							\
+    Writer<StringBuffer> w(sb);						\
+    encoder.GetSchema().Accept(w);					\
+    printf("GetSchema() Expected: %s Actual: %s\n", exp, sb.GetString()); \
+    ADD_FAILURE();							\
+  }
+TEST(SchemaEncoder, Boolean) {
+  VALIDATE_ENCODED("true", "{\"type\":\"boolean\"}");
+}
+TEST(SchemaEncoder, Null) {
+  VALIDATE_ENCODED("null", "{\"type\":\"null\"}");
+}
+TEST(SchemaEncoder, Int) {
+  VALIDATE_ENCODED("1", "{\"type\":\"integer\"}");
+}
+TEST(SchemaEncoder, Double) {
+  VALIDATE_ENCODED("1.5", "{\"type\":\"number\"}");
+}
+TEST(SchemaEncoder, String) {
+  VALIDATE_ENCODED("\"hello\"", "{\"type\":\"string\"}");
+}
+TEST(SchemaEncoder, Array) {
+  VALIDATE_ENCODED("[1, \"hello\"]",
+		   "{"
+		   "  \"type\":\"array\","
+		   "  \"items\": ["
+		   "    {\"type\": \"integer\"},"
+		   "    {\"type\": \"string\"}"
+		   "  ]"
+		   "}");
+}
+TEST(SchemaEncoder, Object) {
+  VALIDATE_ENCODED("{\"a\": 1, \"b\": \"hello\"}",
+		   "{"
+		   "  \"type\": \"object\","
+		   "  \"properties\": {"
+		   "    \"a\": {\"type\": \"integer\"},"
+		   "    \"b\": {\"type\": \"string\"}"
+		   "  }"
+		   "}");
+}
+TEST(SchemaEncoder, Scalar) {
+  VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\"",
+		   "{"
+		   "  \"type\": \"scalar\","
+		   "  \"subtype\": \"uint\","
+		   "  \"precision\": 1,"
+		   "  \"units\": \"g\""
+		   "}");
+}
+TEST(SchemaEncoder, OneDArray) {
+  VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzNdfQ==-YGG-AAEC-YGG-\"",
+		   "{"
+		   "  \"type\": \"ndarray\","
+		   "  \"subtype\": \"uint\","
+		   "  \"precision\": 1,"
+		   "  \"units\": \"g\","
+		   "  \"shape\": [3]"
+		   "}");
+}
+TEST(SchemaEncoder, NDArray) {
+  VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAECAwQF-YGG-\"",
+		   "{"
+		   "  \"type\": \"ndarray\","
+		   "  \"subtype\": \"uint\","
+		   "  \"precision\": 1,"
+		   "  \"units\": \"g\","
+		   "  \"shape\": [2, 3]"
+		   "}");
+}
+TEST(SchemaEncoder, PythonClass) {
+  VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"",
+		   "{"
+		   "  \"type\": \"class\""
+		   "}");
+}
+TEST(SchemaEncoder, PythonFunction) {
+  VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9mdW5jdGlvbgA=-YGG-\"",
+		   "{"
+		   "  \"type\": \"function\""
+		   "}");
+}
+TEST(SchemaEncoder, PythonInstance) {
+  VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"",
+		   "{"
+		   "  \"type\": \"instance\""
+		   "}");
+}
+TEST(SchemaEncoder, Schema) {
+  VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"",
+		   "{"
+		   "  \"type\": \"schema\""
+		   "}");
+}
+#endif // RAPIDJSON_YGGDRASIL
 
 #if defined(_MSC_VER) || defined(__clang__)
 RAPIDJSON_DIAG_POP
