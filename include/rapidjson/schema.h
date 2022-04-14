@@ -26,6 +26,7 @@
 #include <cmath> // abs, floor
 #ifdef RAPIDJSON_YGGDRASIL
 #include "units.h"
+#include "writer.h"
 #include "metaschema.h"
 #if RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11 override
@@ -280,7 +281,7 @@ public:
   virtual void CircularAlias(const SValue& alias) = 0;
   virtual void ConflictingAliases(const SValue& alias, const SValue& base1, const SValue& base2) = 0;
   virtual ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) = 0;
-  virtual void NormalizationMergeConflict(const typename SchemaType::ValueType& cond, const GenericStringBuffer<typename SchemaType::EncodingType>& instanceRef, const GenericStringBuffer<typename SchemaType::EncodingType>& schemaRef) = 0;
+  virtual void NormalizationMergeConflict(const typename SchemaType::ValueType& cond, const SValue& expected, const SValue& actual, const GenericStringBuffer<typename SchemaType::EncodingType>& instanceRef, const GenericStringBuffer<typename SchemaType::EncodingType>& schemaRef) = 0;
   virtual void AddWarnings(ISchemaValidator** subvalidators, SizeType count) = 0;
   virtual void DeprecationWarning(const SValue* warning=nullptr) = 0;
 #endif // RAPIDJSON_YGGDRASIL
@@ -783,43 +784,44 @@ public:
   NORMALIZE_MISSING_KEY_(arg2);						\
   if (!BeginValue(context, schema)) return false;
   
-#define REQUIRED_PROPERTY_(method, cond)				\
+#define REQUIRED_PROPERTY_(method, cond, args)				\
   if (!(cond)) {							\
     GenericStringBuffer<EncodingType> instanceRef;			\
     GenericStringBuffer<EncodingType> schemaRef;			\
     GetInstanceRef(instanceRef, false);					\
     GetSchemaRef(schemaRef, schema);					\
-    context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), instanceRef, schemaRef); \
+    context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), \
+						     *CurrentValue(), ValueType args.Move(), instanceRef, schemaRef); \
     RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
   }
 
-#define NORMALIZE_VALUE_(method, value)					\
+#define NORMALIZE_VALUE_(method, value, args)				\
   BEGIN_NORMALIZE_(method, (value), (value));				\
-  REQUIRED_PROPERTY_(method, (CurrentValue()->Is ## method()));		\
-  REQUIRED_PROPERTY_(method, (value == CurrentValue()->Get ## method())); \
+  REQUIRED_PROPERTY_(method, (CurrentValue()->Is ## method()), args);	\
+  REQUIRED_PROPERTY_(method, (value == CurrentValue()->Get ## method()), args); \
   return EndValue(context, schema)
 
   bool Null(Context& context, const SchemaType& schema) {
     BEGIN_NORMALIZE_(Null, (), ());
-    REQUIRED_PROPERTY_(Null, CurrentValue()->IsNull());
+    REQUIRED_PROPERTY_(Null, CurrentValue()->IsNull(), ());
     return EndValue(context, schema);
   }
-  bool Bool(Context& context, const SchemaType& schema, bool b)       { NORMALIZE_VALUE_(Bool,   b); }
-  bool Int(Context& context, const SchemaType& schema, int i)         { NORMALIZE_VALUE_(Int,    i); }
-  bool Uint(Context& context, const SchemaType& schema, unsigned u)   { NORMALIZE_VALUE_(Uint,   u); }
-  bool Int64(Context& context, const SchemaType& schema, int64_t i)   { NORMALIZE_VALUE_(Int64,  i); }
-  bool Uint64(Context& context, const SchemaType& schema, uint64_t u) { NORMALIZE_VALUE_(Uint64, u); }
+  bool Bool(Context& context, const SchemaType& schema, bool b)       { NORMALIZE_VALUE_(Bool,   b, (b)); }
+  bool Int(Context& context, const SchemaType& schema, int i)         { NORMALIZE_VALUE_(Int,    i, (i)); }
+  bool Uint(Context& context, const SchemaType& schema, unsigned u)   { NORMALIZE_VALUE_(Uint,   u, (u)); }
+  bool Int64(Context& context, const SchemaType& schema, int64_t i)   { NORMALIZE_VALUE_(Int64,  i, (i)); }
+  bool Uint64(Context& context, const SchemaType& schema, uint64_t u) { NORMALIZE_VALUE_(Uint64, u, (u)); }
   bool Double(Context& context, const SchemaType& schema, double d)   {
     BEGIN_NORMALIZE_(Double, (d), (d));
-    REQUIRED_PROPERTY_(Double, CurrentValue()->IsDouble());
+    REQUIRED_PROPERTY_(Double, CurrentValue()->IsDouble(), (d));
     double b = CurrentValue()->GetDouble();
-    REQUIRED_PROPERTY_(Double, (d >= b && d <= b));
+    REQUIRED_PROPERTY_(Double, (d >= b && d <= b), (d));
     return EndValue(context, schema);
   }
   bool String(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy) {
     BEGIN_NORMALIZE_(String, (str, length, copy), (str, length, GetAllocator()));
-    REQUIRED_PROPERTY_(String, CurrentValue()->IsString());
-    REQUIRED_PROPERTY_(String, (internal::StrCmp(str, CurrentValue()->GetString()) == 0));
+    REQUIRED_PROPERTY_(String, CurrentValue()->IsString(), (str, length));
+    REQUIRED_PROPERTY_(String, (internal::StrCmp(str, CurrentValue()->GetString()) == 0), (str, length));
     return EndValue(context, schema);
   }
 
@@ -904,18 +906,25 @@ public:
     }
     BEGIN_NORMALIZE_(YggdrasilString, (str, length, copy, valueSchema),
 		     (str, length, valueSchema));
-    REQUIRED_PROPERTY_(YggdrasilString, CurrentValue()->IsYggdrasil());
-    REQUIRED_PROPERTY_(YggdrasilString, (CurrentValue()->GetValueSchema() == valueSchema));
-    REQUIRED_PROPERTY_(YggdrasilString, CurrentValue()->IsString());
-    REQUIRED_PROPERTY_(YggdrasilString, (internal::StrCmp(str, CurrentValue()->GetString()) == 0));
+    REQUIRED_PROPERTY_(YggdrasilString, CurrentValue()->IsYggdrasil(),
+		       (str, length, valueSchema));
+    REQUIRED_PROPERTY_(YggdrasilString, (CurrentValue()->GetValueSchema() == valueSchema),
+		       (str, length, valueSchema));
+    REQUIRED_PROPERTY_(YggdrasilString, CurrentValue()->IsString(),
+		       (str, length, valueSchema));
+    REQUIRED_PROPERTY_(YggdrasilString, (internal::StrCmp(str, CurrentValue()->GetString()) == 0),
+		       (str, length, valueSchema));
     return EndValue(context, schema);
   }
   template <typename YggSchemaValueType>
   bool YggdrasilStartObject(Context& context, const SchemaType& schema, YggSchemaValueType& valueSchema) {
     BEGIN_NORMALIZE_START_(YggdrasilStartObject, (valueSchema), (kObjectType, valueSchema));
-    REQUIRED_PROPERTY_(YggdrasilObject, CurrentValue()->IsYggdrasil());
-    REQUIRED_PROPERTY_(YggdrasilObject, (CurrentValue()->GetValueSchema() == valueSchema));
-    REQUIRED_PROPERTY_(YggdrasilObject, CurrentValue()->IsObject());
+    REQUIRED_PROPERTY_(YggdrasilObject, CurrentValue()->IsYggdrasil(),
+		       (kObjectType, valueSchema));
+    REQUIRED_PROPERTY_(YggdrasilObject, (CurrentValue()->GetValueSchema() == valueSchema),
+		       (kObjectType, valueSchema));
+    REQUIRED_PROPERTY_(YggdrasilObject, CurrentValue()->IsObject(),
+		       (kObjectType, valueSchema));
     return true;
   }
   bool YggdrasilEndObject(Context& context, const SchemaType& schema, SizeType memberCount) {
@@ -924,7 +933,8 @@ public:
   }
   bool StartObject(Context& context, const SchemaType& schema) {
     BEGIN_NORMALIZE_START_(StartObject, (), (kObjectType));
-    REQUIRED_PROPERTY_(Object, (inSingular(schema) || CurrentValue()->IsObject()));
+    REQUIRED_PROPERTY_(Object, (inSingular(schema) || CurrentValue()->IsObject()),
+		       (kObjectType));
     return true;
   }
   bool Key(Context& context, const SchemaType& schema, const Ch* str, SizeType len, bool copy, bool dont_check_aliases=false) {
@@ -992,7 +1002,8 @@ public:
   }
   bool StartArray(Context& context, const SchemaType& schema) {
     BEGIN_NORMALIZE_START_(StartArray, (), (kArrayType));
-    REQUIRED_PROPERTY_(Array, (inSingular(schema) || CurrentValue()->IsArray()));
+    REQUIRED_PROPERTY_(Array, (inSingular(schema) || CurrentValue()->IsArray()),
+		       (kArrayType));
     return true;
   }
   bool EndArray(Context& context, const SchemaType& schema, SizeType elementCount) {
@@ -3995,6 +4006,231 @@ public:
     const ValueType& GetError() const { return error_; }
 
 #ifdef RAPIDJSON_YGGDRASIL
+
+    template<typename ErrorType, typename OtherType>
+    void CheckErrorReplace_(ErrorType* curr, OtherType* other,
+			    typename ErrorType::AllocatorType& allocator) const {
+      if (other->IsNull())
+	return;
+      if (curr->IsNull() ||
+	  (curr->IsString() &&
+	   (other->GetStringLength() > curr->GetStringLength())))
+	curr->SetString(other->GetString(),
+			other->GetStringLength(),
+			allocator);
+    }
+    template<typename ErrorType>
+    SizeType getMaxLen_(ErrorType* a, ErrorType* b) const {
+      if (a->IsNull()) {
+	if (b->IsNull())
+	  return 0;
+	else
+	  return b->GetStringLength();
+      } else if (b->IsNull())
+	return a->GetStringLength();
+      else if (a->GetStringLength() > b->GetStringLength())
+	return a->GetStringLength();
+      else
+	return b->GetStringLength();
+    }
+    
+    template<typename ErrorType>
+    bool GetErrorMsg(ErrorType& out,
+		     typename ErrorType::AllocatorType& allocator,
+		     const ValueType* err = nullptr,
+		     ErrorType* nonTypeError = nullptr,
+		     ErrorType* typeError = nullptr,
+		     bool isSingular = false) const {
+      typedef typename ValueType::ConstMemberIterator MemberIter;
+      if (!err)
+	err = &error_;
+      if ((!isSingular) && (err->MemberCount() > 1))
+	out.SetArray();
+      bool hasSingular = false;
+      ErrorType nonTypeError_target;
+      ErrorType typeError_target;
+      ErrorType nonTypeError_singular;
+      ErrorType typeError_singular;
+      SizeType idx_singular = 0;
+      if (!nonTypeError)
+	nonTypeError = &nonTypeError_target;
+      if (!typeError)
+	typeError = &typeError_target;
+      for (MemberIter ierrTyp = err->MemberBegin(); ierrTyp != err->MemberEnd(); ierrTyp++) {
+	if (!ierrTyp->value.IsObject())
+	  continue;
+	ErrorType iout;
+	if (ierrTyp->name == GetSingularString()) {
+	  hasSingular = true;
+	  if (out.IsArray())
+	    idx_singular = out.Size();
+	  if (!GetErrorMsg(iout, allocator, &(ierrTyp->value),
+			   &nonTypeError_singular, &typeError_singular,
+			   true))
+	    return false;
+	} else {
+	  if (!GetErrorMsg_(iout, allocator, &(ierrTyp->value),
+			    nonTypeError, typeError, isSingular))
+	    return false;
+	}
+	if ((!isSingular) && (err->MemberCount() > 1))
+	  out.PushBack(iout, allocator);
+	else
+	  out.Swap(iout);
+      }
+      if (hasSingular) {
+	SizeType maxOther = getMaxLen_(typeError, nonTypeError);
+	SizeType maxSingu = getMaxLen_(&typeError_singular,
+				       &nonTypeError_singular);
+	if (nonTypeError_singular.IsNull() &&
+	    ((maxSingu < maxOther) || (*typeError == typeError_singular))) {
+	  if (out.IsArray())
+	    out.Erase(out.Begin() + idx_singular);
+	} else if (nonTypeError->IsNull() && (maxOther < maxSingu)) {
+	  if (out.IsArray()) {
+	    ErrorType tmp(out[idx_singular], allocator);
+	    out.Swap(tmp);
+	  }
+	}
+	CheckErrorReplace_(nonTypeError, &nonTypeError_singular, allocator);
+	CheckErrorReplace_(typeError, &typeError_singular, allocator);
+      }
+      return true;
+    }
+
+    template<typename ErrorType>
+    bool GetErrorMsg_(ErrorType& out,
+		      typename ErrorType::AllocatorType& allocator,
+		      const ValueType* err,
+		      ErrorType* nonTypeError,
+		      ErrorType* typeError,
+		      bool isSingular = false) const {
+      typedef typename ValueType::ConstMemberIterator MemberIter;
+      typedef typename ValueType::ConstValueIterator ValueIter;
+      out.SetObject();
+      internal::Stack<StateAllocator> msg_stack(stateAllocator_, kDefaultDocumentStackCapacity);
+      MemberIter code = err->FindMember(GetErrorCodeString());
+      if (code == err->MemberEnd())
+	return false;
+      MemberIter iRef = err->FindMember(GetInstanceRefString());
+      MemberIter sRef = err->FindMember(GetSchemaRefString());
+      if (iRef != err->MemberEnd()) {
+	switch ((ValidateErrorCode)(code->value.GetInt())) {
+	case kValidateErrorType:
+	  CheckErrorReplace_(typeError, &(iRef->value), allocator);
+	  break;
+	case kValidateErrorOneOf:
+	case kValidateErrorAllOf:
+	case kValidateErrorAnyOf:
+	  break;
+	default:
+	  CheckErrorReplace_(nonTypeError, &(iRef->value), allocator);
+	}
+      }
+      const RAPIDJSON_ERROR_CHARTYPE* msg = GetValidateError_En((ValidateErrorCode)(code->value.GetInt()));
+      SizeType msg_len = internal::StrLen(msg);
+      SizeType start = 0;
+      SizeType len = 0;
+      StringBuffer sb;
+      Writer<StringBuffer> w(sb);
+      for (SizeType i = 0; i < msg_len; i++) {
+	*msg_stack.template Push<Ch>() = msg[i];
+	if (msg[i] == (RAPIDJSON_ERROR_CHARTYPE)'%') {
+	  i++;
+	  start = i;
+	  while ((i < msg_len) && !((msg[i] == ' ') ||
+				    (msg[i] == '\'') ||
+				    (msg[i] == '\"') ||
+				    (msg[i] == '.') ||
+				    (msg[i] == ','))) {
+	    *msg_stack.template Push<Ch>() = msg[i];
+	    i++;
+	  }
+	  len = i - start;
+	  i--; // So that the space/quote is added in next iteration
+	  *msg_stack.template Push<Ch>() = '\0';
+	  ValueType key(msg_stack.template Top<Ch>() - len, len,
+			*stateAllocator_);
+	  msg_stack.template Pop<Ch>(1);
+	  MemberIter val = err->FindMember(key);
+	  if (val != err->MemberEnd()) {
+	    msg_stack.template Pop<Ch>(len + 1);
+	    if (!val->value.Accept(w))
+	      return false;
+	    SizeType val_start = 0;
+	    SizeType val_end = (SizeType)sb.GetLength();
+	    if (val->value.IsString()) {
+	      val_start++;
+	      val_end--;
+	    }
+	    for (SizeType j = val_start; j < val_end; j++)
+	      *msg_stack.template Push<Ch>() = sb.GetString()[j];
+	    sb.Clear();
+	    w.Reset(sb);
+	  } else {
+	    std::cerr << "Missing key: " << key.GetString() << std::endl;
+	  }
+	}
+      }
+      if (msg_stack.GetSize() > 0) {
+	out.AddMember(ErrorType(GetMessageString(),
+				GetMessageString().length,
+				allocator).Move(),
+		      ErrorType(msg_stack.template Bottom<Ch>(),
+				static_cast<SizeType>(msg_stack.GetSize() / sizeof(Ch)),
+				allocator).Move(),
+		      allocator);
+	msg_stack.Clear();
+      }
+      if (iRef != err->MemberEnd()) {
+	out.AddMember(ErrorType(iRef->name.GetString(),
+				iRef->name.GetStringLength(),
+				allocator).Move(),
+		      ErrorType(iRef->value.GetString(),
+				iRef->value.GetStringLength(),
+				allocator).Move(),
+		      allocator);
+	
+      }
+      if (sRef != err->MemberEnd()) {
+	out.AddMember(ErrorType(sRef->name.GetString(),
+				sRef->name.GetStringLength(),
+				allocator).Move(),
+		      ErrorType(sRef->value.GetString(),
+				sRef->value.GetStringLength(),
+				allocator).Move(),
+		      allocator);
+      }
+      if (isSingular) {
+	out.AddMember(ErrorType(GetSingularString(),
+				GetSingularString().length,
+				allocator).Move(),
+		      ErrorType(isSingular).Move(),
+		      allocator);
+      }
+      MemberIter errArray = err->FindMember(GetErrorsString());
+      if ((errArray != err->MemberEnd()) && errArray->value.IsArray()) {
+	ErrorType errs(kArrayType);
+	
+	for (ValueIter ierr = errArray->value.Begin(); ierr != errArray->value.End(); ierr++) {
+	  ErrorType iout;
+	  ErrorType inonTypeError;
+	  ErrorType itypeError;
+	  if (!GetErrorMsg(iout, allocator, ierr,
+			   &inonTypeError, &itypeError))
+	    return false;
+	  CheckErrorReplace_(nonTypeError, &inonTypeError, allocator);
+	  CheckErrorReplace_(typeError, &itypeError, allocator);
+	  errs.PushBack(iout, allocator);
+	}
+	out.AddMember(ErrorType(GetErrorsString(),
+				GetErrorsString().length,
+				allocator).Move(),
+		      errs, allocator);
+      }
+      return true;
+    }
+  
     //! Check if the validator will check for a Python object.
     bool RequiresPython() const { return root_.RequiresPython(); }
   
@@ -4336,6 +4572,7 @@ public:
     return static_cast<ValidateErrorCode>(vcode->value.GetUint());
   }
   void NormalizationMergeConflict(const typename SchemaType::ValueType& cond,
+				  const SValue& expected, const SValue& actual,
 				  const GenericStringBuffer<EncodingType>& instanceRef,
 				  const GenericStringBuffer<EncodingType>& schemaRef) {
     currentError_.SetObject();
@@ -4346,6 +4583,12 @@ public:
     AddErrorCode(currentError_, code);
     currentError_.AddMember(GetInstanceRefString(), ValueType(instanceRef.GetString(), static_cast<SizeType>(instanceRef.GetSize() / sizeof(Ch)), GetStateAllocator()).Move(), GetStateAllocator());
     currentError_.AddMember(GetSchemaRefString(), ValueType(schemaRef.GetString(), static_cast<SizeType>(schemaRef.GetSize() / sizeof(Ch)) ,GetStateAllocator()).Move(), GetStateAllocator());
+    currentError_.AddMember(GetExpectedString(),
+			    ValueType(expected, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    currentError_.AddMember(GetActualString(),
+			    ValueType(actual, GetStateAllocator()).Move(),
+			    GetStateAllocator());
     AddError(ValueType(SchemaType::GetValidateErrorKeyword(code), GetStateAllocator(), false).Move(), currentError_);
   }
   void AddWarnings(ISchemaValidator** subvalidators, SizeType count) {
@@ -4386,6 +4629,7 @@ public:
     RAPIDJSON_STRING_(Warning, 'w', 'a', 'r', 'n', 'i', 'n', 'g')
     RAPIDJSON_STRING_(Warnings, 'w', 'a', 'r', 'n', 'i', 'n', 'g', 's')
     RAPIDJSON_STRING_(Singular, 's', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
+    RAPIDJSON_STRING_(Message, 'm', 'e', 's', 's', 'a', 'g', 'e')
 #endif //RAPIDJSON_YGGDRASIL
 #undef RAPIDJSON_STRING_
 

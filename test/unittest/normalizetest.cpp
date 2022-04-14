@@ -169,7 +169,9 @@ TEST(SchemaNormalizer, MergeConflict) {
 		     "    \"errorCode\": 37,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/allOf/1\","
-		     "    \"conflicting\": \"string\""
+		     "    \"conflicting\": \"string\","
+		     "    \"expected\": \"a\","
+		     "    \"actual\": \"b\""
 		     "}}");
 }
 
@@ -200,7 +202,9 @@ TEST(SchemaNormalizer, MergeConflictNested) {
 		     "    \"errorCode\": 37,"
 		     "    \"instanceRef\": \"#/client/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/client/allOf/1\","
-		     "    \"conflicting\": \"string\""
+		     "    \"conflicting\": \"string\","
+		     "    \"expected\": \"a\","
+		     "    \"actual\": \"b\""
 		     "}}");
 }
 

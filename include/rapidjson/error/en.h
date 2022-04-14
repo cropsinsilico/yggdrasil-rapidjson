@@ -120,7 +120,7 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
         case kNormalizeErrorAliasDuplicate:             return RAPIDJSON_ERROR_STRING("Aliased property already exists in the normalized document.");
         case kNormalizeErrorCircularAlias:              return RAPIDJSON_ERROR_STRING("Property has circular aliases.");
         case kNormalizeErrorConflictingAliases:         return RAPIDJSON_ERROR_STRING("Property has conflicting aliases.");
-        case kNormalizeErrorMergeConflict:              return RAPIDJSON_ERROR_STRING("Property has conflicting normalized documents.");
+        case kNormalizeErrorMergeConflict:              return RAPIDJSON_ERROR_STRING("Property has conflicting normalized documents, %expected and %actual");
 	// Warnings
         case kValidateWarnings:                         return RAPIDJSON_ERROR_STRING("One or more validation warnings have occurred");
         case kDeprecatedWarning:                        return RAPIDJSON_ERROR_STRING("Property is being deprecated.");

@@ -180,6 +180,18 @@ TEST(SchemaValidator, Hasher) {
     }\
     Document e;\
     e.Parse(error);\
+    RAPIDJSON_DEFAULT_ALLOCATOR allocator;\
+    Value e_msg;\
+    if (!validator.GetErrorMsg(e_msg, allocator)) {	\
+      StringBuffer sb_t;			\
+      PrettyWriter<StringBuffer> w_t(sb_t);			\
+      printf("ErrorMsg = %s\n", sb_t.GetString());		\
+      StringBuffer sb;						\
+      PrettyWriter<StringBuffer> w(sb);				\
+      validator.GetError().Accept(w);				\
+      printf("GetError(): %s", sb.GetString());			\
+      ADD_FAILURE();						\
+    }\
     if (validator.GetError() != e) {\
         StringBuffer sb;\
         PrettyWriter<StringBuffer> w(sb);\
