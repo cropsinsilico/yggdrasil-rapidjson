@@ -79,7 +79,7 @@ if __name__ == "__main__":
         },
         "allowSingular": {
             "description": "If true, the value may only contain an element matching the schema for array items. Only valid for array schemas.",
-            "type": "boolean",
+            "type": ["boolean", "object", "schema"],
             "default": False
         },
         "deprecated": {
