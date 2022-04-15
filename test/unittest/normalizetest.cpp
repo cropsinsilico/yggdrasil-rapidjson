@@ -19,6 +19,7 @@
 #include "rapidjson/schema.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "rapidjson/prettywriter.h"
 #include "rapidjson/error/error.h"
 #include "rapidjson/error/en.h"
 
@@ -57,7 +58,7 @@ using namespace rapidjson;
         normalizer.GetInvalidDocumentPointer().StringifyUriFragment(sb);\
         printf("Invalid document: %s\n", sb.GetString());\
         sb.Clear();\
-        Writer<StringBuffer> w(sb);\
+        PrettyWriter<StringBuffer> w(sb);	\
         normalizer.GetError().Accept(w);\
         printf("Validation error: %s\n", sb.GetString());\
     }\
@@ -106,13 +107,28 @@ using namespace rapidjson;
         printf("GetInvalidDocumentPointer() Expected: %s Actual: %s\n", invalidDocumentPointer, sb.GetString());\
         ADD_FAILURE();\
     }\
-    Document e;\
-    e.Parse(error);\
+    Document e;							\
+    e.Parse(error);						\
+    RAPIDJSON_DEFAULT_ALLOCATOR allocator;			\
+    Value e_msg;						\
+    if (!normalizer.GetErrorMsg(e_msg, allocator)) {		\
+      StringBuffer sb_t;					\
+      PrettyWriter<StringBuffer> w_t(sb_t);			\
+      printf("ErrorMsg = %s\n", sb_t.GetString());		\
+      StringBuffer sb;						\
+      PrettyWriter<StringBuffer> w(sb);				\
+      normalizer.GetError().Accept(w);				\
+      printf("GetError(): %s", sb.GetString());			\
+      ADD_FAILURE();						\
+    }								\
     if (normalizer.GetError() != e) {\
         StringBuffer sb;\
-        Writer<StringBuffer> w(sb);\
+        PrettyWriter<StringBuffer> w(sb);		\
         normalizer.GetError().Accept(w);\
-        printf("GetError() Expected: %s Actual: %s\n", error, sb.GetString());\
+        StringBuffer sb_e;\
+        PrettyWriter<StringBuffer> w_e(sb_e);\
+	e.Accept(w_e);\
+        printf("GetError() Expected: %s Actual: %s\n", sb_e.GetString(), sb.GetString()); \
         ADD_FAILURE();\
     }\
 }
@@ -147,6 +163,35 @@ TEST(SchemaNormalizer, Default) {
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }");
 }
 
+TEST(SchemaNormalizer, Merge) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"allOf\": ["
+        "    { \"properties\": {"
+	"        \"field_names\": {"
+	"          \"type\": \"array\","
+	"          \"items\": { \"type\": \"string\" },"
+	"          \"aliases\": [ \"column_names\" ]"
+	"        }}"
+	"    },"
+        "    { \"properties\": {"
+	"        \"field_names\": {"
+	"          \"type\": \"array\","
+	"          \"items\": { \"type\": \"string\" },"
+	"          \"aliases\": [ \"column_names\" ]"
+	"        }}"
+	"    }"
+	"  ]"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "{\"column_names\": [\"a\", \"b\"]}",
+	      true,
+	      "{\"field_names\": [\"a\", \"b\"]}");
+}
+
 TEST(SchemaNormalizer, MergeConflict) {
     Document sd;
     sd.Parse(
@@ -164,7 +209,8 @@ TEST(SchemaNormalizer, MergeConflict) {
 	"  ]"
         "}");
     SchemaDocument s(sd);
-    FAILED_NORMALIZE(s, "{}", "", "normalization", "",
+    FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",
+		     "/shipping_address",
 		     "{ \"normalization\": {"
 		     "    \"errorCode\": 37,"
 		     "    \"instanceRef\": \"#/shipping_address\","
@@ -197,7 +243,8 @@ TEST(SchemaNormalizer, MergeConflictNested) {
         "}");
     SchemaDocument s(sd);
     FAILED_NORMALIZE(s, "{ \"client\": {} }",
-		     "/properties/client", "normalization", "/client",
+		     "/properties/client/allOf/1", "normalization",
+		     "/client/shipping_address",
 		     "{ \"normalization\": {"
 		     "    \"errorCode\": 37,"
 		     "    \"instanceRef\": \"#/client/shipping_address\","

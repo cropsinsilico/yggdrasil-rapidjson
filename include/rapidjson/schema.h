@@ -281,7 +281,7 @@ public:
   virtual void CircularAlias(const SValue& alias) = 0;
   virtual void ConflictingAliases(const SValue& alias, const SValue& base1, const SValue& base2) = 0;
   virtual ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) = 0;
-  virtual void NormalizationMergeConflict(const typename SchemaType::ValueType& cond, const SValue& expected, const SValue& actual, const GenericStringBuffer<typename SchemaType::EncodingType>& instanceRef, const GenericStringBuffer<typename SchemaType::EncodingType>& schemaRef) = 0;
+  virtual void NormalizationMergeConflict(const typename SchemaType::ValueType& cond, const SValue& expected, const SValue& actual) = 0;
   virtual void AddWarnings(ISchemaValidator** subvalidators, SizeType count) = 0;
   virtual void DeprecationWarning(const SValue* warning=nullptr) = 0;
 #endif // RAPIDJSON_YGGDRASIL
@@ -589,9 +589,8 @@ public:
     valueStack_(stackAllocator, stackCapacity),
     childStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
-    pointerStack_(stackAllocator, stackCapacity),
     aliases_(kObjectType), inSingular_(false),
-    extend_pointer_(nullptr), temporary_memory_(nullptr) {}
+    temporary_memory_(nullptr) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent, unsigned& index,
 			    StackAllocator* stackAllocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity) :
@@ -602,9 +601,8 @@ public:
     valueStack_(stackAllocator, stackCapacity),
     childStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
-    pointerStack_(stackAllocator, stackCapacity),
     aliases_(kObjectType), inSingular_(false),
-    extend_pointer_(nullptr), temporary_memory_(nullptr) {
+    temporary_memory_(nullptr) {
     parent->AddChild(this);
   }
 
@@ -616,8 +614,6 @@ public:
       PopValue();
     while (!childStack_.Empty())
       PopChild();
-    while (!pointerStack_.Empty())
-      PopPointer();
     document_.ClearStack();
     if (temporary_memory_) {
       GetAllocator().Free(temporary_memory_);
@@ -625,6 +621,17 @@ public:
     }
   }
 
+  struct KeyEntry {
+    ValueType* key;
+    ValueType* aliased;
+  };
+  struct ValueEntry {
+    ValueEntry(ValueType& value) : val(&value), ptr() {}
+    ValueEntry(ValueType& value, PointerType& p) : val(&value), ptr(p) {}
+    ValueType* val;
+    PointerType ptr;
+  };
+  
   //! Get the allocator of this document.
   AllocatorType& GetAllocator() {
     return document_.GetAllocator();
@@ -657,7 +664,7 @@ public:
   //! Determine if the document was finalized.
   bool WasFinalized() const { return document_.WasFinalized(); }
 
-  bool ExtendChild(Context& context, const SchemaType& schema, unsigned index, const PointerType& pointer) {
+  bool ExtendChild(Context& context, const SchemaType& schema, unsigned index) {
     GenericNormalizedDocument* child = FindChild(index);
     RAPIDJSON_ASSERT(child);
     child->FinalizeFromStack();
@@ -667,7 +674,7 @@ public:
     if (!(replaced || child->modified_))
       return true;
     modified_ = true;
-    return Extend(context, schema, child->document_, &pointer);
+    return Extend(context, schema, child->document_);
   }
 
   bool Append(Context& context, const SchemaType& schema, const ValueType& document) {
@@ -678,7 +685,7 @@ public:
   }
 
   bool Extend(Context& context, const SchemaType& schema,
-	      const ValueType& document, const PointerType* pointer=nullptr) {
+	      const ValueType& document) {
     RAPIDJSON_ASSERT(!extending_);
     RAPIDJSON_ASSERT(!extend_context_);
     RAPIDJSON_ASSERT(!extend_schema_);
@@ -687,21 +694,23 @@ public:
     extending_ = true;
     extend_context_ = &context;
     extend_schema_ = &schema;
-    extend_pointer_ = pointer;
     bool out = document.Accept(*this);
+    if (!out)
+      return false;
     extending_ = false;
     extend_context_ = nullptr;
     extend_schema_ = nullptr;
-    extend_pointer_ = nullptr;
     PopValue();
     return out;
   }
 
   bool BeginValue(Context& context, const SchemaType& schema) {
     if (!BeginValueDirect(context, schema)) return false;
-    if (context.inArray)
-      PushValue(CurrentValue()[context.arrayElementIndex],
+    if (context.inArray) {
+      PushValue((*CurrentValue())[context.arrayElementIndex],
 		context.arrayElementIndex);
+      context.arrayElementIndex++;
+    }
     if (CurrentKey() && !inSingular(schema, 2))
       PushValue((*CurrentValue())[*CurrentKey()], *CurrentKey());
     PushKey();
@@ -786,13 +795,16 @@ public:
   
 #define REQUIRED_PROPERTY_(method, cond, args)				\
   if (!(cond)) {							\
-    GenericStringBuffer<EncodingType> instanceRef;			\
-    GenericStringBuffer<EncodingType> schemaRef;			\
-    GetInstanceRef(instanceRef, false);					\
-    GetSchemaRef(schemaRef, schema);					\
-    context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), \
-						     *CurrentValue(), ValueType args.Move(), instanceRef, schemaRef); \
-    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
+    if (InAliasedKey()) {						\
+      KeyEntry* aliased = AliasedKey();					\
+      context.error_handler.DuplicateAlias(*(aliased->aliased),		\
+					   *(aliased->key));		\
+      RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);	\
+    } else {								\
+      context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), \
+						       *CurrentValue(), ValueType args.Move()); \
+      RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
+    }									\
   }
 
 #define NORMALIZE_VALUE_(method, value, args)				\
@@ -939,9 +951,11 @@ public:
   }
   bool Key(Context& context, const SchemaType& schema, const Ch* str, SizeType len, bool copy, bool dont_check_aliases=false) {
     ValueType primary;
+    ValueType orig;
+    bool aliased = false;
     if (!dont_check_aliases) {
       const ValueType& aliases = AddAliases(schema);
-      ValueType orig(str, len, GetAllocator());
+      orig.SetString(str, len, GetAllocator());
       ConstMemberIterator match = aliases.MemberEnd();
       if (FindAliasName(aliases, orig, match)) {
 	if (!GetFinalAlias(context, aliases, orig, &primary))
@@ -957,14 +971,20 @@ public:
       // Check previous keys for alias target
       if (match != aliases.MemberEnd()) {
 	if (HasMember(primary)) {
-	  // TODO: Check equivalence when the value is added?
-	  context.error_handler.DuplicateAlias(orig, primary);
-	  RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
+	  aliased = true;
+	  if ((!extending_) || appending_) {
+	    // TODO: Check equivalence when the value is added?
+	    context.error_handler.DuplicateAlias(orig, primary);
+	    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
+	  }
 	}
       }
     }
     NORMALIZE_NONE_(Key, (str, len, copy));
-    PushKey(str, len);
+    if (aliased)
+      PushKey(str, len, &orig);
+    else
+      PushKey(str, len);
     return true;
   }
   bool EndObject(Context& context, const SchemaType& schema, SizeType& memberCount) {
@@ -1004,6 +1024,10 @@ public:
     BEGIN_NORMALIZE_START_(StartArray, (), (kArrayType));
     REQUIRED_PROPERTY_(Array, (inSingular(schema) || CurrentValue()->IsArray()),
 		       (kArrayType));
+    if (CurrentValue()->IsArray()) {
+      context.inArray = true;
+      context.arrayElementIndex = 0;
+    }
     return true;
   }
   bool EndArray(Context& context, const SchemaType& schema, SizeType elementCount) {
@@ -1013,6 +1037,7 @@ public:
       tmp.PushBack(*CurrentValue(), GetAllocator());
       CurrentValue()->Swap(tmp);
     }
+    context.inArray = false;
     return EndValue(context, schema);
   }
 
@@ -1070,7 +1095,30 @@ public:
     RAPIDJSON_ASSERT(temporary_memory_);
     return temporary_memory_;
   }
-      
+  
+  PointerType GetSchemaPointer(const SchemaType& schema) const {
+    if (extend_schema_)
+      return extend_schema_->GetPointer();
+    return schema.GetPointer();
+  }
+  
+  PointerType GetInstancePointer() const {
+    RAPIDJSON_ASSERT(documentStack_);
+    PointerType instancePointer;
+    if (documentStack_->Empty()) {
+      instancePointer = PointerType();
+    } else {
+      instancePointer = PointerType(documentStack_->template Bottom<Ch>(), documentStack_->GetSize() / sizeof(Ch));
+    }
+    if (extending_ && !appending_) {
+      for (size_t i = 0; i < CurrentPointer().GetTokenCount(); i++) {
+	PointerType tmp = instancePointer.Append(CurrentPointer().GetTokens()[i]);
+	instancePointer.Swap(tmp);
+      }
+    }
+    return instancePointer;
+  }
+  
 private:
 
   bool inSingular(const SchemaType& schema, size_t nKeys=1) const {
@@ -1087,19 +1135,18 @@ private:
   ValueType* CurrentValue() {
     if (extending_ && !appending_) {
       RAPIDJSON_ASSERT(!valueStack_.Empty());
-      return *valueStack_.template Top<ValueType*>();
+      return valueStack_.template Top<ValueEntry>()->val;
     } else {
       return document_.StackTop();
     }
   }
   void PushValue(ValueType& value, PointerType& p) {
-    ValueType** ref = valueStack_.template Push<ValueType*>();
-    ref[0] = &value;
-    PushPointer(p);
+    ValueEntry* ref = valueStack_.template Push<ValueEntry>();
+    new (ref) ValueEntry(value, p);
   }
   void PushValue(ValueType& value) {
     PointerType p;
-    if (!pointerStack_.Empty())
+    if (!valueStack_.Empty())
       p = CurrentPointer();
     PushValue(value, p);
   }
@@ -1112,49 +1159,56 @@ private:
     PushValue(value, p);
   }
   void PopValue() {
-    valueStack_.template Pop<ValueType*>(1);
-    PopPointer();
+    ValueEntry* ref = valueStack_.template Pop<ValueEntry>(1);
+    ref->~ValueEntry();
   }
   size_t ValueCount() const {
-    return valueStack_.GetSize() / sizeof(ValueType*);
+    return valueStack_.GetSize() / sizeof(ValueEntry);
   }
-  PointerType& CurrentPointer() {
-    RAPIDJSON_ASSERT(!pointerStack_.Empty());
-    return *pointerStack_.template Top<PointerType>();
+  const PointerType& CurrentPointer() const {
+    RAPIDJSON_ASSERT(!valueStack_.Empty());
+    return valueStack_.template Top<ValueEntry>()->ptr;
   }
-  void PushPointer(PointerType& p) {
-    PointerType* ref = pointerStack_.template Push<PointerType>();
-    new (ref) PointerType();
-    ref->Swap(p);
+  KeyEntry* AliasedKey() {
+    if (KeyCount() < 2)
+      return nullptr;
+    KeyEntry* ref = (keyStack_.template Top<KeyEntry>() - 1);
+    return ref;
   }
-  void PopPointer() {
-    PointerType* p = pointerStack_.template Pop<PointerType>(1);
-    p->~PointerType();
-  }
-  size_t PointerCount() const {
-    return pointerStack_.GetSize() / sizeof(PointerType);
+  bool InAliasedKey() {
+    KeyEntry* ref = AliasedKey();
+    return ((ref == nullptr) ||
+	    ((ref->key != nullptr) && (ref->aliased != nullptr)));
   }
   ValueType* CurrentKey() {
     if (keyStack_.Empty())
       return nullptr;
     else
-      return *keyStack_.template Top<ValueType*>();
+      return keyStack_.template Top<KeyEntry>()->key;
   }
-  void PushKey(const Ch* str, SizeType len) {
-    ValueType** ref = keyStack_.template Push<ValueType*>();
-    ref[0] = new ValueType(str, len, GetAllocator());
+  void PushKey(const Ch* str, SizeType len, ValueType* aliased=nullptr) {
+    KeyEntry* ref = keyStack_.template Push<KeyEntry>();
+    ref->key = new ValueType(str, len, GetAllocator());
+    ref->aliased = nullptr;
+    if (aliased)
+      ref->aliased = new ValueType(aliased->GetString(),
+				   aliased->GetStringLength(),
+				   GetAllocator());
   }
   void PushKey() {
-    ValueType** ref = keyStack_.template Push<ValueType*>();
-    ref[0] = nullptr;
+    KeyEntry* ref = keyStack_.template Push<KeyEntry>();
+    ref->key = nullptr;
+    ref->aliased = nullptr;
   }
   void PopKey() {
-    ValueType** ref = keyStack_.template Pop<ValueType*>(1);
-    if (ref[0])
-      delete ref[0];
+    KeyEntry* ref = keyStack_.template Pop<KeyEntry>(1);
+    if (ref->key)
+      delete ref->key;
+    if (ref->aliased)
+      delete ref->aliased;
   }
   size_t KeyCount() const {
-    return keyStack_.GetSize() / sizeof(ValueType*);
+    return keyStack_.GetSize() / sizeof(KeyEntry);
   }
   bool GetFinalAlias(Context& context, const ValueType& aliases,
 		     const ValueType& orig, ValueType* dest) {
@@ -1167,27 +1221,11 @@ private:
   void GetSchemaRef(GenericStringBuffer<EncodingType>& sb, const SchemaType& schema) {
     SizeType len = schema.GetURI().GetStringLength();
     if (len) memcpy(sb.Push(len), schema.GetURI().GetString(), len * sizeof(Ch));
-    const PointerType* schemaPointer;
-    if (extending_ && !appending_)
-      schemaPointer = extend_pointer_;
-    else
-      schemaPointer = &schema.GetPointer();
-    schemaPointer->StringifyUriFragment(sb);
+    PointerType schemaPointer = GetSchemaPointer(schema);
+    schemaPointer.StringifyUriFragment(sb);
   }
   void GetInstanceRef(GenericStringBuffer<EncodingType>& sb, bool parent=true) {
-    RAPIDJSON_ASSERT(documentStack_);
-    PointerType instancePointer;
-    if (documentStack_->Empty()) {
-      instancePointer = PointerType();
-    } else {
-      instancePointer = PointerType(documentStack_->template Bottom<Ch>(), documentStack_->GetSize() / sizeof(Ch));
-    }
-    if (extending_ && !appending_) {
-      for (size_t i = 0; i < CurrentPointer().GetTokenCount(); i++) {
-	PointerType tmp = instancePointer.Append(CurrentPointer().GetTokens()[i]);
-	instancePointer.Swap(tmp);
-      }
-    }
+    PointerType instancePointer = GetInstancePointer();
     ((parent && (instancePointer.GetTokenCount() > 0))
      ? PointerType(instancePointer.GetTokens(), instancePointer.GetTokenCount() - 1)
      : instancePointer).StringifyUriFragment(sb);
@@ -1351,10 +1389,8 @@ private:
   internal::Stack<AllocatorType> valueStack_;
   internal::Stack<AllocatorType> childStack_;
   internal::Stack<AllocatorType>* documentStack_;
-  internal::Stack<AllocatorType> pointerStack_;
   ValueType aliases_;
   bool inSingular_;
-  const PointerType* extend_pointer_;
   void* temporary_memory_;
 };
 
@@ -1984,17 +2020,17 @@ public:
 
 	      if (allOf_.schemas)
                 for (SizeType i = 0; i < allOf_.count; i++)
-		  if (!context.normalized->ExtendChild(context, *this,
-						       context.validators[i + allOf_.begin]->GetValidatorID(),
-						       allOf_.schemas[i]->pointer_))
+		  if (!context.normalized->ExtendChild(context,
+						       *allOf_.schemas[i],
+						       context.validators[i + allOf_.begin]->GetValidatorID()))
 		    return false;
 
 	      if (anyOf_.schemas) {
                 for (SizeType i = 0; i < anyOf_.count; i++) {
 		  if (context.validators[i + anyOf_.begin]->IsValid()) {
-		    if (!context.normalized->ExtendChild(context, *this,
-							 context.validators[i + anyOf_.begin]->GetValidatorID(),
-							 anyOf_.schemas[i]->pointer_))
+		    if (!context.normalized->ExtendChild(context,
+							 *anyOf_.schemas[i],
+							 context.validators[i + anyOf_.begin]->GetValidatorID()))
 		      return false;
 		    break;
 		  }
@@ -2004,9 +2040,9 @@ public:
 	      if (oneOf_.schemas) {
                 for (SizeType i = 0; i < oneOf_.count; i++) {
 		  if (context.validators[i + oneOf_.begin]->IsValid()) {
-		    if (!context.normalized->ExtendChild(context, *this,
-							 context.validators[i + oneOf_.begin]->GetValidatorID(),
-							 oneOf_.schemas[i]->pointer_))
+		    if (!context.normalized->ExtendChild(context,
+							 *oneOf_.schemas[i],
+							 context.validators[i + oneOf_.begin]->GetValidatorID()))
 		      return false;
 		    break;
 		  }
@@ -2016,9 +2052,10 @@ public:
 	      if (allowSingularSchema_.schemas) {
                 for (SizeType i = 0; i < allowSingularSchema_.count; i++) {
 		  if (context.validators[i + allowSingularSchema_.begin]->IsValid()) {
-		    if (!context.normalized->ExtendChild(context, *this,
-							 context.validators[i + allowSingularSchema_.begin]->GetValidatorID(),
-							 allowSingularSchema_.schemas[i]->pointer_))
+		    if (!context.normalized->ExtendChild(context,
+							 *this,
+							 // *allowSingularSchema_.schemas[i],
+							 context.validators[i + allowSingularSchema_.begin]->GetValidatorID()))
 		      return false;
 		    break;
 		  }
@@ -2026,15 +2063,15 @@ public:
 	      }
 	      
 	      if (metaschema_)
-		if (!context.normalized->ExtendChild(context, *this,
-						     context.validators[metaschemaValidatorIndex_]->GetValidatorID(),
-						     metaschema_->pointer_))
+		if (!context.normalized->ExtendChild(context,
+						     *metaschema_,
+						     context.validators[metaschemaValidatorIndex_]->GetValidatorID()))
 		  return false;
 
 	      if (instance_)
-		if (!context.normalized->ExtendChild(context, *this,
-						     context.validators[instanceValidatorIndex_]->GetValidatorID(),
-						     instance_->pointer_))
+		if (!context.normalized->ExtendChild(context,
+						     *instance_,
+						     context.validators[instanceValidatorIndex_]->GetValidatorID()))
 		  return false;
 
 	    }
@@ -4247,6 +4284,9 @@ public:
 
     //! Gets the JSON pointer pointed to the invalid schema.
     //  If reporting all errors, the stack will be empty.
+#ifdef RAPIDJSON_YGGDRASIL
+    virtual
+#endif // RAPIDJSON_YGGDRASIL
     PointerType GetInvalidSchemaPointer() const {
         return schemaStack_.Empty() ? PointerType() : CurrentSchema().GetPointer();
     }
@@ -4275,6 +4315,9 @@ public:
 
     //! Gets the JSON pointer pointed to the invalid value.
     //  If reporting all errors, the stack will be empty.
+#ifdef RAPIDJSON_YGGDRASIL
+    virtual
+#endif // RAPIDJSON_YGGDRASIL
     PointerType GetInvalidDocumentPointer() const {
         if (documentStack_.Empty()) {
             return PointerType();
@@ -4572,24 +4615,18 @@ public:
     return static_cast<ValidateErrorCode>(vcode->value.GetUint());
   }
   void NormalizationMergeConflict(const typename SchemaType::ValueType& cond,
-				  const SValue& expected, const SValue& actual,
-				  const GenericStringBuffer<EncodingType>& instanceRef,
-				  const GenericStringBuffer<EncodingType>& schemaRef) {
+				  const SValue& expected, const SValue& actual) {
     currentError_.SetObject();
     currentError_.AddMember(GetConflictingString(),
 			    ValueType(cond, GetStateAllocator()).Move(),
 			    GetStateAllocator());
-    ValidateErrorCode code = kNormalizeErrorMergeConflict;
-    AddErrorCode(currentError_, code);
-    currentError_.AddMember(GetInstanceRefString(), ValueType(instanceRef.GetString(), static_cast<SizeType>(instanceRef.GetSize() / sizeof(Ch)), GetStateAllocator()).Move(), GetStateAllocator());
-    currentError_.AddMember(GetSchemaRefString(), ValueType(schemaRef.GetString(), static_cast<SizeType>(schemaRef.GetSize() / sizeof(Ch)) ,GetStateAllocator()).Move(), GetStateAllocator());
     currentError_.AddMember(GetExpectedString(),
 			    ValueType(expected, GetStateAllocator()).Move(),
 			    GetStateAllocator());
     currentError_.AddMember(GetActualString(),
 			    ValueType(actual, GetStateAllocator()).Move(),
 			    GetStateAllocator());
-    AddError(ValueType(SchemaType::GetValidateErrorKeyword(code), GetStateAllocator(), false).Move(), currentError_);
+    AddCurrentError(kNormalizeErrorMergeConflict, false);
   }
   void AddWarnings(ISchemaValidator** subvalidators, SizeType count) {
     AddWarningArray(subvalidators, count);
@@ -5324,6 +5361,20 @@ public:
     StateAllocator::Free(v);
   }
 
+  //! Gets the JSON pointer pointed to the invalid schema.
+  //  If reporting all errors, the stack will be empty.
+  PointerType GetInvalidSchemaPointer() const OVERRIDE_CXX11 {
+    if (!this->schemaStack_.Empty()) {
+      return normalized_.GetSchemaPointer(this->CurrentSchema());
+    }
+    return GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::GetInvalidSchemaPointer();
+  }
+
+  //! Gets the JSON pointer pointed to the invalid value.
+  //  If reporting all errors, the stack will be empty.
+  PointerType GetInvalidDocumentPointer() const OVERRIDE_CXX11 {
+    return normalized_.GetInstancePointer();
+  }
 };
 
 typedef GenericSchemaNormalizer<SchemaDocument> SchemaNormalizer;
