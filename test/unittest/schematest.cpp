@@ -180,9 +180,9 @@ TEST(SchemaValidator, Hasher) {
     }\
     Document e;\
     e.Parse(error);\
-    RAPIDJSON_DEFAULT_ALLOCATOR allocator;\
+    RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;\
     Value e_msg;\
-    if (!validator.GetErrorMsg(e_msg, allocator)) {	\
+    if (!validator.GetErrorMsg(e_msg, error_msg_allocator)) {	\
       StringBuffer sb_t;			\
       PrettyWriter<StringBuffer> w_t(sb_t);			\
       printf("ErrorMsg = %s\n", sb_t.GetString());		\
