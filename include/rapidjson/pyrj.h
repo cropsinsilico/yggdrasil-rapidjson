@@ -226,7 +226,74 @@ PyObject* import_python_object(const char* mod_class,
       throw std::runtime_error(error_prefix + "import_python_object: Failed to import Python object '" + mod_class + "'"); // GCOVR_EXCL_LINE
     return NULL;
   }
-  return import_python_class(module_name, class_name, error_prefix, ignore_error);
+  Py_ssize_t module_name_len = (Py_ssize_t)strlen(module_name);
+  bool is_file = ((module_name_len > 3) && (strncmp(module_name + ((size_t)module_name_len - 3), ".py", 3) == 0));
+  if (is_file) {
+    PyObject* path = PyUnicode_FromStringAndSize(module_name, module_name_len - 3);
+    if (path == NULL)
+      return NULL;
+    PyObject* os_path = PyImport_ImportModule("os.path");
+    if (os_path == NULL) {
+      Py_DECREF(path);
+      return NULL;
+    }
+    PyObject* path_split = PyObject_GetAttrString(os_path, "split");
+    if (path_split == NULL) {
+      Py_DECREF(path);
+      Py_DECREF(os_path);
+      return NULL;
+    }
+    PyObject* split_args = PyTuple_Pack(1, path);
+    if (split_args == NULL) {
+      Py_DECREF(path);
+      Py_DECREF(path_split);
+      Py_DECREF(os_path);
+      return NULL;
+    }
+    PyObject* path_parts = PyObject_Call(path_split, split_args, NULL);
+    Py_DECREF(split_args);
+    Py_DECREF(path);
+    Py_DECREF(path_split);
+    if (path_parts == NULL)
+      return NULL;
+    PyObject* path_dir = PyTuple_GetItem(path_parts, 0);
+    if (path_dir == NULL) {
+      Py_DECREF(path_parts);
+      return NULL;
+    }
+    PyObject* sys_path = PySys_GetObject("path");
+    if (sys_path == NULL) {
+      Py_DECREF(path_parts);
+      return NULL;
+    }
+    int res = PyList_Append(sys_path, path_dir);
+    if (res < 0) {
+      Py_DECREF(path_parts);
+      return NULL;
+    }
+    PyObject* path_base = PyTuple_GetItem(path_parts, 1);
+    if (path_base == NULL) {
+      Py_DECREF(path_parts);
+      return NULL;
+    }
+    Py_ssize_t tmp_size = 0;
+    const char* tmp = PyUnicode_AsUTF8AndSize(path_base, &tmp_size);
+    if ((tmp == NULL) || (tmp_size >= 100)) {
+      Py_DECREF(path_parts);
+      return NULL;
+    }
+    memcpy(module_name, tmp, (size_t)tmp_size);
+    module_name[tmp_size] = '\0';
+    Py_DECREF(path_parts);
+  }
+  PyObject* out = import_python_class(module_name, class_name, error_prefix, ignore_error);
+  if (is_file) {
+    PyObject* sys_path = PySys_GetObject("path");
+    if (sys_path == NULL)
+      return NULL;
+    PyObject_CallMethod(sys_path, "pop", "n", Py_SIZE(sys_path) - 1);
+  }
+  return out;
 }
 
 
