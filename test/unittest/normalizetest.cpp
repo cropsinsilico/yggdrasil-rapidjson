@@ -709,6 +709,69 @@ TEST(SchemaNormalizer, NDArray) {
 		     "}}");
 }
 
+TEST(SchemaNormalizer, StolenProperties) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"billing_address\": { \"$ref\": \"#/definitions/address\" },"
+        "    \"shipping_address\": {"
+        "      \"type\": \"object\","
+	"      \"stealProperties\": true,"
+        "      \"properties\": {"
+        "        \"street_address\": { \"type\": \"string\","
+	"                              \"default\": \"default_address\"},"
+        "        \"city\":           { \"type\": \"string\","
+	"                              \"default\": \"default_city\"},"
+        "        \"state\":          { \"type\": \"string\","
+	"                              \"default\": \"default_state\"},"
+        "        \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
+	"                              \"default\": \"residential\" }"
+        "      },"
+        "      \"required\": [\"street_address\", \"city\", \"state\", \"type\"]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"city\": \"Washington\", \"state\": \"DC\" }",
+	      true,
+	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }");
+}
+
+TEST(SchemaNormalizer, SharedProperties) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"billing_address\": { \"$ref\": \"#/definitions/address\" },"
+        "    \"shipping_address\": {"
+        "      \"type\": \"object\","
+	"      \"stealProperties\": [\"state\"],"
+	"      \"shareProperties\": true,"
+        "      \"properties\": {"
+        "        \"street_address\": { \"type\": \"string\","
+	"                              \"default\": \"default_address\"},"
+        "        \"city\":           { \"type\": \"string\","
+	"                              \"default\": \"default_city\"},"
+        "        \"state\":          { \"type\": \"string\","
+	"                              \"default\": \"default_state\"},"
+        "        \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
+	"                              \"default\": \"residential\" }"
+        "      },"
+        "      \"required\": [\"street_address\", \"city\", \"state\", \"type\"]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"city\": \"Washington\", \"state\": \"DC\" }",
+	      true,
+	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"}, \"city\": \"Washington\" }");
+}
+
 #if defined(_MSC_VER) || defined(__clang__)
 RAPIDJSON_DIAG_POP
 #endif

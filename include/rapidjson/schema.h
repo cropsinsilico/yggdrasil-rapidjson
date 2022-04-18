@@ -284,6 +284,7 @@ public:
   virtual void NormalizationMergeConflict(const typename SchemaType::ValueType& cond, const SValue& expected, const SValue& actual) = 0;
   virtual void AddWarnings(ISchemaValidator** subvalidators, SizeType count) = 0;
   virtual void DeprecationWarning(const SValue* warning=nullptr) = 0;
+  virtual bool EndMissingPropertiesChild(const SValue& name) = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -396,6 +397,86 @@ private:
     Stack<Allocator> stack_;
 };
 
+#ifdef RAPIDJSON_YGGDRASIL
+///////////////////////////////////////////////////////////////////////////////
+// ChildProperty
+
+template <typename SchemaDocumentType>
+struct ChildProperties;
+  
+template <typename SchemaDocumentType>
+struct ChildProperty {
+  typedef Schema<SchemaDocumentType> SchemaType;
+  typedef typename SchemaType::SValue SValue;
+  ChildProperty() :
+    name(nullptr), required(false), steal(false), share(false),
+    missing(false), defaultValue(nullptr) {}
+  ChildProperty(const SValue& name0, bool required0,
+		bool steal0, bool share0, const SValue& def) :
+    name(&name0), required(required0), steal(steal0), share(share0),
+    missing(false), defaultValue() {
+    if (!def.IsNull())
+      defaultValue = &def;
+  }
+  const SValue* name;
+  bool required;
+  bool steal;
+  bool share;
+  bool missing;
+  const SValue* defaultValue;
+  friend class ChildProperties<SchemaDocumentType>;
+};
+
+template <typename SchemaDocumentType>
+struct ChildProperties {
+  typedef Schema<SchemaDocumentType> SchemaType;
+  typedef typename SchemaType::SValue SValue;
+  typedef ISchemaStateFactory<SchemaType> SchemaValidatorFactoryType;
+  typedef ChildProperty<SchemaDocumentType> ChildPropertyType;
+  ChildProperties(const SchemaType& schema,
+		  SchemaValidatorFactoryType& f) :
+    factory(f), propertyCount(schema.propertyCount_), properties() {
+    properties = static_cast<ChildPropertyType*>(factory.MallocState(sizeof(ChildPropertyType) * propertyCount));
+    for (SizeType i = 0; i < propertyCount; i++) {
+      if (schema.stealProperties_.Contains(schema.properties_[i].name))
+	properties[i] = ChildPropertyType(schema.properties_[i].name,
+					  schema.properties_[i].required,
+					  true, false,
+					  schema.properties_[i].schema->default_);
+      else if (schema.shareProperties_.Contains(schema.properties_[i].name))
+	properties[i] = ChildPropertyType(schema.properties_[i].name,
+					  schema.properties_[i].required,
+					  false, true,
+					  schema.properties_[i].schema->default_);
+      else
+	properties[i] = ChildPropertyType();
+    }
+  }
+  ~ChildProperties() {
+    if (properties)
+      factory.FreeState(properties);
+  }
+  bool AnyMissing() const {
+    for (SizeType i = 0; i < propertyCount; i++)
+      if (properties[i].missing)
+	return true;
+    return false;
+  }
+  bool SetMissing(SizeType& index) {
+    if (properties[index].name == nullptr)
+      return false;
+    properties[index].missing = true;
+    return true;
+  }
+  ChildPropertyType* Begin() { return properties; }
+  ChildPropertyType* End() { return properties + propertyCount; }
+  SchemaValidatorFactoryType& factory;
+  SizeType propertyCount;
+  ChildPropertyType* properties;
+};
+
+#endif // RAPIDJSON_YGGDRASIL
+
 ///////////////////////////////////////////////////////////////////////////////
 // SchemaValidationContext
 
@@ -439,7 +520,8 @@ struct SchemaValidationContext {
         valueUniqueness(false),
         arrayUniqueness(false)
 #ifdef RAPIDJSON_YGGDRASIL
-	, normalized()
+	, normalized(), childPropertyCount(0), childProperties(),
+	parentProperties(), valueProperties()
 #endif //RAPIDJSON_YGGDRASIL
     {
     }
@@ -461,6 +543,14 @@ struct SchemaValidationContext {
             factory.FreeState(patternPropertiesSchemas);
         if (propertyExist)
             factory.FreeState(propertyExist);
+#ifdef RAPIDJSON_YGGDRASIL
+	if (childProperties) {
+	  for (SizeType i = 0; i < childPropertyCount; i++)
+	    if (childProperties[i])
+	      delete childProperties[i];
+	  factory.FreeState(childProperties);
+	}
+#endif // RAPIDJSON_YGGDRASIL
     }
 
     SchemaValidatorFactoryType& factory;
@@ -486,6 +576,10 @@ struct SchemaValidationContext {
     bool arrayUniqueness;
 #ifdef RAPIDJSON_YGGDRASIL
     NormalizedDocumentType* normalized;
+    SizeType childPropertyCount;
+    ChildProperties<SchemaDocumentType>** childProperties;
+    ChildProperties<SchemaDocumentType>* parentProperties;
+    ChildProperties<SchemaDocumentType>* valueProperties;
 #endif //RAPIDJSON_YGGDRASIL
 };
 
@@ -577,6 +671,7 @@ class GenericNormalizedDocument {
   typedef typename ValueType::MemberIterator MemberIterator;
   typedef typename ValueType::ConstMemberIterator ConstMemberIterator;
   friend class TemporaryMemory<GenericNormalizedDocument<SchemaDocumentType, StackAllocator> >;
+  typedef ChildProperty<SchemaDocumentType> ChildPropertyType;
   typedef units::GenericUnits<EncodingType> UnitsType;
 public:
   GenericNormalizedDocument(AllocatorType* allocator = 0,
@@ -980,6 +1075,14 @@ public:
 	}
       }
     }
+    if (context.childProperties) {
+      SizeType index = 0;
+      if (schema.FindPropertyIndex(typename SchemaType::ValueType(str, len).Move(), &index) &&
+	  (context.patternPropertiesSchemaCount <= 0)) {
+	if (context.childProperties[index])
+	  context.valueProperties = context.childProperties[index];
+      }
+    }
     NORMALIZE_NONE_(Key, (str, len, copy));
     if (aliased)
       PushKey(str, len, &orig);
@@ -988,6 +1091,46 @@ public:
     return true;
   }
   bool EndObject(Context& context, const SchemaType& schema, SizeType& memberCount) {
+    // Borrow properties from parent
+    if ((!extending_) && context.childProperties) {
+      ValueType remove(kArrayType);
+      for (SizeType index = 0; index < schema.propertyCount_; index++) {
+	if (!(context.childProperties[index] &&
+	      context.propertyExist[index] &&
+	      context.childProperties[index]->AnyMissing()))
+	  continue;
+	ValueType* target = GetMember(schema.properties_[index].name,
+				      &memberCount);
+	if (!target)
+	  continue;
+	for (ChildPropertyType* child = context.childProperties[index]->Begin();
+	     child != context.childProperties[index]->End(); child++) {
+	  if (!child->missing)
+	    continue;
+	  if (ValueType* val = GetMember(*(child->name), &memberCount)) {
+	    modified_ = true;
+	    target->AddMember(*(child->name),
+			      ValueType(*val, GetAllocator()).Move(),
+			      GetAllocator());
+	    if (child->steal)
+	      remove.PushBack(ValueType(*(child->name), GetAllocator()).Move(),
+			      GetAllocator());
+	    child->missing = false;
+	  }
+	}
+      }
+      for (typename ValueType::ConstValueIterator it = remove.Begin(); it != remove.End(); ++it)
+	RemoveMember(*it, &memberCount);
+    }
+    // Mark properties that are missing for parent
+    if ((!extending_) && context.parentProperties) {
+      for (SizeType index = 0; index < schema.propertyCount_; index++) {
+	if ((!context.propertyExist[index]) &&
+	    context.parentProperties->SetMissing(index)) {
+	  context.propertyExist[index] = true;
+	}
+      }
+    }
     // Default
     // TODO: Normalize default_?
     if ((!extending_) && (schema.hasRequired_)) {
@@ -1001,10 +1144,36 @@ public:
 	    return false;
 	  if (!Append(context, schema, schema.properties_[index].schema->default_))
 	    return false;
-	  if (context.propertyExist)
-	    context.propertyExist[index] = true;
+	  context.propertyExist[index] = true;
 	  memberCount++;
 	}
+      }
+    }
+    // Set errors for child properties that are still missing
+    if ((!extending_) && context.childProperties) {
+      for (SizeType index = 0; index < schema.propertyCount_; index++) {
+	if (!(context.childProperties[index] &&
+	      context.propertyExist[index] &&
+	      context.childProperties[index]->AnyMissing()))
+	  continue;
+	ValueType* target = GetMember(schema.properties_[index].name,
+				      &memberCount);
+	if (!target)
+	  continue;
+	context.error_handler.StartMissingProperties();
+	for (ChildPropertyType* child = context.childProperties[index]->Begin();
+	     child != context.childProperties[index]->End(); child++) {
+	  if (!(child->missing && child->required))
+	    continue;
+	  if (child->defaultValue)
+	    target->AddMember(*(child->name),
+			      ValueType(*(child->defaultValue), GetAllocator()).Move(),
+			      GetAllocator());
+	  else
+	    context.error_handler.AddMissingProperty(*(child->name));
+	}
+	if (context.error_handler.EndMissingPropertiesChild(schema.properties_[index].name))
+	  RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
       }
     }
     // Do EndObject
@@ -1132,6 +1301,14 @@ private:
     return inSingular_;
   }
 
+  const ValueType* CurrentValue() const {
+    if (extending_ && !appending_) {
+      RAPIDJSON_ASSERT(!valueStack_.Empty());
+      return valueStack_.template Top<ValueEntry>()->val;
+    } else {
+      return document_.StackTop();
+    }
+  }
   ValueType* CurrentValue() {
     if (extending_ && !appending_) {
       RAPIDJSON_ASSERT(!valueStack_.Empty());
@@ -1230,36 +1407,116 @@ private:
      ? PointerType(instancePointer.GetTokens(), instancePointer.GetTokenCount() - 1)
      : instancePointer).StringifyUriFragment(sb);
   }
-  bool HasMember(ValueType& key, ValueType* val=nullptr) {
+  void RemoveMember(const ValueType& key, SizeType* memberCount=nullptr) {
     if (extending_ && !appending_) {
       RAPIDJSON_ASSERT(CurrentValue()->IsObject());
-      if (CurrentValue()->HasMember(key)) {
-	if (val)
-	  val->CopyFrom(CurrentValue()->FindMember(key)->value,
-			GetAllocator());
-	return true;
-      }
-      return false;
+      CurrentValue()->RemoveMember(key);
+      return;
     }
+    if (document_.StackSize() == 0)
+      return;
     ValueType* base = document_.StackTop();
-    if (base->IsObject())
-      return false;
-    while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
+    if (memberCount) {
+      SizeType i = 0;
+      while ((base != document_.StackBottom()) && (i < (*memberCount * 2))) {
+	base--;
+	i++;
+      }
+    } else {
+      if (base->IsObject())
+	return;
+      while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
+    }
     RAPIDJSON_ASSERT(base->IsObject());
     base++;
     while (base != document_.StackTop()) {
       RAPIDJSON_ASSERT(base->IsString());
-      if (*base == key) {
-	if (val && ((base + 1) != document_.StackTop()))
-	  val->CopyFrom(*(base + 1),
-			GetAllocator());
-	return true;
+      if ((*base == key) && (base != document_.StackTop())) {
+	if (base + 1 == document_.StackTop()) {
+	  document_.StackPop()->~ValueType();
+	  document_.StackPop()->~ValueType();
+	} else {
+	  base->~ValueType();
+	  (base + 1)->~ValueType();
+	  memmove(base, base + 2, (document_.StackSize() - 2) * sizeof(ValueType));
+	  // Don't call destructor as the memory should be empty
+	  document_.StackPop();
+	  document_.StackPop();
+	}
+	if (memberCount)
+	  (*memberCount)--;
+	return;
       }
       base++;
       if (base == document_.StackTop()) break;
       base++;
     }
+  }
+  bool HasMember(const ValueType& key, SizeType* memberCount=nullptr) const {
+    if (extending_ && !appending_) {
+      RAPIDJSON_ASSERT(CurrentValue()->IsObject());
+      if (CurrentValue()->HasMember(key))
+	return true;
+      return false;
+    }
+    if (document_.StackSize() == 0)
+      return false;
+    const ValueType* base = document_.StackTop();
+    if (memberCount) {
+      SizeType i = 0;
+      while ((base != document_.StackBottom()) && (i < (*memberCount * 2))) {
+	base--;
+	i++;
+      }
+    } else {
+      if (base->IsObject())
+	  return false;
+      while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
+    }
+    RAPIDJSON_ASSERT(base->IsObject());
+    base++;
+    while (base != document_.StackTop()) {
+      RAPIDJSON_ASSERT(base->IsString());
+      if (*base == key)
+	return true;
+      base++;
+      if (base == document_.StackTop()) break;
+      base++;
+    }
     return false;
+  }
+  ValueType* GetMember(const ValueType& key, SizeType* memberCount=nullptr) {
+    if (extending_ && !appending_) {
+      RAPIDJSON_ASSERT(CurrentValue()->IsObject());
+      if (CurrentValue()->HasMember(key))
+	return &(CurrentValue()->FindMember(key)->value);
+      return nullptr;
+    }
+    if (document_.StackSize() == 0)
+      return nullptr;
+    ValueType* base = document_.StackTop();
+    if (memberCount) {
+      SizeType i = 0;
+      while ((base != document_.StackBottom()) && (i < (*memberCount * 2))) {
+	base--;
+	i++;
+      }
+    } else {
+      if (base->IsObject())
+	return nullptr;
+      while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
+    }
+    RAPIDJSON_ASSERT(base->IsObject());
+    base++;
+    while (base != document_.StackTop()) {
+      RAPIDJSON_ASSERT(base->IsString());
+      if ((*base == key) && (base != document_.StackTop()))
+	return (base + 1);
+      base++;
+      if (base == document_.StackTop()) break;
+      base++;
+    }
+    return nullptr;
   }
   ValueType* Address2Value(const ValueType& address, ValueType* base = nullptr, size_t unfinalized=0) {
     if (!base) base = CurrentValue();
@@ -1415,6 +1672,8 @@ public:
     friend class GenericSchemaDocument<ValueType, AllocatorType>;
 #ifdef RAPIDJSON_YGGDRASIL
     friend class GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR>;
+    friend class ChildProperties<SchemaDocumentType>;
+    typedef ChildProperties<SchemaDocumentType> ChildPropertiesType;
     typedef units::GenericUnits<EncodingType> UnitsType;
 #endif // RAPIDJSON_YGGDRASIL
 
@@ -1476,7 +1735,9 @@ public:
 	instanceValidatorIndex_(),
 	aliases_(kArrayType), child_aliases_(kObjectType), hasAliases_(false),
 	allowSingular_(false), isSingular_(isSingular), parentKey_(kNullType),
-	deprecated_(false)
+	deprecated_(false),
+	stealProperties_(), child_stealProperties_(),
+	shareProperties_(), child_shareProperties_()
 #endif // RAPIDJSON_YGGDRASIL
     {
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
@@ -1561,6 +1822,41 @@ public:
 	    deprecated_.SetBool(v->GetBool());
 	  else if (v->IsString())
 	    deprecated_.SetString(v->GetString(), v->GetStringLength(), *allocator_);
+	}
+	bool addStealProperties = false;
+	if (const ValueType* v = GetMember(value, GetStealPropertiesString())) {
+	  if (v->IsBool()) {
+	    if (v->GetBool()) {
+	      addStealProperties = true;
+	      stealProperties_.SetArray();
+	    }
+	  } else if (v->IsArray() && v->Size() > 0) {
+	    stealProperties_.SetArray();
+	    for (ConstValueIterator itr = v->Begin(); itr != v->End(); ++itr) {
+	      if (itr->IsString()) {
+		SValue iname(itr->GetString(), itr->GetStringLength(), *allocator_);
+		stealProperties_.PushBack(iname, *allocator_);
+	      }
+	    }
+	  }
+	}
+	bool addShareProperties = false;
+	if (const ValueType* v = GetMember(value, GetSharePropertiesString())) {
+	  if (v->IsBool()) {
+	    if (v->GetBool()) {
+	      addShareProperties = true;
+	      shareProperties_.SetArray();
+	    }
+	  } else if (v->IsArray() && v->Size() > 0) {
+	    shareProperties_.SetArray();
+	    for (ConstValueIterator itr = v->Begin(); itr != v->End(); ++itr) {
+	      if (itr->IsString()) {
+		SValue iname(itr->GetString(), itr->GetStringLength(), *allocator_);
+		if (!stealProperties_.Contains(iname))
+		  shareProperties_.PushBack(iname, *allocator_);
+	      }
+	    }
+	  }
 	}
 	// Initialize class before instance
 	if (const ValueType* v = GetMember(value, GetPythonClassString())) {
@@ -1660,6 +1956,46 @@ public:
 #endif // RAPIDJSON_YGGDRASIL
                     schemaDocument->CreateSchema(&properties_[index].schema, q.Append(itr->name, allocator_), itr->value, document, id_);
 #ifdef RAPIDJSON_YGGDRASIL
+		    if (addStealProperties)
+		      stealProperties_.PushBack(SValue(itr->name.GetString(),
+						       itr->name.GetStringLength(),
+						       *allocator_).Move(),
+						*allocator_);
+		    if (addShareProperties && !addStealProperties) {
+		      SValue iname(itr->name.GetString(),
+				   itr->name.GetStringLength(),
+				   *allocator_);
+		      if (!stealProperties_.Contains(iname))
+			shareProperties_.PushBack(iname, *allocator_);
+		    }
+						
+		    if (properties_[index].schema->stealProperties_.IsArray()) {
+		      if (!child_stealProperties_.IsArray())
+			child_stealProperties_.SetArray();
+		      for (typename SValue::ConstValueIterator itv = properties_[index].schema->stealProperties_.Begin(); itv != properties_[index].schema->stealProperties_.End(); ++itv) {
+			if (child_shareProperties_.IsArray()) {
+			  typename SValue::ConstValueIterator itv_share = child_shareProperties_.Index(*itv);
+			  if (itv_share != child_shareProperties_.End())
+			    child_shareProperties_.Erase(itv_share);
+			}
+			if (!child_stealProperties_.Contains(*itv))
+			  child_stealProperties_.PushBack(SValue(itv->GetString(),
+								 itv->GetStringLength(),
+								 *allocator_).Move(),
+							  *allocator_);
+		      }
+		    }
+		    if (properties_[index].schema->shareProperties_.IsArray()) {
+		      if (!child_shareProperties_.IsArray())
+			child_shareProperties_.SetArray();
+		      for (typename SValue::ConstValueIterator itv = properties_[index].schema->shareProperties_.Begin(); itv != properties_[index].schema->shareProperties_.End(); ++itv)
+			if (!(child_stealProperties_.Contains(*itv) ||
+			      child_shareProperties_.Contains(*itv)))
+			  child_shareProperties_.PushBack(SValue(itv->GetString(),
+								 itv->GetStringLength(),
+								 *allocator_).Move(),
+							  *allocator_);
+		    }
 		    if (properties_[index].schema->aliases_.Size() > 0) {
 		      hasAliases_ = true;
 		      for (typename SValue::ConstValueIterator itv = properties_[index].schema->aliases_.Begin(); itv != properties_[index].schema->aliases_.End(); ++itv)
@@ -2156,7 +2492,6 @@ public:
     return false;
   }
   
-  // TODO: Error about normalization
 #define RAPIDJSON_NORMALIZER_BASE_(method, arg)				\
   TemporaryMemory<typename Context::NormalizedDocumentType> __temporary_normalized_memory(context.normalized); \
   if (context.normalized) {						\
@@ -2368,10 +2703,33 @@ public:
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
 
-        if (hasDependencies_ || hasRequired_) {
+#ifdef RAPIDJSON_YGGDRASIL
+        if (hasDependencies_ || hasRequired_ ||
+	    stealProperties_.IsArray() || shareProperties_.IsArray() ||
+	    child_stealProperties_.IsArray() ||
+	    child_shareProperties_.IsArray()) {
+#else // RAPIDJSON_YGGDRASIL
+	if (hasDependencies_ || hasRequired_) {
+#endif // RAPIDJSON_YGGDRASIL
             context.propertyExist = static_cast<bool*>(context.factory.MallocState(sizeof(bool) * propertyCount_));
             std::memset(context.propertyExist, 0, sizeof(bool) * propertyCount_);
         }
+
+#ifdef RAPIDJSON_YGGDRASIL
+	if (child_stealProperties_.IsArray() || child_shareProperties_.IsArray()) {
+	  context.childPropertyCount = propertyCount_;
+	  context.childProperties = static_cast<ChildPropertiesType**>(context.factory.MallocState(sizeof(ChildPropertiesType*) * propertyCount_));
+	  for (SizeType i = 0; i < propertyCount_; i++) {
+	    if (properties_[i].schema->stealProperties_.IsArray() ||
+		properties_[i].schema->shareProperties_.IsArray()) {
+	      context.childProperties[i] = new ChildPropertiesType(
+		  *properties_[i].schema, context.factory);
+	    } else {
+	      context.childProperties[i] = nullptr;
+	    }
+	  }
+	}
+#endif // RAPIDJSON_YGGDRASIL
 
         if (patternProperties_) { // pre-allocate schema array
             SizeType count = patternPropertyCount_ + 1; // extra for valuePatternValidatorType
@@ -2661,6 +3019,8 @@ public:
     RAPIDJSON_STRING_(Aliases, 'a', 'l', 'i', 'a', 's', 'e', 's')
     RAPIDJSON_STRING_(AllowSingular, 'a', 'l', 'l', 'o', 'w', 'S', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
     RAPIDJSON_STRING_(Deprecated, 'd', 'e', 'p', 'r', 'e', 'c', 'a', 't', 'e', 'd')
+    RAPIDJSON_STRING_(StealProperties, 's', 't', 'e', 'a', 'l', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
+    RAPIDJSON_STRING_(ShareProperties, 's', 'h', 'a', 'r', 'e', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
     // Subtypes
     RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'g')
     RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
@@ -3351,6 +3711,10 @@ protected:
     SingularFlag isSingular_;
     SValue parentKey_;
     SValue deprecated_;
+    SValue stealProperties_;
+    SValue child_stealProperties_;
+    SValue shareProperties_;
+    SValue child_shareProperties_;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -3924,6 +4288,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
     template <typename, typename, typename>
     friend class GenericSchemaNormalizer;
+    typedef internal::ChildProperties<SchemaDocumentType> ChildPropertiesType;
 #endif // RAPIDJSON_YGGDRASIL
 
     //! Constructor without output handler.
@@ -4420,6 +4785,11 @@ public:
         AddCurrentError(kValidateErrorRequired);
         return true;
     }
+#ifdef RAPIDJSON_YGGDRASIL
+    virtual bool EndMissingPropertiesChild(const SValue&) {
+        return EndMissingProperties();
+    }
+#endif // RAPIDJSON_YGGDRASIL
     void PropertyViolations(ISchemaValidator** subvalidators, SizeType count) {
         for (SizeType i = 0; i < count; ++i)
             MergeError(static_cast<GenericSchemaValidator*>(subvalidators[i])->GetError());
@@ -4914,8 +5284,14 @@ private:
             const SchemaType** sa = CurrentContext().patternPropertiesSchemas;
             typename Context::PatternValidatorType patternValidatorType = CurrentContext().valuePatternValidatorType;
             bool valueUniqueness = CurrentContext().valueUniqueness;
+#ifdef RAPIDJSON_YGGDRASIL
+	    ChildPropertiesType* childProperties = CurrentContext().valueProperties;
+#endif // RAPIDJSON_YGGDRASIL
             RAPIDJSON_ASSERT(CurrentContext().valueSchema);
             PushSchema(*CurrentContext().valueSchema);
+#ifdef RAPIDJSON_YGGDRASIL
+	    CurrentContext().parentProperties = childProperties;
+#endif // RAPIDJSON_YGGDRASIL
 
             if (count > 0) {
                 CurrentContext().objectPatternValidatorType = patternValidatorType;
@@ -5254,7 +5630,7 @@ public:
      allocator,
      schemaStackCapacity,
      documentStackCapacity),
-    normalized_(&this->GetStateAllocator()), normalization_depth_(0), validator_index_(0), child_validators_(0) {
+    normalized_(&this->GetStateAllocator()), normalization_depth_(0), validator_index_(0), child_validators_(0), temp_key_(nullptr) {
     normalized_.SetDocumentStack(&this->documentStack_);
   }
   GenericSchemaNormalizer(
@@ -5269,7 +5645,8 @@ public:
      allocator,
      schemaStackCapacity,
      documentStackCapacity),
-    normalized_(&this->GetStateAllocator()), normalization_depth_(0), validator_index_(0), child_validators_(0) {
+    normalized_(&this->GetStateAllocator()), normalization_depth_(0), validator_index_(0), child_validators_(0),
+    temp_key_(nullptr) {
     normalized_.SetDocumentStack(&this->documentStack_);
   }
 
@@ -5301,7 +5678,8 @@ private:
      allocator,
      schemaStackCapacity,
      documentStackCapacity),
-    normalized_(&normalized, validator_index), normalization_depth_(normalization_depth), validator_index_(validator_index), child_validators_(0) {
+    normalized_(&normalized, validator_index), normalization_depth_(normalization_depth), validator_index_(validator_index), child_validators_(0),
+    temp_key_(nullptr) {
     normalized_.SetDocumentStack(&this->documentStack_);
   }
   
@@ -5311,6 +5689,7 @@ private:
   unsigned normalization_depth_;
   unsigned validator_index_;
   unsigned child_validators_;
+  const SValue* temp_key_;
 
 public:
 
@@ -5331,7 +5710,6 @@ public:
   bool EndValue() OVERRIDE_CXX11 {
     if (!GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::EndValue())
       return false;
-    // TODO: Check parallel validators
     normalization_depth_--;
     if (normalization_depth_ == 0)
       normalized_.FinalizeFromStack();
@@ -5364,16 +5742,34 @@ public:
   //! Gets the JSON pointer pointed to the invalid schema.
   //  If reporting all errors, the stack will be empty.
   PointerType GetInvalidSchemaPointer() const OVERRIDE_CXX11 {
-    if (!this->schemaStack_.Empty()) {
-      return normalized_.GetSchemaPointer(this->CurrentSchema());
-    }
-    return GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::GetInvalidSchemaPointer();
+    PointerType out;
+    if (!this->schemaStack_.Empty())
+      out = normalized_.GetSchemaPointer(this->CurrentSchema());
+    else
+      out = GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::GetInvalidSchemaPointer();
+    if (temp_key_)
+      return out.Append(temp_key_->GetString(),
+			temp_key_->GetStringLength(),
+			this->stateAllocator_);
+    return out;
   }
 
   //! Gets the JSON pointer pointed to the invalid value.
   //  If reporting all errors, the stack will be empty.
   PointerType GetInvalidDocumentPointer() const OVERRIDE_CXX11 {
-    return normalized_.GetInstancePointer();
+    PointerType out = normalized_.GetInstancePointer();
+    if (temp_key_)
+      return out.Append(temp_key_->GetString(),
+			temp_key_->GetStringLength(),
+			this->stateAllocator_);
+    return out;
+  }
+
+  bool EndMissingPropertiesChild(const SValue& key) OVERRIDE_CXX11 {
+    temp_key_ = &key;
+    bool out = GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::EndMissingPropertiesChild(key);
+    temp_key_ = nullptr;
+    return out;
   }
 };
 

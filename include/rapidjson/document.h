@@ -2037,6 +2037,20 @@ public:
     //@{
 
 #ifdef RAPIDJSON_YGGDRASIL
+    //! Locate an array element.
+    ConstValueIterator Index(const ValueType& x) const {
+      if (IsArray()) {
+	for (ConstValueIterator it = Begin(); it != End(); ++it) {
+	  if (x == *it)
+	    return it;
+	}
+      }
+      return End();
+    }
+    //! Check if an array contains an element.
+    bool Contains(const ValueType& x) const {
+      return (Index(x) != End());
+    }
     int GetInt() const          {
       if (IsScalar()) {
 	if (GetSubType() == GetIntSubTypeString())
@@ -5018,15 +5032,23 @@ public:
     RAPIDJSON_ASSERT(!stack_.Empty());
     return stack_.template Pop<ValueType>(1);
   }
+  const ValueType* StackTop() const {
+    RAPIDJSON_ASSERT(!stack_.Empty());
+    return stack_.template Top<ValueType>();
+  }
   ValueType* StackTop() {
     RAPIDJSON_ASSERT(!stack_.Empty());
     return stack_.template Top<ValueType>();
+  }
+  const ValueType* StackBottom() const {
+    RAPIDJSON_ASSERT(!stack_.Empty());
+    return stack_.template Bottom<ValueType>();
   }
   ValueType* StackBottom() {
     RAPIDJSON_ASSERT(!stack_.Empty());
     return stack_.template Bottom<ValueType>();
   }
-  size_t StackSize() {
+  size_t StackSize() const {
     return stack_.GetSize() / sizeof(ValueType);
   }
 #endif // RAPIDJSON_YGGDRASIL
