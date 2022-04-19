@@ -402,10 +402,11 @@ private:
 // ChildProperty
 
 template <typename SchemaDocumentType>
-struct ChildProperties;
+class ChildProperties;
   
 template <typename SchemaDocumentType>
-struct ChildProperty {
+class ChildProperty {
+public:
   typedef Schema<SchemaDocumentType> SchemaType;
   typedef typename SchemaType::SValue SValue;
   ChildProperty() :
@@ -428,7 +429,8 @@ struct ChildProperty {
 };
 
 template <typename SchemaDocumentType>
-struct ChildProperties {
+class ChildProperties {
+public:
   typedef Schema<SchemaDocumentType> SchemaType;
   typedef typename SchemaType::SValue SValue;
   typedef ISchemaStateFactory<SchemaType> SchemaValidatorFactoryType;
@@ -1438,7 +1440,7 @@ private:
 	} else {
 	  base->~ValueType();
 	  (base + 1)->~ValueType();
-	  memmove(base, base + 2, (document_.StackSize() - 2) * sizeof(ValueType));
+	  memmove((void*)base, (void*)(base + 2), (document_.StackSize() - 2) * sizeof(ValueType));
 	  // Don't call destructor as the memory should be empty
 	  document_.StackPop();
 	  document_.StackPop();
