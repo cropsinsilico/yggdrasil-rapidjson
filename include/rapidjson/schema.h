@@ -306,7 +306,7 @@ public:
 #define RAPIDJSON_YGGDRASIL_GENERIC_ERROR(...)				\
   {									\
     RAPIDJSON_YGGDRASIL_GENERIC_SET_ERROR(__VA_ARGS__);			\
-    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrors);			\
+    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorGeneric);			\
   }
 #else // RAPIDJSON_YGGDRASIL
 #define RAPIDJSON_YGGDRASIL_GENERIC_ERROR(...) {}
@@ -704,28 +704,28 @@ public:
     document_(allocator, stackCapacity, stackAllocator), index_(0),
     extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
-    extend_singular_(false), extend_parentKey_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
     valueStack_(stackAllocator, stackCapacity),
     childStack_(stackAllocator, stackCapacity),
     modifiedStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
-    temporary_memory_(nullptr) {}
+    temporary_memory_(nullptr),
+    extend_child_(nullptr) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent, unsigned& index,
 			    StackAllocator* stackAllocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity) :
     document_(&parent->GetAllocator(), stackCapacity, stackAllocator),
     index_(index), extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
-    extend_singular_(false), extend_parentKey_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
     valueStack_(stackAllocator, stackCapacity),
     childStack_(stackAllocator, stackCapacity),
     modifiedStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
-    temporary_memory_(nullptr) {
+    temporary_memory_(nullptr),
+    extend_child_(nullptr) {
     parent->AddChild(this);
   }
 
@@ -752,10 +752,14 @@ public:
     ValueType* aliased;
   };
   struct ValueEntry {
-    ValueEntry(ValueType& value) : val(&value), ptr() {}
-    ValueEntry(ValueType& value, PointerType& p) : val(&value), ptr(p) {}
+    ValueEntry(ValueType& value) :
+      val(&value), ptr(), modified(false), child_modified(false) {}
+    ValueEntry(ValueType& value, PointerType& p, AllocatorType* allocator = 0) :
+      val(&value), ptr(p, allocator), modified(false), child_modified(false) {}
     ValueType* val;
     PointerType ptr;
+    bool modified;
+    bool child_modified;
   };
   
   //! Get the allocator of this document.
@@ -802,7 +806,7 @@ public:
     if (!ExtendAliases(context, child->aliases_, &replaced)) return false;
     if (!(replaced || child->WasModified()))
       return true;
-    RecordModified();
+    extend_child_ = child;
     return Extend(context, schema, child->document_);
   }
 
@@ -829,17 +833,12 @@ public:
     extending_ = true;
     extend_context_ = &context;
     extend_schema_ = &schema;
-    extend_singular_ = ((schema.isSingular_ == kSingularItem) ||
-			(schema.isSingular_ == kSingularValue));
-    if (extend_singular_ && schema.parentKey_.IsString())
-      extend_parentKey_ = &(schema.parentKey_);
     bool out = document.Accept(*this);
     if (!out)
       return false;
     extending_ = false;
     extend_context_ = nullptr;
     extend_schema_ = nullptr;
-    extend_singular_ = false;
     PopValue();
     return out;
   }
@@ -859,10 +858,10 @@ public:
   // Methods for normalizing values
   bool BeginNorm(Context& context, const SchemaType& schema) {
     if ((schema.isSingular_ == kSingularItem) && (ToggleSingular())) {
-      RecordModified();
+      RecordModifiedSingular();
       return NormStartArray(context, schema);
     } else if ((schema.isSingular_ == kSingularValue) && (ToggleSingular())) {
-      RecordModified();
+      RecordModifiedSingular(schema.parentKey_);
       if (!NormStartObject(context, schema)) return false;
       RAPIDJSON_ASSERT(schema.parentKey_.IsString());
       return NormKey(context, schema, schema.parentKey_.GetString(),
@@ -871,9 +870,11 @@ public:
     return true;
   }
   bool EndNorm(Context& context, const SchemaType& schema) {
-    if ((schema.isSingular_ == kSingularItem) && (ToggleSingular()))
+    if ((schema.isSingular_ == kSingularItem) && (ToggleSingular())) {
+      RecordModified((SizeType)0);
       return NormEndArray(context, schema, 1);
-    else if ((schema.isSingular_ == kSingularValue) && (ToggleSingular())) {
+    } else if ((schema.isSingular_ == kSingularValue) && (ToggleSingular())) {
+      RecordModified(schema.parentKey_);
       SizeType memberCount = 1;
       return NormEndObject(context, schema, memberCount);
     }
@@ -1021,13 +1022,15 @@ public:
       if (FindAliasName(aliases, orig, match)) {
 	if (!GetFinalAlias(context, aliases, orig, &primary))
 	  return false;
-	RecordModified(orig);
+	RecordModifiedAlias(primary, orig);
 	len = primary.GetStringLength();
 	str = primary.GetString();
 	aliased = true;
       } else if (FindAliasValue(aliases, orig, match)) {
 	primary.CopyFrom(orig, GetAllocator());
 	orig.CopyFrom(match->name, GetAllocator());
+	if (extending_ && !appending_ && HasMember(orig))
+	  RecordModifiedAlias(primary, orig);
       }
       // Check previous keys for alias target
       if (match != aliases.MemberEnd()) {
@@ -1145,12 +1148,14 @@ public:
 	     child != context.childProperties[index]->End(); child++) {
 	  if (!(child->missing && child->required))
 	    continue;
-	  if (child->defaultValue)
+	  if (child->defaultValue) {
+	    RecordModified(*(child->name));
 	    target->AddMember(*(child->name),
 			      ValueType(*(child->defaultValue), GetAllocator()).Move(),
 			      GetAllocator());
-	  else
+	  } else {
 	    context.error_handler.AddMissingProperty(*(child->name));
+	  }
 	}
 	if (context.error_handler.EndMissingPropertiesChild(schema.properties_[index].name))
 	  RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
@@ -1181,6 +1186,16 @@ public:
     if (!current)
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
     if (CurrentIdx()) {
+      if (*CurrentIdx() >= current->Size()) {
+	if ((!CurrentModified()) && CurrentChildModified()) {
+	  current->PushBack(ValueType(kNullType).Move(), GetAllocator());
+	} else {
+	  RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current index %d outside of"
+					    " the current array (size = %d)",
+					    (int)(*CurrentIdx()),
+					    (int)(current->Size()));
+	}
+      }
       PushValue((*current)[*CurrentIdx()], *CurrentIdx());
       CurrentIdx()[0]++;
       current = CurrentValue();
@@ -1193,7 +1208,10 @@ public:
 	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value does not have the "
 					  "expected key: %s",
 					  (const char*)(CurrentKey()->GetString()));
-      PushValue((*current)[*CurrentKey()], *CurrentKey());
+      if (InAliasedKey())
+	PushValue((*current)[*CurrentKey()], *(AliasedKey()->aliased));
+      else
+	PushValue((*current)[*CurrentKey()], *CurrentKey());
       current = CurrentValue();
     }
     PushKey();
@@ -1206,30 +1224,30 @@ public:
     } else if (CurrentKey()) {
       PopValue();
       PopKey();
+    } else if (CurrentChildModified() && !CurrentModified()) {
+      RecordModified();
     }
     return true;
   }
 
 #define REQUIRED_PROPERTY_(method, cond, args)				\
-  if (!(cond)) {							\
+  if (CurrentChildModified() && !(cond)) {				\
     if (InAliasedKey()) {						\
       KeyEntry* aliased = AliasedKey();					\
       context.error_handler.DuplicateAlias(*(aliased->aliased),		\
 					   *(aliased->key));		\
       RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);	\
     } else {								\
-      ValueType* tmp_current = CurrentValue();				\
-      RAPIDJSON_ASSERT(tmp_current);					\
-      if (!tmp_current)							\
+      RAPIDJSON_ASSERT(current);					\
+      if (!current)							\
 	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set when raising NormalizationMergeConflict error"); \
       context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), \
-						       *tmp_current, ValueType args.Move()); \
+						       *current, ValueType args.Move()); \
       RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
     }									\
   }
 #define EXTEND_BEGIN_(method, args)					\
   DEBUG_BEGIN(Extend, method);						\
-  extend_singular_ = false;						\
   ValueType* current = CurrentValue();					\
   if (current && current->IsObject() && CurrentKey() &&			\
       (!current->HasMember(CurrentKey()->GetString()))) {		\
@@ -1239,7 +1257,16 @@ public:
 		       ValueType args.Move(),				\
 		       GetAllocator());					\
   }									\
+  /* Delay marking collections as modified until after it is complete */\
+  bool in_collection = (current->IsArray() || current->IsObject());	\
   if (!BeginExtend(context)) return false;				\
+  if ((!CurrentModified()) && CurrentChildModified()) {			\
+    ValueType child_swap args;						\
+    CurrentValue()->Swap(child_swap);					\
+    if (!(CurrentValue()->IsArray() || CurrentValue()->IsObject() ||	\
+	  in_collection))						\
+      RecordModified();							\
+  }									\
   current = CurrentValue();						\
   REQUIRED_PROPERTY_(method, (current), args)
 #define EXTEND_END_(method)						\
@@ -1253,8 +1280,8 @@ public:
   EXTEND_END_(method)
 
   bool ExtendNull(Context& context) {
-    EXTEND_BEGIN_(Null, ());
-    REQUIRED_PROPERTY_(Null, (current->IsNull()), ());
+    EXTEND_BEGIN_(Null, (kNullType));
+    REQUIRED_PROPERTY_(Null, (current->IsNull()), (kNullType));
     EXTEND_END_(Null);
   }
   bool ExtendBool(Context& context, bool b) { EXTEND_VALUE_(Bool, b, (b)); }
@@ -1312,21 +1339,22 @@ public:
     EXTEND_END_(YggdrasilEndObject);
   }
   bool ExtendStartObject(Context& context) {
-    bool first_extend_singular = extend_singular_;
     EXTEND_BEGIN_(Object, (kObjectType));
-    if (first_extend_singular) {
-      const SValue* key = extend_parentKey_;
-      RAPIDJSON_ASSERT(key && key->IsString());
-      if (!(key && key->IsString()))
-	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Parent key is not set for singular object");
-      ValueType tmp(kObjectType);
-      tmp.AddMember(ValueType(key->GetString(),
-			      key->GetStringLength(),
-			      GetAllocator()).Move(),
-		    ValueType(kNullType).Move(), GetAllocator());
-      current->Swap(tmp[key->GetString()]);
-      current->Swap(tmp);
-      extend_parentKey_ = nullptr;
+    if (extend_child_ && CurrentModified() && CurrentChildModified()) {
+      PointerType p = GetInstancePointer();
+      PointerType p_key;
+      if (!isValueSingular(p, false, &p_key) &&
+	  extend_child_->isValueSingular(p, false, &p_key)) {
+	typename PointerType::Token key_token = p_key.GetTokens()[p_key.GetTokenCount() - 1];
+	ValueType key(key_token.name, key_token.length, GetAllocator());
+	ValueType tmp(kObjectType);
+	tmp.AddMember(ValueType(key, GetAllocator()).Move(),
+		      ValueType(kNullType).Move(), GetAllocator());
+	current->Swap(tmp[key]);
+	current->Swap(tmp);
+	RecordModifiedSingular(key);
+	RecordModified(key);
+      }
     }
     REQUIRED_PROPERTY_(Object, current->IsObject(), (kObjectType));
     return true;
@@ -1349,27 +1377,53 @@ public:
       PushKey(str, len);
     return true;
   }
-  bool ExtendEndObject(Context& context, SizeType&) {
-    // TODO: Check size?
+  bool ExtendEndObject(Context& context, SizeType) {
+    ValueType* current = CurrentValue();
+    REQUIRED_PROPERTY_(Object, current->IsObject(), (*current, GetAllocator()));
+    // Don't check memberCount, as members may be missing from either the
+    //   child or the parent
+    // REQUIRED_PROPERTY_(Object, current->MemberCount() == memberCount,
+    // 		       (*current, GetAllocator()));
+    if ((!CurrentModified()) && CurrentChildModified()) {
+      for (SizeType i = 0; i < current->MemberCount(); i++) {
+	ConstMemberIterator it = current->MemberBegin() + i;
+	if (CurrentChildModified(it->name))
+	  RecordModified(it->name);
+      }
+    }
     EXTEND_END_(EndObject);
   }
   bool ExtendStartArray(Context& context) {
-    bool first_extend_singular = extend_singular_;
     EXTEND_BEGIN_(Array, (kArrayType));
-    if (first_extend_singular) {
-      ValueType tmp(kArrayType);
-      tmp.PushBack(*current, GetAllocator());
-      current->Swap(tmp);
+    if (extend_child_ && CurrentModified() && CurrentChildModified()) {
+      PointerType p = GetInstancePointer();
+      if (!isValueSingular(p) && extend_child_->isValueSingular(p)) {
+	ValueType tmp(kArrayType);
+	tmp.PushBack(*current, GetAllocator());
+	current->Swap(tmp);
+	RecordModifiedSingular();
+	RecordModified((SizeType)0);
+      }
     }
     REQUIRED_PROPERTY_(Array, current->IsArray(), (kArrayType));
     PushKey(0);
     return true;
   }
-  bool ExtendEndArray(Context& context, SizeType&) {
+  bool ExtendEndArray(Context& context, SizeType& elementCount) {
+    ValueType* current = CurrentValue();
+    REQUIRED_PROPERTY_(Array, CurrentIdx(), (*current, GetAllocator()));
+    REQUIRED_PROPERTY_(Array, current->IsArray(), (*current, GetAllocator()));
+    REQUIRED_PROPERTY_(Array, current->Size() == elementCount,
+		       (*current, GetAllocator()));
     if (!CurrentIdx())
       return false;
     PopKey();
-    // TODO: Check size?
+    if ((!CurrentModified()) && CurrentChildModified()) {
+      for (SizeType i = 0; i < current->Size(); i++) {
+	if (CurrentChildModified(i))
+	  RecordModified(i);
+      }
+    }
     EXTEND_END_(EndArray);
   }
 
@@ -1394,45 +1448,143 @@ public:
       return extend_schema_->GetPointer();
     return schema.GetPointer();
   }
-  
-  PointerType GetInstancePointer() const {
+
+  template <typename VType>
+  PointerType GetInstancePointer(const VType& key, bool parent,
+				 RAPIDJSON_DISABLEIF((
+       internal::OrExpr<YGGDRASIL_IS_INT_TYPE(VType),
+       internal::OrExpr<YGGDRASIL_IS_UINT_TYPE(VType),
+       internal::OrExpr<internal::IsSame<VType, bool>,
+       internal::IsPointer<VType> > > >))) {
+    return GetInstancePointer(parent).Append(key.GetString(),
+					     key.GetStringLength(),
+					     &GetAllocator());
+  }
+  PointerType GetInstancePointer(const SizeType& index, bool parent) {
+    return GetInstancePointer(parent).Append(index, &GetAllocator());
+  }
+  PointerType GetInstancePointer(bool parent=false) {
+    PointerType instancePointer = GetInstancePointerBase(&GetAllocator());
+    if (parent && (instancePointer.GetTokenCount() > 0))
+      return instancePointer.Remove(1, &GetAllocator());
+    return instancePointer;
+  }
+  PointerType GetInstancePointerBase(AllocatorType* allocator = 0) const {
     RAPIDJSON_ASSERT(documentStack_);
-    PointerType instancePointer;
-    if (documentStack_->Empty()) {
-      instancePointer = PointerType();
-    } else {
-      instancePointer = PointerType(documentStack_->template Bottom<Ch>(), documentStack_->GetSize() / sizeof(Ch));
-    }
     if (extending_ && !appending_ && !valueStack_.Empty()) {
-      for (size_t i = 0; i < CurrentPointer().GetTokenCount(); i++) {
-	PointerType tmp = instancePointer.Append(CurrentPointer().GetTokens()[i]);
-	instancePointer.Swap(tmp);
+      return PointerType(CurrentPointer(), allocator);
+    } else {
+      if (!documentStack_->Empty()) {
+	return PointerType(documentStack_->template Bottom<Ch>(), documentStack_->GetSize() / sizeof(Ch), allocator);
       }
     }
-    return instancePointer;
+    return PointerType(allocator);
   }
   
 private:
 
-  void RecordModified(const PointerType p) {
-    std::cerr << "Before RecordModified" << std::endl;
-    PointerType* ref = modifiedStack_.template Push<PointerType>();
-    new (ref) PointerType(p);
-    std::cerr << "After RecordModified" << std::endl;
+  void RecordModifiedAlias(const ValueType& primary, const ValueType& alias,
+			   PointerType* ptr_base=nullptr) {
+    RecordModified(alias, ((!extending_) || appending_));
+    RecordModified(primary, ((!extending_) || appending_));
+    if (extending_ && !appending_ && HasMember(alias)) {
+      PointerType p_primary;
+      PointerType p_alias;
+      if (ptr_base) {
+	p_primary = ptr_base->Append(primary.GetString(),
+				     primary.GetStringLength(),
+				     &GetAllocator());
+	p_alias = ptr_base->Append(alias.GetString(),
+				   alias.GetStringLength(),
+				   &GetAllocator());
+      } else {
+	p_primary = GetInstancePointer(primary, false);
+	p_alias = GetInstancePointer(alias, false);
+      }
+      // Replace all labels of modification with alias
+      SizeType N = (SizeType)(modifiedStack_.GetSize() / sizeof(PointerType));
+      PointerType* it = modifiedStack_.template Bottom<PointerType>();
+      for (SizeType i = 0; i < N; i++, it++) {
+	if (PointerStartsWith(*it, p_alias, false)) {
+	  // TODO: Replace old modification?
+	  // *it = it->Replace(p_alias.GetTokenCount() - 1,
+	  // 		    primary.GetString(), primary.GetStringLength(),
+	  // 		    &GetAllocator());
+	  RecordModified(it->Replace((SizeType)(p_alias.GetTokenCount() - 1),
+				     primary.GetString(),
+				     primary.GetStringLength(),
+				     &GetAllocator()));
+	}
+      }
+      // Swap the aliased value
+      ValueType tmp(kNullType);
+      tmp.Swap(*GetMember(alias));
+      RemoveMember(alias);
+      CurrentValue()->AddMember(primary, tmp, GetAllocator());
+    }
   }
-  void RecordModified() {
-    RecordModified(GetInstancePointer());
+
+  void RecordModifiedSingular(bool parent=false) {
+    RecordModified(SchemaType::GetAllowSingularString(), parent);
+  }
+  template<typename VType>
+  void RecordModifiedSingular(const VType& key, bool parent=false) {
+    PointerType p = GetInstancePointer(SchemaType::GetAllowSingularString(), parent).Append(key.GetString(), key.GetStringLength(), &GetAllocator());
+    RecordModified(p);
+  }
+  void RecordModified(const PointerType p) {
+    PointerType* ref = modifiedStack_.template Push<PointerType>();
+    new (ref) PointerType(p, &GetAllocator());
+  }
+  void RecordModified(bool parent=false) {
+    RecordModified(GetInstancePointer(parent));
+    if (extending_ && !appending_ && !valueStack_.Empty()) {
+      if (parent)
+	(valueStack_.template Top<ValueEntry>() - 1)->modified = true;
+      else
+	valueStack_.template Top<ValueEntry>()->modified = true;
+    }
   }
   template <typename VType>
-  void RecordModified(const VType& key) {
-    PointerType p = GetInstancePointer().Append(key.GetString(),
-						key.GetStringLength(),
-						&GetAllocator());
-    RecordModified(p);
+  void RecordModified(const VType& key, bool parent=false) {
+    RecordModified(GetInstancePointer(key, parent));
   }
   void PopModified() {
     PointerType* ref = modifiedStack_.template Pop<PointerType>(1);
     ref->~PointerType();
+  }
+  bool isValueSingular(const PointerType& p, bool exact=false,
+		       PointerType* match=nullptr) {
+    PointerType q = p.Append(SchemaType::GetAllowSingularString().GetString(),
+			     SchemaType::GetAllowSingularString().GetStringLength());
+    return isValueModified(q, exact, match);
+  }
+  bool isValueModified(const PointerType& p, bool exact=false,
+		       PointerType* match=nullptr) {
+    if (modifiedStack_.Empty())
+      return false;
+    SizeType N = (SizeType)(modifiedStack_.GetSize() / sizeof(PointerType));
+    PointerType* it = modifiedStack_.template Bottom<PointerType>();
+    for (SizeType i = 0; i < N; i++, it++) {
+      if (PointerStartsWith(*it, p, exact)) {
+	if (match)
+	  *match = *it;
+	return true;
+      }
+    }
+    return false;
+  }
+  bool PointerStartsWith(const PointerType& a, const PointerType& b,
+			 bool exact=false) {
+    if (a.GetTokenCount() == b.GetTokenCount()) {
+      if (a == b)
+	return true;
+    } else if ((!exact) && (a.GetTokenCount() > b.GetTokenCount())) {
+      PointerType partial(a.GetTokens(), b.GetTokenCount());
+      if (partial == b)
+	return true;
+    }
+    return false;
   }
 
   bool ToggleSingular() {
@@ -1466,22 +1618,48 @@ private:
       return document_.StackTop();
     }
   }
+  bool CurrentModified() {
+    if (extending_ && !appending_ && !valueStack_.Empty())
+      return valueStack_.template Top<ValueEntry>()->modified;
+    return false;
+  }
+  bool CurrentChildModified() {
+    if (extending_ && !appending_ && !valueStack_.Empty())
+      return valueStack_.template Top<ValueEntry>()->child_modified;
+    return false;
+  }
+  template<typename VType>
+  bool CurrentChildModified(const VType& key) {
+    if (CurrentChildModified())
+      return true;
+    PointerType p;
+    if (valueStack_.Empty())
+      p = GetInstancePointer(key, false);
+    else
+      p = CurrentPointer(key);
+    return isValueModified(p);
+  }
   void PushValue(ValueType& value, PointerType& p) {
     ValueEntry* ref = valueStack_.template Push<ValueEntry>();
-    new (ref) ValueEntry(value, p);
+    new (ref) ValueEntry(value, p, &GetAllocator());
+    ref->modified = isValueModified(p);
+    if (extend_child_)
+      ref->child_modified = extend_child_->isValueModified(p);
   }
   void PushValue(ValueType& value) {
     PointerType p;
-    if (!valueStack_.Empty())
+    if (valueStack_.Empty())
+      p = GetInstancePointer();
+    else
       p = CurrentPointer();
     PushValue(value, p);
   }
   void PushValue(ValueType& value, ValueType& key) {
-    PointerType p = CurrentPointer().Append(key.GetString(), key.GetStringLength(), &GetAllocator());
+    PointerType p = CurrentPointer(key);
     PushValue(value, p);
   }
   void PushValue(ValueType& value, SizeType index) {
-    PointerType p = CurrentPointer().Append(index, &GetAllocator());
+    PointerType p = CurrentPointer(index);
     PushValue(value, p);
   }
   void PopValue() {
@@ -1494,6 +1672,14 @@ private:
   const PointerType& CurrentPointer() const {
     RAPIDJSON_ASSERT(!valueStack_.Empty());
     return valueStack_.template Top<ValueEntry>()->ptr;
+  }
+  PointerType CurrentPointer(const SizeType& index) {
+    return CurrentPointer().Append(index, &GetAllocator());
+  }
+  template<typename VType>
+  PointerType CurrentPointer(const VType& key) {
+    return CurrentPointer().Append(key.GetString(), key.GetStringLength(),
+				   &GetAllocator());
   }
   KeyEntry* AliasedKey() {
     if (KeyCount() < 2)
@@ -1691,24 +1877,39 @@ private:
     }
     return nullptr;
   }
-  ValueType* Address2Value(const ValueType& address, ValueType* base = nullptr, size_t unfinalized=0) {
-    if (!base) base = CurrentValue();
-    size_t idx = 0;
-    GenericPointer<ValueType> ptr;
+  bool Address2Pointer(const ValueType& address, PointerType& ptr,
+		       size_t unfinalized=0) {
     if (unfinalized) {
       GenericStringBuffer<EncodingType> instanceRef;
       GetInstanceRef(instanceRef, false);
       SizeType currentLength = static_cast<SizeType>(instanceRef.GetSize() / sizeof(Ch));
       if (currentLength > address.GetStringLength()) {
 	// std::cerr << "In Address2Value, the current address is longer than the requested address: " << instanceRef.GetString() << " vs. " << address.GetString() << std::endl;
-	return nullptr;
+	return false;
+      } else {
+	ptr = PointerType(address.GetString() + currentLength,
+			  address.GetStringLength() - currentLength,
+			  &GetAllocator());
       }
-      ptr = GenericPointer<ValueType>(address.GetString() + currentLength,
-				      address.GetStringLength() - currentLength);
     } else {
-      ptr = GenericPointer<ValueType>(address.GetString(), address.GetStringLength());
+      ptr = PointerType(address.GetString(), address.GetStringLength(),
+			&GetAllocator());
     }
-    return ptr.Get(*base, &idx);
+    return true;
+  }
+  ValueType* Address2Value(const ValueType& address, ValueType* base = nullptr,
+			   PointerType* ptr=nullptr, size_t unfinalized=0) {
+    if (!base) base = CurrentValue();
+    size_t idx = 0;
+    PointerType ptr_target;
+    if (!ptr)
+      ptr = &ptr_target;
+    if (!Address2Pointer(address, *ptr, unfinalized))
+      return nullptr;
+    typedef GenericPointer<ValueType, AllocatorType> ValuePointerType;
+    ValuePointerType schema_ptr((typename ValuePointerType::Token*)(ptr->GetTokens()),
+				ptr->GetTokenCount());
+    return schema_ptr.Get(*base, &idx);
   }
   //! Add new aliases and check if the document contains any of them.
   bool ExtendAliases(Context& context, ValueType& aliases, bool* replaced) {
@@ -1745,7 +1946,9 @@ private:
 	    unfinalized = 1;
 	    root = document_.StackTop();
 	  }
-	  ValueType* base = Address2Value(it->name, root, unfinalized);
+	  PointerType base_ptr;
+	  ValueType* base = Address2Value(it->name, root, &base_ptr,
+					  unfinalized);
 	  if (!base) continue;
 	  if (base->IsObject() && (base->HasMember(v->name))) {
 	    typename ValueType::MemberIterator old = base->FindMember(v->name);
@@ -1757,20 +1960,12 @@ private:
 	      }
 	    } else {
 	      *replaced = true;
-	      ValueType new_val;
-	      new_val.CopyFrom(old->value, GetAllocator());
-	      base->AddMember(ValueType(v->value.GetString(),
-					v->value.GetStringLength(),
-					GetAllocator()).Move(),
-			      new_val,
-			      GetAllocator());
-	      base->RemoveMember(v->name);
+	      RecordModifiedAlias(primary, v->name, &base_ptr);
 	    }
 	  }
 	}
       }
     }
-    if (*replaced) RecordModified();
     return true;
   }
   bool FindAliasName(const ValueType& aliases, ValueType& name,
@@ -1818,8 +2013,6 @@ private:
   bool appending_;
   Context* extend_context_;
   const SchemaType* extend_schema_;
-  bool extend_singular_;
-  const SValue* extend_parentKey_;
   internal::Stack<AllocatorType> keyStack_;
   internal::Stack<AllocatorType> valueStack_;
   internal::Stack<AllocatorType> childStack_;
@@ -1828,6 +2021,7 @@ private:
   ValueType aliases_;
   bool inSingular_;
   void* temporary_memory_;
+  GenericNormalizedDocument* extend_child_;
 
 public:
 #define PARAM_WITH_CONTEXT_(...)				\
@@ -3188,6 +3382,7 @@ public:
 	    case kNormalizeErrorConflictingAliases:     return GetAliasesString();
 	    case kNormalizeErrorMergeConflict:          return GetNormalizationString();
 	    case kDeprecatedWarning:                    return GetDeprecatedString();
+	    case kValidateErrorGeneric:                 return GetGenericString();
 #endif // RAPIDJSON_YGGDRASIL
 
             default:                                    return GetNullString();
@@ -3288,6 +3483,7 @@ public:
     RAPIDJSON_STRING_(Uint64, 'u', 'i', 'n', 't', '6', '4')
     RAPIDJSON_STRING_(YggdrasilObject, 'y', 'g', 'g', 'O', 'b', 'j', 'e', 'c', 't')
     RAPIDJSON_STRING_(YggdrasilString, 'y', 'g', 'g', 'S', 't', 'r', 'i', 'n', 'g')
+    RAPIDJSON_STRING_(Generic, 'g', 'e', 'n', 'e', 'r', 'i', 'c')
 #endif // RAPIDJSON_YGGDRASIL
 
 #undef RAPIDJSON_STRING_
@@ -5048,7 +5244,7 @@ public:
 			      ValueType(msg.c_str(), (SizeType)(msg.size()),
 					GetStateAllocator()).Move(),
 			      GetStateAllocator());
-      AddCurrentError(kValidateErrors);
+      AddCurrentError(kValidateErrorGeneric);
     }
 #endif // RAPIDJSON_YGGDRASIL
     void PropertyViolations(ISchemaValidator** subvalidators, SizeType count) {
@@ -6018,7 +6214,7 @@ public:
   //! Gets the JSON pointer pointed to the invalid value.
   //  If reporting all errors, the stack will be empty.
   PointerType GetInvalidDocumentPointer() const OVERRIDE_CXX11 {
-    PointerType out = normalized_.GetInstancePointer();
+    PointerType out = normalized_.GetInstancePointerBase();
     if (temp_key_)
       return out.Append(temp_key_->GetString(),
 			temp_key_->GetStringLength(),

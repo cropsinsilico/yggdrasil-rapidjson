@@ -332,6 +332,64 @@ public:
         }
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+    GenericPointer Remove(SizeType count = 1, Allocator* allocator = 0) const {
+        GenericPointer r;
+        r.allocator_ = allocator;
+	r.CopyFromRaw(*this);
+	if (count > tokenCount_)
+	  count = (SizeType)tokenCount_;
+	Ch* old_nameBuffer = r.nameBuffer_;
+	Ch* new_nameBuffer = reinterpret_cast<Ch *>(r.tokens_ + r.tokenCount_ - count);
+	if (tokenCount_ > count) {
+	  size_t nameBufferSizeRemoved = count;
+	  for (Token *t = tokens_; t != tokens_ + tokenCount_ - count; ++t)
+	    nameBufferSizeRemoved += t->length;
+	  std::memmove(new_nameBuffer, old_nameBuffer,
+		       nameBufferSizeRemoved * sizeof(Ch));
+	}
+	std::ptrdiff_t diff = old_nameBuffer - new_nameBuffer;
+	r.tokenCount_ -= count;
+	r.nameBuffer_ = new_nameBuffer;
+	for (Token *t = r.tokens_; t != r.tokens_ + r.tokenCount_; t++)
+	  t->name -= diff;
+        return r;
+    }
+
+    GenericPointer Replace(SizeType index, const Ch* name, SizeType length,
+			   Allocator* allocator) {
+        GenericPointer r;
+        r.allocator_ = allocator;
+	if (index >= tokenCount_) {
+	  r.CopyFromRaw(*this);
+	  return r;
+	}
+	int diff = (int)length - (int)(tokens_[index].length);
+	if (diff > 0)
+	  r.CopyFromRaw(*this, 0, (size_t)diff);
+	else
+	  r.CopyFromRaw(*this);
+	Token* replace = r.tokens_ + index;
+	Token* next = replace + 1;
+	size_t nameBufferSizeFollows = 0;
+	for (Token *t = next; t != r.tokens_ + r.tokenCount_; t++)
+	  nameBufferSizeFollows += t->length + 1;
+	if (diff != 0 && index != (r.tokenCount_ - 1)) {
+	  std::memmove((void*)(next->name + diff),
+		       (void*)(next->name),
+		       nameBufferSizeFollows * sizeof(Ch));
+	  for (Token *t = next; t != r.tokens_ + r.tokenCount_; t++)
+	    t->name += diff;
+	}
+	std::memcpy((void*)(replace->name), name, length * sizeof(Ch));
+	size_t nameBufferSizeProceeds = 0;
+	for (Token *t = r.tokens_; t != next; t++)
+	  nameBufferSizeProceeds += t->length + 1;
+	r.nameBuffer_[nameBufferSizeProceeds - 1] = '\0';
+	return r;
+    }
+#endif // RAPIDJSON_YGGDRASIL
+  
     //!@name Handling Parse Error
     //@{
 

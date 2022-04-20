@@ -124,6 +124,8 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
 	// Warnings
         case kValidateWarnings:                         return RAPIDJSON_ERROR_STRING("One or more validation warnings have occurred");
         case kDeprecatedWarning:                        return RAPIDJSON_ERROR_STRING("Property is being deprecated.");
+	// Generic error for debugging
+        case kValidateErrorGeneric:                     return RAPIDJSON_ERROR_STRING("Generic error occurred: %message");
 #endif // RAPIDJSON_YGGDRASIL
         default:                                        return RAPIDJSON_ERROR_STRING("Unknown error.");
     }

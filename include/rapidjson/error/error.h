@@ -207,7 +207,8 @@ enum ValidateErrorCode {
     kNormalizeErrorConflictingAliases,         //!< Property has conflicting aliases.
     kNormalizeErrorMergeConflict,              //!< Property has conflicting normalized documents.
     kValidateWarnings,                         //!< Top level code indicating that warnings are present.
-    kDeprecatedWarning                         //!< Property is being deprecated.
+    kDeprecatedWarning,                        //!< Property is being deprecated.
+    kValidateErrorGeneric                      //!< Generic error occurred: %message.
 #endif // RAPIDJSON_YGGDRASIL
 };
 
