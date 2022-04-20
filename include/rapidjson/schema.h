@@ -1024,7 +1024,6 @@ public:
 	RecordModified(orig);
 	len = primary.GetStringLength();
 	str = primary.GetString();
-	copy = true;
 	aliased = true;
       } else if (FindAliasValue(aliases, orig, match)) {
 	primary.CopyFrom(orig, GetAllocator());
@@ -1177,7 +1176,7 @@ public:
   
   // Methods for extending a document, checking and/or merging parallel
   //   entries in the process.
-  bool BeginExtend(Context&) {
+  bool BeginExtend(Context& context) {
     ValueType* current = CurrentValue();
     if (!current)
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
