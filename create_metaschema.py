@@ -88,7 +88,7 @@ if __name__ == "__main__":
             "type": ["boolean", "string"],
         },
         "stealProperties": {
-            "description": "If true, this property will look for missing properties in the parent and steal them during normalization. If a property is also selected by the 'shareProperties' field, the property will stolen and NOT shared.",
+            "description": "If true, this property will look for missing properties in the parent and steal them during normalization. If a property is also selected by the 'shareProperties' field, the property will stolen and NOT shared. If a property is explicitly named in the parent's schema, the property will be shared and not stolen.",
             "oneOf": [
                 {"type": "boolean"},
                 {"type": "array",
