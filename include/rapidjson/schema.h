@@ -702,12 +702,13 @@ public:
 			    StackAllocator* stackAllocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity) :
     document_(allocator, stackCapacity, stackAllocator), index_(0),
-    modified_(false), extending_(false), appending_(false),
+    extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
     extend_singular_(false), extend_parentKey_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
     valueStack_(stackAllocator, stackCapacity),
     childStack_(stackAllocator, stackCapacity),
+    modifiedStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
     temporary_memory_(nullptr) {}
@@ -715,12 +716,13 @@ public:
 			    StackAllocator* stackAllocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity) :
     document_(&parent->GetAllocator(), stackCapacity, stackAllocator),
-    index_(index), modified_(false), extending_(false), appending_(false),
+    index_(index), extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
     extend_singular_(false), extend_parentKey_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
     valueStack_(stackAllocator, stackCapacity),
     childStack_(stackAllocator, stackCapacity),
+    modifiedStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
     temporary_memory_(nullptr) {
@@ -735,6 +737,8 @@ public:
       PopValue();
     while (!childStack_.Empty())
       PopChild();
+    while (!modifiedStack_.Empty())
+      PopModified();
     document_.ClearStack();
     if (temporary_memory_) {
       GetAllocator().Free(temporary_memory_);
@@ -780,7 +784,7 @@ public:
   //! Get the current normalized document.
   const DocumentType& GetDocument() const { return document_; }
   //! Determine if the document was modified.
-  bool WasModified() const { return modified_; }
+  bool WasModified() const { return (modifiedStack_.GetSize() > 0); }
   //! Finalize the document from elements added to the stack.
   void FinalizeFromStack() { document_.FinalizeFromStack(); }
   //! Determine if the document was finalized.
@@ -796,9 +800,9 @@ public:
     bool replaced = false;
     if (!child->ExtendAliases(context, aliases_, &replaced)) return false;
     if (!ExtendAliases(context, child->aliases_, &replaced)) return false;
-    if (!(replaced || child->modified_))
+    if (!(replaced || child->WasModified()))
       return true;
-    modified_ = true;
+    RecordModified();
     return Extend(context, schema, child->document_);
   }
 
@@ -855,10 +859,10 @@ public:
   // Methods for normalizing values
   bool BeginNorm(Context& context, const SchemaType& schema) {
     if ((schema.isSingular_ == kSingularItem) && (ToggleSingular())) {
-      modified_ = true;
+      RecordModified();
       return NormStartArray(context, schema);
     } else if ((schema.isSingular_ == kSingularValue) && (ToggleSingular())) {
-      modified_ = true;
+      RecordModified();
       if (!NormStartObject(context, schema)) return false;
       RAPIDJSON_ASSERT(schema.parentKey_.IsString());
       return NormKey(context, schema, schema.parentKey_.GetString(),
@@ -973,7 +977,7 @@ public:
 			      schema.units_.GetStringLength(),
 			      false);
 	  if ((src_units != dst_units) && (src_units.is_compatible(dst_units))) {
-	    modified_ = true;
+	    RecordModified();
 	    changeUnits((YggSubType)subtype, precision,
 			(unsigned char*)str, src_units,
 			(unsigned char*)(&(str[0])), dst_units,
@@ -1004,7 +1008,7 @@ public:
     NORM_BODY_(StartObject, ());
     return true;
   }
-  bool AliasKey(Context& context, const Ch* str, SizeType len, bool copy,
+  bool AliasKey(Context& context, const Ch* str, SizeType len, bool,
 		bool dont_check_aliases,
 		ValueType& orig, ValueType& primary,
 		const SchemaType* schema=nullptr) {
@@ -1017,7 +1021,7 @@ public:
       if (FindAliasName(aliases, orig, match)) {
 	if (!GetFinalAlias(context, aliases, orig, &primary))
 	  return false;
-	modified_ = true;
+	RecordModified(orig);
 	len = primary.GetStringLength();
 	str = primary.GetString();
 	copy = true;
@@ -1085,7 +1089,7 @@ public:
 	  if (!child->missing)
 	    continue;
 	  if (ValueType* val = GetMember(*(child->name), &memberCount)) {
-	    modified_ = true;
+	    RecordModified(*(child->name));
 	    target->AddMember(*(child->name),
 			      ValueType(*val, GetAllocator()).Move(),
 			      GetAllocator());
@@ -1114,7 +1118,7 @@ public:
       for (SizeType index = 0; index < schema.propertyCount_; index++) {
 	if (schema.properties_[index].required && !context.propertyExist[index]
 	    && !schema.properties_[index].schema->default_.IsNull()) {
-	  modified_ = true;
+	  RecordModified(schema.properties_[index].name);
 	  const Ch* str = schema.properties_[index].name.GetString();
 	  SizeType len = schema.properties_[index].name.GetStringLength();
 	  if (!NormKey(context, schema, str, len, true))
@@ -1173,7 +1177,7 @@ public:
   
   // Methods for extending a document, checking and/or merging parallel
   //   entries in the process.
-  bool BeginExtend(Context& context) {
+  bool BeginExtend(Context&) {
     ValueType* current = CurrentValue();
     if (!current)
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
@@ -1196,7 +1200,7 @@ public:
     PushKey();
     return true;
   }
-  bool EndExtend(Context& context) {
+  bool EndExtend(Context&) {
     PopKey();
     if (CurrentIdx()) {
       PopValue();
@@ -1266,7 +1270,7 @@ public:
     REQUIRED_PROPERTY_(Double, (d >= b && d <= b), (d));
     EXTEND_END_(Double);
   }
-  bool ExtendString(Context& context, const Ch* str, SizeType length, bool copy) {
+  bool ExtendString(Context& context, const Ch* str, SizeType length, bool) {
     EXTEND_BEGIN_(String, (str, length, GetAllocator()));
     REQUIRED_PROPERTY_(String, (current->IsString()), (str, length));
     REQUIRED_PROPERTY_(String,
@@ -1275,7 +1279,7 @@ public:
     EXTEND_END_(String);
   }
   template <typename YggSchemaValueType>
-  bool ExtendYggdrasilString(Context& context, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
+  bool ExtendYggdrasilString(Context& context, const Ch* str, SizeType length, bool, YggSchemaValueType& valueSchema) {
     EXTEND_BEGIN_(YggdrasilString, (str, length, valueSchema));
     REQUIRED_PROPERTY_(YggdrasilString,
 		       (current && current->IsYggdrasil()),
@@ -1305,7 +1309,7 @@ public:
 		       (kObjectType, valueSchema));
     return true;
   }
-  bool ExtendYggdrasilEndObject(Context& context, SizeType memberCount) {
+  bool ExtendYggdrasilEndObject(Context& context, SizeType) {
     EXTEND_END_(YggdrasilEndObject);
   }
   bool ExtendStartObject(Context& context) {
@@ -1346,7 +1350,7 @@ public:
       PushKey(str, len);
     return true;
   }
-  bool ExtendEndObject(Context& context, SizeType& memberCount) {
+  bool ExtendEndObject(Context& context, SizeType&) {
     // TODO: Check size?
     EXTEND_END_(EndObject);
   }
@@ -1362,7 +1366,7 @@ public:
     PushKey(0);
     return true;
   }
-  bool ExtendEndArray(Context& context, SizeType elementCount) {
+  bool ExtendEndArray(Context& context, SizeType&) {
     if (!CurrentIdx())
       return false;
     PopKey();
@@ -1400,7 +1404,7 @@ public:
     } else {
       instancePointer = PointerType(documentStack_->template Bottom<Ch>(), documentStack_->GetSize() / sizeof(Ch));
     }
-    if (extending_ && !appending_) {
+    if (extending_ && !appending_ && !valueStack_.Empty()) {
       for (size_t i = 0; i < CurrentPointer().GetTokenCount(); i++) {
 	PointerType tmp = instancePointer.Append(CurrentPointer().GetTokens()[i]);
 	instancePointer.Swap(tmp);
@@ -1410,6 +1414,27 @@ public:
   }
   
 private:
+
+  void RecordModified(const PointerType p) {
+    std::cerr << "Before RecordModified" << std::endl;
+    PointerType* ref = modifiedStack_.template Push<PointerType>();
+    new (ref) PointerType(p);
+    std::cerr << "After RecordModified" << std::endl;
+  }
+  void RecordModified() {
+    RecordModified(GetInstancePointer());
+  }
+  template <typename VType>
+  void RecordModified(const VType& key) {
+    PointerType p = GetInstancePointer().Append(key.GetString(),
+						key.GetStringLength(),
+						&GetAllocator());
+    RecordModified(p);
+  }
+  void PopModified() {
+    PointerType* ref = modifiedStack_.template Pop<PointerType>(1);
+    ref->~PointerType();
+  }
 
   bool ToggleSingular() {
     inSingular_ = (!inSingular_);
@@ -1746,7 +1771,7 @@ private:
 	}
       }
     }
-    if (*replaced) modified_ = true;
+    if (*replaced) RecordModified();
     return true;
   }
   bool FindAliasName(const ValueType& aliases, ValueType& name,
@@ -1790,7 +1815,6 @@ private:
   static const size_t kDefaultStackCapacity = 1024;
   DocumentType document_;
   unsigned index_;
-  bool modified_;
   bool extending_;
   bool appending_;
   Context* extend_context_;
@@ -1800,6 +1824,7 @@ private:
   internal::Stack<AllocatorType> keyStack_;
   internal::Stack<AllocatorType> valueStack_;
   internal::Stack<AllocatorType> childStack_;
+  internal::Stack<AllocatorType> modifiedStack_;
   internal::Stack<AllocatorType>* documentStack_;
   ValueType aliases_;
   bool inSingular_;
