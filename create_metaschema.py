@@ -78,8 +78,8 @@ if __name__ == "__main__":
             "items": {"type": "string"}
         },
         "allowSingular": {
-            "description": "If true, the value may only contain an element matching the schema for array items. Only valid for array schemas.",
-            "type": ["boolean", "object", "schema"],
+            "description": "If true, the value may only contain an element matching the schema for 1) all array items, 2) the only array item in a 1-element long array, 3) the first required object property, 4) the only object property in a 1-element long object. Only valid for array & object schemas.",
+            "type": ["boolean", "string"],
             "default": False
         },
         "deprecated": {

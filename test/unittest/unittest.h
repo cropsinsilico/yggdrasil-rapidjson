@@ -190,6 +190,30 @@ public:
     Py_DECREF(pyargs);							\
     Py_DECREF(pykwargs);						\
   }
+#define SIMPLE_TYPES_STRING				\
+  "[\"array\","						\
+  "\"boolean\","					\
+  "\"integer\","						\
+  "\"null\","							\
+  "\"number\","							\
+  "\"object\","							\
+  "\"string\","							\
+  "\"1darray\","						\
+  "\"any\","							\
+  "\"bytes\","							\
+  "\"class\","							\
+  "\"complex\","						\
+  "\"float\","							\
+  "\"function\","						\
+  "\"instance\","						\
+  "\"int\","							\
+  "\"ndarray\","						\
+  "\"obj\","							\
+  "\"ply\","							\
+  "\"scalar\","							\
+  "\"schema\","							\
+  "\"uint\","							\
+  "\"unicode\"]"
 #endif // RAPIDJSON_YGGDRASIL
 
 class Random {

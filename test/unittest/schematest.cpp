@@ -282,8 +282,13 @@ TEST(SchemaValidator, Enum_Typed) {
     SchemaDocument s(sd);
 
     VALIDATE(s, "\"red\"", true);
+#ifdef RAPIDJSON_YGGDRASIL
+    INVALIDATE(s, "\"blue\"", "", "enum", "",
+        "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#\", \"expected\": [\"red\", \"amber\", \"green\"] }}");
+#else // RAPIDJSON_YGGDRASIL
     INVALIDATE(s, "\"blue\"", "", "enum", "",
         "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#\" }}");
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(SchemaValidator, Enum_Typless) {
@@ -294,8 +299,13 @@ TEST(SchemaValidator, Enum_Typless) {
     VALIDATE(s, "\"red\"", true);
     VALIDATE(s, "null", true);
     VALIDATE(s, "42", true);
+#ifdef RAPIDJSON_YGGDRASIL
+    INVALIDATE(s, "0", "", "enum", "",
+        "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#\", \"expected\": [\"red\", \"amber\", \"green\", null, 42] }}");
+#else // RAPIDJSON_YGGDRASIL
     INVALIDATE(s, "0", "", "enum", "",
         "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#\" }}");
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(SchemaValidator, Enum_InvalidType) {
@@ -1559,8 +1569,13 @@ TEST(SchemaValidator, Array_ItemsTuple) {
     SchemaDocument s(sd);
 
     VALIDATE(s, "[1600, \"Pennsylvania\", \"Avenue\", \"NW\"]", true);
+#ifdef RAPIDJSON_YGGDRASIL
+    INVALIDATE(s, "[24, \"Sussex\", \"Drive\"]", "/items/2", "enum", "/2",
+        "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#/2\", \"schemaRef\": \"#/items/2\", \"expected\": [\"Street\", \"Avenue\", \"Boulevard\"] }}");
+#else // RAPIDJSON_YGGDRASIL
     INVALIDATE(s, "[24, \"Sussex\", \"Drive\"]", "/items/2", "enum", "/2",
         "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#/2\", \"schemaRef\": \"#/items/2\" }}");
+#endif // RAPIDJSON_YGGDRASIL 
     INVALIDATE(s, "[\"Palais de l'Elysee\"]", "/items/0", "type", "/0",
         "{ \"type\": {"
         "    \"errorCode\": 20,"
@@ -1935,7 +1950,9 @@ TEST(SchemaValidator, Schema) { // 33
 	     "            \"instanceRef\": \"#/type\","
 	     "            \"schemaRef\": \"#/properties/type\","
 	     "            \"errors\": ["
-	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
+	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\","
+	     "                           \"expected\": " SIMPLE_TYPES_STRING
+	     "}},"
 	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
 	     "            ]"
 	     "}}}}");
@@ -1950,7 +1967,9 @@ TEST(SchemaValidator, Schema) { // 33
 	     "            \"instanceRef\": \"#/type\","
 	     "            \"schemaRef\": \"#/properties/type\","
 	     "            \"errors\": ["
-	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
+	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\","
+	     "                           \"expected\": " SIMPLE_TYPES_STRING
+	     "}},"
 	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
 	     "            ]"
 	     "}}}}");
@@ -2039,7 +2058,9 @@ TEST(SchemaValidator, SingularArraySchema) {
 	     "            \"instanceRef\": \"#/type\","
 	     "            \"schemaRef\": \"#/properties/type\","
 	     "            \"errors\": ["
-	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
+	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\","
+	     "                           \"expected\": " SIMPLE_TYPES_STRING
+	     "}},"
 	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
 	     "            ]"
 	     "  }}}}"
@@ -2128,7 +2149,9 @@ TEST(SchemaValidator, SingularObjectSchema) {
 	     "            \"instanceRef\": \"#/type\","
 	     "            \"schemaRef\": \"#/properties/type\","
 	     "            \"errors\": ["
-	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\"}},"
+	     "                {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/definitions/simpleTypes\","
+	     "                           \"expected\": " SIMPLE_TYPES_STRING
+	     "}},"
 	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
 	     "            ]"
 	     "}}}}}");
@@ -2297,7 +2320,11 @@ TEST(SchemaValidator, AllOf_Nested) {
         "    { \"allOf\": {"
         "      \"errors\": ["
         "        {},"
+#ifdef RAPIDJSON_YGGDRASIL
+        "        { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\", \"expected\": [\"ok\", \"OK\", \"o\"] }}"
+#else // RAPIDJSON_YGGDRASIL
         "        { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\" }}"
+#endif // RAPIDJSON_YGGDRASIL
         "      ],"
         "      \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
         "    }}],"
@@ -2318,8 +2345,13 @@ TEST(SchemaValidator, AllOf_Nested) {
         "      {},"
         "      { \"allOf\": {"
         "          \"errors\": ["
+#ifdef RAPIDJSON_YGGDRASIL
+        "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\", \"expected\": [\"ok\", \"okay\", \"OK\", \"o\"]}},"
+        "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\", \"expected\": [\"ok\", \"OK\", \"o\"]}}"
+#else // RAPIDJSON_YGGDRASIL
         "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\"}},"
         "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\"}}"
+#endif // RAPIDJSON_YGGDRASIL
         "          ],"
         "          \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
         "      }}"
@@ -2333,8 +2365,13 @@ TEST(SchemaValidator, AllOf_Nested) {
         "      { \"maxLength\": {\"actual\": \"too long\", \"expected\": 5, \"errorCode\": 6, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/1\" }},"
         "      { \"allOf\": {"
         "          \"errors\": ["
+#ifdef RAPIDJSON_YGGDRASIL
+        "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\", \"expected\": [\"ok\", \"okay\", \"OK\", \"o\"] }},"
+        "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\", \"expected\": [\"ok\", \"OK\", \"o\"]}}"
+#else // RAPIDJSON_YGGDRASIL
         "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\"}},"
         "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\"}}"
+#endif // RAPIDJSON_YGGDRASIL
         "          ],"
         "          \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
         "      }}"
@@ -2348,8 +2385,13 @@ TEST(SchemaValidator, AllOf_Nested) {
         "      {\"type\": {\"expected\": [\"string\"], \"actual\": \"integer\", \"errorCode\": 20, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/1\"}},"
         "      { \"allOf\": {"
         "          \"errors\": ["
+#ifdef RAPIDJSON_YGGDRASIL
+        "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\", \"expected\": [\"ok\", \"okay\", \"OK\", \"o\"] }},"
+        "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\", \"expected\": [\"ok\", \"OK\", \"o\"] }}"
+#else // RAPIDJSON_YGGDRASIL
         "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\"}},"
         "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\"}}"
+#endif // RAPIDJSON_YGGDRASIL
         "          ],"
         "          \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
         "      }}"
@@ -2515,6 +2557,9 @@ TEST(SchemaValidator, SchemaPointer) {
         "    \"errorCode\": 19,"
         "    \"instanceRef\":\"#/a/d/a/c\","
         "    \"schemaRef\":\"#/definitions/Prop_a/properties/c\""
+#ifdef RAPIDJSON_YGGDRASIL
+	"    , \"expected\": [\"C1\", \"C2\", \"C3\"]"
+#endif //RAPIDJSON_YGGDRASIL
         "}}");
     INVALIDATE(s1,
         "{"
@@ -3243,7 +3288,11 @@ TEST(SchemaValidator, ContinueOnErrors) {
         "  },"
         "  \"allOf\": {"
         "    \"errors\":["
+#ifdef RAPIDJSON_YGGDRASIL
+        "      {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/address/country\",\"schemaRef\":\"#/definitions/country_type\", \"expected\": [\"UK\", \"Canada\"]}}"
+#else // RAPIDJSON_YGGDRASIL
         "      {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/address/country\",\"schemaRef\":\"#/definitions/country_type\"}}"
+#endif // RAPIDJSON_YGGDRASIL
         "    ],"
         "    \"errorCode\":23,\"instanceRef\":\"#/address/country\",\"schemaRef\":\"#/definitions/address_type/properties/country\""
         "  },"
@@ -3292,8 +3341,13 @@ TEST(SchemaValidator, ContinueOnErrors) {
         "  },"
         "  \"oneOf\": {"
         "    \"errors\": ["
+#ifdef RAPIDJSON_YGGDRASIL
+        "      {\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/county_type\", \"expected\": [\"Sussex\", \"Surrey\", \"Kent\"] }},"
+        "      {\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/province_type\", \"expected\": [\"Quebec\", \"BC\", \"Alberta\"] }}"
+#else // RAPIDJSON_YGGDRASIL
         "      {\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/county_type\"}},"
         "      {\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/province_type\"}}"
+#endif //RAPIDJSON_YGGDRASIL
         "    ],"
         "    \"errorCode\": 21, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/address_type/properties/area\""
         "  }"
@@ -3415,7 +3469,11 @@ TEST(SchemaValidator, ContinueOnErrors_Enum) {
     SchemaDocument s(sd);
     VALIDATE(s, "{\"gender\":\"M\"}", true);
     INVALIDATE_(s, "{\"gender\":\"X\"}", "#", "errors", "#",
+#ifdef RAPIDJSON_YGGDRASIL
+        "{\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/gender\", \"schemaRef\": \"#/properties/gender\", \"expected\": [\"M\", \"F\"]}}",
+#else // RAPIDJSON_YGGDRASIL
         "{\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/gender\", \"schemaRef\": \"#/properties/gender\"}}",
+#endif // RAPIDJSON_YGGDRASIL
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
     INVALIDATE_(s, "{\"gender\":1}", "#", "errors", "#",
         "{\"type\": {\"expected\":[\"string\"], \"actual\": \"integer\", \"errorCode\": 20, \"instanceRef\": \"#/gender\", \"schemaRef\": \"#/properties/gender\"}}",

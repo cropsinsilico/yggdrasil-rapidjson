@@ -33,6 +33,9 @@
 #else // RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11
 #endif // RAPIDJSON_HAS_CXX11
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#include "prettywriter.h"
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 #endif // RAPIDJSON_YGGDRASIL
 
 #if !defined(RAPIDJSON_SCHEMA_USE_INTERNALREGEX)
@@ -285,6 +288,7 @@ public:
   virtual void AddWarnings(ISchemaValidator** subvalidators, SizeType count) = 0;
   virtual void DeprecationWarning(const SValue* warning=nullptr) = 0;
   virtual bool EndMissingPropertiesChild(const SValue& name) = 0;
+  virtual void DisallowedValueEnum(const typename SchemaType::ValueType& expected) = 0;
   virtual void GenericError(const char* str) = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
@@ -708,6 +712,7 @@ public:
     valueStack_(stackAllocator, stackCapacity),
     childStack_(stackAllocator, stackCapacity),
     modifiedStack_(stackAllocator, stackCapacity),
+    singularStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
     temporary_memory_(nullptr),
@@ -722,11 +727,16 @@ public:
     valueStack_(stackAllocator, stackCapacity),
     childStack_(stackAllocator, stackCapacity),
     modifiedStack_(stackAllocator, stackCapacity),
+    singularStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
     temporary_memory_(nullptr),
     extend_child_(nullptr) {
     parent->AddChild(this);
+    SizeType N = (SizeType)(parent->singularStack_.GetSize() / sizeof(ModificationEntry));
+    ModificationEntry* it = parent->singularStack_.template Bottom<ModificationEntry>();
+    for (SizeType i = 0; i < N; i++, it++)
+      RecordSingular(it->before, it->after);
   }
 
   //! Destructor.
@@ -739,6 +749,8 @@ public:
       PopChild();
     while (!modifiedStack_.Empty())
       PopModified();
+    while (!singularStack_.Empty())
+      PopSingular();
     document_.ClearStack();
     if (temporary_memory_) {
       GetAllocator().Free(temporary_memory_);
@@ -753,13 +765,34 @@ public:
   };
   struct ValueEntry {
     ValueEntry(ValueType& value) :
-      val(&value), ptr(), modified(false), child_modified(false) {}
+      val(&value), ptr(), modified(false), child_modified(false),
+      singular(false), child_singular(false) {}
     ValueEntry(ValueType& value, PointerType& p, AllocatorType* allocator = 0) :
-      val(&value), ptr(p, allocator), modified(false), child_modified(false) {}
+      val(&value), ptr(p, allocator), modified(false), child_modified(false),
+      singular(false), child_singular(false) {}
     ValueType* val;
     PointerType ptr;
     bool modified;
     bool child_modified;
+    bool singular;
+    bool child_singular;
+  };
+  struct ModificationEntry {
+    ModificationEntry(const PointerType& before0, const PointerType& after0,
+		      AllocatorType& allocator,
+		      bool no_before0=false, bool no_after0=false) :
+      before(before0, &allocator), after(after0, &allocator),
+      no_before(no_before0), no_after(no_after0) {}
+    PointerType before;
+    PointerType after;
+    bool no_before;
+    bool no_after;
+  };
+  enum ModificationFlag {
+    kCheckModifiedNull,
+    kCheckModifiedBefore,
+    kCheckModifiedBoth,
+    kCheckModifiedAfter
   };
   
   //! Get the allocator of this document.
@@ -843,22 +876,50 @@ public:
     return out;
   }
 
-  /*
-#define DEBUG_BEGIN(section, method)		\
-  std::cerr << #section << " begin: " << #method << std::endl
-#define DEBUG_KEY(section, value)		\
-  std::cerr << #section << " key: " << value << std::endl
-#define DEBUG_END(section, method, value)	\
-  std::cerr << #section << " end: " << #method << " = " << value << std::endl
-  */
-#define DEBUG_BEGIN(section, method)
-#define DEBUG_KEY(section, value)
-#define DEBUG_END(section, method, value)
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#define DEBUG_STEP							\
+  std::cerr << __debug_section << " " << __debug_section_mark <<	\
+    "[" << __debug_section_idx << "]: " <<				\
+    __debug_section_value << " = " << out << " (";			\
+  DisplayCurrentPointer();						\
+  if (__debug_section_schema) {						\
+    std::cerr << ", ";							\
+    DisplayPointer(GetSchemaPointer(*__debug_section_schema));		\
+    std::cerr << ", " << __debug_section_schema->isSingular_;		\
+  }									\
+  std::cerr << ")" << std::endl;					\
+  __debug_section_idx++
+#define DEBUG_INIT(section, mark, value, schema)	\
+  int __debug_section_idx = 0;				\
+  std::string __debug_section = #section;		\
+  std::string __debug_section_mark = #mark;		\
+  std::string __debug_section_value = value;		\
+  const SchemaType* __debug_section_schema = schema;	\
+  DEBUG_STEP
+#define DEBUG_MOD(section, mark, value)		\
+  __debug_section_idx = 0;			\
+  __debug_section = #section;			\
+  __debug_section_mark = #mark;			\
+  __debug_section_value = value;		\
+  DEBUG_STEP
+#else // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#define DEBUG_STEP
+#define DEBUG_INIT(section, mark, value, schema)
+#define DEBUG_MOD(section, mark, value)
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#define INIT_CHECK(section, mark, value, schema)	\
+  bool out = true;					\
+  DEBUG_INIT(section, mark, value, schema)
+#define MOD_CHECK(section, mark, value)		\
+  DEBUG_MOD(section, mark, value)
+#define CHECK_RESULT				\
+  DEBUG_STEP;					\
+  if (!out) return false
 
   // Methods for normalizing values
   bool BeginNorm(Context& context, const SchemaType& schema) {
     if ((schema.isSingular_ == kSingularItem) && (ToggleSingular())) {
-      RecordModifiedSingular();
+      RecordModifiedSingular((SizeType)0);
       return NormStartArray(context, schema);
     } else if ((schema.isSingular_ == kSingularValue) && (ToggleSingular())) {
       RecordModifiedSingular(schema.parentKey_);
@@ -871,24 +932,28 @@ public:
   }
   bool EndNorm(Context& context, const SchemaType& schema) {
     if ((schema.isSingular_ == kSingularItem) && (ToggleSingular())) {
-      RecordModified((SizeType)0);
       return NormEndArray(context, schema, 1);
     } else if ((schema.isSingular_ == kSingularValue) && (ToggleSingular())) {
-      RecordModified(schema.parentKey_);
       SizeType memberCount = 1;
       return NormEndObject(context, schema, memberCount);
     }
     return true;
   }
 
+#define NORM_BEGIN_STUB_(method)		\
+  INIT_CHECK(Norm, stub, #method, &schema)
 #define NORM_BEGIN_(method)			\
-  DEBUG_BEGIN(Norm, method);			\
-  if (!BeginNorm(context, schema)) return false
+  INIT_CHECK(Norm, begin, #method, &schema);	\
+  out = BeginNorm(context, schema);		\
+  CHECK_RESULT
 #define NORM_BODY_(method, args)		\
-  if (!document_.method args) return false
+  MOD_CHECK(Norm, body, #method);		\
+  out = document_.method args;			\
+  CHECK_RESULT
 #define NORM_END_(method)			\
-  bool out = EndNorm(context, schema);		\
-  DEBUG_END(Norm, method, out);			\
+  MOD_CHECK(Norm, end, #method);		\
+  out = EndNorm(context, schema);		\
+  CHECK_RESULT;					\
   return out
 #define NORM_VALUE_(method, args)		\
   NORM_BEGIN_(method);				\
@@ -1001,6 +1066,7 @@ public:
     return true;
   }
   bool NormYggdrasilEndObject(Context& context, const SchemaType& schema, SizeType memberCount) {
+    NORM_BEGIN_STUB_(YggdrasilEndObject);
     NORM_BODY_(YggdrasilEndObject, (memberCount));
     NORM_END_(YggdrasilEndObject);
   }
@@ -1053,10 +1119,10 @@ public:
   bool NormKey(Context& context, const SchemaType& schema, const Ch* str, SizeType len, bool copy, bool dont_check_aliases=false) {
     ValueType orig;
     ValueType primary;
-    DEBUG_KEY(Norm, str);
-    if (!AliasKey(context, str, len, copy, dont_check_aliases,
-		  orig, primary, &schema))
-      return false;
+    INIT_CHECK(Norm, key, (const char*)str, &schema);
+    out = AliasKey(context, str, len, copy, dont_check_aliases,
+		   orig, primary, &schema);
+    CHECK_RESULT;
     if (primary.IsString()) {
       len = primary.GetStringLength();
       str = primary.GetString();
@@ -1074,6 +1140,7 @@ public:
     return true;
   }
   bool NormEndObject(Context& context, const SchemaType& schema, SizeType& memberCount) {
+    NORM_BEGIN_STUB_(EndObject);
     // Borrow properties from parent
     if ((!extending_) && context.childProperties) {
       ValueType remove(kArrayType);
@@ -1091,7 +1158,7 @@ public:
 	  if (!child->missing)
 	    continue;
 	  if (ValueType* val = GetMember(*(child->name), &memberCount)) {
-	    RecordModified(*(child->name));
+	    RecordModifiedAdded(*(child->name));
 	    target->AddMember(*(child->name),
 			      ValueType(*val, GetAllocator()).Move(),
 			      GetAllocator());
@@ -1120,7 +1187,7 @@ public:
       for (SizeType index = 0; index < schema.propertyCount_; index++) {
 	if (schema.properties_[index].required && !context.propertyExist[index]
 	    && !schema.properties_[index].schema->default_.IsNull()) {
-	  RecordModified(schema.properties_[index].name);
+	  RecordModifiedAdded(schema.properties_[index].name);
 	  const Ch* str = schema.properties_[index].name.GetString();
 	  SizeType len = schema.properties_[index].name.GetStringLength();
 	  if (!NormKey(context, schema, str, len, true))
@@ -1149,7 +1216,7 @@ public:
 	  if (!(child->missing && child->required))
 	    continue;
 	  if (child->defaultValue) {
-	    RecordModified(*(child->name));
+	    RecordModifiedAdded(*(child->name));
 	    target->AddMember(*(child->name),
 			      ValueType(*(child->defaultValue), GetAllocator()).Move(),
 			      GetAllocator());
@@ -1171,6 +1238,7 @@ public:
     return true;
   }
   bool NormEndArray(Context& context, const SchemaType& schema, SizeType elementCount) {
+    NORM_BEGIN_STUB_(EndArray);
     NORM_BODY_(EndArray, (elementCount));
     NORM_END_(EndArray);
   }
@@ -1181,7 +1249,7 @@ public:
   
   // Methods for extending a document, checking and/or merging parallel
   //   entries in the process.
-  bool BeginExtend(Context& context) {
+  bool BeginExtend(Context& context, bool dont_recurse=false) {
     ValueType* current = CurrentValue();
     if (!current)
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
@@ -1215,18 +1283,48 @@ public:
       current = CurrentValue();
     }
     PushKey();
+    if ((!dont_recurse) && CurrentSingular() && !CurrentChildSingular() &&
+	(current->IsArray() || current->IsObject())) {
+      if (current->IsArray()) {
+	PushKey((SizeType)0);
+      } else if (current->IsObject()) {
+	ModificationEntry* key_mod = nullptr;
+	if (!isValueSingular(GetInstancePointer(), false, &key_mod))
+	  return false;
+	typename PointerType::Token key_token = key_mod->after.GetTokens()[key_mod->after.GetTokenCount() - 1];
+	PushKey(key_token.name, key_token.length);
+      }
+      return BeginExtend(context, true);
+    }
     return true;
   }
-  bool EndExtend(Context&) {
+  bool EndExtend(Context& context, bool dont_recurse=false) {
+    ValueType* current = CurrentValue();
+    if ((!dont_recurse) && CurrentSingular() && !CurrentChildSingular() &&
+	(current->IsArray() || current->IsObject()))
+      return EndExtend(context, true);
     PopKey();
     if (CurrentIdx()) {
       PopValue();
+      current = CurrentValue();
     } else if (CurrentKey()) {
       PopValue();
       PopKey();
+      current = CurrentValue();
     } else if (CurrentChildModified() && !CurrentModified()) {
-      RecordModified();
+      StealChildModified();
     }
+    return true;
+  }
+  bool GetParentKey(PointerType p, ValueType* out) {
+    ModificationEntry* key_mod = nullptr;
+    if (!isValueSingular(p, false, &key_mod))
+      return false;
+    typename PointerType::Token key_token = key_mod->after.GetTokens()[key_mod->after.GetTokenCount() - 1];
+    if (key_token.index != kPointerInvalidIndex)
+      out->SetUint(key_token.index);
+    else
+      out->SetString(key_token.name, key_token.length, GetAllocator());
     return true;
   }
 
@@ -1236,6 +1334,8 @@ public:
       KeyEntry* aliased = AliasedKey();					\
       context.error_handler.DuplicateAlias(*(aliased->aliased),		\
 					   *(aliased->key));		\
+      out = false;							\
+      DEBUG_STEP;							\
       RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);	\
     } else {								\
       RAPIDJSON_ASSERT(current);					\
@@ -1243,11 +1343,15 @@ public:
 	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set when raising NormalizationMergeConflict error"); \
       context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), \
 						       *current, ValueType args.Move()); \
+      out = false;							\
+      DEBUG_STEP;							\
       RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
     }									\
   }
+#define EXTEND_BEGIN_STUB_(method)					\
+  INIT_CHECK(Extend, stub, #method, extend_schema_)
 #define EXTEND_BEGIN_(method, args)					\
-  DEBUG_BEGIN(Extend, method);						\
+  INIT_CHECK(Extend, begin, #method, extend_schema_);			\
   ValueType* current = CurrentValue();					\
   if (current && current->IsObject() && CurrentKey() &&			\
       (!current->HasMember(CurrentKey()->GetString()))) {		\
@@ -1259,27 +1363,46 @@ public:
   }									\
   /* Delay marking collections as modified until after it is complete */\
   bool in_collection = (current->IsArray() || current->IsObject());	\
-  if (!BeginExtend(context)) return false;				\
+  out = BeginExtend(context, dont_recurse);				\
+  CHECK_RESULT;								\
   if ((!CurrentModified()) && CurrentChildModified()) {			\
     ValueType child_swap args;						\
     CurrentValue()->Swap(child_swap);					\
     if (!(CurrentValue()->IsArray() || CurrentValue()->IsObject() ||	\
-	  in_collection))						\
-      RecordModified();							\
+	  in_collection)) {						\
+      StealChildModified();						\
+    }									\
+  } else if (!CurrentSingular() && CurrentChildSingular() && extend_child_) { \
+    ValueType child_swap args;						\
+    CurrentValue()->Swap(child_swap);					\
+    if (CurrentValue()->IsArray()) {					\
+      RecordModifiedSingular((SizeType)0);				\
+      CurrentValue()->PushBack(child_swap, GetAllocator());		\
+    } else if (CurrentValue()->IsObject()) {				\
+      ValueType key;							\
+      out = extend_child_->GetParentKey(GetInstancePointer(), &key);	\
+      CHECK_RESULT;							\
+      RecordModifiedSingular(key);					\
+      CurrentValue()->AddMember(key, child_swap, GetAllocator());	\
+    }									\
   }									\
   current = CurrentValue();						\
-  REQUIRED_PROPERTY_(method, (current), args)
+  REQUIRED_PROPERTY_(method, (current), args);				\
+  CHECK_RESULT
 #define EXTEND_END_(method)						\
-  bool out = EndExtend(context);					\
-  DEBUG_END(Extend, method, out);					\
+  MOD_CHECK(Extend, end, #method);					\
+  out = EndExtend(context, dont_recurse);				\
+  CHECK_RESULT;								\
   return out
 #define EXTEND_VALUE_(method, value, args)				\
+  bool dont_recurse = false;						\
   EXTEND_BEGIN_(method, args);						\
   REQUIRED_PROPERTY_(method, (current->Is ## method()), args);		\
   REQUIRED_PROPERTY_(method, (value == current->Get ## method()), args); \
   EXTEND_END_(method)
 
   bool ExtendNull(Context& context) {
+    bool dont_recurse = false;
     EXTEND_BEGIN_(Null, (kNullType));
     REQUIRED_PROPERTY_(Null, (current->IsNull()), (kNullType));
     EXTEND_END_(Null);
@@ -1290,6 +1413,7 @@ public:
   bool ExtendInt64(Context& context, int64_t i) { EXTEND_VALUE_(Int64, i, (i)); }
   bool ExtendUint64(Context& context, uint64_t u) { EXTEND_VALUE_(Uint64, u, (u)); }
   bool ExtendDouble(Context& context, double d) {
+    bool dont_recurse = false;
     EXTEND_BEGIN_(Double, (d));
     REQUIRED_PROPERTY_(Double, (current->IsDouble()), (d));
     double b = current->GetDouble();
@@ -1297,6 +1421,7 @@ public:
     EXTEND_END_(Double);
   }
   bool ExtendString(Context& context, const Ch* str, SizeType length, bool) {
+    bool dont_recurse = false;
     EXTEND_BEGIN_(String, (str, length, GetAllocator()));
     REQUIRED_PROPERTY_(String, (current->IsString()), (str, length));
     REQUIRED_PROPERTY_(String,
@@ -1306,6 +1431,7 @@ public:
   }
   template <typename YggSchemaValueType>
   bool ExtendYggdrasilString(Context& context, const Ch* str, SizeType length, bool, YggSchemaValueType& valueSchema) {
+    bool dont_recurse = false;
     EXTEND_BEGIN_(YggdrasilString, (str, length, valueSchema));
     REQUIRED_PROPERTY_(YggdrasilString,
 		       (current && current->IsYggdrasil()),
@@ -1322,7 +1448,7 @@ public:
     EXTEND_END_(YggdrasilString);
   }
   template <typename YggSchemaValueType>
-  bool ExtendYggdrasilStartObject(Context& context, YggSchemaValueType& valueSchema) {
+  bool ExtendYggdrasilStartObject(Context& context, YggSchemaValueType& valueSchema, bool dont_recurse=false) {
     EXTEND_BEGIN_(YggdrasilObject, (kObjectType, valueSchema));
     REQUIRED_PROPERTY_(YggdrasilObject,
 		       (current && current->IsYggdrasil()),
@@ -1335,25 +1461,25 @@ public:
 		       (kObjectType, valueSchema));
     return true;
   }
-  bool ExtendYggdrasilEndObject(Context& context, SizeType) {
+  bool ExtendYggdrasilEndObject(Context& context, SizeType, bool dont_recurse=false) {
+    EXTEND_BEGIN_STUB_(YggdrasilObject);
     EXTEND_END_(YggdrasilEndObject);
   }
-  bool ExtendStartObject(Context& context) {
+  bool ExtendStartObject(Context& context, bool dont_recurse=false) {
     EXTEND_BEGIN_(Object, (kObjectType));
     if (extend_child_ && CurrentModified() && CurrentChildModified()) {
       PointerType p = GetInstancePointer();
-      PointerType p_key;
-      if (!isValueSingular(p, false, &p_key) &&
-	  extend_child_->isValueSingular(p, false, &p_key)) {
-	typename PointerType::Token key_token = p_key.GetTokens()[p_key.GetTokenCount() - 1];
+      ModificationEntry* key_mod = nullptr;
+      if (!isValueSingular(p) &&
+	  extend_child_->isValueSingular(p, false, &key_mod)) {
+	typename PointerType::Token key_token = key_mod->after.GetTokens()[key_mod->after.GetTokenCount() - 1];
 	ValueType key(key_token.name, key_token.length, GetAllocator());
 	ValueType tmp(kObjectType);
 	tmp.AddMember(ValueType(key, GetAllocator()).Move(),
 		      ValueType(kNullType).Move(), GetAllocator());
 	current->Swap(tmp[key]);
 	current->Swap(tmp);
-	RecordModifiedSingular(key);
-	RecordModified(key);
+	StealChildModified();
       }
     }
     REQUIRED_PROPERTY_(Object, current->IsObject(), (kObjectType));
@@ -1362,10 +1488,9 @@ public:
   bool ExtendKey(Context& context, const Ch* str, SizeType len, bool copy) {
     ValueType orig;
     ValueType primary;
-    DEBUG_KEY(Extend, str);
-    if (!AliasKey(context, str, len, copy, false,
-		  orig, primary))
-      return false;
+    INIT_CHECK(Extend, key, (const char*)str, extend_schema_);
+    out = AliasKey(context, str, len, copy, false, orig, primary);
+    CHECK_RESULT;
     if (primary.IsString()) {
       len = primary.GetStringLength();
       str = primary.GetString();
@@ -1375,25 +1500,22 @@ public:
       PushKey(str, len, &orig);
     else
       PushKey(str, len);
+    CHECK_RESULT;
     return true;
   }
-  bool ExtendEndObject(Context& context, SizeType) {
+  bool ExtendEndObject(Context& context, SizeType, bool dont_recurse=false) {
+    EXTEND_BEGIN_STUB_(Object);
     ValueType* current = CurrentValue();
     REQUIRED_PROPERTY_(Object, current->IsObject(), (*current, GetAllocator()));
     // Don't check memberCount, as members may be missing from either the
     //   child or the parent
     // REQUIRED_PROPERTY_(Object, current->MemberCount() == memberCount,
     // 		       (*current, GetAllocator()));
-    if ((!CurrentModified()) && CurrentChildModified()) {
-      for (SizeType i = 0; i < current->MemberCount(); i++) {
-	ConstMemberIterator it = current->MemberBegin() + i;
-	if (CurrentChildModified(it->name))
-	  RecordModified(it->name);
-      }
-    }
+    if ((!CurrentModified()) && CurrentChildModified())
+      StealChildModified();
     EXTEND_END_(EndObject);
   }
-  bool ExtendStartArray(Context& context) {
+  bool ExtendStartArray(Context& context, bool dont_recurse=false) {
     EXTEND_BEGIN_(Array, (kArrayType));
     if (extend_child_ && CurrentModified() && CurrentChildModified()) {
       PointerType p = GetInstancePointer();
@@ -1401,29 +1523,25 @@ public:
 	ValueType tmp(kArrayType);
 	tmp.PushBack(*current, GetAllocator());
 	current->Swap(tmp);
-	RecordModifiedSingular();
-	RecordModified((SizeType)0);
+	StealChildModified();
       }
     }
     REQUIRED_PROPERTY_(Array, current->IsArray(), (kArrayType));
     PushKey(0);
     return true;
   }
-  bool ExtendEndArray(Context& context, SizeType& elementCount) {
+  bool ExtendEndArray(Context& context, SizeType elementCount, bool dont_recurse=false) {
+    EXTEND_BEGIN_STUB_(Array);
     ValueType* current = CurrentValue();
     REQUIRED_PROPERTY_(Array, CurrentIdx(), (*current, GetAllocator()));
     REQUIRED_PROPERTY_(Array, current->IsArray(), (*current, GetAllocator()));
     REQUIRED_PROPERTY_(Array, current->Size() == elementCount,
 		       (*current, GetAllocator()));
-    if (!CurrentIdx())
-      return false;
+    out = CurrentIdx();
+    CHECK_RESULT;
     PopKey();
-    if ((!CurrentModified()) && CurrentChildModified()) {
-      for (SizeType i = 0; i < current->Size(); i++) {
-	if (CurrentChildModified(i))
-	  RecordModified(i);
-      }
-    }
+    if ((!CurrentModified()) && CurrentChildModified())
+      StealChildModified();
     EXTEND_END_(EndArray);
   }
 
@@ -1469,6 +1587,23 @@ public:
       return instancePointer.Remove(1, &GetAllocator());
     return instancePointer;
   }
+  PointerType GetInstancePointerSingular(bool parent=false) {
+    return GetInstancePointer(SchemaType::GetAllowSingularString(), parent);
+  }
+  template<typename VType>
+  PointerType GetInstancePointerSingular(const VType& key, bool parent,
+					 RAPIDJSON_DISABLEIF((
+       internal::OrExpr<YGGDRASIL_IS_INT_TYPE(VType),
+       internal::OrExpr<YGGDRASIL_IS_UINT_TYPE(VType),
+       internal::OrExpr<internal::IsSame<VType, bool>,
+       internal::IsPointer<VType> > > >))) {
+    return GetInstancePointerSingular(parent).Append(key.GetString(),
+						     key.GetStringLength(),
+						     &GetAllocator());
+  }
+  PointerType GetInstancePointerSingular(const SizeType& index, bool parent) {
+    return GetInstancePointerSingular(parent).Append(index, &GetAllocator());
+  }
   PointerType GetInstancePointerBase(AllocatorType* allocator = 0) const {
     RAPIDJSON_ASSERT(documentStack_);
     if (extending_ && !appending_ && !valueStack_.Empty()) {
@@ -1485,9 +1620,9 @@ private:
 
   void RecordModifiedAlias(const ValueType& primary, const ValueType& alias,
 			   PointerType* ptr_base=nullptr) {
-    RecordModified(alias, ((!extending_) || appending_));
-    RecordModified(primary, ((!extending_) || appending_));
-    if (extending_ && !appending_ && HasMember(alias)) {
+    bool in_extend = (ptr_base || (extending_ && !appending_));
+    RecordModified(primary, alias, !in_extend);
+    if (in_extend && HasMember(alias)) {
       PointerType p_primary;
       PointerType p_alias;
       if (ptr_base) {
@@ -1502,18 +1637,18 @@ private:
 	p_alias = GetInstancePointer(alias, false);
       }
       // Replace all labels of modification with alias
-      SizeType N = (SizeType)(modifiedStack_.GetSize() / sizeof(PointerType));
-      PointerType* it = modifiedStack_.template Bottom<PointerType>();
+      SizeType N = (SizeType)(modifiedStack_.GetSize() / sizeof(ModificationEntry));
+      ModificationEntry* it = modifiedStack_.template Bottom<ModificationEntry>();
       for (SizeType i = 0; i < N; i++, it++) {
-	if (PointerStartsWith(*it, p_alias, false)) {
+	if (PointerStartsWith(it->after, p_alias, false)) {
 	  // TODO: Replace old modification?
 	  // *it = it->Replace(p_alias.GetTokenCount() - 1,
 	  // 		    primary.GetString(), primary.GetStringLength(),
 	  // 		    &GetAllocator());
-	  RecordModified(it->Replace((SizeType)(p_alias.GetTokenCount() - 1),
-				     primary.GetString(),
-				     primary.GetStringLength(),
-				     &GetAllocator()));
+	  RecordModified(it->after.Replace((SizeType)(p_alias.GetTokenCount() - 1),
+					   primary.GetString(),
+					   primary.GetStringLength(),
+					   &GetAllocator()));
 	}
       }
       // Swap the aliased value
@@ -1524,17 +1659,76 @@ private:
     }
   }
 
-  void RecordModifiedSingular(bool parent=false) {
-    RecordModified(SchemaType::GetAllowSingularString(), parent);
-  }
   template<typename VType>
   void RecordModifiedSingular(const VType& key, bool parent=false) {
-    PointerType p = GetInstancePointer(SchemaType::GetAllowSingularString(), parent).Append(key.GetString(), key.GetStringLength(), &GetAllocator());
-    RecordModified(p);
+    RecordModified(GetInstancePointer(parent),
+		   GetInstancePointerSingular(key, parent));
+    RecordSingular(GetInstancePointer(parent),
+		   GetInstancePointer(key, parent));
   }
-  void RecordModified(const PointerType p) {
-    PointerType* ref = modifiedStack_.template Push<PointerType>();
-    new (ref) PointerType(p, &GetAllocator());
+  PointerType ReplacePrefix(const PointerType p,
+			    const PointerType& before,
+			    const PointerType& after) {
+    if ((!PointerStartsWith(p, before, false)) ||
+	PointerStartsWith(p, after, false))
+      return p;
+    PointerType q = after;
+    for (size_t i = before.GetTokenCount(); i < p.GetTokenCount(); i++)
+      q = q.Append(p.GetTokens()[i], &GetAllocator());
+    return q;
+  }
+  PointerType ReplaceSingular(const PointerType p) {
+    if (singularStack_.Empty())
+      return p;
+    PointerType q = p;
+    SizeType N = (SizeType)(singularStack_.GetSize() / sizeof(ModificationEntry));
+    ModificationEntry* it = singularStack_.template Bottom<ModificationEntry>();
+    for (SizeType i = 0; i < N; i++, it++)
+      q = ReplacePrefix(q, it->before, it->after);
+    return q;
+  }
+  void RecordSingular(const PointerType before, const PointerType after) {
+    SizeType N = (SizeType)(singularStack_.GetSize() / sizeof(ModificationEntry));
+    ModificationEntry* it = singularStack_.template Bottom<ModificationEntry>();
+    for (SizeType i = 0; i < N; i++, it++) {
+      if (PointerStartsWith(it->before, before, true) &&
+	  PointerStartsWith(it->after, after, true))
+	return;
+    }
+    PointerType after_mod = ReplaceSingular(after);
+    it = singularStack_.template Bottom<ModificationEntry>();
+    for (SizeType i = 0; i < N; i++, it++)
+      it->after = ReplacePrefix(it->after, before, after_mod);
+    ModificationEntry* ref = singularStack_.template Push<ModificationEntry>();
+    new (ref) ModificationEntry(before, after_mod, GetAllocator());
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    std::cerr << "RecordSingular ";
+    DisplayModifications(&singularStack_);
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+  }
+  void PopSingular() {
+    ModificationEntry* ref = singularStack_.template Pop<ModificationEntry>(1);
+    ref->~ModificationEntry();
+  }
+  void RecordModified(const PointerType p,
+		      bool no_before=false, bool no_after=false) {
+    RecordModified(p, p, no_before, no_after);
+  }
+  void RecordModified(const PointerType before, const PointerType after,
+		      bool no_before=false, bool no_after=false) {
+    ModificationEntry* match = nullptr;
+    PointerType after_mod = ReplaceSingular(after);
+    if (!(isValueModified(before, true, kCheckModifiedBefore, no_before, &match) &&
+          (match->no_after == no_after) &&
+          PointerStartsWith(match->after, after_mod, true))) {
+      ModificationEntry* ref = modifiedStack_.template Push<ModificationEntry>();
+      new (ref) ModificationEntry(before, after_mod, GetAllocator(),
+				  no_before, no_after);
+    }
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    std::cerr << "RecordModified ";
+    DisplayModifications();
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
   }
   void RecordModified(bool parent=false) {
     RecordModified(GetInstancePointer(parent));
@@ -1549,26 +1743,82 @@ private:
   void RecordModified(const VType& key, bool parent=false) {
     RecordModified(GetInstancePointer(key, parent));
   }
+  template <typename VType>
+  void RecordModified(const VType& key_before, const VType& key_after,
+		      bool parent=false) {
+    RecordModified(GetInstancePointer(key_before, parent),
+		   GetInstancePointer(key_after, parent));
+  }
+  void RecordModified(ModificationEntry& entry) {
+    RecordModified(entry.before, entry.after,
+		   entry.no_before, entry.no_after);
+  }
+  template <typename VType>
+  void RecordModifiedRemoved(const VType& key, bool parent=false) {
+    RecordModified(GetInstancePointer(key, parent),
+		   GetInstancePointer(parent),
+		   false, true);
+  }
+  template <typename VType>
+  void RecordModifiedAdded(const VType& key, bool parent=false) {
+    RecordModified(GetInstancePointer(parent),
+		   GetInstancePointer(key, parent),
+		   true, false);
+  }
+  void StealChildModified(bool parent=false) {
+    StealChildModified(GetInstancePointer(parent));
+  }
+  void StealChildModified(const PointerType& p) {
+    if ((!extend_child_) || extend_child_->modifiedStack_.Empty())
+      return;
+    SizeType N = (SizeType)(extend_child_->modifiedStack_.GetSize() / sizeof(ModificationEntry));
+    ModificationEntry* it = extend_child_->modifiedStack_.template Bottom<ModificationEntry>();
+    for (SizeType i = 0; i < N; i++, it++) {
+      if (PointerStartsWith(it->before, p, false))
+	RecordModified(*it);
+    }
+  }
   void PopModified() {
-    PointerType* ref = modifiedStack_.template Pop<PointerType>(1);
-    ref->~PointerType();
+    ModificationEntry* ref = modifiedStack_.template Pop<ModificationEntry>(1);
+    ref->~ModificationEntry();
   }
   bool isValueSingular(const PointerType& p, bool exact=false,
-		       PointerType* match=nullptr) {
-    PointerType q = p.Append(SchemaType::GetAllowSingularString().GetString(),
-			     SchemaType::GetAllowSingularString().GetStringLength());
-    return isValueModified(q, exact, match);
+		       ModificationEntry** match=nullptr,
+		       bool appended=false) {
+    PointerType q;
+    if (appended) {
+      q = p.Remove(1).Append(
+	   SchemaType::GetAllowSingularString().GetString(),
+	   SchemaType::GetAllowSingularString().GetStringLength()).Append(
+	       p.GetTokens()[p.GetTokenCount() - 1]);
+    } else {
+      q = p.Append(SchemaType::GetAllowSingularString().GetString(),
+		   SchemaType::GetAllowSingularString().GetStringLength());
+    }
+    return isValueModified(q, exact, kCheckModifiedAfter, false, match);
   }
   bool isValueModified(const PointerType& p, bool exact=false,
-		       PointerType* match=nullptr) {
+		       ModificationFlag checkFlag=kCheckModifiedNull,
+		       bool is_empty=false, ModificationEntry** match=nullptr) {
     if (modifiedStack_.Empty())
       return false;
-    SizeType N = (SizeType)(modifiedStack_.GetSize() / sizeof(PointerType));
-    PointerType* it = modifiedStack_.template Bottom<PointerType>();
+    if (checkFlag == kCheckModifiedNull) {
+      if (extending_ && !appending_)
+	checkFlag = kCheckModifiedBoth;
+      else
+	checkFlag = kCheckModifiedBefore;
+    }
+    SizeType N = (SizeType)(modifiedStack_.GetSize() / sizeof(ModificationEntry));
+    ModificationEntry* it = modifiedStack_.template Bottom<ModificationEntry>();
     for (SizeType i = 0; i < N; i++, it++) {
-      if (PointerStartsWith(*it, p, exact)) {
+      if (((checkFlag <= kCheckModifiedBoth) &&
+	   PointerStartsWith(it->before, p, exact) &&
+	   ((it->no_before == is_empty) || (!exact))) ||
+	  ((checkFlag >= kCheckModifiedBoth) &&
+	   PointerStartsWith(it->after, p, exact) &&
+	   ((it->no_after == is_empty) || (!exact)))) {
 	if (match)
-	  *match = *it;
+	  *match = it;
 	return true;
       }
     }
@@ -1628,23 +1878,53 @@ private:
       return valueStack_.template Top<ValueEntry>()->child_modified;
     return false;
   }
+  bool CurrentSingular() {
+    if (extending_ && !appending_ && !valueStack_.Empty())
+      return valueStack_.template Top<ValueEntry>()->singular;
+    return false;
+  }
+  bool CurrentChildSingular() {
+    if (extending_ && !appending_ && !valueStack_.Empty())
+      return valueStack_.template Top<ValueEntry>()->child_singular;
+    return false;
+  }
   template<typename VType>
-  bool CurrentChildModified(const VType& key) {
-    if (CurrentChildModified())
+  bool CurrentChildSingular(const VType& key) {
+    if (CurrentChildSingular())
       return true;
     PointerType p;
     if (valueStack_.Empty())
       p = GetInstancePointer(key, false);
     else
       p = CurrentPointer(key);
-    return isValueModified(p);
+    return isValueSingular(p, false, nullptr, true);
   }
-  void PushValue(ValueType& value, PointerType& p) {
+  void PushValue(ValueType& value, PointerType& p, bool appended=false) {
     ValueEntry* ref = valueStack_.template Push<ValueEntry>();
     new (ref) ValueEntry(value, p, &GetAllocator());
-    ref->modified = isValueModified(p);
-    if (extend_child_)
-      ref->child_modified = extend_child_->isValueModified(p);
+    ref->singular = isValueSingular(p, false, nullptr, appended);
+    if (ref->singular)
+      ref->modified = true;
+    else
+      ref->modified = isValueModified(p, false, kCheckModifiedBoth);
+    if (extend_child_) {
+      ref->child_singular = extend_child_->isValueSingular(p, false, nullptr,
+							   appended);
+      if (ref->child_singular)
+	ref->child_modified = true;
+      else
+	ref->child_modified = extend_child_->isValueModified(p, false,
+							     kCheckModifiedBoth);
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+      std::cerr << "Push value: ";
+      DisplayPointer(p);
+      std::cerr << ", " << ref->modified << ", " << ref->child_modified << ", " << ref->singular << ", " << ref->child_singular << std::endl;
+      std::cerr << "Parent ";
+      DisplayModifications();
+      std::cerr << "Child ";
+      extend_child_->DisplayModifications();
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    }
   }
   void PushValue(ValueType& value) {
     PointerType p;
@@ -1656,14 +1936,19 @@ private:
   }
   void PushValue(ValueType& value, ValueType& key) {
     PointerType p = CurrentPointer(key);
-    PushValue(value, p);
+    PushValue(value, p, true);
   }
   void PushValue(ValueType& value, SizeType index) {
     PointerType p = CurrentPointer(index);
-    PushValue(value, p);
+    PushValue(value, p, true);
   }
   void PopValue() {
     ValueEntry* ref = valueStack_.template Pop<ValueEntry>(1);
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    std::cerr << "PopValue: ";
+    DisplayValue(*(ref->val));
+    std::cerr << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     ref->~ValueEntry();
   }
   size_t ValueCount() const {
@@ -2006,6 +2291,58 @@ private:
     return aliases;
   }
 
+  void DisplayPointer(const PointerType& p) {
+    GenericStringBuffer<EncodingType> sb;
+    p.StringifyUriFragment(sb);
+    std::cerr << sb.GetString();
+  }
+  void DisplayCurrentPointer() {
+    DisplayPointer(GetInstancePointer());
+  }
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+  template<typename VType>
+  void DisplayValue(VType& value) {
+    StringBuffer sb;
+    PrettyWriter<StringBuffer, typename VType::EncodingType, UTF8<> > w(sb);
+    value.Accept(w);
+    std::cerr << (const char*)(sb.GetString()) << std::endl;
+  }
+  void DisplayAliases() {
+    DisplayValue(aliases_);
+  }
+  void DisplayModifications(internal::Stack<AllocatorType>* stack=nullptr) {
+    if (!stack)
+      stack = &modifiedStack_;
+    std::cerr << "Modifications: " << std::endl;
+    if (stack->Empty())
+      return;
+    GenericStringBuffer<EncodingType> sb;
+    SizeType N = (SizeType)(stack->GetSize() / sizeof(ModificationEntry));
+    ModificationEntry* it = stack->template Bottom<ModificationEntry>();
+    for (SizeType i = 0; i < N; i++, it++) {
+      std::cerr << "    ";
+      // if (!it->no_before) {
+      it->before.StringifyUriFragment(sb);
+      std::cerr << sb.GetString();
+      sb.Clear();
+      // }
+      if (it->no_before) {
+	std::cerr << " (added)";
+      }
+      std::cerr << " -> ";
+      // if (!it->no_after) {
+      it->after.StringifyUriFragment(sb);
+      std::cerr << sb.GetString();
+      sb.Clear();
+      // }
+      if (it->no_after) {
+	std::cerr << " (removed)";
+      }
+      std::cerr << std::endl;
+    }
+  }
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+
   static const size_t kDefaultStackCapacity = 1024;
   DocumentType document_;
   unsigned index_;
@@ -2017,6 +2354,7 @@ private:
   internal::Stack<AllocatorType> valueStack_;
   internal::Stack<AllocatorType> childStack_;
   internal::Stack<AllocatorType> modifiedStack_;
+  internal::Stack<AllocatorType> singularStack_;
   internal::Stack<AllocatorType>* documentStack_;
   ValueType aliases_;
   bool inSingular_;
@@ -2183,7 +2521,8 @@ public:
 	allowSingular_(false), isSingular_(isSingular), parentKey_(kNullType),
 	deprecated_(false),
 	stealProperties_(), child_stealProperties_(),
-	shareProperties_(), child_shareProperties_()
+	shareProperties_(), child_shareProperties_(),
+	enumValues_()
 #endif // RAPIDJSON_YGGDRASIL
     {
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
@@ -2236,22 +2575,7 @@ public:
 	    kSingular = kSingularArray;
 	  else if ((type_ & (1 << kObjectSchemaType)))
 	    kSingular = kSingularObject;
-	  AssignSingularIfExist(*schemaDocument, p, value, GetAllowSingularString(), document, kSingular);
-	  if ((allowSingular_) && (!allowSingularSchema_.schemas)) {
-	    if (kSingular == kSingularArray) {
-	      AssignSingularIfExist(*schemaDocument, p, value, GetItemsString(), document, kSingular);
-	    } else if (kSingular == kSingularObject) {
-	      const ValueType* properties = GetMember(value, GetPropertiesString());
-	      const ValueType* required = GetMember(value, GetRequiredString());
-	      const ValueType* prop0 = nullptr;
-	      if (required && required->IsArray() && (required->Size() == 1))
-		prop0 = &((*required)[0]);
-	      else if (properties && properties->IsObject() && (properties->MemberCount() == 1))
-		prop0 = &(properties->MemberBegin()->name);
-	      if (properties && prop0)
-		AssignSingularIfExist(*schemaDocument, p.Append(GetPropertiesString(), allocator_), *properties, *prop0, document, kSingular);
-	    }
-	  }
+	  AssignSingularIfExist(*schemaDocument, p, value, GetAllowSingularString(), document, kSingular, true);
 	  if (allowSingularSchema_.schemas) {
 	    allowSingular_ = true;
 	    schemaDocument->CreateSchema(&allowSingularSchema_.schemas[0], p, value, document, id_, kSingular);
@@ -2322,6 +2646,9 @@ public:
                     itr->Accept(h);
                     enum_[enumCount_++] = h.GetHashCode();
                 }
+#ifdef RAPIDJSON_YGGDRASIL
+		enumValues_ = v;
+#endif // RAPIDJSON_YGGDRASIL
             }
         }
 
@@ -2733,7 +3060,11 @@ public:
             for (SizeType i = 0; i < enumCount_; i++)
                 if (enum_[i] == h)
                     goto foundEnum;
+#ifdef RAPIDJSON_YGGDRASIL
+            context.error_handler.DisallowedValueEnum(*enumValues_);
+#else // RAPIDJSON_YGGDRASIL
             context.error_handler.DisallowedValue(kValidateErrorEnum);
+#endif // RAPIDJSON_YGGDRASIL
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorEnum);
             foundEnum:;
         }
@@ -3554,10 +3885,18 @@ protected:
     }
 
 #ifdef RAPIDJSON_YGGDRASIL
-  void AssignSingularIfExist(SchemaDocumentType& schemaDocument, const PointerType& p, const ValueType& value, const ValueType& name, const ValueType& document, const SingularFlag containerFlag) {
+  void AssignSingularIfExist(SchemaDocumentType& schemaDocument, const PointerType& p, const ValueType& value, const ValueType& name, const ValueType& document, const SingularFlag containerFlag, bool first_pass=false) {
     if (const ValueType* v = GetMember(value, name)) {
-      if (v->IsBool()) {
-	allowSingular_ = v->GetBool();
+      if (first_pass) {
+	if (v->IsBool()) {
+	  allowSingular_ = v->GetBool();
+	  if (containerFlag == kSingularArray)
+	    AssignSingularIfExist(schemaDocument, p, value, GetItemsString(), document, containerFlag);
+	  else if (containerFlag == kSingularObject)
+	    AssignSingularIfExistObject(schemaDocument, p, value, document);
+	} else if (v->IsString() && (containerFlag == kSingularObject)) {
+	  AssignSingularIfExistObject(schemaDocument, p, value, document, v);
+	}
 	return;
       }
       const ValueType* v0 = nullptr;
@@ -3572,14 +3911,31 @@ protected:
 	allowSingularSchema_.count = 2;
 	allowSingularSchema_.schemas = static_cast<const Schema**>(allocator_->Malloc(allowSingularSchema_.count * sizeof(const Schema*)));
 	memset(allowSingularSchema_.schemas, 0, sizeof(Schema*)* allowSingularSchema_.count);
-	if (containerFlag == kSingularObject)
+	if (containerFlag == kSingularObject) {
+	  // if (first_pass)
+	  //   AssignSingularIfExistObject(schemaDocument, p, value, document);
+	  // else
 	  schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_, kSingularValue, &name);
-	else
+	} else {
 	  schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_, kSingularItem);
+	}
 	allowSingularSchema_.begin = validatorCount_;
 	validatorCount_ += allowSingularSchema_.count;
       }
     }
+  }
+  void AssignSingularIfExistObject(SchemaDocumentType& schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document,
+				   const ValueType* prop0=nullptr) {
+    const ValueType* properties = GetMember(value, GetPropertiesString());
+    const ValueType* required = GetMember(value, GetRequiredString());
+    if (!prop0) {
+      if (required && required->IsArray()) // && (required->Size() == 1))
+	prop0 = &((*required)[0]);
+      else if (properties && properties->IsObject() && (properties->MemberCount() == 1))
+	prop0 = &(properties->MemberBegin()->name);
+    }
+    if (properties && prop0)
+      AssignSingularIfExist(schemaDocument, p.Append(GetPropertiesString(), allocator_), *properties, *prop0, document, kSingularObject);
   }
 #endif // RAPIDJSON_YGGDRASIL
 
@@ -4162,6 +4518,7 @@ protected:
     SValue child_stealProperties_;
     SValue shareProperties_;
     SValue child_shareProperties_;
+    const ValueType* enumValues_;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -5235,6 +5592,13 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
     virtual bool EndMissingPropertiesChild(const SValue&) {
         return EndMissingProperties();
+    }
+    void DisallowedValueEnum(const typename SchemaType::ValueType& expected) {
+      currentError_.SetObject();
+      currentError_.AddMember(GetExpectedString(),
+			      ValueType(expected, GetStateAllocator()).Move(),
+			      GetStateAllocator());
+      AddCurrentError(kValidateErrorEnum);
     }
     void GenericError(const char* str) {
       std::cerr << "GenericError: " << str << std::endl;

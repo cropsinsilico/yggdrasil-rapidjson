@@ -100,7 +100,7 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
         case kValidateErrorPatternProperties:           return RAPIDJSON_ERROR_STRING("Object has 'patternProperties' that are not allowed by the schema.");
         case kValidateErrorDependencies:                return RAPIDJSON_ERROR_STRING("Object has missing property or schema dependencies, refer to following errors.");
 
-        case kValidateErrorEnum:                        return RAPIDJSON_ERROR_STRING("Property has a value that is not one of its allowed enumerated values.");
+        case kValidateErrorEnum:                        return RAPIDJSON_ERROR_STRING("Property has a value that is not one of its allowed enumerated values: %expected.");
         case kValidateErrorType:                        return RAPIDJSON_ERROR_STRING("Property has a type '%actual' that is not in the following list: '%expected'.");
 
         case kValidateErrorOneOf:                       return RAPIDJSON_ERROR_STRING("Property did not match any of the sub-schemas specified by 'oneOf', refer to following errors.");
@@ -119,7 +119,7 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
         case kValidateErrorInvalidSchema:               return RAPIDJSON_ERROR_STRING("Property is not a valid JSON schema.");
         case kNormalizeErrorAliasDuplicate:             return RAPIDJSON_ERROR_STRING("Aliased property already exists in the normalized document.");
         case kNormalizeErrorCircularAlias:              return RAPIDJSON_ERROR_STRING("Property has circular aliases.");
-        case kNormalizeErrorConflictingAliases:         return RAPIDJSON_ERROR_STRING("Property has conflicting aliases.");
+        case kNormalizeErrorConflictingAliases:         return RAPIDJSON_ERROR_STRING("Property has conflicting values for %conflicting aliases: %expected vs %actual.");
         case kNormalizeErrorMergeConflict:              return RAPIDJSON_ERROR_STRING("Property has conflicting normalized documents, %expected and %actual");
 	// Warnings
         case kValidateWarnings:                         return RAPIDJSON_ERROR_STRING("One or more validation warnings have occurred");

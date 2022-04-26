@@ -377,6 +377,25 @@ TEST(SchemaNormalizer, SingularObject) {
 	    "{ \"streets\": {\"key\": \"1600 Pennsylvania Ave.\"} }");
 }
 
+TEST(SchemaNormalizer, SingularNested) {
+  Document sd;
+  sd.Parse(
+        "{"
+	"  \"type\": \"array\","
+	"  \"allowSingular\": true,"
+	"  \"items\": {"
+        "    \"type\": \"object\","
+	"    \"allowSingular\": true,"
+	"    \"properties\": {"
+	"       \"streets\": { \"type\": \"string\" }"
+	"    }"
+	"  }"
+        "}");
+  SchemaDocument s(sd);
+  NORMALIZE(s, "\"1600 Pennsylvania Ave.\"", true,
+	    "[ { \"streets\": \"1600 Pennsylvania Ave.\"} ]");
+}
+
 TEST(SchemaNormalizer, AliasCircular) {
     Document sd;
     sd.Parse(

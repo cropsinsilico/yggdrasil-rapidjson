@@ -341,14 +341,14 @@ public:
 	  count = (SizeType)tokenCount_;
 	Ch* old_nameBuffer = r.nameBuffer_;
 	Ch* new_nameBuffer = reinterpret_cast<Ch *>(r.tokens_ + r.tokenCount_ - count);
+	std::ptrdiff_t diff = old_nameBuffer - new_nameBuffer;
 	if (tokenCount_ > count) {
-	  size_t nameBufferSizeRemoved = count;
+	  size_t nameBufferSizeRemoved = 0;
 	  for (Token *t = tokens_; t != tokens_ + tokenCount_ - count; ++t)
-	    nameBufferSizeRemoved += t->length;
+	    nameBufferSizeRemoved += t->length + 1;
 	  std::memmove(new_nameBuffer, old_nameBuffer,
 		       nameBufferSizeRemoved * sizeof(Ch));
 	}
-	std::ptrdiff_t diff = old_nameBuffer - new_nameBuffer;
 	r.tokenCount_ -= count;
 	r.nameBuffer_ = new_nameBuffer;
 	for (Token *t = r.tokens_; t != r.tokens_ + r.tokenCount_; t++)
