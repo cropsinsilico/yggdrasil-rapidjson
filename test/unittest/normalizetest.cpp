@@ -791,6 +791,172 @@ TEST(SchemaNormalizer, SharedProperties) {
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"}, \"city\": \"Washington\" }");
 }
 
+TEST(SchemaNormalizer, StolenPropertiesPath) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"billing_address\": {"
+        "      \"type\": \"object\","
+	"      \"stealProperties\": true,"
+        "      \"properties\": {"
+        "        \"street_address\": { \"type\": \"string\","
+	"                              \"default\": \"default_address\"},"
+        "        \"city\":           { \"type\": \"string\","
+	"                              \"default\": \"default_city\"}"
+        "      },"
+	"      \"additionalProperties\": false,"
+        "      \"required\": [\"street_address\", \"city\"]"
+        "    },"
+        "    \"shipping_address\": {"
+        "      \"type\": \"object\","
+	"      \"allOf\": [{"
+	"        \"stealProperties\": {"
+	"          \"../billing_address\": true,"
+	"          \"..\": [\"street_address\"]"
+	"        },"
+        "        \"properties\": {"
+        "          \"street_address\": { \"type\": \"string\","
+	"                                \"default\": \"default_address\"},"
+        "          \"city\":           { \"type\": \"string\","
+	"                                \"default\": \"default_city\"}"
+        "        },"
+        "        \"required\": [\"street_address\", \"city\"]"
+	"      }, {"
+	"        \"stealProperties\": {"
+	"          \"../billing_address\": true"
+	"        },"
+        "        \"properties\": {"
+        "          \"state\":          { \"type\": \"string\","
+	"                                \"default\": \"default_state\"},"
+        "          \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
+	"                                \"default\": \"residential\" }"
+        "        },"
+        "        \"required\": [\"state\", \"type\"]"
+	"      }]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "{"
+	      "  \"street_address\": \"1600 Pennsylvania Avenue NW\","
+	      "  \"shipping_address\": {"
+	      "  },"
+	      "  \"billing_address\": {"
+	      "    \"city\": \"Washington\","
+	      "    \"state\": \"DC\","
+	      "    \"type\": \"residential\""
+	      "  }"
+	      "}",
+	      true,
+	      "{"
+	      "  \"shipping_address\": {"
+	      "    \"street_address\": \"1600 Pennsylvania Avenue NW\","
+	      "    \"city\": \"Washington\","
+	      "    \"state\": \"DC\","
+	      "    \"type\": \"residential\""
+	      "  },"
+	      "  \"billing_address\": {"
+	      "    \"street_address\": \"1600 Pennsylvania Avenue NW\","
+	      "    \"city\": \"Washington\""
+	      "  }"
+	      "}");
+}
+
+TEST(SchemaNormalizer, SharedPropertiesPath) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"billing_address\": {"
+        "      \"type\": \"object\","
+	"      \"shareProperties\": true,"
+        "      \"properties\": {"
+        "        \"street_address\": { \"type\": \"string\","
+	"                              \"default\": \"default_address\"},"
+        "        \"city\":           { \"type\": \"string\","
+	"                              \"default\": \"default_city\"}"
+        "      },"
+        "      \"required\": [\"street_address\", \"city\"]"
+        "    },"
+        "    \"shipping_address\": {"
+        "      \"type\": \"object\","
+	"      \"allOf\": [{"
+	"        \"shareProperties\": {"
+	"          \"../billing_address\": true,"
+	"          \"..\": [\"street_address\"]"
+	"        },"
+        "        \"properties\": {"
+        "          \"street_address\": { \"type\": \"string\","
+	"                                \"default\": \"default_address\"},"
+        "          \"city\":           { \"type\": \"string\","
+	"                                \"default\": \"default_city\"}"
+        "        },"
+        "        \"required\": [\"street_address\", \"city\"]"
+	"      }, {"
+	"        \"shareProperties\": {"
+	"          \"../billing_address\": true"
+	"        },"
+        "        \"properties\": {"
+        "          \"state\":          { \"type\": \"string\","
+	"                                \"default\": \"default_state\"},"
+        "          \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
+	"                                \"default\": \"residential\" }"
+        "        },"
+        "        \"required\": [\"state\", \"type\"]"
+	"      }]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "{"
+	      "  \"street_address\": \"1600 Pennsylvania Avenue NW\","
+	      "  \"shipping_address\": {"
+	      "  },"
+	      "  \"billing_address\": {"
+	      "    \"city\": \"Washington\","
+	      "    \"state\": \"DC\","
+	      "    \"type\": \"residential\""
+	      "  }"
+	      "}",
+	      true,
+	      "{"
+	      "  \"street_address\": \"1600 Pennsylvania Avenue NW\","
+	      "  \"shipping_address\": {"
+	      "    \"street_address\": \"1600 Pennsylvania Avenue NW\","
+	      "    \"city\": \"Washington\","
+	      "    \"state\": \"DC\","
+	      "    \"type\": \"residential\""
+	      "  },"
+	      "  \"billing_address\": {"
+	      "    \"street_address\": \"1600 Pennsylvania Avenue NW\","
+	      "    \"city\": \"Washington\","
+	      "    \"state\": \"DC\","
+	      "    \"type\": \"residential\""
+	      "  }"
+	      "}");
+}
+
+#ifdef METASCHEMA_YGG_TESTS
+TEST(SchemaNormalizer, YggSchema) {
+    Document sd;
+    sd.Parse(get_yggschema<char>());
+    if (sd.HasParseError()) {
+      Reader reader;
+      BaseReaderHandler<> handler;
+      StringStream json(get_yggschema<char>());
+      reader.Parse(json, handler);
+      std::cerr << get_yggschema<char>() + reader.GetErrorOffset() << std::endl;
+    }
+    EXPECT_FALSE(sd.HasParseError());
+    SchemaDocument s(sd);
+    NORMALIZE(s, get_testschema<char>(), true, get_testschema_result<char>());
+}
+#endif // METASCHEMA_YGG_TESTS
 #if defined(_MSC_VER) || defined(__clang__)
 RAPIDJSON_DIAG_POP
 #endif

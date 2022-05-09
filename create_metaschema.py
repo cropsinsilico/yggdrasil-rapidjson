@@ -1,7 +1,46 @@
 import copy
 import json
 import argparse
+import os
 from urllib.request import urlopen
+
+
+def filter_func_ex():  # pragma: no cover
+    r"""Test function for normalizing filters."""
+    return False
+
+
+filter_func_ex_name = '%s:filter_func_ex' % __file__
+
+
+def make_function(name, base):
+    return [
+        "template<typename T>",
+        "inline const typename item_return<T>::type* " + name + "() { return nullptr; }", "",
+        "template<>",
+        "inline const item_return<char>::type* " + name + "<char>() {",
+        "  const char* out = \""
+        + json.dumps(base, indent=1).replace(
+            "\"\\t\"", "\"\\\\t\"").replace(
+            "\"\\n\"", "\"\\\\n\"").replace(
+            "\\\"", "\\\\\"").replace(
+            "\"", "\\\"").replace(
+            '\n', "\"\n    \"")
+        + "\";",
+        "  return out;",
+        "}", "",
+        "template<>",
+        "inline const item_return<wchar_t>::type* " + name + "<wchar_t>() {",
+        "  const wchar_t* out = L\""
+        + json.dumps(base, indent=1).replace(
+            "\"\\t\"", "\"\\\\t\"").replace(
+            "\"\\n\"", "\"\\\\n\"").replace(
+            "\\\"", "\\\\\"").replace(
+            "\"", "\\\"").replace(
+            '\n', "\"\n    L\"")
+        + "\";",
+        "  return out;",
+        "}", ""]
 
 
 if __name__ == "__main__":
@@ -12,6 +51,8 @@ if __name__ == "__main__":
                               "should be saved."))
     parser.add_argument("--base-draft", default="draft-04",
                         help="JSON schema draft that should be used as a base")
+    parser.add_argument("--ygg-tests", action='store_true',
+                        help='Include tests for the yggdrasil schema')
     args = parser.parse_args()
     url = f'http://json-schema.org/{args.base_draft}/schema#'
     standard = json.loads(urlopen(url).read().decode('utf-8'))
@@ -92,7 +133,13 @@ if __name__ == "__main__":
             "oneOf": [
                 {"type": "boolean"},
                 {"type": "array",
-                 "items": {"type": "string"}}],
+                 "items": {"type": "string"}},
+                {"type": "object",
+                 "additionalProperties": {
+                     "oneOf": [
+                         {"type": "boolean"},
+                         {"type": "array",
+                          "items": {"type": "string"}}]}}],
             "default": False
         },
         "shareProperties": {
@@ -100,7 +147,13 @@ if __name__ == "__main__":
             "oneOf": [
                 {"type": "boolean"},
                 {"type": "array",
-                 "items": {"type": "string"}}],
+                 "items": {"type": "string"}},
+                {"type": "object",
+                 "additionalProperties": {
+                     "oneOf": [
+                         {"type": "boolean"},
+                         {"type": "array",
+                          "items": {"type": "string"}}]}}],
             "default": False
         }
     })
@@ -108,39 +161,66 @@ if __name__ == "__main__":
                 "#ifndef METASCHEMA_H_",
                 "#define METASCHEMA_H_", "",
                 "template<class T>",
-                "struct item_return{ typedef T type; };", "",
-                "template<typename T>",
-                "inline const typename item_return<T>::type* get_metaschema() { return nullptr; }", "",
-                "template<>",
-                "inline const item_return<char>::type* get_metaschema<char>() {",
-                "  const char* out = \""
-                + json.dumps(base, indent=1).replace(
-                    "\"", "\\\"").replace('\n', "\"\n    \"") + "\";",
-                "  return out;",
-                "}", "",
-                "template<>",
-                "inline const item_return<wchar_t>::type* get_metaschema<wchar_t>() {",
-                "  const wchar_t* out = L\""
-                + json.dumps(base, indent=1).replace(
-                    "\"", "\\\"").replace('\n', "\"\n    L\"") + "\";",
-                "  return out;",
-                "}", "",
-                "template<typename T>",
-                "inline const typename item_return<T>::type* get_standard_metaschema() { return nullptr; }", "",
-                "template<>",
-                "inline const item_return<char>::type* get_standard_metaschema<char>() {",
-                "  const char* out = \""
-                + json.dumps(standard, indent=1).replace(
-                    "\"", "\\\"").replace('\n', "\"\n    \"") + "\";",
-                "  return out;",
-                "}", "",
-                "template<>",
-                "inline const item_return<wchar_t>::type* get_standard_metaschema<wchar_t>() {",
-                "  const wchar_t* out = L\""
-                + json.dumps(standard, indent=1).replace(
-                    "\"", "\\\"").replace('\n', "\"\n    L\"") + "\";",
-                "  return out;",
-                "}", "",
-                "", "#endif // METASCHEMA_H_", ""]
+                "struct item_return{ typedef T type; };", ""]
+    contents += (make_function("get_metaschema", base)
+                 + make_function("get_standard_metaschema", standard))
+    ## Create test
+    if args.ygg_tests:
+        import yaml
+        fname = '/Users/langmm/yggdrasil/yggdrasil/.ygg_schema.yml'
+        with open(fname, 'r') as fd:
+            base = yaml.load(fd, yaml.SafeLoader)
+        test_yaml = (
+            {'models': [{
+                'name': 'modelA',
+                'language': 'c',
+                'args': 'model.c',
+                'outputs': [
+                    {'name': 'outputA',
+                     'column_names': ['a', 'b'],
+                     'column_units': ['cm', 'g'],
+                     'filter': {
+                         'function': filter_func_ex_name}}],
+                'working_dir': os.getcwd()}],
+             'connections': [{
+                 'inputs': 'outputA',
+                 'outputs': 'fileA.txt',
+                 'seritype': 'direct',
+                 'working_dir': os.getcwd()}]},
+            {'models': [{
+                'name': 'modelA',
+                'language': 'c',
+                'args': ['model.c'],
+                'inputs': [{'commtype': 'default',
+                            'datatype': {'type': 'bytes'},
+                            'is_default': True,
+                            'name': 'modelA:input'}],
+                'outputs': [{'name': 'modelA:outputA',
+                             'commtype': 'default',
+                             'datatype': {'type': 'bytes'},
+                             'filter': {
+                                 'function': filter_func_ex_name}}],
+                'working_dir': os.getcwd()}],
+             'connections': [{
+                 'inputs': [
+                     {'name': 'modelA:outputA',
+                      'datatype': {'type': 'bytes'},
+                      'commtype': 'default',
+                      'filter': {
+                          'function': filter_func_ex_name}}],
+                 'outputs': [
+                     {'name': 'fileA.txt',
+                      'filetype': 'binary',
+                      'working_dir': os.getcwd(),
+                      'serializer': {'seritype': 'direct'},
+                      'field_names': ['a', 'b'],
+                      'field_units': ['cm', 'g']}]}]})
+        contents += (["#define METASCHEMA_YGG_TESTS", ""]
+                     + make_function("get_yggschema", base)
+                     + make_function("get_testschema", test_yaml[0])
+                     + make_function("get_testschema_result", test_yaml[1]))
+    ## End test
+    contents += ["", "#endif // METASCHEMA_H_", ""]
     with open(args.dest, 'w') as fd:
         fd.write('\n'.join(contents))
+        

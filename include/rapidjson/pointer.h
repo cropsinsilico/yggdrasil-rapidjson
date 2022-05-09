@@ -245,6 +245,10 @@ public:
         \return A new Pointer with appended token.
     */
     GenericPointer Append(const Token& token, Allocator* allocator = 0) const {
+#ifdef RAPIDJSON_YGGDRASIL
+        if (token.length == 2 && token.name[0] == '.' && token.name[1] == '.')
+	    return Pop(1, allocator);
+#endif // RAPIDJSON_YGGDRASIL
         GenericPointer r;
         r.allocator_ = allocator;
         Ch *p = r.CopyFromRaw(*this, 1, token.length + 1);
@@ -333,7 +337,162 @@ public:
     }
 
 #ifdef RAPIDJSON_YGGDRASIL
-    GenericPointer Remove(SizeType count = 1, Allocator* allocator = 0) const {
+    GenericPointer RelativeTo(const GenericPointer& root, Allocator* allocator = 0) const {
+      GenericPointer r;
+      r.allocator_ = allocator;
+      r.CopyFromRaw(root);
+      for (size_t i = 0; i < tokenCount_; i++)
+	r = r.Append(tokens_[i], allocator);
+      return r;
+    }
+    static GenericPointer FromRelative(const Ch* source, size_t length,
+				       Allocator& allocator) {
+      Ch* str = nullptr;
+      if (length > 0 && source[0] != (Ch)'/') {
+	length++;
+	str = (Ch*)allocator.Malloc((length + 1) * sizeof(Ch));
+	str[0] = (Ch)'/';
+	std::memcpy(str + 1, source, (length - 1) * sizeof(Ch));
+      } else {
+	str = (Ch*)allocator.Malloc((length + 1) * sizeof(Ch));
+	std::memcpy(str, source, length * sizeof(Ch));
+      }
+      if (length > 0 && str[length - 1] == (Ch)'/')
+	length--;
+      str[length] = '\0'; // Might be unnecessary
+      size_t last = length;
+      size_t origLength = length;
+      size_t levels = 0;
+      for (size_t j = 0, i = (origLength - 1); j < origLength; j++, i--) {
+	if (str[i] == '/') {
+	  if (last - i == 3 &&
+	      str[i + 1] == '.' &&
+	      str[i + 2] == '.')
+	    levels++;
+	  else if (levels) {
+	    std::memmove(str + i, str + last + 3, length - (last + 3));
+	    length -= (last + 3 - i);
+	    levels--;
+	  }
+	  last = i;
+	}
+      }
+      str[length] = '\0';
+      GenericPointer out(str, length, &allocator);
+      allocator.Free(str);
+      return out;
+    }
+    GenericPointer CompressRelative(Allocator* allocator = 0) const {
+        GenericPointer r;
+        r.allocator_ = allocator;
+	r.CopyFromRaw(*this);
+	size_t levels = 0;
+	size_t origCount = r.tokenCount_;
+	for (size_t j = 0, i = origCount - 1; j < origCount; j++, i--) {
+	  if (r.tokens_[i].length == 2 &&
+	      r.tokens_[i].name[0] == (Ch)'.' &&
+	      r.tokens_[i].name[1] == (Ch)'.') {
+	    levels++;
+	  } else if (levels) {
+	    r = r.Remove((SizeType)(i + 1), r.allocator_);
+	    r = r.Remove((SizeType)i, r.allocator_);
+	    levels--;
+	  }
+	}
+	return r;
+    }
+    GenericPointer Insert(SizeType index, const Token& token,
+			  Allocator* allocator = 0) const {
+        if (index >= tokenCount_)
+	  return Append(token, allocator);
+        GenericPointer r;
+        r.allocator_ = allocator;
+	r.CopyFromRaw(*this, 1, token.length + 1);
+	Token* old_tokens = r.tokens_ + index;
+	Token* new_tokens = old_tokens + 1;
+	size_t size_nameBuffer = 0;
+	for (Token *t = r.tokens_; t != r.tokens_ + index; ++t)
+	  size_nameBuffer += t->length + 1;
+	Ch* old_nameBuffer = r.nameBuffer_ + size_nameBuffer;
+	Ch* new_nameBuffer = old_nameBuffer + token.length + 1;
+	std::ptrdiff_t diff = new_nameBuffer - old_nameBuffer;
+	size_nameBuffer = 0;
+	for (Token *t = r.tokens_ + index; t != r.tokens_ + tokenCount_; ++t)
+	  size_nameBuffer += t->length + 1;
+	std::memmove(new_tokens, old_tokens,
+		     (tokenCount_ - index) * sizeof(Token));
+	std::memmove(new_nameBuffer, old_nameBuffer,
+		     size_nameBuffer * sizeof(Ch));
+	for (Token *t = r.tokens_ + index; t != r.tokens_ + tokenCount_; ++t)
+	  t->name += diff;
+	std::memcpy(old_nameBuffer, token.name,
+		    (token.length + 1) * sizeof(Ch));
+	r.tokens_[index].name = old_nameBuffer;
+	r.tokens_[index].length = token.length;
+	r.tokens_[index].index = token.index;
+        return r;
+    }
+    GenericPointer Insert(SizeType index, const Ch* name, SizeType length,
+			  Allocator* allocator = 0) const {
+        Token token = { name, length, kPointerInvalidIndex };
+        return Insert(index, token, allocator);
+    }
+    GenericPointer Insert(SizeType index, SizeType valueIndex,
+			  Allocator* allocator = 0) const {
+        char buffer[21];
+        char* end = sizeof(SizeType) == 4 ? internal::u32toa(valueIndex, buffer) : internal::u64toa(valueIndex, buffer);
+        SizeType length = static_cast<SizeType>(end - buffer);
+        buffer[length] = '\0';
+
+        if (sizeof(Ch) == 1) {
+            Token token = { reinterpret_cast<Ch*>(buffer), length, valueIndex };
+            return Insert(index, token, allocator);
+        }
+        else {
+            Ch name[21];
+            for (size_t i = 0; i <= length; i++)
+                name[i] = static_cast<Ch>(buffer[i]);
+            Token token = { name, length, valueIndex };
+            return Insert(index, token, allocator);
+        }
+    }
+    GenericPointer Remove(SizeType index, Allocator* allocator = 0) const {
+        if (index >= (tokenCount_ - 1))
+	  return Pop(1, allocator);
+        GenericPointer r;
+        r.allocator_ = allocator;
+	r.CopyFromRaw(*this);
+	Token* old_tokens = r.tokens_ + index + 1;
+	Token* new_tokens = r.tokens_ + index;
+	Ch* old_nameBuffer = r.nameBuffer_;
+	Ch* new_nameBuffer = reinterpret_cast<Ch *>(r.tokens_ + r.tokenCount_ - 1);
+	std::ptrdiff_t diff = old_nameBuffer - new_nameBuffer;
+	size_t size_nameBufferBefore = 0, size_nameBufferAfter = 0;
+	for (Token *t = r.tokens_; t != r.tokens_ + index; ++t)
+	  size_nameBufferBefore += t->length + 1;
+	for (Token *t = r.tokens_ + index + 1; t != r.tokens_ + r.tokenCount_; ++t)
+	  size_nameBufferAfter += t->length + 1;
+	std::memmove(new_tokens, old_tokens,
+		     (tokenCount_ - (index + 1)) * sizeof(Token));
+	// Move names before removed index
+	std::memmove(new_nameBuffer, old_nameBuffer,
+		     size_nameBufferBefore * sizeof(Ch));
+	for (Token *t = r.tokens_; t != r.tokens_ + index; t++)
+	  t->name -= diff;
+	// Move names after removed index
+	old_nameBuffer += size_nameBufferBefore + tokens_[index].length + 1;
+	new_nameBuffer += size_nameBufferBefore;
+	diff = old_nameBuffer - new_nameBuffer;
+	std::memmove(new_nameBuffer, old_nameBuffer,
+		     size_nameBufferAfter * sizeof(Ch));
+	for (Token *t = r.tokens_ + index; t != r.tokens_ + r.tokenCount_ - 1; t++)
+	  t->name -= diff;
+	// Change buffer & total
+	r.nameBuffer_ = new_nameBuffer;
+	r.tokenCount_ -= 1;
+        return r;
+    }
+    GenericPointer Pop(SizeType count = 1, Allocator* allocator = 0) const {
         GenericPointer r;
         r.allocator_ = allocator;
 	r.CopyFromRaw(*this);
@@ -382,6 +541,7 @@ public:
 	    t->name += diff;
 	}
 	std::memcpy((void*)(replace->name), name, length * sizeof(Ch));
+	replace->length = length;
 	size_t nameBufferSizeProceeds = 0;
 	for (Token *t = r.tokens_; t != next; t++)
 	  nameBufferSizeProceeds += t->length + 1;
@@ -777,6 +937,70 @@ public:
     GetWithDefault(GenericDocument<EncodingType, typename ValueType::AllocatorType, stackAllocator>& document, T defaultValue) const {
         return GetWithDefault(document, defaultValue, document.GetAllocator());
     }
+
+#ifdef RAPIDJSON_YGGDRASIL
+    template <typename DocumentType>
+    typename DocumentType::ValueType* GetFromUnfinalized(DocumentType& document, size_t* unresolvedTokenIndex = 0) const {
+        RAPIDJSON_ASSERT(IsValid());
+	typename DocumentType::ValueType* v = document.StackBottom();
+	typename DocumentType::ValueType* vStack = v;
+	typename DocumentType::ValueType* stackTop = document.StackTop() + 1;
+        for (const Token *t = tokens_; t != tokens_ + tokenCount_; ++t) {
+            switch (v->GetType()) {
+            case kObjectType:
+                {
+		    typename DocumentType::ValueType::MemberIterator m = v->FindMember(GenericValue<EncodingType>(GenericStringRef<Ch>(t->name, t->length)));
+                    if (m == v->MemberEnd()) {
+		      if (v != vStack || v->MemberCount() > 0)
+			break;
+		      int i = 0;
+		      typename DocumentType::ValueType* s = vStack + 1;
+		      for (; s != stackTop; s++, i++) {
+			if (((i % 2) == 0) && *s == t->name) {
+			  s++;
+			  break;
+			}
+		      }
+		      if (s == stackTop)
+			break;
+		      v = s;
+		      vStack = v;
+		    } else {
+		      v = &m->value;
+		      vStack = nullptr;
+		    }
+                }
+                continue;
+            case kArrayType:
+	        if (v != vStack || v->Size() > 0) {
+		  if (t->index == kPointerInvalidIndex || t->index >= v->Size())
+                    break;
+		  v = &((*v)[t->index]);
+		  vStack = nullptr;
+		} else {
+		  SizeType i = 0;
+		  typename DocumentType::ValueType* s = vStack + 1;
+		  for (; s != stackTop && i != t->index; s++, i++) {
+		    // TODO: Check for object/array?
+		  }
+		  if (s == stackTop)
+		    break;
+		  v = s;
+		  vStack = v;
+		}
+                continue;
+            default:
+                break;
+            }
+
+            // Error: unresolved token
+            if (unresolvedTokenIndex)
+                *unresolvedTokenIndex = static_cast<size_t>(t - tokens_);
+            return 0;
+        }
+        return v;
+    }
+#endif // RAPIDJSON_YGGDRASIL
 
     //@}
 

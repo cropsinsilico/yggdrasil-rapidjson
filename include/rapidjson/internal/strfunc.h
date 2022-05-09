@@ -59,6 +59,18 @@ inline int StrCmp(const Ch* s1, const Ch* s2) {
     return static_cast<unsigned>(*s1) < static_cast<unsigned>(*s2) ? -1 : static_cast<unsigned>(*s1) > static_cast<unsigned>(*s2);
 }
 
+#ifdef RAPIDJSON_YGGDRASIL
+template<typename Ch>
+inline int StrNCmp(const Ch* s1, const Ch* s2, SizeType N) {
+    RAPIDJSON_ASSERT(s1 != 0);
+    RAPIDJSON_ASSERT(s2 != 0);
+    SizeType i = 1;
+    while(*s1 && (*s1 == *s2) && (i < N)) { s1++; s2++; i++; }
+    return static_cast<unsigned>(*s1) < static_cast<unsigned>(*s2) ? -1 : static_cast<unsigned>(*s1) > static_cast<unsigned>(*s2);
+}
+#endif // RAPIDJSON_YGGDRASIL
+
+  
 //! Returns number of code points in a encoded string.
 template<typename Encoding>
 bool CountStringCodePoint(const typename Encoding::Ch* s, SizeType length, SizeType* outCount) {
