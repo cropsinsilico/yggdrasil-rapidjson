@@ -348,14 +348,20 @@ public:
     static GenericPointer FromRelative(const Ch* source, size_t length,
 				       Allocator& allocator) {
       Ch* str = nullptr;
-      if (length > 0 && source[0] != (Ch)'/') {
-	length++;
+      if (length > 0 && source[0] == (Ch)'!') {
+	length--;
 	str = (Ch*)allocator.Malloc((length + 1) * sizeof(Ch));
-	str[0] = (Ch)'/';
-	std::memcpy(str + 1, source, (length - 1) * sizeof(Ch));
+	std::memcpy(str, source + 1, length * sizeof(Ch));
       } else {
 	str = (Ch*)allocator.Malloc((length + 1) * sizeof(Ch));
 	std::memcpy(str, source, length * sizeof(Ch));
+      }
+      if (length > 0 && str[0] != (Ch)'/') {
+	length++;
+	str = (Ch*)allocator.Realloc(str, length * sizeof(Ch),
+				     (length + 1) * sizeof(Ch));
+	std::memmove(str + 1, str, (length - 1) * sizeof(Ch));
+	str[0] = (Ch)'/';
       }
       if (length > 0 && str[length - 1] == (Ch)'/')
 	length--;

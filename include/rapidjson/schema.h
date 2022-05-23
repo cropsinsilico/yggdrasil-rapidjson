@@ -434,59 +434,137 @@ public:
   typedef typename SchemaType::SValue SValue;
   typedef typename SchemaType::AllocatorType AllocatorType;
   typedef typename SchemaType::SharedProperty SharedPropertyType;
+  typedef typename SchemaType::PointerType PointerType;
   typedef typename SchemaType::Ch Ch;
   typedef GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
   typedef typename NormalizedDocumentType::ValueType NormValueType;
-  SharedProperties(const SchemaType& schema, bool local0=false) :
-    local(local0),
-    propertyCount(local0 ? schema.localSharedPropertyCount_ : schema.sharedPropertyCount_),
-    properties(local0 ? schema.localSharedProperties_ : schema.sharedProperties_) {
+  SharedProperties(const SchemaType& schema) :
+    localPropertyCount(schema.localSharedPropertyCount_),
+    otherPropertyCount(schema.sharedPropertyCount_),
+    propertyCount(schema.localSharedPropertyCount_ +
+		  schema.sharedPropertyCount_),
+    localProperties(schema.localSharedProperties_),
+    otherProperties(schema.sharedProperties_),
+    propertyNames(kArrayType) {
+    for (SizeType i = 0; i < propertyCount; i++) {
+      SharedPropertyType* sp = GetProperty(i);
+      for (typename SharedPropertyType::PropertyEntry* it = sp->PropsBegin();
+	   it != sp->PropsEnd(); it++) {
+	if (!propertyNames.Contains(it->name))
+	  propertyNames.PushBack(SValue(it->name, *schema.allocator_).Move(),
+				 *schema.allocator_);
+      }
+    }
+  }
+  bool isLocal(const SizeType& i) const {
+    return (i < localPropertyCount);
+  }
+  SizeType relativeIndex(const SizeType& i) const {
+    if (isLocal(i))
+      return i;
+    return i - localPropertyCount;
+  }
+  SharedPropertyType* GetProperty(const SizeType& i) {
+    if (i < localPropertyCount)
+      return localProperties + i;
+    else
+      return otherProperties[i - localPropertyCount];
+  }
+  const SharedPropertyType* GetProperty(const SizeType& i) const {
+    if (i < localPropertyCount)
+      return localProperties + i;
+    else
+      return otherProperties[i - localPropertyCount];
   }
   bool AnyMissing() const {
-    for (SizeType i = 0; i < propertyCount; i++)
-      if (properties[i].AnyMissing())
-	return true;
-    return false;
-  }
-  SharedPropertyType* Begin() { return properties; }
-  SharedPropertyType* End() { return properties + propertyCount; }
-  const SharedPropertyType* Begin() const { return properties; }
-  const SharedPropertyType* End() const { return properties + propertyCount; }
-  bool StolenProperty(const Ch* str, SizeType len) const {
-    for (const SharedPropertyType* it = Begin(); it != End(); it++) {
-      if (it->StolenProperty(str, len))
+    for (SizeType i = 0; i < propertyCount; i++) {
+      if (GetProperty(i)->AnyMissing())
 	return true;
     }
     return false;
-  }
-  bool CheckMissing(NormValueType& x,
-		    NormalizedDocumentType& normalized,
-		    bool isLocalProperty = false) {
-    for (SharedPropertyType* it = Begin(); it != End(); it++) {
-      if (!it->CheckMissing(x, normalized, local || isLocalProperty))
-	return false;
-    }
-    return true;
-  }
-  void AssignMissing(NormalizedDocumentType& normalized) {
-    for (SharedPropertyType* it = Begin(); it != End(); it++)
-      it->AssignMissing(normalized);
-  }
-  void FindMissing(NormalizedDocumentType& normalized,
-		   NormValueType& missing) {
-    for (SharedPropertyType* it = Begin(); it != End(); it++)
-      it->FindMissing(normalized, missing);
   }
   void Display() {
-    for (SharedPropertyType* it = Begin(); it != End(); it++) {
+    for (SizeType i = 0; i < propertyCount; i++) {
       std::cerr << "    ";
-      it->Display();
+      GetProperty(i)->Display();
       std::cerr << std::endl;
     }
   }
-  bool local;
+  void AddObject(PointerType instancePtr, PointerType schemaPtr,
+		 NormalizedDocumentType& normalized,
+		 NormValueType* v) {
+    for (SizeType i = 0; i < propertyCount; i++)
+      GetProperty(i)->AddObject(instancePtr, schemaPtr,
+				normalized, v, isLocal(i),
+				relativeIndex(i));
+  }
+  bool hasSrc(const Ch* str, SizeType length) const {
+    for (SizeType i = 0; i < propertyCount; i++)  {
+      if (GetProperty(i)->isSrc(isLocal(i)) &&
+	  GetProperty(i)->FindProperty(SValue(str, length).Move()))
+	return true;
+    }
+    return false;
+  }
+  bool hasDst(const Ch* str, SizeType length) const {
+    for (SizeType i = 0; i < propertyCount; i++)  {
+      if (GetProperty(i)->isDst(isLocal(i)) &&
+	  GetProperty(i)->FindProperty(SValue(str, length).Move()))
+	return true;
+    }
+    return false;
+  }
+  bool AllVisited(const SValue& name, bool source,
+		  SValue* missing = nullptr) const {
+    for (SizeType i = 0; i < propertyCount; i++)  {
+      if (GetProperty(i)->HasUnvisitedProperty(name, source, missing)) {
+	if (!missing)
+	  return false;
+      }
+    }
+    for (SizeType i = 0; i < propertyCount; i++)  {
+      if (GetProperty(i)->HasUnvisitedSiblingProperty(name, source, missing)) {
+	if (!missing)
+	  return false;
+      }
+    }
+    if (missing)
+      return missing->Size() == 0;
+    return true;
+  }
+  bool AllSrcsVisited(const SValue& name, SValue* missing = nullptr) const {
+    return AllVisited(name, true, missing);
+  }
+  bool AllDstsVisited(const SValue& name, SValue* missing = nullptr) const {
+    return AllVisited(name, false, missing);
+  }
+  void Finalize(NormalizedDocumentType& normalized,
+		NormValueType& missing) {
+    // Assign values destinations if all sources have been visited
+    // Add missing properties if all sources have been visited and the
+    //   property is required.
+    // Remove values from sources if all destinations have been visited
+    //   and the property is not present in the source.
+    for (typename SValue::ConstValueIterator it = propertyNames.Begin();
+	 it != propertyNames.End(); ++it) {
+      if (AllSrcsVisited(*it)) {
+	for (SizeType i = 0; i < propertyCount; i++)
+	  GetProperty(i)->AssignMissing(*it, normalized);
+	for (SizeType i = 0; i < propertyCount; i++)
+	  GetProperty(i)->RecordMissing(*it, normalized, missing);
+	if (AllDstsVisited(*it)) {
+	  for (SizeType i = 0; i < propertyCount; i++)
+	    GetProperty(i)->RemoveShared(*it, normalized);
+	}
+      }
+    }
+  }
+  SizeType localPropertyCount;
+  SizeType otherPropertyCount;
   SizeType propertyCount;
-  SharedPropertyType* properties;
+  SharedPropertyType* localProperties;
+  SharedPropertyType** otherProperties;
+  SValue propertyNames;
 };
 
 #endif // RAPIDJSON_YGGDRASIL
@@ -536,15 +614,12 @@ struct SchemaValidationContext {
         arrayUniqueness(false)
 #ifdef RAPIDJSON_YGGDRASIL
 	, normalized(),
-	localSharedProperties(),
 	sharedProperties()
 #endif //RAPIDJSON_YGGDRASIL
     {
 #ifdef RAPIDJSON_YGGDRASIL
-      if (s) {
-	localSharedProperties = s->GetSharedProperties(true);
+      if (s)
 	sharedProperties = s->GetSharedProperties();
-      }
 #endif // RAPIDJSON_YGGDRASIL
     }
 
@@ -566,8 +641,6 @@ struct SchemaValidationContext {
         if (propertyExist)
             factory.FreeState(propertyExist);
 #ifdef RAPIDJSON_YGGDRASIL
-	if (localSharedProperties)
-	  delete localSharedProperties;
 	if (sharedProperties)
 	  delete sharedProperties;
 #endif // RAPIDJSON_YGGDRASIL
@@ -596,7 +669,6 @@ struct SchemaValidationContext {
     bool arrayUniqueness;
 #ifdef RAPIDJSON_YGGDRASIL
     NormalizedDocumentType* normalized;
-    SharedProperties<SchemaDocumentType>* localSharedProperties;
     SharedProperties<SchemaDocumentType>* sharedProperties;
 #endif //RAPIDJSON_YGGDRASIL
 };
@@ -1147,36 +1219,13 @@ public:
     }
     NORM_BODY_(EndObject, (memberCount));
     // Set destinations for local shared properties
-    if (context.localSharedProperties) {
-      for (SharedPropertyType* it = context.localSharedProperties->Begin();
-	   it != context.localSharedProperties->End(); it++) {
-	// Record destination for missing property
-	if (!context.propertyExist[it->index]) {
-	  it->AddDestination(GetInstancePointer(),
-			     GetSchemaPointer(schema),
-			     *this, CurrentValue());
-	  context.propertyExist[it->index] = true;
-	}
-      }
-    }
-    // Share properties with destinations that pointed to this address
-    if (context.localSharedProperties)
-      if (!context.localSharedProperties->CheckMissing(*CurrentValue(), *this))
-	return false;
     if (context.sharedProperties)
-      if (!context.sharedProperties->CheckMissing(*CurrentValue(), *this))
-	return false;
-    // Set missing properties
-    if (context.localSharedProperties)
-      context.localSharedProperties->AssignMissing(*this);
-    if (context.sharedProperties)
-      context.sharedProperties->AssignMissing(*this);
-    // Go through and raise errors for missing properties
+      context.sharedProperties->AddObject(GetInstancePointer(),
+					  GetSchemaPointer(schema),
+					  *this, CurrentValue());
     ValueType missing(kObjectType);
-    if (context.localSharedProperties)
-      context.localSharedProperties->FindMissing(*this, missing);
     if (context.sharedProperties)
-      context.sharedProperties->FindMissing(*this, missing);
+      context.sharedProperties->Finalize(*this, missing);
     for (ConstMemberIterator it = missing.MemberBegin();
 	 it != missing.MemberEnd(); ++it) {
       context.error_handler.StartMissingProperties();
@@ -2873,34 +2922,27 @@ public:
 	    if (v->IsObject())
 	        kwargs_.CopyFrom(*v, *allocator_, true);
 	}
-	// Shared/stolen properties
-	const ValueType* stealProperties = GetMember(value, GetStealPropertiesString());
-	const ValueType* shareProperties = GetMember(value, GetSharePropertiesString());
-	if (stealProperties || shareProperties) {
+	// Push/pull shared properties
+	const ValueType* pushProperties = GetMember(value, GetPushPropertiesString());
+	const ValueType* pullProperties = GetMember(value, GetPullPropertiesString());
+	if (pushProperties || pullProperties) {
 	  SValue allSharedProperties(kArrayType);
-	  if (stealProperties)
-	    GetUniqueSharedProperties(stealProperties, allSharedProperties);
-	  if (shareProperties)
-	    GetUniqueSharedProperties(shareProperties, allSharedProperties);
+	  if (pushProperties)
+	    GetUniqueSharedProperties(pushProperties, allSharedProperties, true);
+	  if (pullProperties)
+	    GetUniqueSharedProperties(pullProperties, allSharedProperties);
 	  if (allSharedProperties.Size() > 0) {
 	    localSharedPropertyCount_ = allSharedProperties.Size();
 	    localSharedProperties_ = static_cast<SharedProperty*>(allocator_->Malloc(sizeof(SharedProperty) * localSharedPropertyCount_));
-	    for (SizeType i = 0; i < localSharedPropertyCount_; i++) {
-	      SizeType index;
-	      if (FindPropertyIndex(ValueType(allSharedProperties[i].GetString(),
-					      allSharedProperties[i].GetStringLength()).Move(),
-				    &index)) {
-		new (&localSharedProperties_[i]) SharedProperty(properties_[index],
-								index,
-								allocator_);
-
-	      }
-	    }
+	    for (SizeType i = 0; i < localSharedPropertyCount_; i++)
+	      new (&localSharedProperties_[i]) SharedProperty(allSharedProperties[i],
+							      this, i,
+							      allocator_);
 	  }
-	  if (stealProperties)
-	    AssignSharedProperties(stealProperties, true);
-	  if (shareProperties)
-	    AssignSharedProperties(shareProperties);
+	  if (pushProperties)
+	    AssignSharedProperties(pushProperties, true);
+	  if (pullProperties)
+	    AssignSharedProperties(pullProperties);
 	}
 #endif // RAPIDJSON_YGGDRASIL
 
@@ -2933,8 +2975,6 @@ public:
 	    localSharedProperties_ = nullptr;
 	}
 	if (sharedProperties_) {
-	    for (SizeType i = 0; i < sharedPropertyCount_; i++)
-	        sharedProperties_[i].~SharedProperty();
 	    AllocatorType::Free(sharedProperties_);
 	    sharedProperties_ = nullptr;
 	}
@@ -3533,10 +3573,8 @@ public:
         if (context.patternPropertiesSchemaCount == 0) { // patternProperties are not additional properties
 #ifdef RAPIDJSON_YGGDRASIL
 	    // TODO: Check for sharedProperty
-	    if ((context.sharedProperties &&
-		 context.sharedProperties->StolenProperty(str, len)) ||
-		(context.localSharedProperties &&
-		 context.localSharedProperties->StolenProperty(str, len)))
+	    if (context.sharedProperties &&
+		context.sharedProperties->hasSrc(str, len))
 	        return true;
 #endif // RAPIDJSON_YGGDRASIL
             // Must set valueSchema for when kValidateContinueOnErrorFlag is set, else reports spurious type error
@@ -3760,8 +3798,8 @@ public:
     RAPIDJSON_STRING_(Aliases, 'a', 'l', 'i', 'a', 's', 'e', 's')
     RAPIDJSON_STRING_(AllowSingular, 'a', 'l', 'l', 'o', 'w', 'S', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
     RAPIDJSON_STRING_(Deprecated, 'd', 'e', 'p', 'r', 'e', 'c', 'a', 't', 'e', 'd')
-    RAPIDJSON_STRING_(StealProperties, 's', 't', 'e', 'a', 'l', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
-    RAPIDJSON_STRING_(ShareProperties, 's', 'h', 'a', 'r', 'e', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
+    RAPIDJSON_STRING_(PushProperties, 'p', 'u', 's', 'h', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
+    RAPIDJSON_STRING_(PullProperties, 'p', 'u', 'l', 'l', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
     // Subtypes
     RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'g')
     RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
@@ -4108,22 +4146,8 @@ protected:
         SizeType len = name.GetStringLength();
         const Ch* str = name.GetString();
         for (SizeType index = 0; index < localSharedPropertyCount_; index++)
-            if (localSharedProperties_[index].name.GetStringLength() == len &&
-                (std::memcmp(localSharedProperties_[index].name.GetString(), str, sizeof(Ch) * len) == 0))
-            {
-                *outIndex = index;
-                return true;
-            }
-        return false;
-    }
-    bool FindSharedPropertyIndex(const ValueType& name, SizeType* outIndex) const {
-        if (!sharedProperties_)
-	    return false;
-        SizeType len = name.GetStringLength();
-        const Ch* str = name.GetString();
-        for (SizeType index = 0; index < sharedPropertyCount_; index++)
-            if (sharedProperties_[index].name.GetStringLength() == len &&
-                (std::memcmp(sharedProperties_[index].name.GetString(), str, sizeof(Ch) * len) == 0))
+            if (localSharedProperties_[index].path.GetStringLength() == len &&
+                (std::memcmp(localSharedProperties_[index].path.GetString(), str, sizeof(Ch) * len) == 0))
             {
                 *outIndex = index;
                 return true;
@@ -4447,158 +4471,262 @@ protected:
     };
 
 #ifdef RAPIDJSON_YGGDRASIL
+    // Pull
+    //   - Destination is local
+    //   - Source is in links
+    //   - Set destinations after all links visited
+    // Push
+    //   - Destinations are in links
+    //   - Source is local
+    //   - Set destinations after sources for that destination are set
     class SharedProperty {
     public:
         typedef typename NormalizedDocumentType::ValueType NormValueType;
         SharedProperty(AllocatorType* allocator = 0,
 		       size_t stackCapacity = kDefaultStackCapacity) :
-	  name(), schema(), required(false),
-	  missing(false), index(0), defaultValue(),
-	  baseProperty(), found(), foundParent(),
-	  sources(kArrayType),
-	  links(allocator, stackCapacity),
-	  // sources(allocator, stackCapacity),
-	  destinations(allocator, stackCapacity),
-	  temporary(allocator, stackCapacity) {}
-        SharedProperty(SValue& name0, AllocatorType* allocator,
-		       size_t stackCapacity = kDefaultStackCapacity) :
-	  name(name0.GetString(), name0.GetStringLength(), *allocator),
-	  schema(), required(false),
-	  missing(false), index(0), defaultValue(),
-	  baseProperty(), found(), foundParent(),
-	  sources(kArrayType),
-	  links(allocator, stackCapacity),
-	  // sources(allocator, stackCapacity),
-	  destinations(allocator, stackCapacity),
-	  temporary(allocator, stackCapacity) {
-	  RAPIDJSON_ASSERT(name0.IsString());
-	  RAPIDJSON_ASSERT(name.IsString());
+	  path(),
+	  schema(),
+	  index(0),
+	  ptr(),
+	  push(false), allProperties(false), relative(false),
+	  visited(false), checkingVisits(0),
+	  properties(allocator, stackCapacity),
+	  links(allocator, stackCapacity) {
+	  checkingVisits = new bool(false);
 	}
-        SharedProperty(Property& p, SizeType index0,
+      SharedProperty(SValue& path0, SchemaType* schema0, size_t index0,
 		       AllocatorType* allocator,
 		       size_t stackCapacity = kDefaultStackCapacity) :
-	  name(p.name.GetString(), p.name.GetStringLength(), *allocator),
-	  schema(const_cast<SchemaType*>(p.schema)), required(p.required),
-	  missing(false), index(index0), defaultValue(),
-	  baseProperty(&p), found(), foundParent(),
-	  sources(kArrayType),
-	  links(allocator, stackCapacity),
-	  // sources(allocator, stackCapacity),
-	  destinations(allocator, stackCapacity),
-	  temporary(allocator, stackCapacity) {
-	  RAPIDJSON_ASSERT(p.name.IsString());
-	  RAPIDJSON_ASSERT(name.IsString());
-	  p.sharedProperty = this;
-	  if (p.schema->defaultSet_)
-	    defaultValue = &(p.schema->default_);
+	  path(path0.GetString(), path0.GetStringLength(), *allocator),
+	  schema(schema0),
+	  index(index0),
+	  ptr(),
+	  push(false), allProperties(false), relative(false),
+	  visited(false), checkingVisits(0),
+	  properties(allocator, stackCapacity),
+	  links(allocator, stackCapacity) {
+	  checkingVisits = new bool(false);
+	  if (path.GetStringLength() > 0 && path.GetString()[0] == '/') {
+	    ptr = PointerType(path.GetString(), path.GetStringLength(),
+			      allocator);
+	  } else {
+	    ptr = PointerType::FromRelative(path.GetString(),
+					    path.GetStringLength(),
+					    *allocator);
+	    relative = true;
+	  }
 	}
         ~SharedProperty() {
+	  delete checkingVisits;
 	  while (!links.Empty())
 	    links.template Pop<LinkEntry>(1);
-	  // while (!sources.Empty())
-	  //   sources.template Pop<DestEntry>(1);
-	  while (!destinations.Empty())
-	    destinations.template Pop<DestEntry>(1);
-	  while (!temporary.Empty())
-	    temporary.template Pop<LinkEntry>(1);
-	  if (found)
-	    delete found;
-	  if (foundParent)
-	    delete foundParent;
+	  while (!properties.Empty())
+	    properties.template Pop<PropertyEntry>(1)->~PropertyEntry();
 	}
-        struct SourceEntry {
-	  SourceEntry() :
-	    name(), found(0), foundParent(0), processed(false) {}
-	  SourceEntry(const SValue& name0, AllocatorType& allocator) :
-	    name(name0, allocator, true), found(0), foundParent(0),
-	    processed(false) {}
-	  void Display() const {
-	  }
-	  SValue name;
-	  NormValueType* found;
-	  PointerType* foundParent;
-	  bool processed;
-	};
-        struct DestEntry {
-	  DestEntry() : instancePtr(), schemaPtr() {}
-	  DestEntry(PointerType pInstance, PointerType pSchema,
-		    AllocatorType& allocator) :
+        struct ValueEntry {
+	  ValueEntry() :
+	    instancePtr(), schemaPtr(), value(), shared(false) {}
+	  ValueEntry(PointerType pInstance, PointerType pSchema,
+		     AllocatorType& allocator) :
 	    instancePtr(pInstance, &allocator),
-	    schemaPtr(pSchema, &allocator) {}
+	    schemaPtr(pSchema, &allocator),
+	    value(), shared(false) {}
+	  ~ValueEntry() {
+	    if (value)
+	      delete value;
+	  }
 	  PointerType instancePtr;
 	  PointerType schemaPtr;
+	  NormValueType* value;
+	  bool shared;
+	};
+        struct PropertyEntry {
+	  PropertyEntry(AllocatorType* allocator = 0,
+			size_t stackCapacity = 0) :
+	    name(), base(), inSource(false), noDsts(false),
+	    srcs(allocator, stackCapacity),
+	    dsts(allocator, stackCapacity) {}
+	  PropertyEntry(const Ch* str,
+			SizeType length,
+			AllocatorType& allocator,
+			bool inSource0 = false,
+			size_t stackCapacity = sizeof(ValueEntry)) :
+	    name(str, length, allocator),
+	    base(), inSource(inSource0), noDsts(false),
+	    srcs(&allocator, stackCapacity),
+	    dsts(&allocator, stackCapacity) {}
+	  ~PropertyEntry() {
+	    while (!srcs.Empty())
+	      srcs.template Pop<ValueEntry>(1)->~ValueEntry();
+	    while (!dsts.Empty())
+	      dsts.template Pop<ValueEntry>(1)->~ValueEntry();
+	  }
+	  void Display() const {
+	    std::cerr << name.GetString();
+	  }
+	  void AddObject(PointerType instancePtr, PointerType schemaPtr,
+			 NormalizedDocumentType& normalized,
+			 NormValueType* v, bool isDestination) {
+	    RAPIDJSON_ASSERT(v && name.IsString());
+	    if (isDestination) {
+	      if (v->HasMember(name))
+		return;
+	      ValueEntry* ref = dsts.template Push<ValueEntry>();
+	      new (ref) ValueEntry(instancePtr, schemaPtr,
+				   normalized.GetAllocator());
+	    } else {
+	      if (!v->HasMember(name))
+		return;
+	      ValueEntry* ref = srcs.template Push<ValueEntry>();
+	      new (ref) ValueEntry(instancePtr, schemaPtr,
+				   normalized.GetAllocator());
+	      // ref->value = new NormValueType(v->FindMember(name)->value,
+	      // 				     normalized.GetAllocator());
+	    }
+	  }
+	  ValueEntry* GetSource() {
+	    if (srcs.Empty())
+	      return nullptr;
+	    return srcs.template Bottom<ValueEntry>();
+	  }
+	  void AssignMissing(NormalizedDocumentType& normalized) {
+	    ValueEntry* src = GetSource();
+	    NormValueType* val = nullptr;
+	    // if (src) {
+	    //   RAPIDJSON_ASSERT(src->value);
+	    //   if (src->value)
+	    //     val = src->value;
+	    if (src) {
+	      NormValueType* srcParent = normalized.Get(src->instancePtr);
+	      RAPIDJSON_ASSERT(srcParent && srcParent->HasMember(name));
+	      if (srcParent && srcParent->HasMember(name))
+		val = &(srcParent->FindMember(name)->value);
+	    } else if (base && base->schema && base->schema->defaultSet_) {
+	      val = const_cast<SValue*>(&(base->schema->default_));
+	    } else {
+	      return;
+	    }
+	    if (!val)
+	      std::cerr << "Failed to get value from source: " << name.GetString() << std::endl;
+	    while (val && !dsts.Empty()) {
+	      ValueEntry* dst = dsts.template Top<ValueEntry>();
+	      NormValueType* parent = normalized.Get(dst->instancePtr);
+	      RAPIDJSON_ASSERT(parent);
+	      if (parent && !parent->HasMember(name)) {
+		parent->AddMember(NormValueType(name.GetString(),
+						name.GetStringLength(),
+						normalized.GetAllocator()).Move(),
+				  NormValueType(*val,
+						normalized.GetAllocator()).Move(),
+				  normalized.GetAllocator());
+		normalized.RecordModified(dst->instancePtr,
+					  dst->instancePtr.Append(name.GetString(),
+								  name.GetStringLength(),
+								  &normalized.GetAllocator()),
+					  true, false);
+		if (src)
+		  src->shared = true;
+	      }
+	      dsts.template Pop<ValueEntry>(1);
+	    }
+	  }
+	  void RecordMissing(NormalizedDocumentType& normalized,
+			     NormValueType& missing) {
+	    if (dsts.Empty())
+	      return;
+	    size_t ndsts = dsts.GetSize() / sizeof(ValueEntry);
+	    ValueEntry* dst = dsts.template Bottom<ValueEntry>();
+	    GenericStringBuffer<EncodingType> sb;
+	    for (size_t i = 0; i < ndsts; i++, dst++) {
+	      NormValueType* parent = normalized.Get(dst->instancePtr);
+	      RAPIDJSON_ASSERT(parent);
+	      if (parent && !parent->HasMember(name)) {
+		dst->instancePtr.StringifyUriFragment(sb);
+		NormValueType instanceRef(sb.GetString(),
+					  (SizeType)sb.GetLength(),
+					  normalized.GetAllocator());
+	      
+		sb.Clear();
+		dst->schemaPtr.StringifyUriFragment(sb);
+		const NormValueType schemaRef(sb.GetString(),
+					      (SizeType)sb.GetLength(),
+					      normalized.GetAllocator());
+		sb.Clear();
+		if (!missing.HasMember(schemaRef))
+		  missing.AddMember(NormValueType(schemaRef,
+						  normalized.GetAllocator()).Move(),
+				    NormValueType(kArrayType).Move(),
+				    normalized.GetAllocator());
+		NormValueType val(kArrayType);
+		val.PushBack(instanceRef, normalized.GetAllocator());
+		val.PushBack(NormValueType(name.GetString(),
+					   name.GetStringLength(),
+					   normalized.GetAllocator()).Move(),
+			     normalized.GetAllocator());
+		missing[schemaRef].PushBack(val, normalized.GetAllocator());
+	      }
+	    }
+	  }
+	  void RemoveShared(NormalizedDocumentType& normalized) {
+	    // TODO: Remove source from list?
+	    if (srcs.Empty() || inSource)
+	      return;
+	    size_t nsrcs = srcs.GetSize() / sizeof(ValueEntry);
+	    ValueEntry* src = srcs.template Bottom<ValueEntry>();
+	    for (size_t i = 0; i < nsrcs; i++, src++) {
+	      if (src->shared) {
+		NormValueType* parent = normalized.Get(src->instancePtr);
+		RAPIDJSON_ASSERT(parent);
+		if (parent && parent->HasMember(name))
+		  parent->RemoveMember(name);
+	      }
+	    }
+	  }
+	  SValue name;
+	  Property* base;
+	  bool inSource;
+	  bool noDsts;
+	  internal::Stack<AllocatorType> srcs;
+	  internal::Stack<AllocatorType> dsts;
 	};
         struct LinkEntry {
 	  LinkEntry() :
-	    src(), orig(), prop(0), steal(false), relative(false) {}
-	  LinkEntry(const LinkEntry& x, AllocatorType& allocator,
-		    bool parent=false) :
-	    src(parent ? x.src.Remove(0, &allocator) : PointerType(x.src, &allocator)),
-	    orig(x.orig.GetString(), x.orig.GetStringLength(), allocator),
-	    prop(x.prop), steal(x.steal), relative(false) {}
-	  LinkEntry(const SValue& v, SharedProperty* prop0, bool steal0,
-		    AllocatorType& allocator) :
-	    src(),
-	    orig(v.GetString(), v.GetStringLength(), allocator),
-	    prop(prop0), steal(steal0), relative(false) {
-	    if (v.GetStringLength() > 0 && v.GetString()[0] == '/') {
-	      src = PointerType(v.GetString(), v.GetStringLength(),
-				&allocator);
-	    } else {
-	      src = PointerType::FromRelative(v.GetString(),
-					      v.GetStringLength(),
-					      allocator);
-	      relative = true;
-	    }
+	    schema(), index(0), visited(false) {}
+	  LinkEntry(SchemaType* schema0, size_t index0) :
+	    schema(schema0), index(index0), visited(false) {}
+	  void Display() const {
+	    NormalizedDocumentType::DisplayPointer(schema->pointer_);
 	  }
-	  LinkEntry& Move() RAPIDJSON_NOEXCEPT { return *this; }
-	  bool SourceFromHere() const {
-	    return (src.GetTokenCount() == 0);
-	  }
-	  bool SourceFromParent() const {
-	    return ((src.GetTokenCount() > 0) &&
-		    (src.GetTokens()[0].length == 2) &&
-		    (src.GetTokens()[0].name[0] == (Ch)('.')) &&
-		    (src.GetTokens()[0].name[1] == (Ch)('.')));
-	  }
-	  bool SourceFromChild() const {
-	    return ((src.GetTokenCount() > 0) && !SourceFromParent());
-	  }
-	  PointerType src;
-	  SValue orig;
-	  SharedProperty* prop;
-	  bool steal;
-	  bool relative;
+	  SchemaType* schema;
+	  size_t index;
+	  bool visited;
 	};
         static const size_t kDefaultStackCapacity = 128;
-        SValue name;
+        SValue path;
         SchemaType* schema;
-        bool required;
-        bool missing;
-        SizeType index;
-        const SValue* defaultValue;
-        Property* baseProperty;
-        NormValueType* found;
-        PointerType* foundParent;
-        SValue sources;
+        size_t index;
+        PointerType ptr;
+        bool push;
+        bool allProperties;
+        bool relative;
+        bool visited;
+        bool* checkingVisits;
+        internal::Stack<AllocatorType> properties;
         internal::Stack<AllocatorType> links;
-      // internal::Stack<AllocatorType> sources;
-        internal::Stack<AllocatorType> destinations;
-        internal::Stack<AllocatorType> temporary;
-        size_t NTemp() const {
-	  return (temporary.GetSize() / sizeof(LinkEntry));
+        size_t NProps() const {
+	  return (properties.GetSize() / sizeof(PropertyEntry));
 	}
-        LinkEntry* TempBegin() {
-	  return temporary.template Bottom<LinkEntry>();
+        PropertyEntry* PropsBegin() {
+	  return properties.template Bottom<PropertyEntry>();
 	}
-        LinkEntry* TempEnd() {
-	  return TempBegin() + NTemp();
+        PropertyEntry* PropsEnd() {
+	  return PropsBegin() + NProps();
 	}
-        const LinkEntry* TempBegin() const {
-	  return temporary.template Bottom<LinkEntry>();
+        const PropertyEntry* PropsBegin() const {
+	  return properties.template Bottom<PropertyEntry>();
 	}
-        const LinkEntry* TempEnd() const {
-	  return TempBegin() + NTemp();
+        const PropertyEntry* PropsEnd() const {
+	  return PropsBegin() + NProps();
 	}
         size_t NLinks() const {
 	  return (links.GetSize() / sizeof(LinkEntry));
@@ -4615,466 +4743,480 @@ protected:
         const LinkEntry* LinksEnd() const {
 	  return LinksBegin() + NLinks();
         }
-        size_t NDests() const {
-	  return (destinations.GetSize() / sizeof(DestEntry));
-	}
-        DestEntry* DestsBegin() {
-	  return destinations.template Bottom<DestEntry>();
-	}
-        DestEntry* DestsEnd() {
-	  return DestsBegin() + NDests();
-	}
-        bool IsLocal() const {
-	  return (schema != nullptr);
-	}
-        bool AnyMissing(bool skipLocal=false) const {
-	  if (missing && !skipLocal) return true;
-	  for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++)
-	    if (it->prop->AnyMissing())
-	      return true;
-	  return false;
+        void DisplayLinks() const {
+	  std::cerr << "[";
+	  for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
+	    if (it != LinksBegin())
+	      std::cerr << ", ";
+	    it->Display();
+	  }
+	  std::cerr << "]";
 	}
         void Display() const {
-	  std::cerr << "SharedProperty(\"" << name.GetString() << "\"";
-	  if (IsLocal())
-	    std::cerr << ", [LOCAL]";
-	  std::cerr << ", sources = ";
-	  // std::cerr << ", sources = [";
-	  // for (const SourceEntry* it = SrcBegin(); it != SrcEnd(); it++) {
-	  // it->Display();
-	  // std::cerr << ", ";
-	  // }
-	  // std::cerr << "], links = [";
-	  NormalizedDocumentType::DisplayValue(sources);
-	  std::cerr << ", links = [";
-	  for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
-	    it->prop->Display();
-	    std::cerr << ", ";
-	  }
-	  std::cerr << "], temp = [";
-	  std::cerr << NTemp();
-	  // for (const LinkEntry* it = TempBegin(); it != TempEnd(); it++) {
-	  //   it->prop->Display();
-	  //   std::cerr << ", ";
-	  // }
-	  std::cerr << "])";
-	}
-        void FindMissing(NormalizedDocumentType& normalized,
-			 NormValueType& missing) {
-	  // if (
-	  if (sources.Size() == 0 && !found && required) {
-	    GenericStringBuffer<EncodingType> sb;
-	    for (DestEntry* it = DestsBegin(); it != DestsEnd(); it++) {
-	      it->instancePtr.StringifyUriFragment(sb);
-	      NormValueType instanceRef(sb.GetString(),
-					(SizeType)sb.GetLength(),
-					normalized.GetAllocator());
-	      
-	      sb.Clear();
-	      it->schemaPtr.StringifyUriFragment(sb);
-	      const NormValueType schemaRef(sb.GetString(),
-					    (SizeType)sb.GetLength(),
-					    normalized.GetAllocator());
-	      sb.Clear();
-	      if (!missing.HasMember(schemaRef))
-		missing.AddMember(NormValueType(schemaRef,
-						normalized.GetAllocator()).Move(),
-				  NormValueType(kArrayType).Move(),
-				  normalized.GetAllocator());
-	      NormValueType val(kArrayType);
-	      val.PushBack(instanceRef, normalized.GetAllocator());
-	      val.PushBack(NormValueType(this->name.GetString(),
-					 this->name.GetStringLength(),
-					 normalized.GetAllocator()).Move(),
-			   normalized.GetAllocator());
-	      missing[schemaRef].PushBack(val, normalized.GetAllocator());
-	    }
-	  }
-	  for (LinkEntry* it = LinksBegin(); it != LinksEnd(); it++)
-	    it->prop->FindMissing(normalized, missing);
-	}
-        bool AssignMissing(NormalizedDocumentType& normalized,
-			   bool* steal=nullptr) {
-	  bool modified = false;
-	  bool stealTarget = false;
-	  if (found) {
-	    while (!destinations.Empty()) {
-	      DestEntry* ref = destinations.template Top<DestEntry>();
-	      SetDestination(ref->instancePtr, normalized);
-	      destinations.template Pop<DestEntry>(1);
-	      modified = true;
-	    }
-	  }
-	  // Follow links if not in the destination LinkEntry
-	  for (LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
-	    if (it->prop->AssignMissing(normalized, &stealTarget)) {
-	      modified = true;
-	      if (it->steal)
-		stealTarget = true;
-	    }
-	  }
-	  if (steal) {
-	    if (stealTarget)
-	      *steal = true;
-	  } else if (stealTarget && foundParent) {
-	    NormValueType* parent = normalized.Get(*foundParent);
-	    if (parent)
-	      parent->RemoveMember(this->name);
-	    delete foundParent;
-	    foundParent = nullptr;
-	  }
-	  return modified;
-	}
-        bool StolenProperty(const Ch* str, SizeType len) const {
-	  if ((len == name.GetStringLength()) &&
-	      (std::memcmp(str, name.GetString(), len * sizeof(Ch)) == 0)) {
-	    for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
-	      if (it->steal)
-		return true;
-	      if (it->prop->StolenProperty(str, len))
-		return true;
-	    }
-	  }
-	  return false;
-	}
-        bool CheckMissing(NormValueType& x,
-			  NormalizedDocumentType& normalized,
-			  bool isLocalProperty) {
-	  if (found)
-	    return true;
-	  if (!x.IsObject())
-	    return false;
-	  typename NormValueType::MemberIterator it = x.FindMember(this->name);
-	  if (it == x.MemberEnd())
-	    return RemoveSource(normalized);
+	  std::cerr << "SharedProperty(\"" << path.GetString() << "\", ";
+	  if (push)
+	    std::cerr << "push";
 	  else
-	    return SetFound(it->value, normalized, isLocalProperty);
+	    std::cerr << "pull";
+	  std::cerr << ", properties = [";
+	  for (const PropertyEntry* it = PropsBegin(); it != PropsEnd(); it++) {
+	    if (it != PropsBegin())
+	      std::cerr << ", ";
+	    it->Display();
+	  }
+	  std::cerr << "], visited = " << visited << ", linksVisited = " <<
+	    AllLinksVisited() << ", ";
+	  if (push)
+	    NormalizedDocumentType::DisplayPointer(schema->pointer_);
+	  else
+	    DisplayLinks();
+	  std::cerr << " -> ";
+	  if (push)
+	    DisplayLinks();
+	  else
+	    NormalizedDocumentType::DisplayPointer(schema->pointer_);
+	  std::cerr << ")";
 	}
-        bool RemoveSource(NormalizedDocumentType& normalized,
-			  SValue* src=nullptr) {
-	  if (src) {
-	    typename SValue::ConstValueIterator it = sources.Index(*src);
-	    if (it != sources.End()) {
-	      sources.Erase(it);
-	      if (sources.Size() == 0 && defaultValue)
-		SetFound(*defaultValue, normalized, true);
+        LinkEntry* AddLink(SchemaType* schema, size_t index) {
+	  LinkEntry* ref = links.template Push<LinkEntry>();
+	  new (ref) LinkEntry(schema, index);
+	  return ref;
+	}
+        bool HasUnvisitedProperty(const SValue& name, bool source,
+				  SValue* missing = nullptr) const {
+	  const PropertyEntry* prop = FindProperty(name);
+	  if (!prop)
+	    return false;
+	  return (!Visited(name, source, missing));
+	}
+        PropertyEntry* FindProperty(const SValue& name) {
+	  if (!properties.Empty()) {
+	    for (PropertyEntry* it = PropsBegin(); it != PropsEnd(); it++) {
+	      if (name.GetStringLength() == it->name.GetStringLength() &&
+		  std::memcmp(name.GetString(), it->name.GetString(),
+			      name.GetStringLength() * sizeof(Ch)) == 0)
+		return it;
 	    }
-	  } else {
-	    for (LinkEntry* it = LinksBegin(); it != LinksEnd(); it++)
-	      if (!it->prop->RemoveSource(normalized, &it->orig))
+	  }
+	  return nullptr;
+	}
+        const PropertyEntry* FindProperty(const SValue& name) const {
+	  if (!properties.Empty()) {
+	    for (const PropertyEntry* it = PropsBegin(); it != PropsEnd(); it++) {
+	      if (name.GetStringLength() == it->name.GetStringLength() &&
+		  std::memcmp(name.GetString(), it->name.GetString(),
+			      name.GetStringLength() * sizeof(Ch)) == 0)
+		return it;
+	    }
+	  }
+	  return nullptr;
+	}
+        PropertyEntry* AddProperty(Property& p,
+				   AllocatorType& allocator,
+				   bool inSource,
+				   bool requireExisting=false) {
+	  PropertyEntry* ref = AddProperty(p.name, allocator, inSource,
+					   requireExisting);
+	  if (ref && !ref->base) {
+	    ref->base = &p;
+	  }
+	  if (ref && !p.sharedProperty)
+	    p.sharedProperty = this;
+	  return ref;
+	}
+        template<typename VT>
+        PropertyEntry* AddProperty(VT& name,
+				   AllocatorType& allocator,
+				   bool inSource,
+				   bool requireExisting=false) {
+	  if (!name.IsString())
+	    return nullptr;
+	  PropertyEntry* ref = FindProperty(SValue(name.GetString(), name.GetStringLength()).Move());
+	  if (!(ref || requireExisting)) {
+	    ref = properties.template Push<PropertyEntry>();
+	    new (ref) PropertyEntry(name.GetString(), name.GetStringLength(),
+				    allocator);
+	  }
+	  if (ref && inSource)
+	    ref->inSource = true;
+	  return ref;
+	}
+        void CheckSourceProperties(const SchemaType* srcSchema) {
+	  for (SizeType i = 0; i < srcSchema->propertyCount_; i++) {
+	    PropertyEntry* match = FindProperty(srcSchema->properties_[i].name);
+	    if (match)
+	      match->inSource = true;
+	  }
+	}
+        void AddProperties(Property* props, SizeType propCount,
+			   AllocatorType& allocator,
+			   bool requireExisting=false) {
+	  for (SizeType i = 0; i < propCount; i++)
+	    AddProperty(props[i], allocator, false, requireExisting);
+	}
+        void AssignMissing(const SValue& name,
+			   NormalizedDocumentType& normalized) {
+	  PropertyEntry* prop = FindProperty(name);
+	  if (prop)
+	    prop->AssignMissing(normalized);
+	}
+        void RecordMissing(const SValue& name,
+			   NormalizedDocumentType& normalized,
+			   NormValueType& missing) {
+	  PropertyEntry* prop = FindProperty(name);
+	  if (prop && prop->base->required)
+	    prop->RecordMissing(normalized, missing);
+	}
+        void RemoveShared(const SValue& name,
+			  NormalizedDocumentType& normalized) {
+	  PropertyEntry* prop = FindProperty(name);
+	  if (prop)
+	    prop->RemoveShared(normalized);
+	}
+        bool isDst(bool local) const {
+	  return ((local && !push) || (!local && push));
+	}
+        bool isSrc(bool local) const {
+	  return (!isDst(local));
+	}
+        bool AllLinksVisited(SValue* missing = nullptr) const {
+	  for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
+	    if (!it->visited) {
+	      if (missing)
+		AddMissingPtr(it->schema->pointer_, missing);
+	      else
 		return false;
-	  }
-	  return true;
-	}
-        bool SetFound(const NormValueType& x,
-		      NormalizedDocumentType& normalized,
-		      bool dont_remove=false) {
-	  if (found)
-	    return true;
-	  found = new NormValueType(x, normalized.GetAllocator());
-	  if (!dont_remove)
-	    foundParent = new PointerType(normalized.GetInstancePointer(),
-					  &normalized.GetAllocator());
-	  missing = false;
-	  for (LinkEntry* it = LinksBegin(); it != LinksEnd(); it++)
-	    if (!it->prop->SetFound(x, normalized, dont_remove))
-	      return false;
-	  return true;
-	}
-        void SetDestination(PointerType ptr,
-			    NormalizedDocumentType& normalized,
-			    NormValueType* parent = nullptr) {
-	  if (!parent)
-	    parent = normalized.Get(ptr);
-	  if (parent) {
-	    parent->AddMember(NormValueType(this->name.GetString(),
-					    this->name.GetStringLength(),
-					    normalized.GetAllocator()).Move(),
-			      NormValueType(*found,
-					    normalized.GetAllocator()).Move(),
-			      normalized.GetAllocator());
-	    normalized.RecordModified(ptr,
-				      ptr.Append(this->name.GetString(),
-						 this->name.GetStringLength(),
-						 &normalized.GetAllocator()),
-				      true, false);
-	  }
-	}
-        void AddDestination(PointerType instancePtr, PointerType schemaPtr,
-			    NormalizedDocumentType& normalized,
-			    NormValueType* v) {
-	  if (found) {
-	    SetDestination(instancePtr, normalized, v);
-	  } else {
-	    DestEntry* ref = destinations.template Push<DestEntry>();
-	    new (ref) DestEntry(instancePtr, schemaPtr,
-				normalized.GetAllocator());
-	    missing = true;
-	  }
-	}
-        void AddSource(const SValue& v, AllocatorType& allocator,
-		       bool steal=false,
-		       bool vRefersToParent=false) {
-	  RAPIDJSON_ASSERT(v.GetStringLength() > 0);
-	  PointerType p(v.GetString());
-	  // TODO: Replace shared with steal
-	  for (LinkEntry* it = TempBegin(); it != TempEnd(); it++) {
-	    if (it->src == p && it->steal == steal)
-	      return;
-	  }
-	  LinkEntry* ref = temporary.template Push<LinkEntry>();
-	  new (ref) LinkEntry(v, this, steal, allocator);
-	  for (typename SValue::ConstValueIterator itr = sources.Begin();
-	       itr != sources.End(); ++itr)
-	    if (*itr == v)
-	      return;
-	  sources.PushBack(SValue(v, allocator, true).Move(), allocator);
-	}
-        LinkEntry* PopLink(internal::Stack<AllocatorType>& stack) {
-	  LinkEntry* ref = stack.template Pop<LinkEntry>(1);
-	  return ref;
-	}
-        LinkEntry* AddLink(const LinkEntry& x,
-			   internal::Stack<AllocatorType>& stack,
-			   AllocatorType& allocator) {
-	  LinkEntry* ref = stack.template Push<LinkEntry>();
-	  new (ref) LinkEntry(x, allocator);
-	  return ref;
-	}
-        void MigrateSource(const LinkEntry& x, AllocatorType& allocator,
-			   bool sourceHasProperty=false) {
-	  RAPIDJSON_ASSERT(x.SourceFromHere());
-	  LinkEntry* ref = AddLink(x, links, allocator);
-	  if (sourceHasProperty)
-	    ref->steal = false;
-	}
-        void SortSources(const SchemaType* root,
-			 const PointerType& path,
-			 AllocatorType& allocator,
-			 bool parallelSchema=false) {
-	  size_t nBefore = NTemp();
-	  if (nBefore == 0)
-	    return;
-	  for (LinkEntry* it = TempBegin(); it != TempEnd(); it++) {
-	    if (it->relative) {
-	      it->src = it->src.RelativeTo(path, &allocator);
-	      it->relative = false;
 	    }
-	    const_cast<SchemaType*>(root)->AddSharedPropertyLink(*it);
 	  }
-	  RAPIDJSON_ASSERT(NTemp() == nBefore);
-	  if (NTemp() != nBefore)
-	    std::cerr << "Element added to temporary stack during sort" << std::endl;
-	  while (!temporary.Empty())
-	    PopLink(temporary);
+	  if (missing)
+	    return (missing->Size() == 0);
+	  return true;
 	}
-    };
-    void GetUniqueSharedProperties(const ValueType* v, SValue& dest,
-				   bool dontRecurse=false) {
-      if (v->IsBool()) {
-	for (SizeType i = 0; i < propertyCount_; i++)
-	  if (properties_[i].name.IsString())
-	    AddUniqueElement(dest, properties_[i].name);
-      } else if (v->IsArray()) {
-	for (typename ValueType::ConstValueIterator i = v->Begin(); i != v->End(); ++i)
-	  if (v->IsString())
-	    AddUniqueElement(dest, *v);
-      } else if (v->IsObject() && !dontRecurse) {
-	for (typename ValueType::ConstMemberIterator itr = v->MemberBegin(); itr != v->MemberEnd(); ++itr)
-	  GetUniqueSharedProperties(&itr->value, dest, true);
-      }
-    }
-    void AddChildSharedPropertyLink(const typename SharedProperty::LinkEntry& x, const SchemaType* childSchema, bool parallelSchema=false) {
-      if (childSchema) {
-	if (parallelSchema) {
-	  const_cast<SchemaType*>(childSchema)->AddSharedPropertyLink(x);
-	} else {
-	  typename SharedProperty::LinkEntry x_up(x, *allocator_, true);
-	  const_cast<SchemaType*>(childSchema)->AddSharedPropertyLink(x_up);
-	}
-      }
-    }
-    bool AddSharedPropertyLink(const typename SharedProperty::LinkEntry& x) {
-      SizeType index;
-      RAPIDJSON_ASSERT(!x.SourceFromParent());
-      if (x.SourceFromParent()) {
-	std::cerr << "AddSharedPropertyLink: No parent" << std::endl;
-	return false;
-      }
-      if (allOf_.schemas) {
-	for (SizeType i = 0; i < allOf_.count; i++)
-	  AddChildSharedPropertyLink(x, allOf_.schemas[i], true);
-      }
-      if (anyOf_.schemas) {
-	for (SizeType i = 0; i < anyOf_.count; i++)
-	  AddChildSharedPropertyLink(x, anyOf_.schemas[i], true);
-      }
-      if (oneOf_.schemas) {
-	for (SizeType i = 0; i < oneOf_.count; i++)
-	  AddChildSharedPropertyLink(x, oneOf_.schemas[i], true);
-      }
-      if (allowSingularSchema_.schemas) {
-	for (SizeType i = 0; i < allowSingularSchema_.count; i++)
-	  AddChildSharedPropertyLink(x, allowSingularSchema_.schemas[i], true);
-      }
-      if (x.SourceFromChild()) {
-	ValueType name;
-	if (x.src.GetTokens()[0].index == kPointerInvalidIndex)
-	  name.SetString(x.src.GetTokens()[0].name,
-			 x.src.GetTokens()[0].length);
-	else
-	  name.SetUint(x.src.GetTokens()[0].index);
-	if (name.IsString()) {
-	  bool patternMatched = false;
-	  if (patternProperties_) {
-	    for (SizeType i = 0; i < patternPropertyCount_; i++) {
-	      if (patternProperties_[i].pattern &&
-		  IsPatternMatch(patternProperties_[i].pattern,
-				 name.GetString(),
-				 name.GetStringLength())) {
-		AddChildSharedPropertyLink(x, patternProperties_[i].schema);
-		patternMatched = true;
+        bool HasUnvisitedSiblingProperty(const SValue& name, bool source,
+					 SValue* missing = nullptr) const {
+	  if ((source && !push) || (!source && push)) {
+	    return schema->HasUnvisitedSharedProperty(name, source, true,
+						      index, missing);
+	  } else {
+	    for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
+	      if (it->schema->HasUnvisitedSharedProperty(name, source, false,
+							 it->index, missing)) {
+		if (missing)
+		  AddMissingPtr(it->schema->pointer_, missing);
+		else
+		  return true;
 	      }
 	    }
 	  }
-	  if (properties_ && FindPropertyIndex(name, &index))
-	    AddChildSharedPropertyLink(x, properties_[index].schema);
-	  else if (additionalPropertiesSchema_)
-	    AddChildSharedPropertyLink(x, additionalPropertiesSchema_);
-	  else if (!patternMatched) {
-	    std::cerr << "Failed to find child property: " << name.GetString() << ", ";
-	    NormalizedDocumentType::DisplayPointer(x.src);
-	    std::cerr << std::endl;
+	  if (missing)
+	    return (missing->Size() > 0);
+	  return false;
+	}
+        bool NoDsts(const SValue& name) const {
+	  const PropertyEntry* prop = FindProperty(name);
+	  if (prop && prop->noDsts)
+	    return true;
+	  return false;
+	}
+        bool LocalVisited(const SValue& name, bool source,
+			  SValue* missing = nullptr) const {
+	  if (source && NoDsts(name))
+	    return true;
+	  if ((source && push) || (!source && !push)) {
+	    // Local
+	    if (visited)
+	      return true;
+	    if (missing)
+	      AddMissingPtr(schema->pointer_, missing);
 	    return false;
-	  }
-	} else {
-	  if (itemsList_)
-	    AddChildSharedPropertyLink(x, itemsList_);
-	  else if (itemsTuple_ && name.GetUint() < itemsTupleCount_)
-	    AddChildSharedPropertyLink(x, itemsTuple_[name.GetUint()]);
-	  else if (additionalItemsSchema_)
-	    AddChildSharedPropertyLink(x, additionalItemsSchema_);
-	  else {
-	    std::cerr << "Failed to find child item: " << name.GetUint() << ", ";
-	    NormalizedDocumentType::DisplayPointer(x.src);
-	    std::cerr << std::endl;
-	    return false;
+	  } else {
+	    // Links
+	    return AllLinksVisited(missing);
 	  }
 	}
-      } else {
-	RAPIDJSON_ASSERT(x.prop);
-	if (!x.prop) return false;
-	bool hasProperty = false;
-	if (properties_)
-	  hasProperty = FindPropertyIndex(ValueType(x.prop->name.GetString(),
-						    x.prop->name.GetStringLength()).Move(),
-					  &index);
-	if (FindLocalSharedPropertyIndex(ValueType(x.prop->name.GetString(),
-						   x.prop->name.GetStringLength()).Move(),
-					 &index)) {
-	  localSharedProperties_[index].MigrateSource(x, *allocator_,
-						      hasProperty);
-	} else {
-	  if (!FindSharedPropertyIndex(ValueType(x.prop->name.GetString(),
-						 x.prop->name.GetStringLength()).Move(),
-				       &index)) {
-	    sharedPropertyCount_++;
-	    if (sharedProperties_)
-	      sharedProperties_ = static_cast<SharedProperty*>(allocator_->Realloc(sharedProperties_, sizeof(SharedProperty) * (sharedPropertyCount_ - 1), sizeof(SharedProperty) * sharedPropertyCount_));
-	    else
-	      sharedProperties_ = static_cast<SharedProperty*>(allocator_->Malloc(sizeof(SharedProperty) * sharedPropertyCount_));
-	    index = sharedPropertyCount_ - 1;
-	    new (sharedProperties_ + index) SharedProperty(x.prop->name, allocator_);
+        void AddMissingPtr(const PointerType& p, SValue* missing) const {
+	  GenericStringBuffer<EncodingType> sb;
+	  if (!p.IsValid())
+	    std::cerr << "AddMissingPtr: invalid pointer" << std::endl;
+	  p.StringifyUriFragment(sb);
+	  missing->PushBack(SValue(sb.GetString(), (SizeType)sb.GetLength(),
+				   *schema->allocator_).Move(),
+			    *schema->allocator_);
+	}
+        bool Visited(const SValue& name, bool source,
+		     SValue* missing = nullptr) const {
+	  if (*checkingVisits)
+	    return true;
+	  *checkingVisits = true;
+	  bool out = true;
+	  if (!LocalVisited(name, source, missing)) {
+	    out = false;
 	  }
-	  sharedProperties_[index].MigrateSource(x, *allocator_, hasProperty);
+	  *checkingVisits = false;
+	  return out;
+	}
+        void AddObject(PointerType instancePtr, PointerType schemaPtr,
+		       NormalizedDocumentType& normalized,
+		       NormValueType* v, bool local, SizeType index) {
+	  bool isDestination = isDst(local);
+	  size_t i = 0;
+	  for (PropertyEntry* it = PropsBegin(); it != PropsEnd(); it++, i++)
+	    it->AddObject(instancePtr, schemaPtr, normalized, v,
+			  isDestination);
+	  if (local) {
+	    visited = true;
+	  } else {
+	    for (LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
+	      if (it->schema->pointer_ == schemaPtr) {
+		RAPIDJSON_ASSERT(it->index == index);
+		it->visited = true;
+	      }
+	    }
+	  }
+	  if (isDestination) {
+	    for (PropertyEntry* it = PropsBegin(); it != PropsEnd(); it++, i++) {
+	      if (isDestination && it->dsts.Empty() && !it->noDsts) {
+		// Check if all destinations added and if so, then mark the
+		//   property as having no destinations so that it is treated
+		//   as visited
+		bool dstsVisited = Visited(it->name, false);
+		if (dstsVisited) {
+		  it->noDsts = true;
+		  RAPIDJSON_ASSERT(Visited(it->name, true));
+		}
+	      }
+	    }
+	  }
+	}
+        void SortSources(const SchemaType* root,
+			 const PointerType& rootPath,
+			 AllocatorType& allocator,
+			 bool parallelSchema=false) {
+	  if (relative) {
+	    ptr = ptr.RelativeTo(rootPath, &allocator);
+	    relative = false;
+	  }
+	  const_cast<SchemaType*>(root)->AddSharedPropertyLink(ptr, this);
+	}
+    };
+#define NESTED_FUNCTION_CALL(method, ptr, ...)		\
+    if (ptr.GetTokenCount() > 0) {					\
+      RAPIDJSON_ASSERT(!(ptr.GetTokens()[0].length == 2 &&		\
+			 ptr.GetTokens()[0].name[0] == '.' &&		\
+			 ptr.GetTokens()[0].name[1] == '.'));		\
+      if (ptr.GetTokens()[0].length == 2 &&				\
+	  ptr.GetTokens()[0].name[0] == '.' &&				\
+	  ptr.GetTokens()[0].name[1] == '.') {				\
+	std::cerr << #method << ": parent disallowed" << std::endl;	\
+	return;								\
+      }									\
+    }									\
+    if (allOf_.schemas) {						\
+      for (SizeType i = 0; i < allOf_.count; i++)			\
+	method(ptr, __VA_ARGS__, allOf_.schemas[i], true);		\
+    }									\
+    if (anyOf_.schemas) {						\
+      for (SizeType i = 0; i < anyOf_.count; i++)			\
+	method(ptr, __VA_ARGS__, anyOf_.schemas[i], true);		\
+    }									\
+    if (oneOf_.schemas) {						\
+      for (SizeType i = 0; i < oneOf_.count; i++)			\
+	method(ptr, __VA_ARGS__, oneOf_.schemas[i], true);		\
+    }									\
+    if (allowSingularSchema_.schemas) {					\
+      for (SizeType i = 0; i < allowSingularSchema_.count; i++)		\
+	method(ptr, __VA_ARGS__, allowSingularSchema_.schemas[i], true); \
+    }									\
+    if (ptr.GetTokenCount() > 0) {					\
+      SizeType index;							\
+      ValueType name;							\
+      if (ptr.GetTokens()[0].index == kPointerInvalidIndex)		\
+	name.SetString(ptr.GetTokens()[0].name,				\
+		       ptr.GetTokens()[0].length);			\
+      else								\
+	name.SetUint(ptr.GetTokens()[0].index);				\
+      if (name.IsString()) {						\
+	bool patternMatched = false;					\
+	if (patternProperties_) {					\
+	  for (SizeType i = 0; i < patternPropertyCount_; i++) {	\
+	    if (patternProperties_[i].pattern &&			\
+		IsPatternMatch(patternProperties_[i].pattern,		\
+			       name.GetString(),			\
+			       name.GetStringLength())) {		\
+	      method(ptr, __VA_ARGS__, patternProperties_[i].schema);	\
+	      patternMatched = true;					\
+	    }								\
+	  }								\
+	}								\
+	if (properties_ && FindPropertyIndex(name, &index))		\
+	  method(ptr, __VA_ARGS__, properties_[index].schema); \
+	else if (additionalPropertiesSchema_)				\
+	  method(ptr, __VA_ARGS__, additionalPropertiesSchema_); \
+	else if (!patternMatched) {					\
+	  std::cerr << #method << ": Failed to find child property: " << name.GetString() << ", "; \
+	  NormalizedDocumentType::DisplayPointer(ptr);			\
+	  std::cerr << std::endl;					\
+	  return;							\
+	}								\
+      } else {								\
+	if (itemsList_)							\
+	  method(ptr, __VA_ARGS__, itemsList_);				\
+	else if (itemsTuple_ && name.GetUint() < itemsTupleCount_)	\
+	  method(ptr, __VA_ARGS__, itemsTuple_[name.GetUint()]); \
+	else if (additionalItemsSchema_)				\
+	  method(ptr, __VA_ARGS__, additionalItemsSchema_);	\
+	else {								\
+	  std::cerr << #method << ": Failed to find child item: " << name.GetUint() << ", "; \
+	  NormalizedDocumentType::DisplayPointer(ptr);			\
+	  std::cerr << std::endl;					\
+	  return;							\
+	}								\
+      }									\
+      return;								\
+    }
+#define NESTED_FUNCTION_CALL_VERBOSE(method, ptr, ...)			\
+    std::cerr << #method << " [";					\
+    NormalizedDocumentType::DisplayPointer(pointer_);			\
+    std::cerr << "]: ";							\
+    NormalizedDocumentType::DisplayPointer(ptr);			\
+    std::cerr << std::endl;						\
+    NESTED_FUNCTION_CALL(method, ptr, __VA_ARGS__)
+    
+    void GetUniqueSharedProperties(const ValueType* v, SValue& dest,
+				   bool push=false,
+				   const ValueType* key0=nullptr) {
+      if (v->IsObject()) {
+	if (v->MemberCount() > 0 && !key0) {
+	  for (typename ValueType::ConstMemberIterator itr = v->MemberBegin(); itr != v->MemberEnd(); ++itr)
+	    GetUniqueSharedProperties(&itr->value, dest, push, &(itr->name));
+	}
+      } else if (v->IsBool() || v->IsArray()) {
+	if (v->IsArray()) {
+	  for (typename ValueType::ConstValueIterator itr = v->Begin(); itr != v->End(); ++itr) {
+	    if (!itr->IsString())
+	      return;
+	  }
+	}
+	if (key0)
+	  AddUniqueElement(dest, *key0);
+	else
+	  AddUniqueElement(dest, GetRelativeUpString());
+      }
+    }
+    void AddSharedPropertyLink(const PointerType p, SharedProperty* sharedProp,
+			       const SchemaType* childSchema, bool parallelSchema=false) {
+      if (childSchema) {
+	if (parallelSchema) {
+	  const_cast<SchemaType*>(childSchema)->AddSharedPropertyLink(p, sharedProp);
+	} else {
+	  PointerType p_up = p.Remove(0, allocator_);
+	  const_cast<SchemaType*>(childSchema)->AddSharedPropertyLink(p_up, sharedProp);
 	}
       }
-      return true;
     }
+    void AddSharedPropertyLink(const PointerType p, SharedProperty* sharedProp) {
+      NESTED_FUNCTION_CALL(AddSharedPropertyLink, p, sharedProp);
+      if (sharedProp->push && properties_) {
+	sharedProp->AddProperties(properties_, propertyCount_, *allocator_,
+				  !sharedProp->allProperties);
+	if (sharedProp->allProperties)
+	  sharedProp->CheckSourceProperties(sharedProp->schema);
+      } else {
+	sharedProp->CheckSourceProperties(this);
+      }
+      sharedPropertyCount_++;
+      sharedProperties_ = static_cast<SharedProperty**>(allocator_->Realloc(sharedProperties_, sizeof(SharedProperty*) * (sharedPropertyCount_ - 1), sizeof(SharedProperty*) * sharedPropertyCount_));
+      sharedProperties_[sharedPropertyCount_ - 1] = sharedProp;
+      sharedProp->AddLink(this, sharedPropertyCount_ - 1);
+    }
+    
+#define NESTED_CONST_CALL(method, schema, ...)			\
+    const_cast<SchemaType*>(schema)->method(__VA_ARGS__)
     void SortSharedProperties(const SchemaType* root, const PointerType path) {
       if (inSort_)
 	return;
       inSort_ = true;
+      if (localSharedProperties_) {
+	for (SizeType i = 0; i < localSharedPropertyCount_; i++)
+	  localSharedProperties_[i].SortSources(root, path, *allocator_);
+      }
       if (properties_) {
 	for (SizeType i = 0; i < propertyCount_; i++)
-	  AssignSharedProperties(root, properties_[i].schema,
-				 path.Append(properties_[i].name.GetString(),
-					     properties_[i].name.GetStringLength(),
-					     allocator_));
+	  NESTED_CONST_CALL(SortSharedProperties, properties_[i].schema,
+			    root,
+			    path.Append(properties_[i].name.GetString(),
+					properties_[i].name.GetStringLength(),
+					allocator_));
       }
       if (additionalPropertiesSchema_)
-	AssignSharedProperties(root, additionalPropertiesSchema_,
-			       path.Append(GetWildcardString().GetString(),
-					   GetWildcardString().GetStringLength(),
-					   allocator_));
+	NESTED_CONST_CALL(SortSharedProperties, additionalPropertiesSchema_,
+			  root,
+			  path.Append(GetWildcardString().GetString(),
+				      GetWildcardString().GetStringLength(),
+				      allocator_));
       if (patternProperties_) {
 	// TODO: Get pattern string
 	for (SizeType i = 0; i < patternPropertyCount_; i++)
-	  AssignSharedProperties(root, patternProperties_[i].schema,
-				 path.Append(GetWildcardString().GetString(),
-					     GetWildcardString().GetStringLength(),
-					     allocator_));
+	  NESTED_CONST_CALL(SortSharedProperties,
+			    patternProperties_[i].schema,
+			    root,
+			    path.Append(GetWildcardString().GetString(),
+					GetWildcardString().GetStringLength(),
+					allocator_));
       }
       if (itemsList_)
-	AssignSharedProperties(root, itemsList_, path.Append(0, allocator_));
+	NESTED_CONST_CALL(SortSharedProperties, itemsList_,
+			  root, path.Append(0, allocator_));
       else if (itemsTuple_) {
 	for (SizeType i = 0; i < itemsTupleCount_; i++)
-	  AssignSharedProperties(root, itemsTuple_[i],
-				 path.Append(i, allocator_));
+	  NESTED_CONST_CALL(SortSharedProperties, itemsTuple_[i], root,
+			    path.Append(i, allocator_));
       }
       // TODO: Indicate index?
       if (additionalItemsSchema_)
-	AssignSharedProperties(root, additionalItemsSchema_,
-			       path.Append(GetWildcardString().GetString(),
-					   GetWildcardString().GetStringLength(),
-					   allocator_));
+	NESTED_CONST_CALL(SortSharedProperties, additionalItemsSchema_, root,
+			  path.Append(GetWildcardString().GetString(),
+				      GetWildcardString().GetStringLength(),
+				      allocator_));
       // if (hasSchemaDependencies_) {
       // dependenciesSchema?
       // }
       if (allOf_.schemas) {
 	for (SizeType i = 0; i < allOf_.count; i++)
-	  AssignSharedProperties(root, allOf_.schemas[i], path, true);
+	  NESTED_CONST_CALL(SortSharedProperties, allOf_.schemas[i], root, path);
       }
       if (anyOf_.schemas) {
 	for (SizeType i = 0; i < anyOf_.count; i++)
-	  AssignSharedProperties(root, anyOf_.schemas[i], path, true);
+	  NESTED_CONST_CALL(SortSharedProperties, anyOf_.schemas[i], root, path);
       }
       if (oneOf_.schemas) {
 	for (SizeType i = 0; i < oneOf_.count; i++)
-	  AssignSharedProperties(root, oneOf_.schemas[i], path, true);
+	  NESTED_CONST_CALL(SortSharedProperties, oneOf_.schemas[i], root, path);
       }
       if (allowSingularSchema_.schemas) {
 	for (SizeType i = 0; i < allowSingularSchema_.count; i++)
-	  AssignSharedProperties(root, allowSingularSchema_.schemas[i],
-				 path, true);
+	  NESTED_CONST_CALL(SortSharedProperties, allowSingularSchema_.schemas[i],
+			    root, path);
       }
     }
-    void AssignSharedProperties(const SchemaType* root,
-				const SchemaType* childSchema,
-				const PointerType path,
-				bool parallelSchema=false) {
-      if (childSchema) {
-	const_cast<SchemaType*>(childSchema)->SortSharedProperties(root, path);
-	if (childSchema->localSharedProperties_) {
-	  for (SizeType i = 0; i < childSchema->localSharedPropertyCount_; i++)
-	    childSchema->localSharedProperties_[i].SortSources(root, path, *allocator_, parallelSchema);
-	}
-	if (childSchema->sharedProperties_) {
-	  for (SizeType i = 0; i < childSchema->sharedPropertyCount_; i++)
-	    childSchema->sharedProperties_[i].SortSources(root, path, *allocator_, parallelSchema);
-	}
-      }
-    }
-    void AssignSharedProperties(const ValueType* v, bool steal=false,
+#undef NESTED_CONST_CALL
+    void AssignSharedProperties(const ValueType* v, bool push=false,
 				const ValueType* key0=nullptr) {
       if (v->IsObject()) {
 	if (v->MemberCount() > 0 && !key0) {
 	  for (typename ValueType::ConstMemberIterator itr = v->MemberBegin(); itr != v->MemberEnd(); ++itr)
-	    AssignSharedProperties(&(itr->value), steal, &(itr->name));
+	    AssignSharedProperties(&(itr->value), push, &(itr->name));
 	}
-      } else {
-	SValue key, val;
+      } else if (v->IsBool() || v->IsArray()) {
+	if (v->IsArray()) {
+	  for (typename ValueType::ConstValueIterator itr = v->Begin(); itr != v->End(); ++itr) {
+	    if (!itr->IsString())
+	      return;
+	  }
+	}
+	SValue key;
 	if (key0) {
+	  RAPIDJSON_ASSERT(key0->IsString());
 	  key.SetString(key0->GetString(),
 			key0->GetStringLength(),
 			*allocator_);
@@ -5083,37 +5225,76 @@ protected:
 			GetRelativeUpString().GetStringLength(),
 			*allocator_);
 	}
+	RAPIDJSON_ASSERT(key.IsString());
+	SizeType index;
+	if (!FindLocalSharedPropertyIndex(ValueType(key.GetString(),
+						    key.GetStringLength()).Move(),
+					  &index)) {
+	  std::cerr << "Missing allocated local shared property: " << key.GetString() << std::endl;
+	  return;
+	}
+	localSharedProperties_[index].push = push;
 	if (v->IsBool()) {
 	  if (v->GetBool()) {
-	    for (SizeType i = 0; i < propertyCount_; i++) {
-	      SizeType index;
-	      if (FindLocalSharedPropertyIndex(ValueType(properties_[i].name.GetString(),
-							 properties_[i].name.GetStringLength()).Move(),
-					  &index))
-		localSharedProperties_[index].AddSource(key, *allocator_,
-							steal, (!key0));
-	    }
+	    localSharedProperties_[index].allProperties = true;
+	    if (!push)
+	      localSharedProperties_[index].AddProperties(properties_,
+							  propertyCount_,
+							  *allocator_);
 	  }
 	} else if (v->IsArray() && v->Size() > 0) {
-	  for (typename ValueType::ConstValueIterator itr = v->Begin(); itr != v->End(); ++itr) {
-	    SizeType index;
-	    if (itr->IsString() && FindLocalSharedPropertyIndex(*itr, &index))
-	      localSharedProperties_[index].AddSource(key, *allocator_,
-						      steal, (!key0));
+	  SizeType i;
+	  if (push) {
+	    for (typename ValueType::ConstValueIterator itr = v->Begin(); itr != v->End(); ++itr) {
+	      localSharedProperties_[index].AddProperty(*itr, *allocator_, FindPropertyIndex(*itr, &i));
+	    }
+	  } else {
+	    for (typename ValueType::ConstValueIterator itr = v->Begin(); itr != v->End(); ++itr) {
+	      if (itr->IsString() && FindPropertyIndex(*itr, &i))
+		localSharedProperties_[index].AddProperty(properties_[i],
+							  *allocator_,
+							  false);
+	    }
 	  }
 	}
       }
     }
+    bool HasUnvisitedSharedProperty(const SValue& name, bool source,
+				    bool local, size_t index,
+				    SValue* missing=nullptr) const {
+      if (localSharedProperties_) {
+	for (SizeType i = 0; i < localSharedPropertyCount_; i++) {
+	  if (local && i == index) return false;
+	  if (localSharedProperties_[i].isSrc(true) == source) continue;
+	  if (localSharedProperties_[i].HasUnvisitedProperty(name, source,
+							     missing)) {
+	    if (!missing)
+	      return true;
+	  }
+	}
+      }
+      if (sharedProperties_) {
+	for (SizeType i = 0; i < sharedPropertyCount_; i++) {
+	  if (!local && i == index) return false;
+	  if (sharedProperties_[i]->isSrc(false) == source) continue;
+	  if (sharedProperties_[i]->HasUnvisitedProperty(name, source,
+							 missing)) {
+	    if (!missing)
+	      return true;
+	  }
+	}
+      }
+      if (missing)
+	return (missing->Size() > 0);
+      return false;
+    }
+#undef NESTED_FUNCTION_CALL_VERBOSE
+#undef NESTED_FUNCTION_CALL
 public:
     SharedPropertiesType* GetSharedProperties(bool local=false) const {
-      if (local) {
-	if (!localSharedProperties_)
-	  return nullptr;
-      } else {
-	if (!sharedProperties_)
-	  return nullptr;
-      }
-      return new SharedPropertiesType(*this, local);
+      if (!(localSharedProperties_ || sharedProperties_))
+	return nullptr;
+      return new SharedPropertiesType(*this);
     }
 protected:    
 #endif // RAPIDJSON_YGGDRASIL
@@ -5195,7 +5376,7 @@ protected:
     const ValueType* enumValues_;
     SharedProperty* localSharedProperties_;
     SizeType localSharedPropertyCount_;
-    SharedProperty* sharedProperties_;
+    SharedProperty** sharedProperties_;
     SizeType sharedPropertyCount_;
 #endif // RAPIDJSON_YGGDRASIL
   

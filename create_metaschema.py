@@ -128,8 +128,8 @@ if __name__ == "__main__":
                             " If true, a generic warning will be displayed."),
             "type": ["boolean", "string"],
         },
-        "stealProperties": {
-            "description": "If true, this property will look for missing properties in the parent and steal them during normalization. If a property is also selected by the 'shareProperties' field, the property will stolen and NOT shared. If a property is explicitly named in the parent's schema, the property will be shared and not stolen.",
+        "pullProperties": {
+            "description": "Pull properties from another location in the provided JSON document. If true, any missing local properties will be pulled from the parent object. If an array of property names is provided, only those local properties in the array will be pulled from the parent object. If an object is provided, the keys should be relative or absolute paths to objects in the JSON document that properties will be pulled from with the values specifying which properties should be pulled (true for all properties and an array or a select subset).",
             "oneOf": [
                 {"type": "boolean"},
                 {"type": "array",
@@ -142,8 +142,8 @@ if __name__ == "__main__":
                           "items": {"type": "string"}}]}}],
             "default": False
         },
-        "shareProperties": {
-            "description": "If true, this property will look for missing properties in the parent and share them during normalization. If a property is also selected by the 'stealProperties' field, the property will be stolen and NOT shared.",
+        "pushProperties": {
+            "description": "Push properties to another location in the provided JSON document. If true, any properties missing from the parent will be pushed to the parent object. If an array of property names is provided, only those parent properties in the array will be pushed to the parent object. If an object is provided, the keys should be relative or absolute paths to objects in the JSON document that properties will be pushed to with the values specifying which properties should be pushed (true for all missing destination properties and an array or a select subset).",
             "oneOf": [
                 {"type": "boolean"},
                 {"type": "array",
