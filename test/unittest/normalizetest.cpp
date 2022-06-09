@@ -67,10 +67,41 @@ using namespace rapidjson;
     EXPECT_FALSE(n.HasParseError());\
     if (normalizer.GetNormalized() != n) {\
         StringBuffer sb;\
-        Writer<StringBuffer> w(sb);\
+        PrettyWriter<StringBuffer> w(sb);		\
         normalizer.GetNormalized().Accept(w);\
-        printf("GetNormalized() Expected: %s Actual: %s\n", normalized, sb.GetString());\
+	StringBuffer sb0;\
+	PrettyWriter<StringBuffer> w0(sb0);\
+	n.Accept(w0);\
+        printf("GetNormalized() Expected: %s Actual: %s\n", sb0.GetString(), sb.GetString()); \
         ADD_FAILURE();\
+    }\
+}
+#define NO_NORMALIZE(schema, json)		\
+{\
+    SchemaNormalizer normalizer(schema);\
+    Document d;\
+    d.Parse(json);\
+    EXPECT_FALSE(d.HasParseError());\
+    EXPECT_TRUE(true == d.Accept(normalizer));	\
+    EXPECT_TRUE(true == normalizer.IsValid());\
+    ValidateErrorCode code = normalizer.GetInvalidSchemaCode();\
+    EXPECT_TRUE(code == kValidateErrorNone);		       \
+    EXPECT_TRUE(normalizer.GetInvalidSchemaKeyword() == 0);    \
+    EXPECT_FALSE(normalizer.WasNormalized());		       \
+    if (!normalizer.IsValid()) {\
+        StringBuffer sb;\
+        normalizer.GetInvalidSchemaPointer().StringifyUriFragment(sb);\
+        printf("Invalid schema: %s\n", sb.GetString());\
+        printf("Invalid keyword: %s\n", normalizer.GetInvalidSchemaKeyword());\
+        printf("Invalid code: %d\n", code);\
+        printf("Invalid message: %s\n", GetValidateError_En(code));\
+        sb.Clear();\
+        normalizer.GetInvalidDocumentPointer().StringifyUriFragment(sb);\
+        printf("Invalid document: %s\n", sb.GetString());\
+        sb.Clear();\
+        PrettyWriter<StringBuffer> w(sb);	\
+        normalizer.GetError().Accept(w);\
+        printf("Validation error: %s\n", sb.GetString());\
     }\
 }
 
@@ -338,6 +369,30 @@ TEST(SchemaNormalizer, Alias) {
 		     "}}");
 }
 
+TEST(SchemaNormalizer, AliasArray) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"shipping_address\": {"
+        "      \"type\": \"object\","
+        "      \"properties\": {"
+        "        \"street_addresses\": { \"type\": \"array\","
+	"                                \"items\": {\"type\": \"string\"},"
+	"                                \"aliases\": [\"streets\"] }"
+        "      },"
+        "      \"required\": [\"street_addresses\"]"
+        "    }"
+        "  }"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "{\"shipping_address\": {\"streets\": [\"a\", \"b\"]}}",
+	      true,
+	      "{\"shipping_address\": {\"street_addresses\": [\"a\", \"b\"]}}");
+}
+
 TEST(SchemaNormalizer, SingularArray) {
   Document sd;
   sd.Parse(
@@ -355,6 +410,7 @@ TEST(SchemaNormalizer, SingularArray) {
 	    "{ \"streets\": [\"1600 Pennsylvania Ave.\"] }");
   NORMALIZE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true,
 	    "{ \"streets\": [\"1600 Pennsylvania Ave.\"] }");
+  NO_NORMALIZE(s, "{ \"streets\": [\"1600 Pennsylvania Ave.\"] }");
 }
 
 TEST(SchemaNormalizer, SingularObject) {
@@ -375,6 +431,7 @@ TEST(SchemaNormalizer, SingularObject) {
 	    "{ \"streets\": {\"key\": \"1600 Pennsylvania Ave.\"} }");
   NORMALIZE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true,
 	    "{ \"streets\": {\"key\": \"1600 Pennsylvania Ave.\"} }");
+  NO_NORMALIZE(s, "{ \"streets\": {\"key\": \"1600 Pennsylvania Ave.\"} }");
 }
 
 TEST(SchemaNormalizer, SingularNested) {
@@ -394,6 +451,7 @@ TEST(SchemaNormalizer, SingularNested) {
   SchemaDocument s(sd);
   NORMALIZE(s, "\"1600 Pennsylvania Ave.\"", true,
 	    "[ { \"streets\": \"1600 Pennsylvania Ave.\"} ]");
+  NO_NORMALIZE(s, "[ { \"streets\": \"1600 Pennsylvania Ave.\"} ]");
 }
 
 TEST(SchemaNormalizer, AliasCircular) {
@@ -845,10 +903,10 @@ TEST(SchemaNormalizer, PullPropertiesPath) {
     NORMALIZE(s,
 	      "{"
 	      "  \"street_address\": \"1600 Pennsylvania Avenue NW\","
+	      "  \"city\": \"Washington\","
 	      "  \"shipping_address\": {"
 	      "  },"
 	      "  \"billing_address\": {"
-	      "    \"city\": \"Washington\","
 	      "    \"state\": \"DC\","
 	      "    \"type\": \"residential\""
 	      "  }"

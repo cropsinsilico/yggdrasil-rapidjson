@@ -194,27 +194,26 @@ if __name__ == "__main__":
                 'inputs': [{'commtype': 'default',
                             'datatype': {'type': 'bytes'},
                             'is_default': True,
-                            'name': 'modelA:input'}],
-                'outputs': [{'name': 'modelA:outputA',
+                            'name': 'input'}],
+                'outputs': [{'name': 'outputA',
                              'commtype': 'default',
                              'datatype': {'type': 'bytes'},
                              'filter': {
-                                 'function': filter_func_ex_name}}],
+                                 'function': filter_func_ex_name},
+                             'field_names': ['a', 'b'],
+                             'field_units': ['cm', 'g']}],
                 'working_dir': os.getcwd()}],
              'connections': [{
                  'inputs': [
-                     {'name': 'modelA:outputA',
+                     {'name': 'outputA',
                       'datatype': {'type': 'bytes'},
                       'commtype': 'default',
-                      'filter': {
-                          'function': filter_func_ex_name}}],
+                      'working_dir': os.getcwd()}],
                  'outputs': [
                      {'name': 'fileA.txt',
                       'filetype': 'binary',
-                      'working_dir': os.getcwd(),
                       'serializer': {'seritype': 'direct'},
-                      'field_names': ['a', 'b'],
-                      'field_units': ['cm', 'g']}]}]})
+                      'working_dir': os.getcwd()}]}]})
         contents += (["#define METASCHEMA_YGG_TESTS", ""]
                      + make_function("get_yggschema", base)
                      + make_function("get_testschema", test_yaml[0])

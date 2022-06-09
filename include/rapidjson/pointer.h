@@ -337,6 +337,106 @@ public:
     }
 
 #ifdef RAPIDJSON_YGGDRASIL
+    bool StartsWith(const GenericPointer& rhs) const {
+      if (!IsValid() || !rhs.IsValid() || tokenCount_ <= rhs.tokenCount_)
+	return (*this == rhs);
+      return (CountMatchingTokens(rhs) == rhs.tokenCount_);
+    }
+    size_t CountMatchingTokens(const GenericPointer& rhs) const {
+        if (!IsValid() || !rhs.IsValid())
+            return false;
+
+        for (size_t i = 0; i < tokenCount_; i++) {
+	    if (i >= rhs.tokenCount_ ||
+		tokens_[i].index != rhs.tokens_[i].index ||
+                tokens_[i].length != rhs.tokens_[i].length || 
+                (tokens_[i].length != 0 && std::memcmp(tokens_[i].name, rhs.tokens_[i].name, sizeof(Ch)* tokens_[i].length) != 0))
+            {
+                return i;
+            }
+        }
+
+        return tokenCount_;
+    }
+    bool PartialCompare(const GenericPointer& rhs) const {
+        if (!IsValid() || !rhs.IsValid() || tokenCount_ > rhs.tokenCount_)
+            return false;
+
+        for (size_t i = 0; i < tokenCount_; i++) {
+            if (tokens_[i].index != rhs.tokens_[i].index ||
+                tokens_[i].length != rhs.tokens_[i].length || 
+                (tokens_[i].length != 0 && std::memcmp(tokens_[i].name, rhs.tokens_[i].name, sizeof(Ch)* tokens_[i].length) != 0))
+            {
+                return false;
+            }
+        }
+
+        return true;
+      
+    }
+    GenericPointer PartialFront(size_t nCopy, Allocator* allocator = 0) const {
+        GenericPointer r;
+	r.allocator_ = allocator;
+        if (nCopy > tokenCount_)
+	    nCopy = tokenCount_;
+        if (!r.allocator_) // allocator is independently owned.
+	    r.ownAllocator_ = r.allocator_ = RAPIDJSON_NEW(Allocator)();
+
+        size_t nameBufferSize = nCopy; // null terminators for tokens
+        for (const Token *t = tokens_; t != tokens_ + nCopy; ++t)
+            nameBufferSize += t->length;
+
+        r.tokenCount_ = nCopy;
+        r.tokens_ = static_cast<Token *>(allocator_->Malloc(r.tokenCount_ * sizeof(Token) + nameBufferSize * sizeof(Ch)));
+        r.nameBuffer_ = reinterpret_cast<Ch *>(r.tokens_ + r.tokenCount_);
+        if (nCopy > 0) {
+            std::memcpy(r.tokens_, tokens_, nCopy * sizeof(Token));
+        }
+        if (nameBufferSize > 0) {
+            std::memcpy(r.nameBuffer_, nameBuffer_, nameBufferSize * sizeof(Ch));
+        }
+
+        // Adjust pointers to name buffer
+        std::ptrdiff_t diff = r.nameBuffer_ - nameBuffer_;
+        for (Token *t = r.tokens_; t != r.tokens_ + nCopy; ++t)
+            t->name += diff;
+
+        return r;
+    }
+    GenericPointer PartialBack(size_t nSkip, Allocator* allocator = 0) const {
+        GenericPointer r;
+	r.allocator_ = allocator;
+        if (nSkip > tokenCount_)
+	    nSkip = tokenCount_;
+        if (!r.allocator_) // allocator is independently owned.
+	    r.ownAllocator_ = r.allocator_ = RAPIDJSON_NEW(Allocator)();
+
+	size_t nCopy = tokenCount_ - nSkip;
+	// size_t nSkip = tokenCount_ - nCopy;
+        size_t nameBufferSize = nCopy; // null terminators for tokens
+        for (const Token *t = tokens_ + nSkip; t != tokens_ + tokenCount_; ++t)
+            nameBufferSize += t->length;
+	size_t nameBufferSkip = nSkip; // null terminators for tokens
+	for (const Token *t = tokens_; t != tokens_ + nSkip; ++t)
+	    nameBufferSkip += t->length;
+
+        r.tokenCount_ = nCopy;
+        r.tokens_ = static_cast<Token *>(allocator_->Malloc(r.tokenCount_ * sizeof(Token) + nameBufferSize * sizeof(Ch)));
+        r.nameBuffer_ = reinterpret_cast<Ch *>(r.tokens_ + r.tokenCount_);
+        if (nCopy > 0) {
+            std::memcpy(r.tokens_, tokens_ + nSkip, nCopy * sizeof(Token));
+        }
+        if (nameBufferSize > 0) {
+            std::memcpy(r.nameBuffer_, nameBuffer_ + nameBufferSkip, nameBufferSize * sizeof(Ch));
+        }
+
+        // Adjust pointers to name buffer
+        std::ptrdiff_t diff = r.nameBuffer_ - (nameBuffer_ + nameBufferSkip);
+        for (Token *t = r.tokens_; t != r.tokens_ + nCopy; ++t)
+            t->name += diff;
+
+        return r;
+    }
     GenericPointer RelativeTo(const GenericPointer& root, Allocator* allocator = 0) const {
       GenericPointer r;
       r.allocator_ = allocator;
