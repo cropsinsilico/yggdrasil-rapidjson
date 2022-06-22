@@ -930,7 +930,7 @@ public:
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
     temporary_memory_(nullptr),
-    extend_child_(nullptr), basePointer_(allocator) {}
+    extend_child_(nullptr), basePointer_(allocator), core_(0) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent,
 			    unsigned& index, StackAllocator* stackAllocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity) :
@@ -947,13 +947,13 @@ public:
     aliases_(kObjectType), inSingular_(false),
     temporary_memory_(nullptr),
     extend_child_(nullptr),
-    basePointer_(&parent->GetAllocator()) {
+    basePointer_(&parent->GetAllocator()),
+    core_(parent->core_) {
     parent->AddChild(this);
     SizeType N = (SizeType)(parent->singularStack_.GetSize() / sizeof(ModificationEntry));
     ModificationEntry* it = parent->singularStack_.template Bottom<ModificationEntry>();
     for (SizeType i = 0; i < N; i++, it++)
       RecordSingular(it->before, it->after);
-    // TODO: Copy parent pairs
   }
 
   //! Destructor.
@@ -1052,6 +1052,7 @@ public:
 					(int)index);
     child->FinalizeFromStack();
     bool replaced = false;
+    // TODO: Extend pairs
     if (!child->ExtendAliases(context, aliases_, &replaced)) return false;
     if (!ExtendAliases(context, child->aliases_, &replaced)) return false;
     if (!(replaced || child->WasModified()))
@@ -1393,24 +1394,29 @@ public:
       }
     }
     NORM_BODY_(EndObject, (memberCount));
-    if (baseSchema->sharedProperties_) {
-      ValueType missing(kObjectType);
-      PointerType iP = GetInstancePointer(false, true);
-      if (baseSchemaSet)
-	iP = iP.Pop(1, &GetAllocator());
-      baseSchema->sharedProperties_->Finalize(iP, iS, *this, CurrentValue(),
-					      missing);
-      for (ConstMemberIterator it = missing.MemberBegin();
-	   it != missing.MemberEnd(); ++it) {
-	context.error_handler.StartMissingProperties();
-	for (ConstValueIterator v = it->value.Begin(); v != it->value.End(); ++v)
-	  context.error_handler.AddMissingProperty((*v)[1]);
-	if (context.error_handler.EndMissingPropertiesShared((*it->value.Begin())[0], it->name))
-	  RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
-      }
-    }
+    out = FinalizeShared(context, *baseSchema, iS, baseSchemaSet);
+    CHECK_RESULT;
     // Do EndObject
     NORM_END_(EndObject);
+  }
+  bool FinalizeShared(Context& context, const SchemaType& schema,
+		      PointerType iS, bool isSingular = false) {
+    if (!schema.sharedProperties_) return true;
+    ValueType missing(kObjectType);
+    PointerType iP = GetInstancePointer(false, true);
+    if (isSingular)
+      iP = iP.Pop(1, &GetAllocator());
+    schema.sharedProperties_->Finalize(iP, iS, *this, CurrentValue(),
+				       missing);
+    for (ConstMemberIterator it = missing.MemberBegin();
+	 it != missing.MemberEnd(); ++it) {
+      context.error_handler.StartMissingProperties();
+      for (ConstValueIterator v = it->value.Begin(); v != it->value.End(); ++v)
+	context.error_handler.AddMissingProperty((*v)[1]);
+      if (context.error_handler.EndMissingPropertiesShared((*it->value.Begin())[0], it->name))
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
+    }
+    return true;
   }
   bool NormStartArray(Context& context, const SchemaType& schema) {
     NORM_BEGIN_(StartArray);
@@ -1434,9 +1440,11 @@ public:
     if (!current)
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
     if (CurrentIdx()) {
+      bool childMod = false;
       if (*CurrentIdx() >= current->Size()) {
 	if ((!CurrentModified()) && CurrentChildModified()) {
 	  current->PushBack(ValueType(kNullType).Move(), GetAllocator());
+	  childMod = true;
 	} else {
 	  RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current index %d outside of"
 					    " the current array (size = %d)",
@@ -1444,7 +1452,7 @@ public:
 					    (int)(current->Size()));
 	}
       }
-      PushValue((*current)[*CurrentIdx()], *CurrentIdx());
+      PushValue((*current)[*CurrentIdx()], *CurrentIdx(), false, childMod);
       CurrentIdx()[0]++;
       current = CurrentValue();
     } else if (CurrentKey()) {
@@ -1831,6 +1839,8 @@ public:
   ValueType* Get(const PointerType& p, size_t* unresolvedTokenIndex = 0) {
     // Replace other modifications like alias?
     PointerType pSing = ReplaceSingular(p);
+    if (core_ && !pSing.StartsWith(basePointer_))
+      return core_->Get(pSing, unresolvedTokenIndex);
     RAPIDJSON_ASSERT(pSing.StartsWith(basePointer_));
     return pSing.PartialBack(basePointer_.GetTokenCount()).GetFromUnfinalized(document_, unresolvedTokenIndex);
   }
@@ -2174,18 +2184,19 @@ private:
       p = CurrentPointer(key);
     return isValueSingular(p, false, nullptr, true);
   }
-  void PushValue(ValueType& value, PointerType& p, bool appended=false) {
+  void PushValue(ValueType& value, PointerType& p, bool appended=false,
+		 bool modified = false, bool child_modified = false) {
     ValueEntry* ref = valueStack_.template Push<ValueEntry>();
     new (ref) ValueEntry(value, p, &GetAllocator());
     ref->singular = isValueSingular(p, false, nullptr, appended);
-    if (ref->singular)
+    if (ref->singular || modified)
       ref->modified = true;
     else
       ref->modified = isValueModified(p, false, kCheckModifiedBoth);
     if (extend_child_) {
       ref->child_singular = extend_child_->isValueSingular(p, false, nullptr,
 							   appended);
-      if (ref->child_singular)
+      if (ref->child_singular || child_modified)
 	ref->child_modified = true;
       else
 	ref->child_modified = extend_child_->isValueModified(p, false,
@@ -2201,21 +2212,24 @@ private:
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     }
   }
-  void PushValue(ValueType& value) {
+  void PushValue(ValueType& value,
+		 bool modified = false, bool child_modified = false) {
     PointerType p;
     if (valueStack_.Empty())
       p = GetInstancePointer();
     else
       p = CurrentPointer();
-    PushValue(value, p);
+    PushValue(value, p, false, modified, child_modified);
   }
-  void PushValue(ValueType& value, ValueType& key) {
+  void PushValue(ValueType& value, ValueType& key,
+		 bool modified = false, bool child_modified = false) {
     PointerType p = CurrentPointer(key);
-    PushValue(value, p, true);
+    PushValue(value, p, true, modified, child_modified);
   }
-  void PushValue(ValueType& value, SizeType index) {
+  void PushValue(ValueType& value, SizeType index,
+		 bool modified = false, bool child_modified = false) {
     PointerType p = CurrentPointer(index);
-    PushValue(value, p, true);
+    PushValue(value, p, true, modified, child_modified);
   }
   void PopValue() {
     ValueEntry* ref = valueStack_.template Pop<ValueEntry>(1);
@@ -2603,11 +2617,10 @@ public:
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     std::cerr << (const char*)(sb.GetString());
   }
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
   void DisplayAliases() {
     DisplayValue(aliases_, true);
   }
-  void DisplayModifications(internal::Stack<AllocatorType>* stack=nullptr) {
+  void DisplayModifications(internal::Stack<StackAllocatorType>* stack=nullptr) {
     if (!stack)
       stack = &modifiedStack_;
     std::cerr << "Modifications: " << std::endl;
@@ -2638,7 +2651,6 @@ public:
       std::cerr << std::endl;
     }
   }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 
   static const size_t kDefaultStackCapacity = 1024;
   DocumentType document_;
@@ -2659,6 +2671,7 @@ public:
   void* temporary_memory_;
   GenericNormalizedDocument* extend_child_;
   PointerType basePointer_;
+  GenericNormalizedDocument* core_;
 
 public:
 #define PARAM_WITH_CONTEXT_(...)				\
@@ -3230,12 +3243,13 @@ public:
     bool Normalize(const SValue& x, SValue& dest,
 		   const PointerType instancePtr,
 		   const PointerType schemaPtr,
+		   NormalizedDocumentType& core,
 		   AllocatorType* allocator) const {
       ValueType sdv(kNullType);
       SchemaDocumentType sd(sdv);
       GenericStringBuffer<EncodingType> sb;
       instancePtr.StringifyUriFragment(sb);
-      GenericSchemaNormalizer<SchemaDocumentType, BaseReaderHandler<EncodingType>, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> n(sd, *this, sb.GetString(), sb.GetLength(), schemaPtr);
+      GenericSchemaNormalizer<SchemaDocumentType, BaseReaderHandler<EncodingType>, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> n(sd, *this, sb.GetString(), sb.GetLength(), schemaPtr, core);
       x.Accept(n);
       if (n.IsValid()) {
 	if (n.WasNormalized())
@@ -3247,18 +3261,6 @@ public:
       return false;
     }
 
-    // void DisplayPropertyDefaults() const {
-    // 	std::cerr << "PropertyDefaults [";
-    // 	NormalizedDocumentType::DisplayPointer(pointer_);
-    // 	std::cerr << "]: " << std::endl;
-    // 	for (SizeType index = 0; index < propertyCount_; index++) {
-    // 	    std::cerr << "   " << properties_[index].name.GetString() <<
-    // 	        ": " << properties_[index].required << ", ";
-    // 	    NormalizedDocumentType::DisplayPointer(properties_[index].schema->pointer_);
-    // 	    std::cerr << ", " << properties_[index].schema->defaultSet_ <<
-    // 	        ", " << (bool)(properties_[index].sharedProperty) << std::endl;
-    // 	}
-    // }
 #endif // RAPIDJSON_YGGDRASIL
 
     const SValue& GetURI() const {
@@ -5420,6 +5422,7 @@ protected:
 		if (prop->base->schema->Normalize(*value, value0,
 						  dst.instancePtr.Append(name.GetString(), name.GetStringLength(), &normalized.GetAllocator()),
 						  dst.schemaPtr.Append(SchemaType::GetPropertiesString(), &normalized.GetAllocator()).Append(name.GetString(), name.GetStringLength(), &normalized.GetAllocator()),
+						  normalized,
 						  &normalized.GetAllocator()))
 		  value = &value0;
 		else
@@ -8064,7 +8067,7 @@ public:
       AddCurrentError(kValidateErrorEnum);
     }
     void GenericError(const char* str) {
-      std::cerr << "GenericError: " << str << std::endl;
+      // std::cerr << "GenericError: " << str << std::endl;
       currentError_.SetObject();
       std::basic_string<Ch> msg = units::convert_chars<UTF8<char>, EncodingType>(std::basic_string<char>(str));
       currentError_.AddMember(GetMessageString(),
@@ -8951,6 +8954,7 @@ public:
         const SchemaType& root,
         const Ch* basePath, size_t basePathSize,
 	const PointerType& schemaPointerAbs,
+        NormalizedDocumentType& core,
         StateAllocator* allocator = 0,
         size_t schemaStackCapacity = kDefaultSchemaStackCapacity,
         size_t documentStackCapacity = kDefaultDocumentStackCapacity) :
@@ -8969,6 +8973,7 @@ public:
     validator_index_(0), child_validators_(0),
     temp_instanceRef_(nullptr), temp_schemaRef_(nullptr),
     schemaPointerAbs_(schemaPointerAbs, &normalized_.GetAllocator()) {
+    normalized_.core_ = &core;
     normalized_.SetDocumentStack(&this->documentStack_);
     if (basePath) {
       PointerType basePointer(basePath, basePathSize,
