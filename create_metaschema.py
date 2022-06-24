@@ -185,7 +185,7 @@ if __name__ == "__main__":
              'connections': [{
                  'inputs': 'outputA',
                  'outputs': 'fileA.txt',
-                 'seritype': 'direct',
+                 'seritype': 'ply',
                  'working_dir': os.getcwd()}]},
             {'models': [{
                 'name': 'modelA',
@@ -212,7 +212,7 @@ if __name__ == "__main__":
                  'outputs': [
                      {'name': 'fileA.txt',
                       'filetype': 'binary',
-                      'serializer': {'seritype': 'direct'},
+                      'serializer': {'seritype': 'ply'},
                       'working_dir': os.getcwd()}]}]})
         contents += (["#define METASCHEMA_YGG_TESTS", ""]
                      + make_function("get_yggschema", base)
