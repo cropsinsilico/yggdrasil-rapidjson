@@ -5941,13 +5941,6 @@ protected:
 	bool HasProperty(const SValue& name) const {
 	  return propertyNames.Contains(name); // HERE INSTANCE
 	}
-	bool IsValid(bool local) const {
-	  if (NLinks() == 0)
-	    return false;
-	  if (!(currentMatchLocal || currentMatchLinks))
-	    return false;
-	  return true;
-	}
 	bool Matches(const PointerType& x, bool local,
 		     bool checkInstance = false) const {
 	  if (local) {
@@ -6189,9 +6182,9 @@ protected:
 	RAPIDJSON_ASSERT(!push && this->schema && !this->properties);
 	this->AddPropertiesCpy(allProperties, propertyNames);
       }
-      InstanceEntry* AddInstance(const PointerType& schemaPtr) {
+      InstanceEntry* AddInstance(const PointerType& schemaPtr0) {
 	InstanceEntry* ref = instances.template Push<InstanceEntry>();
-	new (ref) InstanceEntry(this, schemaPtr, this->schema->allocator_);
+	new (ref) InstanceEntry(this, schemaPtr0, this->schema->allocator_);
 	return ref;
       }
       void SetCurrentPtr(const PointerType& x, bool checkInstance = false) {
