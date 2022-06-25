@@ -633,17 +633,11 @@ struct SchemaValidationContext {
         arrayUniqueness(false)
 #ifdef RAPIDJSON_YGGDRASIL
 	, normalized(),
-	sharedProperties(),
 	schemaPointerAbs(),
 	valuePointer(),
 	patternPropertiesPointers(0)
 #endif //RAPIDJSON_YGGDRASIL
-    {
-#ifdef RAPIDJSON_YGGDRASIL
-      if (s)
-	sharedProperties = s->GetSharedProperties();
-#endif // RAPIDJSON_YGGDRASIL
-    }
+    {}
 
     ~SchemaValidationContext() {
         if (hasher)
@@ -694,7 +688,6 @@ struct SchemaValidationContext {
     bool arrayUniqueness;
 #ifdef RAPIDJSON_YGGDRASIL
     NormalizedDocumentType* normalized;
-    SharedProperties<SchemaDocumentType>* sharedProperties;
     PointerType schemaPointerAbs;
     PointerType valuePointer;
     PointerType* patternPropertiesPointers;
@@ -1545,8 +1538,8 @@ public:
     //   cached and added later to avoid modifiying the pair stack during
     //   iteration.
     tempSharedStack_ = static_cast<PairEntry*>(GetAllocator().Realloc(tempSharedStack_, sizeof(PairEntry) * tempSharedCount_, sizeof(PairEntry) * tempSharedCount_ + childShared.GetSize()));
-    memcpy(tempSharedStack_ + tempSharedCount_,
-	   childShared.template Bottom<PairEntry>(),
+    memcpy((char*)(tempSharedStack_ + tempSharedCount_),
+	   (char*)(childShared.template Bottom<PairEntry>()),
 	   childShared.GetSize());
     tempSharedCount_ += childShared.GetSize() / sizeof(PairEntry);
   }
@@ -1980,7 +1973,7 @@ public:
     for (MemberIterator it = v->MemberBegin(); it != v->MemberEnd(); it++)
       present.PushBack(SValue(it->name, GetAllocator(), true).Move(),
 		       GetAllocator());
-    AddSharedObject(iP, iS, present, schema);
+    AddSharedObject(iP, iS, present);
     schema.sharedProperties_->AddObject(iP, iS, present, *this);
     return CheckSharedPairs(context, schema);
   }
@@ -2041,7 +2034,7 @@ public:
   }
   void AddSharedObject(const PointerType& instancePtr,
 		       const PointerType& schemaPtr,
-		       const SValue& present, const SchemaType& schema) {
+		       const SValue& present) {
     for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
 	 it != sharedStack_.template End<PairEntry>(); it++) {
       bool source = !it->src.set;
@@ -2162,6 +2155,7 @@ public:
     }
     ValidateErrorCode code = context.error_handler.SharedNormalizationError(static_cast<ISchemaValidator*>(&n));
     RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+    return false;
   }
   bool NormEndArray(Context& context, const SchemaType& schema, SizeType elementCount) {
     NORM_BEGIN_STUB_(EndArray);
@@ -2586,7 +2580,12 @@ public:
   }
   void RecordModified(const PointerType before, const PointerType after,
 		      bool no_before=false, bool no_after=false,
-		      const char* debugMessage=0) {
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+		      const char* debugMessage=0
+#else // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+		      const char* = 0
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+		      ) {
     ModificationEntry* match = nullptr;
     PointerType after_mod = ReplaceSingular(after);
     if (!(isValueModified(before, true, kCheckModifiedBefore, no_before, &match) &&
@@ -3342,7 +3341,11 @@ public:
     DisplayPointer(GetInstancePointer());
   }
   template<typename VType>
-  static void DisplayValue(VType& value, bool pretty=false) {
+  static void DisplayValue(VType& value
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+			   , bool pretty=false
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+			   ) {
     StringBuffer sb;
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     if (pretty) {
@@ -4612,11 +4615,9 @@ public:
 
         if (context.patternPropertiesSchemaCount == 0) { // patternProperties are not additional properties
 #ifdef RAPIDJSON_YGGDRASIL
-	    // TODO: Check for sharedProperty
 	    if (context.normalized &&
-		context.sharedProperties &&
-		context.sharedProperties->isSrc(context.schemaPointerAbs,
-						str, len)) {
+		sharedProperties_ &&
+		sharedProperties_->isSrc(context.schemaPointerAbs, str, len)) {
 	        context.valueSchema = typeless_;
 		return true;
 	    }
@@ -5899,13 +5900,9 @@ protected:
 	}
         void DisplayLinks() const {
 	  std::cerr << "[";
-	  bool first = true;
 	  for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
 	    std::cerr << std::endl << "        ";
-	    // if (!first)
-	    //   std::cerr << ", ";
 	    it->Display();
-	    first = false;
 	  }
 	  std::cerr << "]";
 	}
@@ -6852,13 +6849,6 @@ protected:
 #undef NESTED_FUNCTION_CALL_VERBOSE
 #undef NESTED_FUNCTION_CALL
 #undef NESTED_FUNCTION_CALL_APPEND
-public:
-    SharedPropertiesType* GetSharedProperties(bool local=false) const {
-      if (!sharedProperties_)
-	return nullptr;
-      return const_cast<SharedPropertiesType*>(sharedProperties_);
-    }
-protected:    
 #endif // RAPIDJSON_YGGDRASIL
 
     AllocatorType* allocator_;
