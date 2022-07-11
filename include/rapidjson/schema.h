@@ -5950,9 +5950,9 @@ protected:
 	bool HasProperty(const SValue& name) const {
 	  return propertyNames.Contains(name); // HERE INSTANCE
 	}
-	bool Matches(const PointerType& x, bool local,
+	bool Matches(const PointerType& x, bool local0,
 		     bool checkInstance = false) const {
-	  if (local) {
+	  if (local0) {
 	    return SharedPropertyBase::Matches(x, checkInstance);
 	  } else {
 	    for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++)
@@ -6225,6 +6225,7 @@ protected:
 	  const SchemaType* s = SchemaType::Get(root, localPtr);
 	  if (!s) {
 	    std::cerr << "SortSources: Could not find schema document" << std::endl;
+	    instances.template Pop<InstanceEntry>(1)->~InstanceEntry();
 	  } else {
 	    const_cast<SchemaType*>(s)->AddSharedPropertyLink(PointerType(),
 							      localPtr,
@@ -6727,6 +6728,9 @@ protected:
 	    std::cerr << "Get: Failing token is \"" << t->name << "\" from ";
 	    NormalizedDocumentType::DisplayPointer(p);
 	    std::cerr << std::endl;
+	    std::cerr << "Properties = " << std::endl;
+	    for (SizeType index = 0; index < v->propertyCount_; index++)
+	      std::cerr << "    " << v->properties_[index].name.GetString() << std::endl;
 	  }
 	}
 	return 0;

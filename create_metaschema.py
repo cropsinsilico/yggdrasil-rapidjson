@@ -170,6 +170,8 @@ if __name__ == "__main__":
         fname = '/Users/langmm/yggdrasil/yggdrasil/.ygg_schema.yml'
         with open(fname, 'r') as fd:
             base = yaml.load(fd, yaml.SafeLoader)
+        base['definitions']['file']['allOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
+        base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
         test_yaml = (
             {'models': [{
                 'name': 'modelA',
