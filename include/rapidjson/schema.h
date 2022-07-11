@@ -951,7 +951,7 @@ public:
     PairEntry(const PairEntry& other,
 	      AllocatorType* allocator) :
       complete(other.complete),
-      properties(other.properties, *allocator, true),
+      properties(other.properties, *allocator),
       prefix(other.prefix, allocator),
       src(allocator), dst(allocator) {
       src.CopyFrom(other.src, *allocator);
@@ -1078,10 +1078,14 @@ public:
       for (typename SValue::ConstValueIterator name = properties.Begin();
 	   name != properties.End(); ++name) {
 	if (setSrc && src.present.Contains(*name))
-	  src.properties.PushBack(SValue(*name, *allocator, true).Move(),
+	  src.properties.PushBack(SValue(name->GetString(),
+					 name->GetStringLength(),
+					 *allocator).Move(),
 				  *allocator);
 	if (setDst && !dst.present.Contains(*name))
-	  dst.properties.PushBack(SValue(*name, *allocator, true).Move(),
+	  dst.properties.PushBack(SValue(name->GetString(),
+					 name->GetStringLength(),
+					 *allocator).Move(),
 				  *allocator);
 	
       }
@@ -1285,7 +1289,9 @@ public:
       RAPIDJSON_ASSERT(parent && parent->HasMember(name));
       if (parent && parent->HasMember(name)) {
 	if (!prop->inSource)
-	  src.shared.PushBack(SValue(name, normalized.GetAllocator(), true).Move(),
+	  src.shared.PushBack(SValue(name.GetString(),
+				     name.GetStringLength(),
+				     normalized.GetAllocator()).Move(),
 			      normalized.GetAllocator());
 	return &(parent->FindMember(name)->value);
       }
@@ -5973,19 +5979,18 @@ protected:
 	  if (!((!parentProperty->push && currentMatchLinks) ||
 		(parentProperty->push && currentMatchLocal)))
 	    return;
-	  bool local = parentProperty->isLocal(false);
-	  if (local)
+	  if (parentProperty->isLocal(false))
 	    parentProperty->schema->sharedProperties_->SetSiblingMembers(name, value, normalized, this->instancePtr, true, parentProperty->index);
 	  else {
 	    for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++)
 	      it->schema->sharedProperties_->SetSiblingMembers(name, value, normalized, it->instancePtr, false, it->index);
 	  }
 	}
-	LinkEntry* AddLink(SchemaType* iSchema, size_t index,
+	LinkEntry* AddLink(SchemaType* iSchema, size_t index0,
 			   const PointerType& path) {
 	  bool firstLink = links.Empty();
 	  LinkEntry* ref = links.template Push<LinkEntry>();
-	  new (ref) LinkEntry(iSchema, index, path, parentProperty);
+	  new (ref) LinkEntry(iSchema, index0, path, parentProperty);
 	  if (firstLink) {
 	    size_t nMatch = this->instancePtr.CountMatchingTokens(ref->instancePtr);
 	    prefix = this->instancePtr.PartialFront(nMatch, iSchema->allocator_);
@@ -6083,6 +6088,7 @@ protected:
 	      }
 	    }
 	    if (nLinkMatched != 1) {
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	      std::cerr << "AddObject (NO LINK MATCHED): ";
 	      NormalizedDocumentType::DisplayPointer(schemaPtr0);
 	      std::cerr << " vs [";
@@ -6092,6 +6098,7 @@ protected:
 		NormalizedDocumentType::DisplayPointer(it->schemaPtr);
 	      }
 	      std::cerr << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	      return; // Don't create/add to a pair
 	    }
 	  }
@@ -6151,20 +6158,20 @@ protected:
       const InstanceEntry* InstsEnd() const {
 	return InstsBegin() + NInsts();
       }
-      bool isDst(bool local) const {
-	return ((local && !push) || (!local && push));
+      bool isDst(bool local0) const {
+	return ((local0 && !push) || (!local0 && push));
       }
-      bool isSrc(bool local) const {
-	return (!isDst(local));
+      bool isSrc(bool local0) const {
+	return (!isDst(local0));
       }
-      bool isLocal(bool source) const {
-	return ((source && push) || (!source && !push));
+      bool isLocal(bool source0) const {
+	return ((source0 && push) || (!source0 && !push));
       }
-      bool Matches(const PointerType& x, bool source,
+      bool Matches(const PointerType& x, bool source0,
 		   bool checkInstance = false) const {
-	bool local = isLocal(source);
+	bool local0 = isLocal(source0);
 	for (const InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++)
-	  if (it->Matches(x, local, checkInstance))
+	  if (it->Matches(x, local0, checkInstance))
 	    return true;
 	return false;
       }
@@ -6236,27 +6243,27 @@ protected:
       }
       void AddObject(PointerType instancePtr, PointerType schemaPtr,
 		     NormalizedDocumentType& normalized,
-		     const SValue& props, bool local) {
-	bool source = isSrc(local);
+		     const SValue& props, bool local0) {
+	bool source0 = isSrc(local0);
 	for (InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++) {
 	  it->currentFlag = (it->NLinks() > 0);
-	  if (it->currentFlag && ((local && it->currentMatchLocal) ||
-				  (!local && it->currentMatchLinks)))
+	  if (it->currentFlag && ((local0 && it->currentMatchLocal) ||
+				  (!local0 && it->currentMatchLinks)))
 	    it->AddObject(instancePtr, schemaPtr, normalized,
-			  props, local, source);
+			  props, local0, source0);
 	  it->currentFlag = (it->currentFlag &&
 			     (it->currentMatchLocal || it->currentMatchLinks));
 	}
       }
       void AddMissingObject(PointerType instancePtr,
 			    NormalizedDocumentType& normalized,
-			    bool local) {
+			    bool local0) {
 	for (InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++) {
 	  if (it->NLinks() == 0 ||
-	      (local && !it->Matches(instancePtr, true, true)) ||
-	      (!local && !it->Matches(instancePtr, false, true)))
+	      (local0 && !it->Matches(instancePtr, true, true)) ||
+	      (!local0 && !it->Matches(instancePtr, false, true)))
 	    continue;
-	  it->AddMissingObject(instancePtr, normalized, local);
+	  it->AddMissingObject(instancePtr, normalized, local0);
 	}
       }
       static const size_t kDefaultStackCapacity = 128;
