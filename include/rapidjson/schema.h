@@ -6251,7 +6251,7 @@ protected:
 	  std::cerr << std::endl;
 	}
       }
-      void AddObject(PointerType instancePtr, PointerType schemaPtr,
+      void AddObject(PointerType instancePtr0, PointerType schemaPtr0,
 		     NormalizedDocumentType& normalized,
 		     const SValue& props, bool local0) {
 	bool source0 = isSrc(local0);
@@ -6259,21 +6259,21 @@ protected:
 	  it->currentFlag = (it->NLinks() > 0);
 	  if (it->currentFlag && ((local0 && it->currentMatchLocal) ||
 				  (!local0 && it->currentMatchLinks)))
-	    it->AddObject(instancePtr, schemaPtr, normalized,
+	    it->AddObject(instancePtr0, schemaPtr0, normalized,
 			  props, local0, source0);
 	  it->currentFlag = (it->currentFlag &&
 			     (it->currentMatchLocal || it->currentMatchLinks));
 	}
       }
-      void AddMissingObject(PointerType instancePtr,
+      void AddMissingObject(PointerType instancePtr0,
 			    NormalizedDocumentType& normalized,
 			    bool local0) {
 	for (InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++) {
 	  if (it->NLinks() == 0 ||
-	      (local0 && !it->Matches(instancePtr, true, true)) ||
-	      (!local0 && !it->Matches(instancePtr, false, true)))
+	      (local0 && !it->Matches(instancePtr0, true, true)) ||
+	      (!local0 && !it->Matches(instancePtr0, false, true)))
 	    continue;
-	  it->AddMissingObject(instancePtr, normalized, local0);
+	  it->AddMissingObject(instancePtr0, normalized, local0);
 	}
       }
       static const size_t kDefaultStackCapacity = 128;

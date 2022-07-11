@@ -13,6 +13,13 @@ def filter_func_ex():  # pragma: no cover
 filter_func_ex_name = '%s:filter_func_ex' % __file__
 
 
+def create_full_schema(fname):
+    import yaml
+    from yggdrasil import schema
+    s = schema.get_schema()
+    s.save(fname, schema=s.full_schema)
+
+
 def make_function(name, base):
     return [
         "template<typename T>",
@@ -53,6 +60,8 @@ if __name__ == "__main__":
                         help="JSON schema draft that should be used as a base")
     parser.add_argument("--ygg-tests", action='store_true',
                         help='Include tests for the yggdrasil schema')
+    parser.add_argument("--create-full-schema", action='store_true',
+                        help='Create a full_schema.yml file')
     args = parser.parse_args()
     url = f'http://json-schema.org/{args.base_draft}/schema#'
     standard = json.loads(urlopen(url).read().decode('utf-8'))
@@ -167,11 +176,20 @@ if __name__ == "__main__":
     ## Create test
     if args.ygg_tests:
         import yaml
-        fname = '/Users/langmm/yggdrasil/yggdrasil/.ygg_schema.yml'
+        # fname = '/Users/langmm/yggdrasil/yggdrasil/.ygg_schema.yml'
+        fname = '/Users/langmm/yggdrasil/full_schema.yml'
+        if args.create_full_schema or not os.path.isfile(fname):
+            create_full_schema(fname)
         with open(fname, 'r') as fd:
             base = yaml.load(fd, yaml.SafeLoader)
-        base['definitions']['file']['allOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
-        base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
+        try:
+            base['definitions']['file']['allOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
+        except KeyError:
+            pass
+        try:
+            base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
+        except KeyError:
+            pass
         test_yaml = (
             {'models': [{
                 'name': 'modelA',
