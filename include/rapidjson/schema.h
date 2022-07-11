@@ -841,6 +841,8 @@ public:
       PopModified();
     while (!singularStack_.Empty())
       PopSingular();
+    while (!sharedStack_.Empty())
+      sharedStack_.template Pop<PairEntry>(1)->~PairEntry();
     document_.ClearStack();
     if (temporary_memory_) {
       GetAllocator().Free(temporary_memory_);
@@ -1555,6 +1557,8 @@ public:
     bool out = ExtendShared(context, schema,
 			    tempSharedStack_, tempSharedCount_,
 			    true);
+    for (SizeType i = 0; i < tempSharedCount_; i++)
+      (tempSharedStack_ + i)->~PairEntry();
     AllocatorType::Free(tempSharedStack_);
     tempSharedStack_ = 0;
     tempSharedCount_ = 0;
@@ -2155,8 +2159,13 @@ public:
 	dest.CopyFrom(n.GetNormalized(), GetAllocator(), true);
       else
 	dest.CopyFrom(x, GetAllocator(), true);
-      if (!n.GetNormalizedDoc().sharedStack_.Empty())
+      if (!n.GetNormalizedDoc().sharedStack_.Empty()) {
 	AddSharedTemp(n.GetNormalizedDoc().sharedStack_);
+	// Don't call the PairEntry destructor, it will be called after the
+	// temporary stack is processed.
+	while (!n.GetNormalizedDoc().sharedStack_.Empty())
+	  n.GetNormalizedDoc().sharedStack_.template Pop<PairEntry>(1);
+      }
       return true;
     }
     ValidateErrorCode code = context.error_handler.SharedNormalizationError(static_cast<ISchemaValidator*>(&n));
@@ -9025,6 +9034,10 @@ public:
 
   //! Get the normalized document instance.
   const NormalizedDocumentType& GetNormalizedDoc() const
+  { return normalized_; }
+  
+  //! Get the normalized document instance.
+  NormalizedDocumentType& GetNormalizedDoc()
   { return normalized_; }
   
   //! Get the normalized version of the parsed document.
