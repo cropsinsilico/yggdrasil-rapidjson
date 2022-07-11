@@ -2313,6 +2313,7 @@ TEST(SchemaValidator, AllOf_Nested) {
 
     VALIDATE(s, "\"ok\"", true);
     VALIDATE(s, "\"OK\"", true);
+#ifdef RAPIDJSON_YGGDRASIL
     INVALIDATE(s, "\"okay\"", "", "allOf", "",
         "{ \"allOf\": {"
         "    \"errors\": ["
@@ -2320,16 +2321,27 @@ TEST(SchemaValidator, AllOf_Nested) {
         "    { \"allOf\": {"
         "      \"errors\": ["
         "        {},"
-#ifdef RAPIDJSON_YGGDRASIL
         "        { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\", \"expected\": [\"ok\", \"OK\", \"o\"] }}"
-#else // RAPIDJSON_YGGDRASIL
-        "        { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\" }}"
-#endif // RAPIDJSON_YGGDRASIL
         "      ],"
         "      \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
         "    }}],"
         "    \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#\""
         "}}");
+#else // RAPIDJSON_YGGDRASIL
+    INVALIDATE(s, "\"okay\"", "", "allOf", "",
+        "{ \"allOf\": {"
+        "    \"errors\": ["
+        "    {},{},"
+        "    { \"allOf\": {"
+        "      \"errors\": ["
+        "        {},"
+        "        { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\" }}"
+        "      ],"
+        "      \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
+        "    }}],"
+        "    \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#\""
+        "}}");
+#endif // RAPIDJSON_YGGDRASIL
     INVALIDATE(s, "\"o\"", "", "allOf", "",
         "{ \"allOf\": {"
         "  \"errors\": ["
@@ -2338,6 +2350,7 @@ TEST(SchemaValidator, AllOf_Nested) {
         "  ],"
         "  \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#\""
         "}}");
+#ifdef RAPIDJSON_YGGDRASIL
     INVALIDATE(s, "\"n\"", "", "allOf", "",
         "{ \"allOf\": {"
         "    \"errors\": ["
@@ -2345,13 +2358,8 @@ TEST(SchemaValidator, AllOf_Nested) {
         "      {},"
         "      { \"allOf\": {"
         "          \"errors\": ["
-#ifdef RAPIDJSON_YGGDRASIL
         "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\", \"expected\": [\"ok\", \"okay\", \"OK\", \"o\"]}},"
         "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\", \"expected\": [\"ok\", \"OK\", \"o\"]}}"
-#else // RAPIDJSON_YGGDRASIL
-        "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\"}},"
-        "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\"}}"
-#endif // RAPIDJSON_YGGDRASIL
         "          ],"
         "          \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
         "      }}"
@@ -2365,13 +2373,8 @@ TEST(SchemaValidator, AllOf_Nested) {
         "      { \"maxLength\": {\"actual\": \"too long\", \"expected\": 5, \"errorCode\": 6, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/1\" }},"
         "      { \"allOf\": {"
         "          \"errors\": ["
-#ifdef RAPIDJSON_YGGDRASIL
         "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\", \"expected\": [\"ok\", \"okay\", \"OK\", \"o\"] }},"
         "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\", \"expected\": [\"ok\", \"OK\", \"o\"]}}"
-#else // RAPIDJSON_YGGDRASIL
-        "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\"}},"
-        "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\"}}"
-#endif // RAPIDJSON_YGGDRASIL
         "          ],"
         "          \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
         "      }}"
@@ -2385,19 +2388,61 @@ TEST(SchemaValidator, AllOf_Nested) {
         "      {\"type\": {\"expected\": [\"string\"], \"actual\": \"integer\", \"errorCode\": 20, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/1\"}},"
         "      { \"allOf\": {"
         "          \"errors\": ["
-#ifdef RAPIDJSON_YGGDRASIL
         "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\", \"expected\": [\"ok\", \"okay\", \"OK\", \"o\"] }},"
         "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\", \"expected\": [\"ok\", \"OK\", \"o\"] }}"
-#else // RAPIDJSON_YGGDRASIL
-        "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\"}},"
-        "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\"}}"
-#endif // RAPIDJSON_YGGDRASIL
         "          ],"
         "          \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
         "      }}"
         "    ],"
         "    \"errorCode\":23,\"instanceRef\":\"#\",\"schemaRef\":\"#\""
         "}}");
+#else // RAPIDJSON_YGGDRASIL
+    INVALIDATE(s, "\"n\"", "", "allOf", "",
+        "{ \"allOf\": {"
+        "    \"errors\": ["
+        "      { \"minLength\": {\"actual\": \"n\", \"expected\": 2, \"errorCode\": 7, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/0\" }},"
+        "      {},"
+        "      { \"allOf\": {"
+        "          \"errors\": ["
+        "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\"}},"
+        "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\"}}"
+        "          ],"
+        "          \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
+        "      }}"
+        "    ],"
+        "    \"errorCode\":23,\"instanceRef\":\"#\",\"schemaRef\":\"#\""
+        "}}");
+    INVALIDATE(s, "\"too long\"", "", "allOf", "",
+        "{ \"allOf\": {"
+        "    \"errors\": ["
+        "      {},"
+        "      { \"maxLength\": {\"actual\": \"too long\", \"expected\": 5, \"errorCode\": 6, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/1\" }},"
+        "      { \"allOf\": {"
+        "          \"errors\": ["
+        "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\"}},"
+        "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\"}}"
+        "          ],"
+        "          \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
+        "      }}"
+        "    ],"
+        "    \"errorCode\":23,\"instanceRef\":\"#\",\"schemaRef\":\"#\""
+        "}}");
+    INVALIDATE(s, "123", "", "allOf", "",
+        "{ \"allOf\": {"
+        "    \"errors\": ["
+        "      {\"type\": {\"expected\": [\"string\"], \"actual\": \"integer\", \"errorCode\": 20, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/0\"}},"
+        "      {\"type\": {\"expected\": [\"string\"], \"actual\": \"integer\", \"errorCode\": 20, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/1\"}},"
+        "      { \"allOf\": {"
+        "          \"errors\": ["
+        "            { \"enum\": {\"errorCode\": 19 ,\"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/0\"}},"
+        "            { \"enum\": {\"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2/allOf/1\"}}"
+        "          ],"
+        "          \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#/allOf/2\""
+        "      }}"
+        "    ],"
+        "    \"errorCode\":23,\"instanceRef\":\"#\",\"schemaRef\":\"#\""
+        "}}");
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(SchemaValidator, EscapedPointer) {
@@ -2539,6 +2584,7 @@ TEST(SchemaValidator, SchemaPointer) {
         "    \"schemaRef\":\"#/paths/~1some~1path/post/parameters/0/schema/properties/b\","
         "    \"expected\": [\"integer\"], \"actual\":\"string\""
         "}}");
+#ifdef RAPIDJSON_YGGDRASIL
     INVALIDATE(s1,
         "{"
         "  \"a\": {"
@@ -2557,10 +2603,29 @@ TEST(SchemaValidator, SchemaPointer) {
         "    \"errorCode\": 19,"
         "    \"instanceRef\":\"#/a/d/a/c\","
         "    \"schemaRef\":\"#/definitions/Prop_a/properties/c\""
-#ifdef RAPIDJSON_YGGDRASIL
 	"    , \"expected\": [\"C1\", \"C2\", \"C3\"]"
-#endif //RAPIDJSON_YGGDRASIL
         "}}");
+#else // RAPIDJSON_YGGDRASIL
+    INVALIDATE(s1,
+        "{"
+        "  \"a\": {"
+        "    \"c\": \"C1\","
+        "    \"d\": {"
+        "      \"a\": {"
+        "        \"c\": \"should be within enum\""
+        "      },"
+        "      \"c\": \"C3\""
+        "    }"
+        "  },"
+        "  \"b\": 123"
+        "}",
+        "#/definitions/Prop_a/properties/c", "enum", "#/a/d/a/c",
+        "{ \"enum\": {"
+        "    \"errorCode\": 19,"
+        "    \"instanceRef\":\"#/a/d/a/c\","
+        "    \"schemaRef\":\"#/definitions/Prop_a/properties/c\""
+        "}}");
+#endif // RAPIDJSON_YGGDRASIL
     INVALIDATE(s1,
         "{"
         "  \"a\": {"
@@ -3265,6 +3330,7 @@ TEST(SchemaValidator, ContinueOnErrors) {
     ASSERT_FALSE(sd.HasParseError());
     SchemaDocument s(sd);
     VALIDATE(s, "{\"version\": 1.0, \"address\": {\"number\": 24, \"street1\": \"The Woodlands\", \"street3\": \"Ham\", \"city\": \"Romsey\", \"area\": \"Kent\", \"country\": \"UK\", \"postcode\": \"SO51 0GP\"}, \"phones\": [\"0111-222333\", \"0777-666888\"], \"names\": [\"Fred\", \"Bloggs\"]}", true);
+#ifdef RAPIDJSON_YGGDRASIL
     INVALIDATE_(s, "{\"version\": 1.01, \"address\": {\"number\": 0, \"street2\": false,  \"street3\": \"Ham\", \"city\": \"RomseyTownFC\", \"area\": \"BC\", \"country\": \"USA\", \"postcode\": \"999ABC\"}, \"phones\": [], \"planet\": \"Earth\", \"extra\": {\"S_xxx\": 123}}", "#", "errors", "#",
         "{ \"multipleOf\": {"
         "    \"errorCode\": 1, \"instanceRef\": \"#/version\", \"schemaRef\": \"#/definitions/decimal_type\", \"expected\": 1.0, \"actual\": 1.01"
@@ -3288,11 +3354,7 @@ TEST(SchemaValidator, ContinueOnErrors) {
         "  },"
         "  \"allOf\": {"
         "    \"errors\":["
-#ifdef RAPIDJSON_YGGDRASIL
         "      {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/address/country\",\"schemaRef\":\"#/definitions/country_type\", \"expected\": [\"UK\", \"Canada\"]}}"
-#else // RAPIDJSON_YGGDRASIL
-        "      {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/address/country\",\"schemaRef\":\"#/definitions/country_type\"}}"
-#endif // RAPIDJSON_YGGDRASIL
         "    ],"
         "    \"errorCode\":23,\"instanceRef\":\"#/address/country\",\"schemaRef\":\"#/definitions/address_type/properties/country\""
         "  },"
@@ -3341,18 +3403,94 @@ TEST(SchemaValidator, ContinueOnErrors) {
         "  },"
         "  \"oneOf\": {"
         "    \"errors\": ["
-#ifdef RAPIDJSON_YGGDRASIL
         "      {\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/county_type\", \"expected\": [\"Sussex\", \"Surrey\", \"Kent\"] }},"
         "      {\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/province_type\", \"expected\": [\"Quebec\", \"BC\", \"Alberta\"] }}"
-#else // RAPIDJSON_YGGDRASIL
-        "      {\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/county_type\"}},"
-        "      {\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/province_type\"}}"
-#endif //RAPIDJSON_YGGDRASIL
         "    ],"
         "    \"errorCode\": 21, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/address_type/properties/area\""
         "  }"
         "}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
+#else // RAPIDJSON_YGGDRASIL
+    INVALIDATE_(s, "{\"version\": 1.01, \"address\": {\"number\": 0, \"street2\": false,  \"street3\": \"Ham\", \"city\": \"RomseyTownFC\", \"area\": \"BC\", \"country\": \"USA\", \"postcode\": \"999ABC\"}, \"phones\": [], \"planet\": \"Earth\", \"extra\": {\"S_xxx\": 123}}", "#", "errors", "#",
+        "{ \"multipleOf\": {"
+        "    \"errorCode\": 1, \"instanceRef\": \"#/version\", \"schemaRef\": \"#/definitions/decimal_type\", \"expected\": 1.0, \"actual\": 1.01"
+        "  },"
+        "  \"minimum\": {"
+        "    \"errorCode\": 5, \"instanceRef\": \"#/address/number\", \"schemaRef\": \"#/definitions/positiveInt_type\", \"expected\": 0, \"actual\": 0, \"exclusiveMinimum\": true"
+        "  },"
+        "  \"type\": ["
+        "    {\"expected\": [\"null\", \"string\"], \"actual\": \"boolean\", \"errorCode\": 20, \"instanceRef\": \"#/address/street2\", \"schemaRef\": \"#/definitions/address_type/properties/street2\"},"
+        "    {\"expected\": [\"string\"], \"actual\": \"integer\", \"errorCode\": 20, \"instanceRef\": \"#/extra/S_xxx\", \"schemaRef\": \"#/properties/extra/patternProperties/%5ES_\"}"
+        "  ],"
+        "  \"maxLength\": {"
+        "    \"actual\": \"RomseyTownFC\", \"expected\": 10, \"errorCode\": 6, \"instanceRef\": \"#/address/city\", \"schemaRef\": \"#/definitions/address_type/properties/city\""
+        "  },"
+        "  \"anyOf\": {"
+        "    \"errors\":["
+        "      {\"pattern\": {\"actual\": \"999ABC\", \"errorCode\": 8, \"instanceRef\": \"#/address/postcode\", \"schemaRef\": \"#/definitions/address_type/properties/postcode/anyOf/0\"}},"
+        "      {\"pattern\": {\"actual\": \"999ABC\", \"errorCode\": 8, \"instanceRef\": \"#/address/postcode\", \"schemaRef\": \"#/definitions/address_type/properties/postcode/anyOf/1\"}}"
+        "    ],"
+        "    \"errorCode\": 24, \"instanceRef\": \"#/address/postcode\", \"schemaRef\": \"#/definitions/address_type/properties/postcode\""
+        "  },"
+        "  \"allOf\": {"
+        "    \"errors\":["
+        "      {\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/address/country\",\"schemaRef\":\"#/definitions/country_type\"}}"
+        "    ],"
+        "    \"errorCode\":23,\"instanceRef\":\"#/address/country\",\"schemaRef\":\"#/definitions/address_type/properties/country\""
+        "  },"
+        "  \"minItems\": {"
+        "    \"actual\": 0, \"expected\": 1, \"errorCode\": 10, \"instanceRef\": \"#/phones\", \"schemaRef\": \"#/properties/phones\""
+        "  },"
+        "  \"additionalProperties\": {"
+        "    \"disallowed\": \"planet\", \"errorCode\": 16, \"instanceRef\": \"#\", \"schemaRef\": \"#\""
+        "  },"
+        "  \"required\": {"
+        "    \"missing\": [\"street1\"], \"errorCode\": 15, \"instanceRef\": \"#/address\", \"schemaRef\": \"#/definitions/address_type\""
+        "  }"
+        "}",
+        kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
+    INVALIDATE_(s, "{\"address\": {\"number\": 200, \"street1\": {}, \"street3\": null, \"city\": \"Rom\", \"area\": \"Dorset\", \"postcode\": \"SO51 0GP\"}, \"phones\": [\"0111-222333\", \"0777-666888\", \"0777-666888\"], \"names\": [\"Fred\", \"S\", \"M\", \"Bloggs\"]}", "#", "errors", "#",
+        "{ \"maximum\": {"
+        "    \"errorCode\": 3, \"instanceRef\": \"#/address/number\", \"schemaRef\": \"#/definitions/positiveInt_type\", \"expected\": 100, \"actual\": 200, \"exclusiveMaximum\": true"
+        "  },"
+        "  \"type\": {"
+        "    \"expected\": [\"string\"], \"actual\": \"object\", \"errorCode\": 20, \"instanceRef\": \"#/address/street1\", \"schemaRef\": \"#/definitions/address_type/properties/street1\""
+        "  },"
+        "  \"not\": {"
+        "    \"errorCode\": 25, \"instanceRef\": \"#/address/street3\", \"schemaRef\": \"#/definitions/address_type/properties/street3\""
+        "  },"
+        "  \"minLength\": {"
+        "    \"actual\": \"Rom\", \"expected\": 4, \"errorCode\": 7, \"instanceRef\": \"#/address/city\", \"schemaRef\": \"#/definitions/address_type/properties/city\""
+        "  },"
+        "  \"maxItems\": {"
+        "    \"actual\": 3, \"expected\": 2, \"errorCode\": 9, \"instanceRef\": \"#/phones\", \"schemaRef\": \"#/properties/phones\""
+        "  },"
+        "  \"uniqueItems\": {"
+        "    \"duplicates\": [1, 2], \"errorCode\": 11, \"instanceRef\": \"#/phones\", \"schemaRef\": \"#/properties/phones\""
+        "  },"
+        "  \"minProperties\": {\"actual\": 6, \"expected\": 7, \"errorCode\": 14, \"instanceRef\": \"#/address\", \"schemaRef\": \"#/definitions/address_type\""
+        "  },"
+        "  \"additionalItems\": ["
+        "    {\"disallowed\": 2, \"errorCode\": 12, \"instanceRef\": \"#/names\", \"schemaRef\": \"#/properties/names\"},"
+        "    {\"disallowed\": 3, \"errorCode\": 12, \"instanceRef\": \"#/names\", \"schemaRef\": \"#/properties/names\"}"
+        "  ],"
+        "  \"dependencies\": {"
+        "    \"errors\": {"
+        "      \"address\": {\"required\": {\"missing\": [\"version\"], \"errorCode\": 15, \"instanceRef\": \"#\", \"schemaRef\": \"#/dependencies/address\"}},"
+        "      \"names\": {\"required\": {\"missing\": [\"version\"], \"errorCode\": 15, \"instanceRef\": \"#\", \"schemaRef\": \"#/dependencies/names\"}}"
+        "    },"
+        "    \"errorCode\": 18, \"instanceRef\": \"#\", \"schemaRef\": \"#\""
+        "  },"
+        "  \"oneOf\": {"
+        "    \"errors\": ["
+        "      {\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/county_type\"}},"
+        "      {\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/province_type\"}}"
+        "    ],"
+        "    \"errorCode\": 21, \"instanceRef\": \"#/address/area\", \"schemaRef\": \"#/definitions/address_type/properties/area\""
+        "  }"
+        "}",
+        kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
+#endif // RAPIDJSON_YGGDRASIL
 
         CrtAllocator::Free(schema);
 }
@@ -3468,13 +3606,15 @@ TEST(SchemaValidator, ContinueOnErrors_Enum) {
     ASSERT_FALSE(sd.HasParseError());
     SchemaDocument s(sd);
     VALIDATE(s, "{\"gender\":\"M\"}", true);
-    INVALIDATE_(s, "{\"gender\":\"X\"}", "#", "errors", "#",
 #ifdef RAPIDJSON_YGGDRASIL
+    INVALIDATE_(s, "{\"gender\":\"X\"}", "#", "errors", "#",
         "{\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/gender\", \"schemaRef\": \"#/properties/gender\", \"expected\": [\"M\", \"F\"]}}",
-#else // RAPIDJSON_YGGDRASIL
-        "{\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/gender\", \"schemaRef\": \"#/properties/gender\"}}",
-#endif // RAPIDJSON_YGGDRASIL
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
+#else // RAPIDJSON_YGGDRASIL
+    INVALIDATE_(s, "{\"gender\":\"X\"}", "#", "errors", "#",
+        "{\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/gender\", \"schemaRef\": \"#/properties/gender\"}}",
+        kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
+#endif // RAPIDJSON_YGGDRASIL
     INVALIDATE_(s, "{\"gender\":1}", "#", "errors", "#",
         "{\"type\": {\"expected\":[\"string\"], \"actual\": \"integer\", \"errorCode\": 20, \"instanceRef\": \"#/gender\", \"schemaRef\": \"#/properties/gender\"}}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);

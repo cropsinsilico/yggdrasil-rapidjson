@@ -5665,14 +5665,17 @@ protected:
 						    &invalidToken,
 						    allocator);
 	if (invalidToken != (schemaPtr.GetTokenCount() + 1)) {
-	  std::cerr << "SharedProeprtyBase: Error converting schema pointer to instance, failed at token " << invalidToken << " of \"";
+	  std::cerr << "SharedPropertyBase: Error converting schema pointer to instance, failed at token " << invalidToken << " of \"";
 	  NormalizedDocumentType::DisplayPointer(schemaPtr);
 	  std::cerr << "\"" << std::endl;
 	}
       }
       ~SharedPropertyBase() {
-	if (ownProperties && properties)
+	if (ownProperties && properties) {
+	  for (SizeType i = 0; i < propertyCount; i++)
+	    (properties + i)->~PropertyEntry();
 	  AllocatorType::Free(properties);
+	}
       }
       struct PropertyEntry {
 	PropertyEntry() :
@@ -5896,7 +5899,7 @@ protected:
 	}
 	~InstanceEntry() {
 	  while (!links.Empty())
-	    links.template Pop<LinkEntry>(1);
+	    links.template Pop<LinkEntry>(1)->~LinkEntry();
 	}
         void DisplayLinks() const {
 	  std::cerr << "[";
@@ -5978,26 +5981,26 @@ protected:
 	      it->schema->sharedProperties_->SetSiblingMembers(name, value, normalized, it->instancePtr, false, it->index);
 	  }
 	}
-	LinkEntry* AddLink(SchemaType* schema, size_t index,
+	LinkEntry* AddLink(SchemaType* iSchema, size_t index,
 			   const PointerType& path) {
 	  bool firstLink = links.Empty();
 	  LinkEntry* ref = links.template Push<LinkEntry>();
-	  new (ref) LinkEntry(schema, index, path, parentProperty);
+	  new (ref) LinkEntry(iSchema, index, path, parentProperty);
 	  if (firstLink) {
 	    size_t nMatch = this->instancePtr.CountMatchingTokens(ref->instancePtr);
-	    prefix = this->instancePtr.PartialFront(nMatch, schema->allocator_);
-	    first = schema->PointersOrdered(this->schemaPtr, ref->schemaPtr);
+	    prefix = this->instancePtr.PartialFront(nMatch, iSchema->allocator_);
+	    first = iSchema->PointersOrdered(this->schemaPtr, ref->schemaPtr);
 	  } else {
 	    RAPIDJSON_ASSERT(prefix.PartialCompare(ref->instancePtr));
 	    RAPIDJSON_ASSERT(LinksBegin()->instancePtr == ref->instancePtr);
-	    RAPIDJSON_ASSERT(first == schema->PointersOrdered(this->schemaPtr, ref->schemaPtr));
+	    RAPIDJSON_ASSERT(first == iSchema->PointersOrdered(this->schemaPtr, ref->schemaPtr));
 	  }
 	  // HERE INSTANCE
 	  for (SizeType i = 0; i < ref->propertyCount; i++) {
 	    if (firstLink || !propertyNames.Contains(ref->properties[i].name))
 	      propertyNames.PushBack(SValue(ref->properties[i].name,
-					    *schema->allocator_, true).Move(),
-				     *schema->allocator_);
+					    *iSchema->allocator_, true).Move(),
+				     *iSchema->allocator_);
 	  }
 	  return ref;
 	}
