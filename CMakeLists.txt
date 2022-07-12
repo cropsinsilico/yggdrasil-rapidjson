@@ -82,8 +82,13 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 # Generate the metaschema header file
+option(RAPIDJSON_YGGDRASIL_TESTS "Build tests using the yggdrasil schema" ON)
+set(RAPIDJSON_YGGDRASIL_METASCHEMA_FLAGS "")
+if(RAPIDJSON_YGGDRASIL_TESTS)
+    set(RAPIDJSON_YGGDRASIL_METASCHEMA_FLAGS "--ygg-tests --create-full-schema")
+endif()
 exec_program(${Python3_EXECUTABLE}
-             ARGS "${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py ${CMAKE_CURRENT_SOURCE_DIR}/include/rapidjson/metaschema.h")
+             ARGS "${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py ${CMAKE_CURRENT_SOURCE_DIR}/include/rapidjson/metaschema.h ${RAPIDJSON_YGGDRASIL_METASCHEMA_FLAGS}")
 
 # compile in release with debug info mode by default
 if(NOT CMAKE_BUILD_TYPE)

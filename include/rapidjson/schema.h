@@ -6020,16 +6020,16 @@ protected:
 	}
 	void AddMissingObject(PointerType instancePtr0,
 			      NormalizedDocumentType& normalized,
-			      bool local) {
-	  if ((first == kPointerOrderTrue && !local) ||
-	      (first == kPointerOrderFalse && local) ||
+			      bool local0) {
+	  if ((first == kPointerOrderTrue && !local0) ||
+	      (first == kPointerOrderFalse && local0) ||
 	      (first == kPointerOrderNull))
 	    return;
 	  SharedPropertyBase* pairProperty = 0;
 	  SharedPropertyBase* partnerProperty = 0;
 	  bool multiplePairs = false;
 	  bool multiplePartners = false;
-	  if (local) {
+	  if (local0) {
 	    RAPIDJSON_ASSERT(NLinks() > 0);
 	    multiplePartners = NLinks() > 1;
 	    pairProperty = this;
@@ -6045,18 +6045,18 @@ protected:
 	}
 	void AddObject(PointerType instancePtr0, PointerType schemaPtr0,
 		       NormalizedDocumentType& normalized,
-		       const SValue& props, bool local, bool source) {
+		       const SValue& props, bool local0, bool source0) {
 	  // Don't add object if a pair has already been created
-	  if ((first == kPointerOrderTrue && !local) ||
-	      (first == kPointerOrderFalse && local))
+	  if ((first == kPointerOrderTrue && !local0) ||
+	      (first == kPointerOrderFalse && local0))
 	    return;
 	  else if (first == kPointerOrderNull) {
 	    // TODO: Additional checks?
 	    typename NormalizedDocumentType::PairEntry* pair = 0;
-	    if (local)
-	      pair = normalized.FindSharedPair(schemaPtr0, source);
+	    if (local0)
+	      pair = normalized.FindSharedPair(schemaPtr0, source0);
 	    else
-	      pair = normalized.FindSharedPair(this->schemaPtr, !source);
+	      pair = normalized.FindSharedPair(this->schemaPtr, !source0);
 	    if (pair) return;
 	  }
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
@@ -6073,7 +6073,7 @@ protected:
 	  SharedPropertyBase* pairProperty = 0;
 	  SharedPropertyBase* partnerProperty = 0;
 	  bool multiplePartners = false;
-	  if (local) {
+	  if (local0) {
 	    RAPIDJSON_ASSERT(NLinks() > 0);
 	    multiplePartners = NLinks() > 2;
 	    pairProperty = this;
@@ -6111,8 +6111,8 @@ protected:
 	      return; // Don't create/add to a pair
 	    }
 	  }
-	  RAPIDJSON_ASSERT(source == pairProperty->source &&
-			   !source == partnerProperty->source);
+	  RAPIDJSON_ASSERT(source0 == pairProperty->source &&
+			   !source0 == partnerProperty->source);
 	  normalized.AddSharedObject(prefix, instancePtr0, schemaPtr0,
 				     props, pairProperty, partnerProperty,
 				     multiplePartners);
