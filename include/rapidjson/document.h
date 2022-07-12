@@ -5022,6 +5022,23 @@ public:
     return true;
   }
   bool WasFinalized() const { return (stack_.GetSize() == 0); }
+  void ConsolidateStack() {
+    if (stack_.GetSize() > sizeof(ValueType)) {
+      ValueType* v = stack_.template Top<ValueType>();
+      while (true) {
+	if (v->IsArray() && v->Size() == 0) {
+	  SizeType N = (SizeType)(stack_.template Top<ValueType>() - v);
+	  EndArray(N);
+	} else if (v->IsObject() && v->MemberCount() == 0) {
+	  SizeType N = (SizeType)(stack_.template Top<ValueType>() - v) / 2;
+	  EndObject(N);
+	}
+	if (v == stack_.template Bottom<ValueType>())
+	  break;
+	v--;
+      }
+    }
+  }
   void FinalizeFromStack() {
     if (stack_.GetSize() > 0) {
       RAPIDJSON_ASSERT(stack_.GetSize() == sizeof(ValueType)); // Got one and only one root object

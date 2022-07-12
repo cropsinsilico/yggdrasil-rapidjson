@@ -1521,7 +1521,11 @@ public:
   //! Determine if the document was modified.
   bool WasModified() const { return (modifiedStack_.GetSize() > 0); }
   //! Finalize the document from elements added to the stack.
-  void FinalizeFromStack() { document_.FinalizeFromStack(); }
+  void FinalizeFromStack(bool afterError = false) {
+    if (afterError)
+      document_.ConsolidateStack();
+    document_.FinalizeFromStack();
+  }
   //! Determine if the document was finalized.
   bool WasFinalized() const { return document_.WasFinalized(); }
 

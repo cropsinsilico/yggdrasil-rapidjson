@@ -48,6 +48,7 @@ using namespace rapidjson;
       EXPECT_TRUE(normalizer.WasNormalized());\
     }\
     if ((expected) && !normalizer.IsValid()) {\
+        normalizer.GetNormalizedDoc().FinalizeFromStack(true);	\
         StringBuffer sb;\
         normalizer.GetInvalidSchemaPointer().StringifyUriFragment(sb);\
         printf("Invalid schema: %s\n", sb.GetString());\
