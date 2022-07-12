@@ -488,6 +488,11 @@ public:
     if (localProperties) {
       for (SizeType i = 0; i < localPropertyCount; i++)
 	localProperties[i].SortSources(root, path);
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+      std::cerr << "SortSources: ";
+      Display();
+      std::cerr << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
     }
   }
   bool isLocal(const SizeType& i) const {
@@ -518,7 +523,7 @@ public:
   }
   void Display(bool* mask=nullptr) {
     for (SizeType i = 0; i < propertyCount; i++) {
-      std::cerr << "    ";
+      std::cerr << "    " << isLocal(i) << ": ";
       GetProperty(i)->Display();
       if (mask && !mask[i])
 	std::cerr << " [masked]";
@@ -545,27 +550,16 @@ public:
     }
     return false;
   }
-  void SetCurrentPtr(const PointerType& x, bool checkInstance = false) {
-    for (SizeType i = 0; i < propertyCount; i++)
-      GetProperty(i)->SetCurrentPtr(x, checkInstance);
-    for (SizeType i = 0; i < propertyCount; i++)
-      GetProperty(i)->SetSiblingCurrentPtr(x, checkInstance);
-  }
-  void SetSiblingCurrentPtr(const PointerType& x, bool source,
-			    bool local, size_t index,
-			    bool checkInstance = false) {
-    SizeType N = siblingCount(local, index);
-    for (SizeType i = 0; i < N; i++) {
-      SharedPropertyType* prop = GetProperty(i);
-      if (prop->isSrc(isLocal(i)) == source) continue;
-      prop->SetCurrentPtr(x, checkInstance);
-    }
-  }
   void AddObject(const PointerType& instancePtr,
 		 const PointerType& schemaPtr,
 		 const SValue& present,
 		 NormalizedDocumentType& normalized) {
-    SetCurrentPtr(instancePtr, true);
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+    std::cerr << "AddObject [";
+    NormalizedDocumentType::DisplayPointer(schemaPtr);
+    std::cerr << "]:" << std::endl;
+    Display();
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
     for (SizeType i = 0; i < propertyCount; i++)
       GetProperty(i)->AddObject(instancePtr, schemaPtr,
 				normalized, present, isLocal(i));
@@ -921,6 +915,7 @@ public:
     void CopyFrom(const SharedValueEntry& rhs, AllocatorType& allocator) {
       instancePtr = rhs.instancePtr;
       schemaPtr = rhs.schemaPtr;
+      shared.CopyFrom(rhs.shared, allocator);
       properties.CopyFrom(rhs.properties, allocator);
       present.CopyFrom(rhs.present, allocator);
       set = rhs.set;
@@ -1479,6 +1474,9 @@ public:
 	  parent = GetParent(normalized, true);
 	RAPIDJSON_ASSERT(parent);
 	if (!parent || !parent->HasMember(copy[i])) continue;
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+	std::cerr << "RemoveShared: " << copy[i].GetString() << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	parent->RemoveMember(copy[i]);
 	typename SValue::ConstValueIterator it = src.properties.Index(copy[i]);
 	if (it != src.properties.End())
@@ -1550,10 +1548,13 @@ public:
     //   cached and added later to avoid modifiying the pair stack during
     //   iteration.
     tempSharedStack_ = static_cast<PairEntry*>(GetAllocator().Realloc(tempSharedStack_, sizeof(PairEntry) * tempSharedCount_, sizeof(PairEntry) * tempSharedCount_ + childShared.GetSize()));
-    memcpy((char*)(tempSharedStack_ + tempSharedCount_),
-	   (char*)(childShared.template Bottom<PairEntry>()),
-	   childShared.GetSize());
-    tempSharedCount_ += childShared.GetSize() / sizeof(PairEntry);
+    size_t NChild = childShared.GetSize() / sizeof(PairEntry);
+    for (size_t i = 0; i < NChild; i++)
+      new (tempSharedStack_ + tempSharedCount_ + i) PairEntry(childShared.template Bottom<PairEntry>()[i], &GetAllocator());
+    // memcpy((char*)(tempSharedStack_ + tempSharedCount_),
+    // 	   (char*)(childShared.template Bottom<PairEntry>()),
+    // 	   childShared.GetSize());
+    tempSharedCount_ += NChild;
   }
   bool ExtendSharedTemp(Context& context, const SchemaType& schema,
 			bool runDefaults = false) {
@@ -1589,15 +1590,19 @@ public:
 		    const PairEntry* childShared, size_t childSharedCount,
 		    bool skipCheck = false, bool verbose = false) {
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-    std::cerr << "ExtendShared Child: " << std::endl;
-    for (SizeType i = 0; i < childSharedCount; i++) {
-      std::cerr << "    ";
-      (childShared + i)->Display(true);
+    if (childSharedCount > 0) {
+      std::cerr << "ExtendShared Child: " << std::endl;
+      for (SizeType i = 0; i < childSharedCount; i++) {
+	std::cerr << "    ";
+	(childShared + i)->Display(true);
+	std::cerr << std::endl;
+      }
       std::cerr << std::endl;
     }
-    std::cerr << std::endl;
-    std::cerr << "ExtendShared Before: " << std::endl;
-    DisplayShared(false);
+    if (sharedStack_.GetSize() > 0) {
+      std::cerr << "ExtendShared Before: " << std::endl;
+      DisplayShared(false);
+    }
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
     size_t NStack = sharedStack_.GetSize() / sizeof(PairEntry);
     for (size_t i = 0; i < childSharedCount; i++) {
@@ -1627,8 +1632,10 @@ public:
       }
     }
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-    std::cerr << "ExtendShared After: " << std::endl;
-    DisplayShared(false);
+    if (sharedStack_.GetSize() > 0) {
+      std::cerr << "ExtendShared After: " << std::endl;
+      DisplayShared(false);
+    }
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
     if (!skipCheck)
       return CheckSharedPairs(context, schema);
@@ -1976,7 +1983,7 @@ public:
 		      const PointerType& iP, const PointerType& iS) {
     if (!schema.sharedProperties_) return true;
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-    std::cerr << "FinalizedShared: ";
+    std::cerr << "FinalizeShared: ";
     DisplayPointer(iS);
     std::cerr << ", ";
     DisplayPointer(iP);
@@ -2167,8 +2174,8 @@ public:
 	AddSharedTemp(n.GetNormalizedDoc().sharedStack_);
 	// Don't call the PairEntry destructor, it will be called after the
 	// temporary stack is processed.
-	while (!n.GetNormalizedDoc().sharedStack_.Empty())
-	  n.GetNormalizedDoc().sharedStack_.template Pop<PairEntry>(1);
+	// while (!n.GetNormalizedDoc().sharedStack_.Empty())
+	//   n.GetNormalizedDoc().sharedStack_.template Pop<PairEntry>(1);
       }
       return true;
     }
@@ -5893,8 +5900,6 @@ protected:
 		      size_t stackCapacity = 0) :
 	  SharedPropertyBase(allocator),
 	  first(kPointerOrderNull),
-	  currentFlag(false),
-	  currentMatchLocal(false), currentMatchLinks(false),
 	  parentProperty(0),
 	  prefix(allocator),
 	  propertyNames(kArrayType), // HERE INSTANCE
@@ -5907,8 +5912,6 @@ protected:
 			     parentProperty0->schema,
 			     parentProperty0->index, rootPath),
 	  first(kPointerOrderNull),
-	  currentFlag(false),
-	  currentMatchLocal(false), currentMatchLinks(false),
 	  parentProperty(parentProperty0),
 	  prefix(allocator),
 	  propertyNames(kArrayType), // HERE INSTANCE
@@ -5929,7 +5932,10 @@ protected:
 	  std::cerr << "]";
 	}
 	void Display() const {
-	  std::cerr << "InstanceEntry(" << std::endl << "      links = ";
+	  std::cerr << "InstanceEntry(";
+	  // NormalizedDocumentType::DisplayPointer(this->instancePtr);
+	  NormalizedDocumentType::DisplayPointer(this->schemaPtr);
+	  std::cerr << ", " << std::endl << "      links = ";
 	  DisplayLinks();
 	  std::cerr << ")";
 	}
@@ -5974,10 +5980,6 @@ protected:
 	  }
 	  return false;
 	}
-	void SetCurrentPtr(const PointerType& x, bool checkInstance = false) {
-	  currentMatchLocal = Matches(x, true, checkInstance);
-	  currentMatchLinks = Matches(x, false, checkInstance);
-	}
 	void SetSiblingCurrentPtr(const PointerType& x, bool checkInstance = false) {
 	  // Links only
 	  for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++)
@@ -5985,19 +5987,6 @@ protected:
 								parentProperty->isSrc(true),
 								false,
 								it->index, checkInstance);
-	}
-	void SetSiblingMembers(const SValue& name,
-			       const NormValueType* value,
-			       NormalizedDocumentType& normalized) {
-	  if (!((!parentProperty->push && currentMatchLinks) ||
-		(parentProperty->push && currentMatchLocal)))
-	    return;
-	  if (parentProperty->isLocal(false))
-	    parentProperty->schema->sharedProperties_->SetSiblingMembers(name, value, normalized, this->instancePtr, true, parentProperty->index);
-	  else {
-	    for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++)
-	      it->schema->sharedProperties_->SetSiblingMembers(name, value, normalized, it->instancePtr, false, it->index);
-	  }
 	}
 	LinkEntry* AddLink(SchemaType* iSchema, size_t index0,
 			   const PointerType& path) {
@@ -6050,9 +6039,13 @@ protected:
 	void AddObject(PointerType instancePtr0, PointerType schemaPtr0,
 		       NormalizedDocumentType& normalized,
 		       const SValue& props, bool local0, bool source0) {
-	  // Don't add object if a pair has already been created
+	  // Don't add object if a pair has already been created or dosn't
+	  //   match the expected instance pointer
 	  if ((first == kPointerOrderTrue && !local0) ||
-	      (first == kPointerOrderFalse && local0))
+	      (first == kPointerOrderFalse && local0) ||
+	      NLinks() == 0 ||
+	      (local0 && !Matches(instancePtr0, true, true)) ||
+	      (!local0 && !Matches(instancePtr0, false, true)))
 	    return;
 	  else if (first == kPointerOrderNull) {
 	    // TODO: Additional checks?
@@ -6102,15 +6095,15 @@ protected:
 	    }
 	    if (nLinkMatched != 1) {
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-	      std::cerr << "AddObject (NO LINK MATCHED): ";
+	      std::cerr << "AddObject (NO LINK MATCHED): " <<
+		std::endl << "    ";
 	      NormalizedDocumentType::DisplayPointer(schemaPtr0);
-	      std::cerr << " vs [";
+	      std::cerr << std::endl << "    ---- vs ----" << std::endl;
 	      for (LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
-		if (it != LinksBegin())
-		  std::cerr << ", ";
+		std::cerr << "    ";
 		NormalizedDocumentType::DisplayPointer(it->schemaPtr);
+		std::cerr << std::endl;
 	      }
-	      std::cerr << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	      return; // Don't create/add to a pair
 	    }
@@ -6122,9 +6115,6 @@ protected:
 				     multiplePartners);
 	}
 	PointerOrderFlag first;
-	bool currentFlag;
-	bool currentMatchLocal;
-	bool currentMatchLinks;
 	SharedProperty* parentProperty;
 	PointerType prefix;
 	SValue propertyNames; // HERE INSTANCE
@@ -6210,18 +6200,6 @@ protected:
 	new (ref) InstanceEntry(this, schemaPtr0, this->schema->allocator_);
 	return ref;
       }
-      void SetCurrentPtr(const PointerType& x, bool checkInstance = false) {
-	for (InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++)
-	  it->SetCurrentPtr(x, checkInstance);
-      }
-      void SetSiblingCurrentPtr(const PointerType& x, bool checkInstance = false) {
-	this->schema->sharedProperties_->SetSiblingCurrentPtr(x, isSrc(false),
-							      true,
-							      this->index,
-							      checkInstance);
-	for (InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++)
-	  it->SetSiblingCurrentPtr(x, checkInstance);
-      }
       void SortSources(const SchemaType* root,
 		       const PointerType& rootPath) {
 	currentInstance = AddInstance(rootPath);
@@ -6259,15 +6237,9 @@ protected:
 		     NormalizedDocumentType& normalized,
 		     const SValue& props, bool local0) {
 	bool source0 = isSrc(local0);
-	for (InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++) {
-	  it->currentFlag = (it->NLinks() > 0);
-	  if (it->currentFlag && ((local0 && it->currentMatchLocal) ||
-				  (!local0 && it->currentMatchLinks)))
-	    it->AddObject(instancePtr0, schemaPtr0, normalized,
-			  props, local0, source0);
-	  it->currentFlag = (it->currentFlag &&
-			     (it->currentMatchLocal || it->currentMatchLinks));
-	}
+	for (InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++)
+	  it->AddObject(instancePtr0, schemaPtr0, normalized,
+			props, local0, source0);
       }
       void AddMissingObject(PointerType instancePtr0,
 			    NormalizedDocumentType& normalized,
