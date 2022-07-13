@@ -3270,8 +3270,9 @@ private:
     return schema_ptr.Get(*base, &idx);
   }
   //! Add new aliases and check if the document contains any of them.
-  bool ExtendAliases(Context& context, ValueType& aliases, bool* replaced) {
-    *replaced = false;
+  bool ExtendAliases(Context& context, const ValueType& aliases, bool* replaced) {
+    if (replaced)
+      *replaced = false;
     RAPIDJSON_ASSERT(aliases.IsObject());
     std::cerr << "ExtendAliases: " << aliases.IsObject() << std::endl;
     for (typename ValueType::ConstMemberIterator it = aliases.MemberBegin(); it != aliases.MemberEnd(); ++it) {
@@ -3282,7 +3283,9 @@ private:
 				     GetAllocator()).Move(),
 			   kObjectType, GetAllocator());
       }
-      RAPIDJSON_ASSERT(it->value.IsObject() && aliases_[it->name].IsObject());
+      RAPIDJSON_ASSERT(it->value.IsObject() &&
+		       aliases_.HasMember(it->name) &&
+		       aliases_[it->name].IsObject());
       std::cerr << "ExtendAliases: " << it->name.GetString() << " - " << aliases_[it->name].IsObject() << std::endl;
       for (typename ValueType::ConstMemberIterator v = it->value.MemberBegin(); v != it->value.MemberEnd(); ++v) {
 	std::cerr << "Checking for alias" << std::endl;
@@ -3332,7 +3335,8 @@ private:
 		RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
 	      }
 	    } else {
-	      *replaced = true;
+	      if (replaced)
+		*replaced = true;
 	      RecordModifiedAlias(primary, v->name, &base_ptr);
 	    }
 	  }
@@ -3362,7 +3366,7 @@ private:
     RAPIDJSON_ASSERT(aliases_.IsObject());
     if (!aliases_.HasMember(address.GetString())) {
       aliases_.AddMember(ValueType(address.GetString(),
-				   static_cast<SizeType>(address.GetSize() / sizeof(Ch)),
+				   (SizeType)address.GetLength(),
 				   GetAllocator()).Move(),
 			 kObjectType, GetAllocator());
     }
