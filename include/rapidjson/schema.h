@@ -1680,6 +1680,7 @@ public:
     extend_context_ = nullptr;
     extend_schema_ = nullptr;
     PopValue();
+    std::cerr << "Finished extend" << std::endl;
     return out;
   }
 
@@ -3271,21 +3272,27 @@ private:
   bool ExtendAliases(Context& context, ValueType& aliases, bool* replaced) {
     *replaced = false;
     RAPIDJSON_ASSERT(aliases.IsObject());
+    std::cerr << "ExtendAliases: " << aliases.IsObject() << std::endl;
     for (typename ValueType::ConstMemberIterator it = aliases.MemberBegin(); it != aliases.MemberEnd(); ++it) {
+      std::cerr << "ExtendAliases: " << it->name.GetString() << std::endl;
       if (!aliases_.HasMember(it->name)) {
 	aliases_.AddMember(ValueType(it->name.GetString(),
 				     it->name.GetStringLength(),
 				     GetAllocator()).Move(),
 			   kObjectType, GetAllocator());
       }
-      RAPIDJSON_ASSERT(it->value.IsObject());
+      RAPIDJSON_ASSERT(it->value.IsObject() && aliases_[it->name].IsObject());
+      std::cerr << "ExtendAliases: " << it->name.GetString() << " - " << aliases_[it->name].IsObject() << std::endl;
       for (typename ValueType::ConstMemberIterator v = it->value.MemberBegin(); v != it->value.MemberEnd(); ++v) {
+	std::cerr << "Checking for alias" << std::endl;
 	if (aliases_[it->name].HasMember(v->name)) {
 	  typename ValueType::ConstMemberIterator existing = aliases_[it->name].FindMember(v->name);
+	  std::cerr << "Checking value" << std::endl;
 	  if (existing->value != v->value) {
 	    context.error_handler.ConflictingAliases(v->name, existing->value, v->value);
 	    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorConflictingAliases);
 	  }
+	  std::cerr << "Checked value" << std::endl;
 	} else {
 	  aliases_[it->name].AddMember(ValueType(v->name.GetString(),
 						 v->name.GetStringLength(),
@@ -4584,6 +4591,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
 	RAPIDJSON_ASSERT(child_aliases_.IsObject());
 	SValue dest;
+	std::cerr << "Key: " << str << std::endl;
 	if (child_aliases_.HasMember(str)) {
 	  SValue orig(str, len, *allocator_);
 	  if (!follow_aliases_(child_aliases_, orig, &dest, *allocator_)) {
@@ -5320,6 +5328,7 @@ protected:
         const Ch* str = name.GetString();
 #ifdef RAPIDJSON_YGGDRASIL
 	RAPIDJSON_ASSERT(child_aliases_.IsObject());
+	std::cerr << "FindPropertyIndex: " << str << std::endl;
 	if (child_aliases_.HasMember(str)) {
 	  SValue orig(str, len, *allocator_);
 	  SValue dest;
