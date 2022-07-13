@@ -36,7 +36,6 @@
 #include <complex>
 #include "units.h"
 #include "precision.h"
-#include <iostream>
 #endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_DIAG_PUSH
@@ -2246,7 +2245,7 @@ public:
                 return false;
             for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
 	        if (!m->name.IsString())
-		    std::cerr << "Accept: " << m->name.GetType() << std::endl;
+		    printf("Accept: %d\n", (int)(m->name.GetType()));
                 RAPIDJSON_ASSERT(m->name.IsString()); // User may change the type of name by MemberIterator.
                 if (RAPIDJSON_UNLIKELY(!handler.Key(m->name.GetString(), m->name.GetStringLength(), (m->name.data_.f.flags & kCopyFlag) != 0)))
                     return false;
@@ -2841,7 +2840,7 @@ public:
 	return false;
       for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
 	if (!m->name.IsString())
-	  std::cerr << "AcceptYggdrasil: " << m->name.GetType() << std::endl;
+	  printf("AcceptYggdrasil: %d\n", (int)(m->name.GetType()));
 	RAPIDJSON_ASSERT(m->name.IsString()); // User may change the type of name by MemberIterator.
 	if (RAPIDJSON_UNLIKELY(!handler.Key(m->name.GetString(), m->name.GetStringLength(), (m->name.data_.f.flags & kCopyFlag) != 0)))
 	  return false;
