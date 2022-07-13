@@ -3277,12 +3277,16 @@ private:
     std::cerr << "ExtendAliases: " << aliases.IsObject() << std::endl;
     for (typename ValueType::ConstMemberIterator it = aliases.MemberBegin(); it != aliases.MemberEnd(); ++it) {
       std::cerr << "ExtendAliases: " << it->name.GetString() << std::endl;
+      DisplayValue(aliases_, true);
+      std::cerr << "ExtendAliases (hasMember): " << aliases_.HasMember(it->name) << std::endl;
       if (!aliases_.HasMember(it->name)) {
+	std::cerr << "EXtend aliases add" << std::endl;
 	aliases_.AddMember(ValueType(it->name.GetString(),
 				     it->name.GetStringLength(),
 				     GetAllocator()).Move(),
 			   kObjectType, GetAllocator());
       }
+      std::cerr << "Extend aliases before assert" << std::endl;
       RAPIDJSON_ASSERT(it->value.IsObject() &&
 		       aliases_.HasMember(it->name) &&
 		       aliases_[it->name].IsObject());
