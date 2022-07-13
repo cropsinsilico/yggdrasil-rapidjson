@@ -2934,15 +2934,6 @@ inline std::ostream & operator << (std::ostream &os, const GenericQuantityArray<
       prefix GenericQuantityArray<T, Encoding>::operator=(other);	\
       return *this;							\
     }									\
-    /* operator GenericQuantityArray<T, Encoding>() const { */		\
-    /* return GenericQuantityArray<T, Encoding>(this->value_, this->units_); */ \
-    /* } */								\
-    /* name<T> operator*(const name<T>& x) const { */			\
-    /* return name(this->value_[0] * x.value_[0], this->units_ * x.units_); */ \
-    /* } */								\
-    /* name<T> operator/(const name<T>& x) const { */			\
-    /* return name(this->value_[0] / x.value_[0], this->units_ / x.units_); */  \
-    /* } */								\
   }
 
 //! GenericQuantityArray with UTF8 encoding
