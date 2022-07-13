@@ -716,6 +716,7 @@ enum SingularFlag {
 template<typename ValueType, typename AllocatorType>
 bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 		     ValueType* dest, AllocatorType& allocator) {
+  RAPIDJSON_ASSERT(aliases.IsObject());
   typename ValueType::ConstMemberIterator primary = aliases.FindMember(orig);
   if (primary == aliases.MemberEnd()) {
     dest->CopyFrom(orig, allocator, true);
@@ -1277,7 +1278,7 @@ public:
       if (!prop) return 0;
       if (!parent)
 	parent = GetParent(normalized, true);
-      RAPIDJSON_ASSERT(parent);
+      RAPIDJSON_ASSERT(parent && parent->IsObject());
       if (!(parent && parent->HasMember(name))) {
 	std::cerr << "GetMember [" << name.GetString() << "]: ";
 	Display();
@@ -1311,7 +1312,7 @@ public:
       if (value) {
 	if (!parent)
 	  parent = GetParent(normalized, false);
-	RAPIDJSON_ASSERT(parent && dst.parent);
+	RAPIDJSON_ASSERT(parent && parent->IsObject() && dst.parent);
 	if (parent && !parent->HasMember(name) && dst.parent) {
 	  typename SchemaType::SharedProperty::PropertyEntry* prop = dst.parent->FindProperty(name);
 	  RAPIDJSON_ASSERT(prop);
@@ -1425,7 +1426,7 @@ public:
 	if (!IsFinalized(copy[i], false, normalized)) continue;
 	if (!parent)
 	  parent = GetParent(normalized, false);
-	RAPIDJSON_ASSERT(parent && dst.parent);
+	RAPIDJSON_ASSERT(parent && parent->IsObject() && dst.parent);
 	if (!parent || parent->HasMember(copy[i]) || !dst.parent) continue;
 	typename SchemaType::SharedProperty::PropertyEntry* prop = dst.parent->FindProperty(copy[i]);
 	RAPIDJSON_ASSERT(prop);
@@ -1447,6 +1448,7 @@ public:
 				      (SizeType)sb.GetLength(),
 				      normalized.GetAllocator());
 	sb.Clear();
+	RAPIDJSON_ASSERT(missing.IsObject());
 	if (!missing.HasMember(schemaRef))
 	  missing.AddMember(ValueType(schemaRef,
 					  normalized.GetAllocator(),
@@ -1472,8 +1474,9 @@ public:
 	  continue;
 	if (!parent)
 	  parent = GetParent(normalized, true);
-	RAPIDJSON_ASSERT(parent);
-	if (!parent || !parent->HasMember(copy[i])) continue;
+	RAPIDJSON_ASSERT(parent && parent->IsObject());
+	if (!parent || !parent->IsObject() ||
+	    !parent->HasMember(copy[i])) continue;
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	std::cerr << "RemoveShared: " << copy[i].GetString() << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
@@ -1785,6 +1788,7 @@ public:
   bool NormYggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
     NORM_BEGIN_(YggdrasilString);
     // Units
+    RAPIDJSON_ASSERT(valueSchema.IsObject());
     typename YggSchemaValueType::ConstMemberIterator typeV = valueSchema.FindMember(SchemaType::GetTypeString());
     typename YggSchemaValueType::ConstMemberIterator subtypeV = valueSchema.FindMember(SchemaType::GetSubTypeString());
     typename YggSchemaValueType::ConstMemberIterator precisionV = valueSchema.FindMember(SchemaType::GetPrecisionString());
@@ -1888,6 +1892,7 @@ public:
     bool aliased = false;
     if (!dont_check_aliases) {
       const ValueType& aliases = AddAliases(schema);
+      RAPIDJSON_ASSERT(aliases.IsObject());
       orig.SetString(str, len, GetAllocator());
       ConstMemberIterator match = aliases.MemberEnd();
       if (FindAliasName(aliases, orig, match)) {
@@ -1991,6 +1996,7 @@ public:
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
     ValueType* v = CurrentValue();
     SValue present(kArrayType);
+    RAPIDJSON_ASSERT(v->IsObject());
     for (MemberIterator it = v->MemberBegin(); it != v->MemberEnd(); it++)
       present.PushBack(SValue(it->name, GetAllocator(), true).Move(),
 		       GetAllocator());
@@ -2025,6 +2031,7 @@ public:
       it->RecordMissing(*this, missing);
       it->RemoveShared(*this);
     }
+    RAPIDJSON_ASSERT(missing.IsObject());
     for (ConstMemberIterator it = missing.MemberBegin();
 	 it != missing.MemberEnd(); ++it) {
       context.error_handler.StartMissingProperties();
@@ -2682,6 +2689,7 @@ private:
       tmp.Swap(*GetMember(alias));
       // tmp.CopyFrom(*GetMember(alias), GetAllocator(), true);
       RemoveMember(alias);
+      RAPIDJSON_ASSERT(CurrentValue()->IsObject());
       CurrentValue()->AddMember(ValueType(primary, GetAllocator(), true).Move(),
 				tmp, GetAllocator());
     }
@@ -3253,6 +3261,7 @@ private:
   //! Add new aliases and check if the document contains any of them.
   bool ExtendAliases(Context& context, ValueType& aliases, bool* replaced) {
     *replaced = false;
+    RAPIDJSON_ASSERT(aliases.IsObject());
     for (typename ValueType::ConstMemberIterator it = aliases.MemberBegin(); it != aliases.MemberEnd(); ++it) {
       if (!aliases_.HasMember(it->name)) {
 	aliases_.AddMember(ValueType(it->name.GetString(),
@@ -3260,6 +3269,7 @@ private:
 				     GetAllocator()).Move(),
 			   kObjectType, GetAllocator());
       }
+      RAPIDJSON_ASSERT(it->value.IsObject());
       for (typename ValueType::ConstMemberIterator v = it->value.MemberBegin(); v != it->value.MemberEnd(); ++v) {
 	if (aliases_[it->name].HasMember(v->name)) {
 	  typename ValueType::ConstMemberIterator existing = aliases_[it->name].FindMember(v->name);
@@ -3315,11 +3325,13 @@ private:
   }
   bool FindAliasName(const ValueType& aliases, ValueType& name,
 		     ConstMemberIterator& match) {
+    RAPIDJSON_ASSERT(aliases.IsObject());
     match = aliases.FindMember(name);
     return (match != aliases.MemberEnd());
   }
   bool FindAliasValue(const ValueType& aliases, ValueType& name,
 		      ConstMemberIterator& match) {
+    RAPIDJSON_ASSERT(aliases.IsObject());
     match = aliases.MemberBegin();
     for ( ; match != aliases.MemberEnd(); ++match)
       if (name == match->value)
@@ -3329,6 +3341,7 @@ private:
   ValueType& GetAliases() {
     GenericStringBuffer<EncodingType> address;
     GetInstanceRef(address, ((!extending_) || appending_));
+    RAPIDJSON_ASSERT(aliases_.IsObject());
     if (!aliases_.HasMember(address.GetString())) {
       aliases_.AddMember(ValueType(address.GetString(),
 				   static_cast<SizeType>(address.GetSize() / sizeof(Ch)),
@@ -3339,8 +3352,11 @@ private:
   }
   const ValueType& AddAliases(const SchemaType* schema) {
     ValueType& aliases = GetAliases();
-    if ((schema == nullptr) || (schema->child_aliases_.MemberCount() == 0))
+    RAPIDJSON_ASSERT(aliases.IsObject());
+    if ((schema == nullptr) || (schema->child_aliases_.IsObject() &&
+				schema->child_aliases_.MemberCount() == 0))
       return aliases;
+    RAPIDJSON_ASSERT(schema->child_aliases_.IsObject());
     for (typename SValue::ConstMemberIterator it = schema->child_aliases_.MemberBegin(); it != schema->child_aliases_.MemberEnd(); ++it) {
       if (!aliases.HasMember(it->name.GetString())) {
 	aliases.AddMember(ValueType(it->name.GetString(),
@@ -4054,6 +4070,7 @@ public:
 	    }
         }
 	if (hasAliases_) {
+	  RAPIDJSON_ASSERT(child_aliases_.IsObject());
 	  for (typename SValue::ConstMemberIterator a = child_aliases_.MemberBegin(); a != child_aliases_.MemberEnd(); a++) {
 	    for (typename SValue::ConstMemberIterator b = a + 1; b != child_aliases_.MemberEnd(); b++) {
 	      if ((a->name == b->name) && (a->value != b->value)) {
@@ -4451,6 +4468,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
   template <typename YggSchemaValueType>
   bool YggdrasilString(Context& context, const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema) const {
+    RAPIDJSON_ASSERT(schema.IsObject());
     RAPIDJSON_NORMALIZER_(YggdrasilString, str, length, copy, schema);
     if (!CheckRequiredSchemaProperty(context, schema, GetTypeString()))
       return false;
@@ -4487,6 +4505,7 @@ public:
   }
   template <typename YggSchemaValueType>
   bool YggdrasilStartObject(Context& context, YggSchemaValueType& schema) const {
+    RAPIDJSON_ASSERT(schema.IsObject());
     RAPIDJSON_NORMALIZER_(YggdrasilStartObject, schema);
     if (!CheckRequiredSchemaProperty(context, schema, GetTypeString()))
       return false;
@@ -4553,6 +4572,7 @@ public:
         RAPIDJSON_NORMALIZER_(Key, str, len, copy);
 	(void)copy;
 #ifdef RAPIDJSON_YGGDRASIL
+	RAPIDJSON_ASSERT(child_aliases_.IsObject());
 	SValue dest;
 	if (child_aliases_.HasMember(str)) {
 	  SValue orig(str, len, *allocator_);
@@ -5289,6 +5309,7 @@ protected:
         SizeType len = name.GetStringLength();
         const Ch* str = name.GetString();
 #ifdef RAPIDJSON_YGGDRASIL
+	RAPIDJSON_ASSERT(child_aliases_.IsObject());
 	if (child_aliases_.HasMember(str)) {
 	  SValue orig(str, len, *allocator_);
 	  SValue dest;
@@ -5477,6 +5498,7 @@ protected:
 #ifdef RAPIDJSON_YGGDRASIL
   template <typename YggSchemaValueType>
   bool CheckRequiredSchemaProperty(Context& context, const YggSchemaValueType& schema, const ValueType& name) const {
+    RAPIDJSON_ASSERT(schema.IsObject());
     if (!schema.HasMember(name)) {
       context.error_handler.MissingRequiredSchemaProperty(name);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequiredSchema);
@@ -5505,6 +5527,7 @@ protected:
   }
   template <typename YggSchemaValueType>
   bool CheckSubType(Context& context, const YggSchemaValueType& schema) const {
+    RAPIDJSON_ASSERT(schema.IsObject());
     if (!CheckRequiredSchemaProperty(context, schema, GetSubTypeString()))
       return false;
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetSubTypeString());
@@ -5523,6 +5546,7 @@ protected:
   }
   template <typename YggSchemaValueType>
   bool CheckPrecision(Context& context, const YggSchemaValueType& schema) const {
+    RAPIDJSON_ASSERT(schema.IsObject());
     if (!CheckRequiredSchemaProperty(context, schema, GetPrecisionString()))
       return false;
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetPrecisionString());
@@ -5546,6 +5570,7 @@ protected:
   }
   template <typename YggSchemaValueType>
   bool CheckUnits(Context& context, const YggSchemaValueType& schema) const {
+    RAPIDJSON_ASSERT(schema.IsObject());
     if (!CheckRequiredSchemaProperty(context, schema, GetUnitsString()))
       return false;
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetUnitsString());
@@ -5554,6 +5579,7 @@ protected:
   }
   template <typename YggSchemaValueType>
   bool CheckShape(Context& context, const YggSchemaValueType& schema) const {
+    RAPIDJSON_ASSERT(schema.IsObject());
     if (!CheckRequiredSchemaProperty(context, schema, GetShapeString()))
       return false;
     if (shape_.IsNull())
@@ -7248,14 +7274,17 @@ private:
 	ValueType v;
 	v.SetArray();
 	v.PushBack(ValueType(v.GetPythonClassString(), d.GetAllocator()).Move(), d.GetAllocator());
+	RAPIDJSON_ASSERT(d.IsObject());
 	d.AddMember(SchemaType::GetRequiredString(), v, d.GetAllocator());
 	if (cls.IsPythonClass()) {
+	  RAPIDJSON_ASSERT(d[v.GetPropertiesString()][v.GetPythonClassString()][SchemaType::GetAnyOfString()][0].IsObject());
 	  d[v.GetPropertiesString()][v.GetPythonClassString()][SchemaType::GetAnyOfString()][0].AddMember(
   	      v.GetPythonClassString(),
 	      ValueType(cls.GetString(),
 			cls.GetStringLength(),
 			d.GetAllocator()).Move(),
 	      d.GetAllocator());
+	  RAPIDJSON_ASSERT(d[v.GetPropertiesString()][v.GetPythonClassString()][SchemaType::GetAnyOfString()][1][v.GetItemsString()].IsObject());
 	  d[v.GetPropertiesString()][v.GetPythonClassString()][SchemaType::GetAnyOfString()][1][v.GetItemsString()].AddMember(
 	      v.GetPythonClassString(),
 	      ValueType(cls.GetString(),
@@ -7680,6 +7709,7 @@ public:
       typedef typename ValueType::ConstMemberIterator MemberIter;
       if (!err)
 	err = &error_;
+      RAPIDJSON_ASSERT(err->IsObject());
       if ((!isSingular) && (err->MemberCount() > 1))
 	out.SetArray();
       bool hasSingular = false;
@@ -7745,6 +7775,8 @@ public:
       typedef typename ValueType::ConstValueIterator ValueIter;
       out.SetObject();
       internal::Stack<StateAllocator> msg_stack(stateAllocator_, kDefaultDocumentStackCapacity);
+      RAPIDJSON_ASSERT(err->IsObject());
+      RAPIDJSON_ASSERT(out.IsObject());
       MemberIter code = err->FindMember(GetErrorCodeString());
       if (code == err->MemberEnd())
 	return false;
@@ -8236,6 +8268,7 @@ public:
     error_.CopyFrom(static_cast<GenericSchemaValidator*>(subvalidator[0])->GetError(), GetStateAllocator(), true);
     RAPIDJSON_ASSERT(error_.IsObject() && (error_.MemberCount() == 1));
     typename ValueType::ConstMemberIterator m = error_.MemberBegin();
+    RAPIDJSON_ASSERT(m->value.IsObject());
     typename ValueType::ConstMemberIterator vcode = m->value.FindMember(GetErrorCodeString());
     RAPIDJSON_ASSERT(vcode != m->value.MemberEnd());
     error_.AddMember(GetSingularString(),
@@ -8735,6 +8768,7 @@ private:
 #ifdef RAPIDJSON_YGGDRASIL
     //! Support for warnings
     void AddWarning(const ValueType& keyword, const ValueType& warning) {
+      RAPIDJSON_ASSERT(warning_.IsObject());
       typename ValueType::MemberIterator member = warning_.FindMember(keyword);
       if (member == warning_.MemberEnd())
 	warning_.AddMember(keyword, ValueType(warning, GetStateAllocator()).Move(), GetStateAllocator());
@@ -8758,6 +8792,7 @@ private:
     void AddWarningArray(ISchemaValidator** subvalidators, SizeType count) {
       for (SizeType i = 0; i < count; ++i) {
 	const ValueType& iwarnings = static_cast<GenericSchemaValidator*>(subvalidators[i])->GetWarning();
+	RAPIDJSON_ASSERT(iwarnings.IsObject());
 	for (typename ValueType::ConstMemberIterator it = iwarnings.MemberBegin(); it != iwarnings.MemberEnd(); ++it) {
 	  if (it->value.IsArray()) {
 	    for (typename ValueType::ConstValueIterator iit = it->value.Begin(); iit != it->value.End(); ++iit)
