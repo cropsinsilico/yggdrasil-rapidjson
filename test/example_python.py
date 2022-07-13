@@ -38,3 +38,7 @@ class OtherClass(object):
 
 def example_function(*args, **kwargs):
     pass
+
+
+def example_filter():
+    return False

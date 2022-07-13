@@ -5,12 +5,7 @@ import os
 from urllib.request import urlopen
 
 
-def filter_func_ex():  # pragma: no cover
-    r"""Test function for normalizing filters."""
-    return False
-
-
-filter_func_ex_name = '%s:filter_func_ex' % __file__
+filter_func_ex_name = 'example_python:example_filter'
 
 
 def create_full_schema(fname):
@@ -177,7 +172,8 @@ if __name__ == "__main__":
     if args.ygg_tests:
         import yaml
         # fname = '/Users/langmm/yggdrasil/yggdrasil/.ygg_schema.yml'
-        fname = '/Users/langmm/yggdrasil/full_schema.yml'
+        fname = os.path.join(os.path.dirname(__file__),
+                             'test', 'full_schema.yml')
         if args.create_full_schema or not os.path.isfile(fname):
             create_full_schema(fname)
         with open(fname, 'r') as fd:
