@@ -33,7 +33,10 @@
 #else // RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11
 #endif // RAPIDJSON_HAS_CXX11
+#define RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#define RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#define RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 #include "prettywriter.h"
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 #endif // RAPIDJSON_YGGDRASIL
@@ -717,6 +720,7 @@ template<typename ValueType, typename AllocatorType>
 bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 		     ValueType* dest, AllocatorType& allocator) {
   RAPIDJSON_ASSERT(aliases.IsObject());
+  std::cerr << "follow_aliases_" << std::endl;
   typename ValueType::ConstMemberIterator primary = aliases.FindMember(orig);
   if (primary == aliases.MemberEnd()) {
     dest->CopyFrom(orig, allocator, true);
@@ -734,6 +738,7 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
       }
     }
     path.PushBack(ValueType(primary->value, allocator, true).Move(), allocator);
+    std::cerr << "follow_aliases_ 1" << std::endl;
     primary = aliases.FindMember(primary->value);
     RAPIDJSON_ASSERT(primary->value.IsString());
   }
@@ -1291,6 +1296,7 @@ public:
 				     name.GetStringLength(),
 				     normalized.GetAllocator()).Move(),
 			      normalized.GetAllocator());
+	std::cerr << "GetMember" << std::endl;
 	return &(parent->FindMember(name)->value);
       }
       return 0;
@@ -1890,6 +1896,7 @@ public:
 		const SchemaType* schema=nullptr) {
     bool exists = false;
     bool aliased = false;
+    std::cerr << "AliasKey" << std::endl;
     if (!dont_check_aliases) {
       const ValueType& aliases = AddAliases(schema);
       RAPIDJSON_ASSERT(aliases.IsObject());
@@ -1929,6 +1936,7 @@ public:
   bool NormKey(Context& context, const SchemaType& schema, const Ch* str, SizeType len, bool copy, bool dont_check_aliases=false) {
     ValueType orig;
     ValueType primary;
+    std::cerr << "NormKey: " << str << std::endl;
     INIT_CHECK(Norm, key, (const char*)str, &schema);
     out = AliasKey(context, str, len, copy, dont_check_aliases,
 		   orig, primary, &schema);
@@ -3194,6 +3202,7 @@ private:
   ValueType* GetMember(const ValueType& key, SizeType* memberCount=nullptr) {
     if (extending_ && !appending_) {
       RAPIDJSON_ASSERT(CurrentValue()->IsObject());
+      std::cerr << "GetMember: " << key.GetString() << std::endl;
       if (CurrentValue()->HasMember(key))
 	return &(CurrentValue()->FindMember(key)->value);
       return nullptr;
@@ -3305,6 +3314,7 @@ private:
 	  PointerType base_ptr;
 	  ValueType* base = Address2Value(it->name, root, &base_ptr,
 					  unfinalized);
+	  std::cerr << "Extend aliases" << std::endl;
 	  if (base && base->IsObject() && (base->HasMember(v->name))) {
 	    typename ValueType::MemberIterator old = base->FindMember(v->name);
 	    if (base->HasMember(primary)) {
@@ -8696,6 +8706,7 @@ private:
          : instancePointer).StringifyUriFragment(sb);
         ValueType instanceRef(sb.GetString(), static_cast<SizeType>(sb.GetSize() / sizeof(Ch)),
                               GetStateAllocator());
+	RAPIDJSON_ASSERT(result.IsObject());
         result.AddMember(GetInstanceRefString(), instanceRef, GetStateAllocator());
     }
 
@@ -8707,14 +8718,17 @@ private:
         else GetInvalidSchemaPointer().StringifyUriFragment(sb);
         ValueType schemaRef(sb.GetString(), static_cast<SizeType>(sb.GetSize() / sizeof(Ch)),
             GetStateAllocator());
+	RAPIDJSON_ASSERT(result.IsObject());
         result.AddMember(GetSchemaRefString(), schemaRef, GetStateAllocator());
     }
 
     void AddErrorCode(ValueType& result, const ValidateErrorCode code) {
+	RAPIDJSON_ASSERT(result.IsObject());
         result.AddMember(GetErrorCodeString(), code, GetStateAllocator());
     }
 
     void AddError(ValueType& keyword, ValueType& error) {
+	RAPIDJSON_ASSERT(error_.IsObject());
         typename ValueType::MemberIterator member = error_.FindMember(keyword);
         if (member == error_.MemberEnd())
             error_.AddMember(keyword, error, GetStateAllocator());
@@ -8736,6 +8750,7 @@ private:
     }
 
     void MergeError(ValueType& other) {
+        RAPIDJSON_ASSERT(other.IsObject());
         for (typename ValueType::MemberIterator it = other.MemberBegin(), end = other.MemberEnd(); it != end; ++it) {
             AddError(it->name, it->value);
         }
