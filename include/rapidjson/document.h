@@ -2244,6 +2244,8 @@ public:
             if (RAPIDJSON_UNLIKELY(!handler.StartObject()))
                 return false;
             for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
+	        if (!m->name.IsString())
+		    std::cerr << "Accept: " << m->name.GetType() << std::endl;
                 RAPIDJSON_ASSERT(m->name.IsString()); // User may change the type of name by MemberIterator.
                 if (RAPIDJSON_UNLIKELY(!handler.Key(m->name.GetString(), m->name.GetStringLength(), (m->name.data_.f.flags & kCopyFlag) != 0)))
                     return false;
@@ -2837,6 +2839,8 @@ public:
       if (RAPIDJSON_UNLIKELY(!handler.YggdrasilStartObject(*schema_)))
 	return false;
       for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
+	if (!m->name.IsString())
+	  std::cerr << "AcceptYggdrasil: " << m->name.GetType() << std::endl;
 	RAPIDJSON_ASSERT(m->name.IsString()); // User may change the type of name by MemberIterator.
 	if (RAPIDJSON_UNLIKELY(!handler.Key(m->name.GetString(), m->name.GetStringLength(), (m->name.data_.f.flags & kCopyFlag) != 0)))
 	  return false;

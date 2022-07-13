@@ -3285,6 +3285,8 @@ private:
 				     it->name.GetStringLength(),
 				     GetAllocator()).Move(),
 			   kObjectType, GetAllocator());
+	DisplayValue(aliases_, true);
+	std::cerr << std::endl;
       }
       std::cerr << "Extend aliases before assert" << std::endl;
       RAPIDJSON_ASSERT(it->value.IsObject() &&
@@ -3309,6 +3311,8 @@ private:
 						 v->value.GetStringLength(),
 						 GetAllocator()).Move(),
 				       GetAllocator());
+	  DisplayValue(aliases_, true);
+	  std::cerr << std::endl;
 	  ValueType primary;
 	  if (!GetFinalAlias(context, aliases_[it->name], v->name, &primary))
 	    return false;
@@ -3373,6 +3377,8 @@ private:
 				   (SizeType)address.GetLength(),
 				   GetAllocator()).Move(),
 			 kObjectType, GetAllocator());
+      DisplayValue(aliases_, true);
+      std::cerr << std::endl;
     }
     return aliases_[address.GetString()];
   }
