@@ -36,6 +36,7 @@
 #include <complex>
 #include "units.h"
 #include "precision.h"
+#include <iostream>
 #endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_DIAG_PUSH
