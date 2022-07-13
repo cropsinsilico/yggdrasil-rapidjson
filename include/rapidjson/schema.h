@@ -3257,6 +3257,7 @@ private:
   ValueType* Address2Value(const ValueType& address, ValueType* base = nullptr,
 			   PointerType* ptr=nullptr, size_t unfinalized=0) {
     if (!base) base = CurrentValue();
+    if (!base) return nullptr;
     size_t idx = 0;
     PointerType ptr_target;
     if (!ptr)
