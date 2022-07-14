@@ -728,7 +728,9 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
   }
   ValueType path(kArrayType);
   RAPIDJSON_ASSERT(orig.IsString());
-  path.PushBack(ValueType(orig, allocator, true).Move(), allocator);
+  path.PushBack(ValueType(orig.GetString(),
+			  orig.GetStringLength(),
+			  allocator).Move(), allocator);
   RAPIDJSON_ASSERT(primary->value.IsString());
   while (aliases.HasMember(primary->value)) {
     for (typename ValueType::ConstValueIterator it = path.Begin(); it != path.End(); ++it) {
@@ -737,7 +739,9 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 	return false;
       }
     }
-    path.PushBack(ValueType(primary->value, allocator, true).Move(), allocator);
+    path.PushBack(ValueType(primary->value.GetString(),
+			    primary->value.GetStringLength(),
+			    allocator).Move(), allocator);
     std::cerr << "follow_aliases_ 1" << std::endl;
     primary = aliases.FindMember(primary->value);
     RAPIDJSON_ASSERT(primary->value.IsString());
@@ -1071,8 +1075,9 @@ public:
 		       AllocatorType* allocator) {
       if (property && properties.Size() == 0) {
 	for (SizeType i = 0; i < property->propertyCount; i++)
-	  properties.PushBack(SValue(property->properties[i].name,
-				     *allocator, true).Move(),
+	  properties.PushBack(SValue(property->properties[i].name.GetString(),
+				     property->properties[i].name.GetStringLength(),
+				     *allocator).Move(),
 			      *allocator);
       }
       bool setSrc = src.set && src.properties.Size() == 0;
@@ -1445,28 +1450,28 @@ public:
 	std::cerr << "RecordMissing: " << copy[i].GetString() << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	dst.instancePtr.StringifyUriFragment(sb);
-	ValueType instanceRef(sb.GetString(),
-				  (SizeType)sb.GetLength(),
-				  normalized.GetAllocator());
+	ValueType val(kArrayType);
+	val.PushBack(ValueType(sb.GetString(),
+			       (SizeType)sb.GetLength(),
+			       normalized.GetAllocator()).Move(),
+		     normalized.GetAllocator());
+	val.PushBack(ValueType(copy[i].GetString(),
+			       copy[i].GetStringLength(),
+			       normalized.GetAllocator()).Move(),
+		     normalized.GetAllocator());
 	sb.Clear();
 	dst.schemaPtr.StringifyUriFragment(sb);
 	const ValueType schemaRef(sb.GetString(),
-				      (SizeType)sb.GetLength(),
-				      normalized.GetAllocator());
+				  (SizeType)sb.GetLength(),
+				  normalized.GetAllocator());
 	sb.Clear();
 	RAPIDJSON_ASSERT(missing.IsObject());
 	if (!missing.HasMember(schemaRef))
-	  missing.AddMember(ValueType(schemaRef,
-					  normalized.GetAllocator(),
-					  true).Move(),
+	  missing.AddMember(ValueType(schemaRef.GetString(),
+				      schemaRef.GetStringLength(),
+				      normalized.GetAllocator()).Move(),
 			    ValueType(kArrayType).Move(),
 			    normalized.GetAllocator());
-	ValueType val(kArrayType);
-	val.PushBack(instanceRef, normalized.GetAllocator());
-	val.PushBack(ValueType(copy[i].GetString(),
-				   copy[i].GetStringLength(),
-				   normalized.GetAllocator()).Move(),
-		     normalized.GetAllocator());
 	missing[schemaRef].PushBack(val, normalized.GetAllocator());
       }
     }
@@ -2010,7 +2015,9 @@ public:
     SValue present(kArrayType);
     RAPIDJSON_ASSERT(v->IsObject());
     for (MemberIterator it = v->MemberBegin(); it != v->MemberEnd(); it++)
-      present.PushBack(SValue(it->name, GetAllocator(), true).Move(),
+      present.PushBack(SValue(it->name.GetString(),
+			      it->name.GetStringLength(),
+			      GetAllocator()).Move(),
 		       GetAllocator());
     AddSharedObject(iP, iS, present);
     schema.sharedProperties_->AddObject(iP, iS, present, *this);
@@ -2222,6 +2229,7 @@ public:
       bool childMod = false;
       if (*CurrentIdx() >= current->Size()) {
 	if ((!CurrentModified()) && CurrentChildModified()) {
+	  RAPIDJSON_ASSERT(current->IsArray());
 	  current->PushBack(ValueType(kNullType).Move(), GetAllocator());
 	  childMod = true;
 	} else {
