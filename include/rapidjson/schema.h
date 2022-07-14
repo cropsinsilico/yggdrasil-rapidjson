@@ -1669,6 +1669,7 @@ public:
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Something is wrong with the state of"
 					" the normalized document at the "
 					" start of an extend call.");
+    std::cerr << "Begin extend" << std::endl;
     PushValue(*document_.StackTop());
     extending_ = true;
     extend_context_ = &context;
@@ -2968,16 +2969,20 @@ private:
   }
   void PushValue(ValueType& value, PointerType& p, bool appended=false,
 		 bool modified = false, bool child_modified = false) {
+    std::cerr << "PushValue 1" << std::endl;
     ValueEntry* ref = valueStack_.template Push<ValueEntry>();
     new (ref) ValueEntry(value, p, &GetAllocator());
     ref->singular = isValueSingular(p, false, nullptr, appended);
+    std::cerr << "PushValue 2" << std::endl;
     if (ref->singular || modified)
       ref->modified = true;
     else
       ref->modified = isValueModified(p, false, kCheckModifiedBoth);
+    std::cerr << "PushValue 3" << std::endl;
     if (extend_child_) {
       ref->child_singular = extend_child_->isValueSingular(p, false, nullptr,
 							   appended);
+      std::cerr << "PushValue 4" << std::endl;
       if (ref->child_singular || child_modified)
 	ref->child_modified = true;
       else
@@ -2993,6 +2998,7 @@ private:
       extend_child_->DisplayModifications();
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     }
+    std::cerr << "PushValue done" << std::endl;
   }
   void PushValue(ValueType& value,
 		 bool modified = false, bool child_modified = false) {
@@ -3335,9 +3341,9 @@ private:
 					  unfinalized);
 	  std::cerr << "Extend aliases" << std::endl;
 	  if (base && base->IsObject() && (base->HasMember(v->name))) {
-	    typename ValueType::MemberIterator old = base->FindMember(v->name);
+	    typename ValueType::ConstMemberIterator old = base->FindMember(v->name);
 	    if (base->HasMember(primary)) {
-	      typename ValueType::MemberIterator alt = base->FindMember(primary);
+	      typename ValueType::ConstMemberIterator alt = base->FindMember(primary);
 	      if (alt->value != old->value) {
 		context.error_handler.DuplicateAlias(v->value, v->name);
 		RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
@@ -3353,13 +3359,13 @@ private:
     }
     return true;
   }
-  bool FindAliasName(const ValueType& aliases, ValueType& name,
+  bool FindAliasName(const ValueType& aliases, const ValueType& name,
 		     ConstMemberIterator& match) {
     RAPIDJSON_ASSERT(aliases.IsObject());
     match = aliases.FindMember(name);
     return (match != aliases.MemberEnd());
   }
-  bool FindAliasValue(const ValueType& aliases, ValueType& name,
+  bool FindAliasValue(const ValueType& aliases, const ValueType& name,
 		      ConstMemberIterator& match) {
     RAPIDJSON_ASSERT(aliases.IsObject());
     match = aliases.MemberBegin();
@@ -3374,7 +3380,7 @@ private:
     RAPIDJSON_ASSERT(aliases_.IsObject());
     if (!aliases_.HasMember(address.GetString())) {
       aliases_.AddMember(ValueType(address.GetString(),
-				   (SizeType)address.GetLength(),
+				   static_cast<SizeType>(address.GetSize() / sizeof(Ch)),
 				   GetAllocator()).Move(),
 			 kObjectType, GetAllocator());
       DisplayValue(aliases_, true);

@@ -2244,8 +2244,14 @@ public:
             if (RAPIDJSON_UNLIKELY(!handler.StartObject()))
                 return false;
             for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
-	        if (!m->name.IsString())
+	        if (!m->name.IsString()) {
 		    printf("Accept: %d\n", (int)(m->name.GetType()));
+		    if (RAPIDJSON_UNLIKELY(!handler.Key(0, 0, true)))
+		        return false;
+		    if (RAPIDJSON_UNLIKELY(!m->value.Accept(handler)))
+		        return false;
+		    continue;
+		}
                 RAPIDJSON_ASSERT(m->name.IsString()); // User may change the type of name by MemberIterator.
                 if (RAPIDJSON_UNLIKELY(!handler.Key(m->name.GetString(), m->name.GetStringLength(), (m->name.data_.f.flags & kCopyFlag) != 0)))
                     return false;
