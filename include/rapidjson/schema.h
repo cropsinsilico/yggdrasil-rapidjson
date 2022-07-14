@@ -1073,6 +1073,9 @@ public:
     }
     void SetProperties(typename SchemaType::SharedPropertyBase* property,
 		       AllocatorType* allocator) {
+      RAPIDJSON_ASSERT(properties.IsArray() &&
+		       src.properties.IsArray() &&
+		       dst.properties.IsArray());
       if (property && properties.Size() == 0) {
 	for (SizeType i = 0; i < property->propertyCount; i++)
 	  properties.PushBack(SValue(property->properties[i].name.GetString(),
@@ -2054,6 +2057,7 @@ public:
     for (ConstMemberIterator it = missing.MemberBegin();
 	 it != missing.MemberEnd(); ++it) {
       context.error_handler.StartMissingProperties();
+      RAPIDJSON_ASSERT(it->value.IsArray());
       for (ConstValueIterator v = it->value.Begin(); v != it->value.End(); ++v)
 	context.error_handler.AddMissingProperty((*v)[1]);
       if (context.error_handler.EndMissingPropertiesShared((*it->value.Begin())[0], it->name))
@@ -2227,9 +2231,13 @@ public:
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
     if (CurrentIdx()) {
       bool childMod = false;
+      if (!current->IsArray())
+	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an array,"
+					  " but an index %d is set (type = %d)",
+					  (int)(*CurrentIdx()),
+					  (int)(current->GetType()));
       if (*CurrentIdx() >= current->Size()) {
 	if ((!CurrentModified()) && CurrentChildModified()) {
-	  RAPIDJSON_ASSERT(current->IsArray());
 	  current->PushBack(ValueType(kNullType).Move(), GetAllocator());
 	  childMod = true;
 	} else {
@@ -3842,6 +3850,7 @@ public:
 #endif // RAPIDJSON_YGGDRASIL
                     schemaDocument->CreateSchema(&properties_[index].schema, q.Append(itr->name, allocator_), itr->value, document, id_);
 #ifdef RAPIDJSON_YGGDRASIL
+		    RAPIDJSON_ASSERT(properties_[index].schema->aliases_.IsArray());
 		    if (properties_[index].schema->aliases_.Size() > 0) {
 		      hasAliases_ = true;
 		      for (typename SValue::ConstValueIterator itv = properties_[index].schema->aliases_.Begin(); itv != properties_[index].schema->aliases_.End(); ++itv)
@@ -5737,22 +5746,22 @@ protected:
     class SharedPropertyBase {
     public:
       SharedPropertyBase(AllocatorType* allocator = 0) :
-	schema(), index(0),
+	schema(0), index(0),
 	local(false), source(false), hasRegex(false),
-	ownProperties(false), propertyCount(0), properties(),
+	ownProperties(false), propertyCount(0), properties(0),
 	instancePtr(allocator), schemaPtr(allocator) {}
       SharedPropertyBase(bool local0, bool source0,
 			 SchemaType* schema0, size_t index0) :
 	schema(schema0), index(index0),
 	local(local0), source(source0), hasRegex(false),
-	ownProperties(false), propertyCount(0), properties(),
+	ownProperties(false), propertyCount(0), properties(0),
 	instancePtr(schema0->allocator_), schemaPtr(schema0->allocator_) {}
       SharedPropertyBase(bool local0, bool source0,
 			 SchemaType* schema0, size_t index0,
 			 const PointerType& path) :
 	schema(schema0), index(index0),
 	local(local0), source(source0), hasRegex(false),
-	ownProperties(false), propertyCount(0), properties(),
+	ownProperties(false), propertyCount(0), properties(0),
 	instancePtr(schema0->allocator_),
 	schemaPtr(path, schema0->allocator_) {
 	SetInstancePtr(schema0->allocator_);
@@ -5781,13 +5790,13 @@ protected:
       }
       struct PropertyEntry {
 	PropertyEntry() :
-	  name(), base(), inSource(false) {}
+	  name(), base(0), inSource(false) {}
 	PropertyEntry(const Ch* str,
 		      SizeType length,
 		      AllocatorType& allocator,
 		      bool inSource0 = false) :
 	  name(str, length, allocator),
-	  base(), inSource(inSource0) {}
+	  base(0), inSource(inSource0) {}
 	void Display() const {
 	  std::cerr << name.GetString();
 	}
@@ -5813,6 +5822,7 @@ protected:
 			    const SchemaType* src = 0) {
 	if (!src) src = schema;
 	ownProperties = true;
+	RAPIDJSON_ASSERT(propertyNames.IsArray());
 	if (allProperties)
 	  propertyCount = src->propertyCount_;
 	else
@@ -6043,6 +6053,7 @@ protected:
 			    *allocator);
 	}
 	bool HasProperty(const SValue& name) const {
+	  RAPIDJSON_ASSERT(propertyNames.IsArray());
 	  return propertyNames.Contains(name); // HERE INSTANCE
 	}
 	bool Matches(const PointerType& x, bool local0,
