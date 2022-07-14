@@ -9,9 +9,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add "encoding" property for bytes
 * Remove use of standard libraries (std::basic_string, std::vector, std::map)?
 * Use explicit allocator for QuantityArray?
-* Make validation/normalization errors more verbose to match jsonschema
 * Add Python wrapper for obj & ply w/ interop to other classes
 * Support for numpy bytes/unitcode scalars arrays
+* Add additional tests for shared properties w/ errors for missing required properties and normalization of additional types within allOf (null, int, uint, int64, uint64, double, yggdrasil object, yggdrasil string
 
 ### IN PROGRESS
 * Add docstrings to new methods
@@ -32,6 +32,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Normalization of default, aliases, & allowSingular w/ error handling
 * Warning messages during validation for deprecated properties
 * Normalization of compatible type/precision conversion
+* Made validation/normalization errors more verbose to match jsonschema
 
 ## [Unreleased]
 

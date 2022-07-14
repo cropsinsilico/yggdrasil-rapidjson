@@ -971,50 +971,49 @@ public:
     }
     bool missing() const { return dst.missing || src.missing; }
     bool set() const { return dst.set && src.set; }
-    bool Completes(const PairEntry& other,
-		   bool verbose = false) const {
+    bool Completes(const PairEntry& other) const {
       bool source = src.set;
       const SharedValueEntry* iVi = GetValue(source);
       const SharedValueEntry* iVo = GetValue(!source);
       const SharedValueEntry* oVi = other.GetValue(source);
       const SharedValueEntry* oVo = other.GetValue(!source);
-      if (verbose) {
-	std::cerr << "Completes: " << Matches(oVi->schemaPtr, source, false) << ", " << Matches(oVo->schemaPtr, !source, false) << ", " << Matches(oVi->instancePtr, source, true) << ", " << other.Matches(iVo->instancePtr, !source, true) << std::endl;
-	std::cerr << "    First: ";
-	DisplayPointer(prefix);
-	std::cerr << std::endl;
-	std::cerr << "      - " << iVi->local << ", " << iVi->multiple << std::endl;
-	std::cerr << "        ";
-	iVi->Display();
-	std::cerr << std::endl;
-	std::cerr << "        ";
-	iVi->Display(true);
-	std::cerr << std::endl;
-	std::cerr << "      - " << iVo->local << ", " << iVo->multiple << std::endl;
-	std::cerr << "        ";
-	iVo->Display();
-	std::cerr << std::endl;
-	std::cerr << "        ";
-	iVo->Display(true);
-	std::cerr << std::endl;
-	std::cerr << "    Second: ";
-	DisplayPointer(other.prefix);
-	std::cerr << std::endl;
-	std::cerr << "      - " << oVi->local << ", " << oVi->multiple << std::endl;
-	std::cerr << "        ";
-	oVi->Display();
-	std::cerr << std::endl;
-	std::cerr << "        ";
-	oVi->Display(true);
-	std::cerr << std::endl;
-	std::cerr << "      - " << oVo->local << ", " << oVo->multiple << std::endl;
-	std::cerr << "        ";
-	oVo->Display();
-	std::cerr << std::endl;
-	std::cerr << "        ";
-	oVo->Display(true);
-	std::cerr << std::endl;
-      }
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+      std::cerr << "Completes: " << Matches(oVi->schemaPtr, source, false) << ", " << Matches(oVo->schemaPtr, !source, false) << ", " << Matches(oVi->instancePtr, source, true) << ", " << other.Matches(iVo->instancePtr, !source, true) << std::endl;
+      std::cerr << "    First: ";
+      DisplayPointer(prefix);
+      std::cerr << std::endl;
+      std::cerr << "      - " << iVi->local << ", " << iVi->multiple << std::endl;
+      std::cerr << "        ";
+      iVi->Display();
+      std::cerr << std::endl;
+      std::cerr << "        ";
+      iVi->Display(true);
+      std::cerr << std::endl;
+      std::cerr << "      - " << iVo->local << ", " << iVo->multiple << std::endl;
+      std::cerr << "        ";
+      iVo->Display();
+      std::cerr << std::endl;
+      std::cerr << "        ";
+      iVo->Display(true);
+      std::cerr << std::endl;
+      std::cerr << "    Second: ";
+      DisplayPointer(other.prefix);
+      std::cerr << std::endl;
+      std::cerr << "      - " << oVi->local << ", " << oVi->multiple << std::endl;
+      std::cerr << "        ";
+      oVi->Display();
+      std::cerr << std::endl;
+      std::cerr << "        ";
+      oVi->Display(true);
+      std::cerr << std::endl;
+      std::cerr << "      - " << oVo->local << ", " << oVo->multiple << std::endl;
+      std::cerr << "        ";
+      oVo->Display();
+      std::cerr << std::endl;
+      std::cerr << "        ";
+      oVo->Display(true);
+      std::cerr << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       if (!iVi->set || iVo->set || !oVo->set || oVi->set ||
 	  prefix != other.prefix ||
 	  ((iVi->local || !oVi->multiple)
@@ -1058,11 +1057,6 @@ public:
 	  typename SchemaType::SharedPropertyBase* parent = it->parent;
 	  if (!parent)
 	    parent = GetValue(!source)->parent;
-	  if (!(parent && parent->schema)) {
-	    std::cerr << "Matches: ";
-	    Display();
-	    std::cerr << std::endl;
-	  }
 	  RAPIDJSON_ASSERT(parent && parent->schema);
 	  return parent->schema->PointerMatches(it->instancePtr, ptr,
 						parent->hasRegex);
@@ -1292,11 +1286,6 @@ public:
       if (!parent)
 	parent = GetParent(normalized, true);
       RAPIDJSON_ASSERT(parent && parent->IsObject());
-      if (!(parent && parent->HasMember(name))) {
-	std::cerr << "GetMember [" << name.GetString() << "]: ";
-	Display();
-	std::cerr << std::endl;
-      }
       RAPIDJSON_ASSERT(parent && parent->HasMember(name));
       if (parent && parent->HasMember(name)) {
 	if (!prop->inSource)
@@ -1307,7 +1296,7 @@ public:
 	std::cerr << "GetMember" << std::endl;
 	return &(parent->FindMember(name)->value);
       }
-      return 0;
+      return 0; // GCOVR_EXCL_LINE
     }
     bool SetMember(Context& context, const SValue& name,
 		   const ValueType* value,
@@ -1337,8 +1326,8 @@ public:
 					   *prop->base->schema))
 	      value = &value0;
 	    else {
-	      std::cerr << "SetMember: Error in normalizing new value for \"" << name.GetString() << "\"" << std::endl;
-	      return false;
+	      std::cerr << "SetMember: Error in normalizing new value for \"" << name.GetString() << "\"" << std::endl; // GCOVR_EXCL_LINE
+	      return false; // GCOVR_EXCL_LINE
 	    }
 	  }
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
@@ -1360,7 +1349,7 @@ public:
 	}
       }
       if (!normalized.SetSharedSiblings(context, this, name, value))
-	return false;
+	return false; // GCOVR_EXCL_LINE
       RemoveMember(name);
       return true;
     }
@@ -1380,7 +1369,7 @@ public:
 	  continue;
 	if (!HasMember(copy[i])) {
 	  if (!normalized.SetSharedSiblings(context, this, copy[i], 0))
-	    return false;
+	    return false; // GCOVR_EXCL_LINE
 	  continue;
 	}
 	ValueType* val = GetMember(copy[i], normalized, srcParent);
@@ -1426,7 +1415,7 @@ public:
 	std::cerr << "]: " << copy[i].GetString() << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	if (!SetMember(context, copy[i], val, normalized, dstParent))
-	  return false;
+	  return false; // GCOVR_EXCL_LINE
       }
       return true;
     }
@@ -1538,7 +1527,7 @@ public:
   //! Finalize the document from elements added to the stack.
   void FinalizeFromStack(bool afterError = false) {
     if (afterError)
-      document_.ConsolidateStack();
+      document_.ConsolidateStack(); // GCOVR_EXCL_LINE
     document_.FinalizeFromStack();
   }
   //! Determine if the document was finalized.
@@ -1548,7 +1537,7 @@ public:
     GenericNormalizedDocument* child = FindChild(index);
     RAPIDJSON_ASSERT(child);
     if (!child)
-      RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Could not find child: %d",
+      RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Could not find child: %d", // GCOVR_EXCL_LINE
 					(int)index);
     child->FinalizeFromStack();
     bool replaced = false;
@@ -1607,7 +1596,7 @@ public:
   }
   bool ExtendShared(Context& context, const SchemaType& schema,
 		    const PairEntry* childShared, size_t childSharedCount,
-		    bool skipCheck = false, bool verbose = false) {
+		    bool skipCheck = false) {
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
     if (childSharedCount > 0) {
       std::cerr << "ExtendShared Child: " << std::endl;
@@ -1634,7 +1623,7 @@ public:
 	for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
 	     it != sharedStack_.template End<PairEntry>(); it++, iStack++) {
 	  if (iStack >= NStack) break;
-	  if (!ot->Completes(*it, verbose)) continue;
+	  if (!ot->Completes(*it)) continue;
 	  if (it->GetValue(source)->multiple) {
 	    PairEntry* pair = sharedStack_.template Push<PairEntry>();
 	    new (pair) PairEntry(*it, &GetAllocator());
@@ -1759,7 +1748,7 @@ public:
 		       schema.parentSchema_->allowSingularSchema_.schemas);
       if (!(schema.parentSchema_ &&
 	    schema.parentSchema_->allowSingularSchema_.schemas))
-	return false;
+	return false; // GCOVR_EXCL_LINE
       return NormEndObject(context, schema, memberCount,
 			   schema.parentSchema_->allowSingularSchema_.schemas[0]);
     }
@@ -1988,9 +1977,9 @@ public:
 	    const Ch* str = baseSchema->properties_[index].name.GetString();
 	    SizeType len = baseSchema->properties_[index].name.GetStringLength();
 	    if (!NormKey(context, *baseSchema, str, len, true))
-	      return false;
+	      return false; // GCOVR_EXCL_LINE
 	    if (!Append(context, *baseSchema, *defV))
-	      return false;
+	      return false; // GCOVR_EXCL_LINE
 	    if (!baseSchemaSet)
 	      context.propertyExist[index] = true;
 	    memberCount++;
@@ -2713,11 +2702,11 @@ private:
 	}
       }
       // Swap the aliased value
-      ValueType tmp(kNullType);
-      tmp.Swap(*GetMember(alias));
-      // tmp.CopyFrom(*GetMember(alias), GetAllocator(), true);
-      RemoveMember(alias);
       RAPIDJSON_ASSERT(CurrentValue()->IsObject());
+      ValueType tmp(kNullType);
+      tmp.Swap(CurrentValue()->FindMember(alias)->value);
+      // tmp.CopyFrom(CurrentValue()->FindMember(alias)->value, GetAllocator(), true);
+      CurrentValue()->RemoveMember(alias);
       CurrentValue()->AddMember(ValueType(primary, GetAllocator(), true).Move(),
 				tmp, GetAllocator());
     }
@@ -3138,59 +3127,59 @@ private:
      ? PointerType(instancePointer.GetTokens(), instancePointer.GetTokenCount() - 1)
      : instancePointer).StringifyUriFragment(sb);
   }
-  void RemoveMember(const ValueType& key, SizeType* memberCount=nullptr,
-		    const SchemaType* schema=nullptr) {
-    if (schema) {
-      for (SizeType index = 0; index < schema->propertyCount_; index++)
-	if (schema->properties_[index].name.GetStringLength() == key.GetStringLength() &&
-	    std::memcmp(schema->properties_[index].name.GetString(),
-			key.GetString(), sizeof(Ch) * key.GetStringLength()))
-	  return;
-    }
-    if (extending_ && !appending_) {
-      RAPIDJSON_ASSERT(CurrentValue()->IsObject());
-      CurrentValue()->RemoveMember(key);
-      return;
-    }
-    if (document_.StackSize() == 0)
-      return;
-    ValueType* base = document_.StackTop();
-    if (memberCount) {
-      SizeType i = 0;
-      while ((base != document_.StackBottom()) && (i < (*memberCount * 2))) {
-	base--;
-	i++;
-      }
-    } else {
-      if (base->IsObject())
-	return;
-      while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
-    }
-    RAPIDJSON_ASSERT(base->IsObject());
-    base++;
-    while (base != document_.StackTop()) {
-      RAPIDJSON_ASSERT(base->IsString());
-      if ((*base == key) && (base != document_.StackTop())) {
-	if (base + 1 == document_.StackTop()) {
-	  document_.StackPop()->~ValueType();
-	  document_.StackPop()->~ValueType();
-	} else {
-	  base->~ValueType();
-	  (base + 1)->~ValueType();
-	  memmove((void*)base, (void*)(base + 2), (document_.StackSize() - 2) * sizeof(ValueType));
-	  // Don't call destructor as the memory should be empty
-	  document_.StackPop();
-	  document_.StackPop();
-	}
-	if (memberCount)
-	  (*memberCount)--;
-	return;
-      }
-      base++;
-      if (base == document_.StackTop()) break;
-      base++;
-    }
-  }
+  // void RemoveMember(const ValueType& key, SizeType* memberCount=nullptr,
+  // 		    const SchemaType* schema=nullptr) {
+  //   if (schema) {
+  //     for (SizeType index = 0; index < schema->propertyCount_; index++)
+  // 	if (schema->properties_[index].name.GetStringLength() == key.GetStringLength() &&
+  // 	    std::memcmp(schema->properties_[index].name.GetString(),
+  // 			key.GetString(), sizeof(Ch) * key.GetStringLength()))
+  // 	  return;
+  //   }
+  //   if (extending_ && !appending_) {
+  //     RAPIDJSON_ASSERT(CurrentValue()->IsObject());
+  //     CurrentValue()->RemoveMember(key);
+  //     return;
+  //   }
+  //   if (document_.StackSize() == 0)
+  //     return;
+  //   ValueType* base = document_.StackTop();
+  //   if (memberCount) {
+  //     SizeType i = 0;
+  //     while ((base != document_.StackBottom()) && (i < (*memberCount * 2))) {
+  // 	base--;
+  // 	i++;
+  //     }
+  //   } else {
+  //     if (base->IsObject())
+  // 	return;
+  //     while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
+  //   }
+  //   RAPIDJSON_ASSERT(base->IsObject());
+  //   base++;
+  //   while (base != document_.StackTop()) {
+  //     RAPIDJSON_ASSERT(base->IsString());
+  //     if ((*base == key) && (base != document_.StackTop())) {
+  // 	if (base + 1 == document_.StackTop()) {
+  // 	  document_.StackPop()->~ValueType();
+  // 	  document_.StackPop()->~ValueType();
+  // 	} else {
+  // 	  base->~ValueType();
+  // 	  (base + 1)->~ValueType();
+  // 	  memmove((void*)base, (void*)(base + 2), (document_.StackSize() - 2) * sizeof(ValueType));
+  // 	  // Don't call destructor as the memory should be empty
+  // 	  document_.StackPop();
+  // 	  document_.StackPop();
+  // 	}
+  // 	if (memberCount)
+  // 	  (*memberCount)--;
+  // 	return;
+  //     }
+  //     base++;
+  //     if (base == document_.StackTop()) break;
+  //     base++;
+  //   }
+  // }
   bool HasMember(const ValueType& key, SizeType* memberCount=nullptr) const {
     if (extending_ && !appending_) {
       RAPIDJSON_ASSERT(CurrentValue()->IsObject());
@@ -3199,7 +3188,7 @@ private:
       return false;
     }
     if (document_.StackSize() == 0)
-      return false;
+      return false; // GCOVR_EXCL_LINE
     const ValueType* base = document_.StackTop();
     if (memberCount) {
       SizeType i = 0;
@@ -3224,40 +3213,40 @@ private:
     }
     return false;
   }
-  ValueType* GetMember(const ValueType& key, SizeType* memberCount=nullptr) {
-    if (extending_ && !appending_) {
-      RAPIDJSON_ASSERT(CurrentValue()->IsObject());
-      std::cerr << "GetMember: " << key.GetString() << std::endl;
-      if (CurrentValue()->HasMember(key))
-	return &(CurrentValue()->FindMember(key)->value);
-      return nullptr;
-    }
-    if (document_.StackSize() == 0)
-      return nullptr;
-    ValueType* base = document_.StackTop();
-    if (memberCount) {
-      SizeType i = 0;
-      while ((base != document_.StackBottom()) && (i < (*memberCount * 2))) {
-	base--;
-	i++;
-      }
-    } else {
-      if (base->IsObject())
-	return nullptr;
-      while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
-    }
-    RAPIDJSON_ASSERT(base->IsObject());
-    base++;
-    while (base != document_.StackTop()) {
-      RAPIDJSON_ASSERT(base->IsString());
-      if ((*base == key) && (base != document_.StackTop()))
-	return (base + 1);
-      base++;
-      if (base == document_.StackTop()) break;
-      base++;
-    }
-    return nullptr;
-  }
+  // ValueType* GetMember(const ValueType& key, SizeType* memberCount=nullptr) {
+  //   if (extending_ && !appending_) {
+  //     RAPIDJSON_ASSERT(CurrentValue()->IsObject());
+  //     std::cerr << "GetMember: " << key.GetString() << std::endl;
+  //     if (CurrentValue()->HasMember(key))
+  // 	return &(CurrentValue()->FindMember(key)->value);
+  //     return nullptr;
+  //   }
+  //   if (document_.StackSize() == 0)
+  //     return nullptr;
+  //   ValueType* base = document_.StackTop();
+  //   if (memberCount) {
+  //     SizeType i = 0;
+  //     while ((base != document_.StackBottom()) && (i < (*memberCount * 2))) {
+  // 	base--;
+  // 	i++;
+  //     }
+  //   } else {
+  //     if (base->IsObject())
+  // 	return nullptr;
+  //     while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
+  //   }
+  //   RAPIDJSON_ASSERT(base->IsObject());
+  //   base++;
+  //   while (base != document_.StackTop()) {
+  //     RAPIDJSON_ASSERT(base->IsString());
+  //     if ((*base == key) && (base != document_.StackTop()))
+  // 	return (base + 1);
+  //     base++;
+  //     if (base == document_.StackTop()) break;
+  //     base++;
+  //   }
+  //   return nullptr;
+  // }
   bool Address2Pointer(const ValueType& address, PointerType& ptr,
 		       size_t unfinalized=0) {
     if (unfinalized) {
@@ -3297,7 +3286,9 @@ private:
   bool ExtendAliases(Context& context, const ValueType& aliases, bool* replaced) {
     if (replaced)
       *replaced = false;
-    RAPIDJSON_ASSERT(aliases.IsObject());
+    RAPIDJSON_ASSERT(aliases.IsObject() &&
+		     (document_.WasFinalized() ||
+		      document_.StackSize() > 0));
     std::cerr << "ExtendAliases: " << aliases.IsObject() << std::endl;
     for (typename ValueType::ConstMemberIterator it = aliases.MemberBegin(); it != aliases.MemberEnd(); ++it) {
       std::cerr << "ExtendAliases: " << it->name.GetString() << std::endl;
@@ -3348,10 +3339,7 @@ private:
 	    root = &document_;
 	  } else {
 	    unfinalized = 1;
-	    if (document_.StackSize() == 0) {
-	      std::cerr << "Address2Value: Empty document stack" << std::endl;
-	      continue;
-	    }
+	    if (document_.StackSize() == 0) continue;
 	    root = document_.StackTop();
 	  }
 	  PointerType base_ptr;
