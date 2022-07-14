@@ -457,7 +457,7 @@ public:
   typedef typename NormalizedDocumentType::ValueType NormValueType;
   SharedProperties() :
     localPropertyCount(0), otherPropertyCount(0), propertyCount(0),
-    localProperties(), otherProperties() {}
+    localProperties(0), otherProperties(0) {}
   ~SharedProperties() {
     if (localProperties) {
       for (SizeType i = 0; i < localPropertyCount; i++)
@@ -804,9 +804,9 @@ public:
     modifiedStack_(stackAllocator, stackCapacity),
     singularStack_(stackAllocator, stackCapacity),
     sharedStack_(stackAllocator, stackCapacity),
+    tempStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
-    tempSharedCount_(0), tempSharedStack_(0),
     temporary_memory_(nullptr),
     extend_child_(nullptr), basePointer_(allocator), core_(0) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent,
@@ -821,9 +821,9 @@ public:
     modifiedStack_(stackAllocator, stackCapacity),
     singularStack_(stackAllocator, stackCapacity),
     sharedStack_(stackAllocator, stackCapacity),
+    tempStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
-    tempSharedCount_(0), tempSharedStack_(0),
     temporary_memory_(nullptr),
     extend_child_(nullptr),
     basePointer_(&parent->GetAllocator()),
@@ -849,6 +849,8 @@ public:
       PopSingular();
     while (!sharedStack_.Empty())
       sharedStack_.template Pop<PairEntry>(1)->~PairEntry();
+    while (!tempStack_.Empty())
+      tempStack_.template Pop<PairEntry>(1)->~PairEntry();
     document_.ClearStack();
     if (temporary_memory_) {
       GetAllocator().Free(temporary_memory_);
@@ -1557,30 +1559,18 @@ public:
     // Pairs created in a normalization object for a set value need to be
     //   cached and added later to avoid modifiying the pair stack during
     //   iteration.
-    tempSharedStack_ = static_cast<PairEntry*>(GetAllocator().Realloc(tempSharedStack_, sizeof(PairEntry) * tempSharedCount_, sizeof(PairEntry) * tempSharedCount_ + childShared.GetSize()));
-    size_t NChild = childShared.GetSize() / sizeof(PairEntry);
-    size_t i = tempSharedCount_;
     for (const PairEntry* it = childShared.template Bottom<PairEntry>();
-	 it != childShared.template End<PairEntry>(); it++, i++)
-      new (tempSharedStack_ + i) PairEntry(*it, &GetAllocator());
-    // for (size_t i = 0; i < NChild; i++)
-    //   new (tempSharedStack_ + tempSharedCount_ + i) PairEntry(childShared.template Bottom<PairEntry>()[i], &GetAllocator());
-    // memcpy((char*)(tempSharedStack_ + tempSharedCount_),
-    // 	   (char*)(childShared.template Bottom<PairEntry>()),
-    // 	   childShared.GetSize());
-    tempSharedCount_ += NChild;
+	 it != childShared.template End<PairEntry>(); it++) {
+      PairEntry *ot = tempStack_.template Push<PairEntry>();
+      new (ot) PairEntry(*it, &GetAllocator());
+    }
   }
   bool ExtendSharedTemp(Context& context, const SchemaType& schema,
 			bool runDefaults = false) {
-    if (!tempSharedStack_) return true;
-    bool out = ExtendShared(context, schema,
-			    tempSharedStack_, tempSharedCount_,
-			    true);
-    for (SizeType i = 0; i < tempSharedCount_; i++)
-      (tempSharedStack_ + i)->~PairEntry();
-    AllocatorType::Free(tempSharedStack_);
-    tempSharedStack_ = 0;
-    tempSharedCount_ = 0;
+    if (tempStack_.Empty()) return true;
+    bool out = ExtendShared(context, schema, tempStack_, true);
+    while (!tempStack_.Empty())
+      tempStack_.template Pop<PairEntry>(1)->~PairEntry();
     if (!out) return out;
     for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
 	 it != sharedStack_.template End<PairEntry>(); it++)
@@ -1595,10 +1585,12 @@ public:
     return out;
   }
   bool ExtendShared(Context& context, const SchemaType& schema,
-		    const internal::Stack<StackAllocatorType>& childShared) {
+		    const internal::Stack<StackAllocatorType>& childShared,
+		    bool skipCheck = false) {
     return ExtendShared(context, schema,
 			childShared.template Bottom<PairEntry>(),
-			childShared.GetSize() / sizeof(PairEntry));
+			childShared.GetSize() / sizeof(PairEntry),
+			skipCheck);
   }
   bool ExtendShared(Context& context, const SchemaType& schema,
 		    const PairEntry* childShared, size_t childSharedCount,
@@ -3291,6 +3283,7 @@ private:
     if (replaced)
       *replaced = false;
     RAPIDJSON_ASSERT(aliases.IsObject() &&
+		     aliases_.IsObject() &&
 		     (document_.WasFinalized() ||
 		      document_.StackSize() > 0));
     std::cerr << "ExtendAliases: " << aliases.IsObject() << std::endl;
@@ -3498,11 +3491,10 @@ public:
   internal::Stack<StackAllocatorType> modifiedStack_;
   internal::Stack<StackAllocatorType> singularStack_;
   internal::Stack<StackAllocatorType> sharedStack_;
+  internal::Stack<StackAllocatorType> tempStack_;
   internal::Stack<StackAllocatorType>* documentStack_;
   ValueType aliases_;
   bool inSingular_;
-  size_t tempSharedCount_;
-  PairEntry* tempSharedStack_;
   void* temporary_memory_;
   GenericNormalizedDocument* extend_child_;
   PointerType basePointer_;
