@@ -1630,7 +1630,7 @@ public:
 	  if (!ot->Completes(*it)) continue;
 	  if (it->GetValue(source)->multiple) {
 	    PairEntry* pair = sharedStack_.template Push<PairEntry>();
-	    new (pair) PairEntry(*it, &GetAllocator());
+	    new (pair) PairEntry(*(sharedStack_.template Bottom<PairEntry>() + iStack), &GetAllocator());
 	    pair->Complete(source, *ot, &GetAllocator());
 	  } else {
 	    it->Complete(source, *ot, &GetAllocator());
