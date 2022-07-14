@@ -2246,9 +2246,8 @@ public:
             for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
 	        if (!m->name.IsString()) {
 		    printf("Accept: %d\n", (int)(m->name.GetType()));
-		    if (RAPIDJSON_UNLIKELY(!handler.Key(GetTypeString().GetString(),
-							GetTypeString().GetStringLength(),
-							true)))
+		    const Ch s[] = { '0', '\0' };
+		    if (RAPIDJSON_UNLIKELY(!handler.Key(s, 1, true)))
 		        return false;
 		    if (RAPIDJSON_UNLIKELY(!m->value.Accept(handler)))
 		        return false;
