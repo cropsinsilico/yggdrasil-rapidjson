@@ -1550,7 +1550,9 @@ public:
     if (!(replaced || child->WasModified()))
       return true;
     extend_child_ = child;
-    return Extend(context, schema, child->document_);
+    bool out = Extend(context, schema, child->document_);
+    extend_child_ = 0;
+    return out;
   }
   void AddSharedTemp(const internal::Stack<StackAllocatorType>& childShared) {
     // Pairs created in a normalization object for a set value need to be
