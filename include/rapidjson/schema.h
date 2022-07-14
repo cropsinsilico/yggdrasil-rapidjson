@@ -804,8 +804,9 @@ public:
     modifiedStack_(stackAllocator, stackCapacity),
     singularStack_(stackAllocator, stackCapacity),
     sharedStack_(stackAllocator, stackCapacity),
-    documentStack_(nullptr), tempSharedCount_(0), tempSharedStack_(0),
+    documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
+    tempSharedCount_(0), tempSharedStack_(0),
     temporary_memory_(nullptr),
     extend_child_(nullptr), basePointer_(allocator), core_(0) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent,
@@ -820,8 +821,9 @@ public:
     modifiedStack_(stackAllocator, stackCapacity),
     singularStack_(stackAllocator, stackCapacity),
     sharedStack_(stackAllocator, stackCapacity),
-    documentStack_(nullptr), tempSharedCount_(0), tempSharedStack_(0),
+    documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
+    tempSharedCount_(0), tempSharedStack_(0),
     temporary_memory_(nullptr),
     extend_child_(nullptr),
     basePointer_(&parent->GetAllocator()),
@@ -1557,8 +1559,12 @@ public:
     //   iteration.
     tempSharedStack_ = static_cast<PairEntry*>(GetAllocator().Realloc(tempSharedStack_, sizeof(PairEntry) * tempSharedCount_, sizeof(PairEntry) * tempSharedCount_ + childShared.GetSize()));
     size_t NChild = childShared.GetSize() / sizeof(PairEntry);
-    for (size_t i = 0; i < NChild; i++)
-      new (tempSharedStack_ + tempSharedCount_ + i) PairEntry(childShared.template Bottom<PairEntry>()[i], &GetAllocator());
+    size_t i = tempSharedCount_;
+    for (const PairEntry* it = childShared.template Bottom<PairEntry>();
+	 it != childShared.template End<PairEntry>(); it++, i++)
+      new (tempSharedStack_ + i) PairEntry(*it, &GetAllocator());
+    // for (size_t i = 0; i < NChild; i++)
+    //   new (tempSharedStack_ + tempSharedCount_ + i) PairEntry(childShared.template Bottom<PairEntry>()[i], &GetAllocator());
     // memcpy((char*)(tempSharedStack_ + tempSharedCount_),
     // 	   (char*)(childShared.template Bottom<PairEntry>()),
     // 	   childShared.GetSize());
@@ -3495,10 +3501,10 @@ public:
   internal::Stack<StackAllocatorType> singularStack_;
   internal::Stack<StackAllocatorType> sharedStack_;
   internal::Stack<StackAllocatorType>* documentStack_;
-  size_t tempSharedCount_;
-  PairEntry* tempSharedStack_;
   ValueType aliases_;
   bool inSingular_;
+  size_t tempSharedCount_;
+  PairEntry* tempSharedStack_;
   void* temporary_memory_;
   GenericNormalizedDocument* extend_child_;
   PointerType basePointer_;
@@ -3658,16 +3664,16 @@ public:
 	kwargs_(),
 	isMetaschema_(isMetaschema),
 	inSort_(false),
-	metaschema_(),
+	metaschema_(0),
 	metaschemaValidatorIndex_(),
-	instance_(),
+	instance_(0),
 	instanceValidatorIndex_(),
 	defaultSet_(false), default_(),
 	aliases_(kArrayType), child_aliases_(kObjectType), hasAliases_(false),
 	allowSingular_(false), isSingular_(isSingular), singularPtr_(),
 	parentSchema_(parentSchema), parentKey_(kNullType),
-	deprecated_(false), enumValues_(),
-	sharedProperties_()
+	deprecated_(false), enumValues_(0),
+	sharedProperties_(0)
 #endif // RAPIDJSON_YGGDRASIL
     {
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
