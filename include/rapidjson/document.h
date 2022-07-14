@@ -2039,6 +2039,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
     //! Locate an array element.
     ConstValueIterator Index(const ValueType& x) const {
+      std::cerr << "Index" << std::endl;
       RAPIDJSON_ASSERT(IsArray());
       if (IsArray()) {
 	for (ConstValueIterator it = Begin(); it != End(); ++it) {
@@ -2050,6 +2051,7 @@ public:
     }
     //! Check if an array contains an element.
     bool Contains(const ValueType& x) const {
+      std::cerr << "Contains" << std::endl;
       RAPIDJSON_ASSERT(IsArray());
       return (Index(x) != End());
     }
