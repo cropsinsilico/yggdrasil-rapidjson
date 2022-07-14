@@ -1625,10 +1625,8 @@ public:
       if ((ot->src.set && !ot->dst.set) ||
 	  (!ot->src.set && ot->dst.set)) {
 	bool source = ot->src.set;
-	size_t iStack = 0;
-	for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
-	     it != sharedStack_.template End<PairEntry>(); it++, iStack++) {
-	  if (iStack >= NStack) break;
+	for (size_t iStack = 0; iStack < NStack; iStack++) {
+	  PairEntry* it = sharedStack_.template Bottom<PairEntry>() + iStack;
 	  if (!ot->Completes(*it)) continue;
 	  if (it->GetValue(source)->multiple) {
 	    PairEntry* pair = sharedStack_.template Push<PairEntry>();
