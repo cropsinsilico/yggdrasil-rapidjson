@@ -2634,9 +2634,8 @@ public:
 		      ) {
     ModificationEntry* match = nullptr;
     PointerType after_mod = ReplaceSingular(after);
-    if (!(isValueModified(before, true, kCheckModifiedBefore, no_before, &match) &&
-          (match->no_after == no_after) &&
-          PointerStartsWith(match->after, after_mod, true))) {
+    if (!isValueModified(before, after_mod, true, true,
+			 no_before, no_after, &match)) {
       ModificationEntry* ref = modifiedStack_.template Push<ModificationEntry>();
       new (ref) ModificationEntry(before, after_mod, GetAllocator(),
 				  no_before, no_after);
@@ -2646,9 +2645,8 @@ public:
     if (debugMessage)
       std::cerr << "[" << debugMessage << "]";
     std::cerr << " (";
-    std::cerr << isValueModified(before, true, kCheckModifiedBefore, no_before, &match) << ", " <<
-      (match->no_after == no_after) << ", " <<
-      PointerStartsWith(match->after, after_mod, true) << ", ";
+    std::cerr << isValueModified(before, after_mod, true, true,
+				 no_before, no_after, &match) << ", ";
     DisplayPointer(before);
     std::cerr << " -> ";
     DisplayPointer(after);
@@ -2685,7 +2683,7 @@ private:
       SizeType N = (SizeType)(modifiedStack_.GetSize() / sizeof(ModificationEntry));
       ModificationEntry* it = modifiedStack_.template Bottom<ModificationEntry>();
       for (SizeType i = 0; i < N; i++, it++) {
-	if (PointerStartsWith(it->after, p_alias, false)) {
+	if (it->after.StartsWith(p_alias)) {
 	  // TODO: Replace old modification?
 	  // *it = it->Replace(p_alias.GetTokenCount() - 1,
 	  // 		    primary.GetString(), primary.GetStringLength(),
@@ -2719,8 +2717,7 @@ private:
   PointerType ReplacePrefix(const PointerType p,
 			    const PointerType& before,
 			    const PointerType& after) {
-    if ((!PointerStartsWith(p, before, false)) ||
-	PointerStartsWith(p, after, false))
+    if ((!p.StartsWith(before)) || p.StartsWith(after))
       return p;
     PointerType q = after;
     for (size_t i = before.GetTokenCount(); i < p.GetTokenCount(); i++)
@@ -2750,8 +2747,7 @@ private:
     SizeType N = (SizeType)(singularStack_.GetSize() / sizeof(ModificationEntry));
     ModificationEntry* it = singularStack_.template Bottom<ModificationEntry>();
     for (SizeType i = 0; i < N; i++, it++) {
-      if (PointerStartsWith(it->before, before, true) &&
-	  PointerStartsWith(it->after, after, true))
+      if (it->before == before && it->after == after)
 	return;
     }
     PointerType after_mod = ReplaceSingular(after);
@@ -2851,7 +2847,7 @@ private:
     SizeType N = (SizeType)(extend_child_->modifiedStack_.GetSize() / sizeof(ModificationEntry));
     ModificationEntry* it = extend_child_->modifiedStack_.template Bottom<ModificationEntry>();
     for (SizeType i = 0; i < N; i++, it++) {
-      if (PointerStartsWith(it->before, p, false))
+      if (it->before.StartsWith(p))
 	RecordModified(*it, "steal");
     }
   }
@@ -2894,6 +2890,26 @@ private:
 	  ((checkFlag >= kCheckModifiedBoth) &&
 	   PointerStartsWith(it->after, p, exact) &&
 	   ((it->no_after == is_empty) || (!exact)))) {
+	if (match)
+	  *match = it;
+	return true;
+      }
+    }
+    return false;
+  }
+  bool isValueModified(const PointerType& pBefore, const PointerType& pAfter,
+		       bool exactBefore, bool exactAfter,
+		       bool emptyBefore, bool emptyAfter,
+		       ModificationEntry** match=nullptr) {
+    if (modifiedStack_.Empty())
+      return false;
+    SizeType N = (SizeType)(modifiedStack_.GetSize() / sizeof(ModificationEntry));
+    ModificationEntry* it = modifiedStack_.template Bottom<ModificationEntry>();
+    for (SizeType i = 0; i < N; i++, it++) {
+      if (((it->no_before == emptyBefore) || (!exactBefore)) &&
+	  ((it->no_after == emptyAfter) || (!exactAfter)) &&
+	  PointerStartsWith(it->before, pBefore, exactBefore) &&
+	  PointerStartsWith(it->after, pAfter, exactAfter)) {
 	if (match)
 	  *match = it;
 	return true;
