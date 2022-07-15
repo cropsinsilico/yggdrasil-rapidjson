@@ -107,7 +107,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON -DRAPIDJSON_BUILD_UBSAN=ON -DRAPIDJSON_BUILD_ASAN=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
       - name: Build
         run: |
           cd build
