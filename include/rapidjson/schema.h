@@ -638,13 +638,19 @@ struct SchemaValidationContext {
         if (hasher)
             factory.DestroryHasher(hasher);
         if (validators) {
-            for (SizeType i = 0; i < validatorCount; i++)
-                factory.DestroySchemaValidator(validators[i]);
+            for (SizeType i = 0; i < validatorCount; i++) {
+                if (validators[i]) {
+                    factory.DestroySchemaValidator(validators[i]);
+                }
+            }
             factory.FreeState(validators);
         }
         if (patternPropertiesValidators) {
-            for (SizeType i = 0; i < patternPropertiesValidatorCount; i++)
-                factory.DestroySchemaValidator(patternPropertiesValidators[i]);
+            for (SizeType i = 0; i < patternPropertiesValidatorCount; i++) {
+                if (patternPropertiesValidators[i]) {
+                    factory.DestroySchemaValidator(patternPropertiesValidators[i]);
+                }
+            }
             factory.FreeState(patternPropertiesValidators);
         }
         if (patternPropertiesSchemas)
@@ -5263,6 +5269,7 @@ protected:
         if (validatorCount_) {
             RAPIDJSON_ASSERT(context.validators == 0);
             context.validators = static_cast<ISchemaValidator**>(context.factory.MallocState(sizeof(ISchemaValidator*) * validatorCount_));
+            std::memset(context.validators, 0, sizeof(ISchemaValidator*) * validatorCount_);
             context.validatorCount = validatorCount_;
 
 #ifdef RAPIDJSON_YGGDRASIL
@@ -8637,6 +8644,7 @@ private:
                 ISchemaValidator**& va = CurrentContext().patternPropertiesValidators;
                 SizeType& validatorCount = CurrentContext().patternPropertiesValidatorCount;
                 va = static_cast<ISchemaValidator**>(MallocState(sizeof(ISchemaValidator*) * count));
+                std::memset(va, 0, sizeof(ISchemaValidator*) * count);
 #ifdef RAPIDJSON_YGGDRASIL
 		RAPIDJSON_ASSERT(pa);
                 for (SizeType i = 0; i < count; i++)
