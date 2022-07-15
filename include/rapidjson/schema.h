@@ -627,7 +627,7 @@ struct SchemaValidationContext {
         valueUniqueness(false),
         arrayUniqueness(false)
 #ifdef RAPIDJSON_YGGDRASIL
-	, normalized(),
+	, normalized(0),
 	schemaPointerAbs(),
 	valuePointer(),
 	patternPropertiesPointers(0)
@@ -791,7 +791,8 @@ public:
   GenericNormalizedDocument(AllocatorType* allocator = 0,
 			    StackAllocator* stackAllocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity) :
-    document_(allocator, stackCapacity, stackAllocator), index_(0),
+    document_(allocator, stackCapacity, stackAllocator),
+    parent_(0), index_(0),
     extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
@@ -809,7 +810,7 @@ public:
 			    unsigned& index, StackAllocator* stackAllocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity) :
     document_(&parent->GetAllocator(), stackCapacity, stackAllocator),
-    index_(index), extending_(false), appending_(false),
+    parent_(parent), index_(index), extending_(false), appending_(false),
     extend_context_(nullptr), extend_schema_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
     valueStack_(stackAllocator, stackCapacity),
@@ -852,6 +853,8 @@ public:
       GetAllocator().Free(temporary_memory_);
       temporary_memory_ = nullptr;
     }
+    if (parent_)
+      parent_->RemoveChild(this);
   }
 
   struct KeyEntry {
@@ -1500,7 +1503,21 @@ public:
   AllocatorType& GetAllocator() {
     return document_.GetAllocator();
   }
-  
+
+  void ClearChildren() {
+    while (!childStack_.Empty() && !childStack_.template Top<GenericNormalizedDocument*>())
+      PopChild();
+  }
+  void RemoveChild(GenericNormalizedDocument* child) {
+    for (GenericNormalizedDocument** ref = childStack_.template Bottom<GenericNormalizedDocument*>();
+	 ref != childStack_.template End<GenericNormalizedDocument*>(); ref++) {
+      if (!ref[0]) continue;
+      if (*ref == child) {
+	ref[0] = 0;
+	return;
+      }
+    }
+  }
   void AddChild(GenericNormalizedDocument* child) {
     GenericNormalizedDocument** ref = childStack_.template Push<GenericNormalizedDocument*>();
     ref[0] = child;
@@ -1509,12 +1526,10 @@ public:
     childStack_.template Pop<GenericNormalizedDocument*>(1);
   }
   GenericNormalizedDocument* FindChild(unsigned index) {
-    GenericNormalizedDocument** ref = childStack_.template Bottom<GenericNormalizedDocument*>();
-    while (true) {
+    for (GenericNormalizedDocument** ref = childStack_.template Bottom<GenericNormalizedDocument*>();
+	 ref != childStack_.template End<GenericNormalizedDocument*>(); ref++) {
+      if (!ref[0]) continue;
       if ((*ref)->index_ == index) return *ref;
-      if (ref == childStack_.template Top<GenericNormalizedDocument*>())
-	break;
-      ref++;
     }
     return nullptr;
   }
@@ -3465,6 +3480,7 @@ public:
 
   static const size_t kDefaultStackCapacity = 1024;
   DocumentType document_;
+  GenericNormalizedDocument* parent_;
   unsigned index_;
   bool extending_;
   bool appending_;
@@ -9101,6 +9117,7 @@ public:
     if (!GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::EndValue())
       return false;
     normalization_depth_--;
+    normalized_.ClearChildren();
     if (normalization_depth_ == 0)
       normalized_.FinalizeFromStack();
     return true;
