@@ -5,9 +5,6 @@ import os
 from urllib.request import urlopen
 
 
-filter_func_ex_name = 'example_python:example_filter'
-
-
 def create_full_schema(fname):
     import yaml
     from yggdrasil import schema
@@ -196,7 +193,7 @@ if __name__ == "__main__":
                      'column_names': ['a', 'b'],
                      'column_units': ['cm', 'g'],
                      'filter': {
-                         'function': filter_func_ex_name}}],
+                         'function': 'example_python:example_filter'}}],
                 'working_dir': os.getcwd()}],
              'connections': [{
                  'inputs': 'outputA',
@@ -215,7 +212,7 @@ if __name__ == "__main__":
                              'commtype': 'default',
                              'datatype': {'type': 'bytes'},
                              'filter': {
-                                 'function': filter_func_ex_name},
+                                 'function': 'example_python:example_filter'},
                              'field_names': ['a', 'b'],
                              'field_units': ['cm', 'g']}],
                 'working_dir': os.getcwd()}],

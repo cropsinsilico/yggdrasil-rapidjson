@@ -4472,6 +4472,18 @@ public:
     }
 
     bool String(Context& context, const Ch* str, SizeType length, bool copy) const {
+#ifdef RAPIDJSON_YGGDRASIL
+        if (yggtype_ & (1 << kYggPythonImportSchemaType) &&
+	    yggtype_ != (1 << kYggTotalSchemaType) - 1) {
+	  GenericDocument<EncodingType, AllocatorType> valueSchema(kObjectType);
+	  valueSchema.AddMember(SValue(GetTypeString(), *allocator_,
+				       true).Move(),
+				SValue(GetPythonClassString(), *allocator_,
+				       true).Move(),
+				*allocator_);
+	  return YggdrasilString(context, str, length, copy, valueSchema);
+	}
+#endif // RAPIDJSON_YGGDRASIL
         RAPIDJSON_NORMALIZER_(String, str, length, copy);
 	(void)copy;
 #ifdef RAPIDJSON_YGGDRASIL
@@ -8117,6 +8129,7 @@ public:
       ValueType sharedError(static_cast<GenericSchemaValidator*>(subvalidator)->GetError(), GetStateAllocator(), true);
       RAPIDJSON_ASSERT(sharedError.IsObject() && (sharedError.MemberCount() == 1));
       typename ValueType::ConstMemberIterator m = sharedError.MemberBegin();
+      RAPIDJSON_ASSERT(m->value.IsObject());
       typename ValueType::ConstMemberIterator vcode = m->value.FindMember(GetErrorCodeString());
       RAPIDJSON_ASSERT(vcode != m->value.MemberEnd());
       MergeError(sharedError);
@@ -8767,6 +8780,7 @@ private:
     }
 
     void AddError(ValueType& keyword, ValueType& error) {
+        RAPIDJSON_ASSERT(error_.IsObject());
         typename ValueType::MemberIterator member = error_.FindMember(keyword);
         if (member == error_.MemberEnd())
             error_.AddMember(keyword, error, GetStateAllocator());
