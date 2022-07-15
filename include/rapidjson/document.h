@@ -2039,7 +2039,6 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
     //! Locate an array element.
     ConstValueIterator Index(const ValueType& x) const {
-      std::cerr << "Index" << std::endl;
       RAPIDJSON_ASSERT(IsArray());
       if (IsArray()) {
 	for (ConstValueIterator it = Begin(); it != End(); ++it) {
@@ -2051,7 +2050,6 @@ public:
     }
     //! Check if an array contains an element.
     bool Contains(const ValueType& x) const {
-      std::cerr << "Contains" << std::endl;
       RAPIDJSON_ASSERT(IsArray());
       return (Index(x) != End());
     }
@@ -2248,15 +2246,6 @@ public:
             if (RAPIDJSON_UNLIKELY(!handler.StartObject()))
                 return false;
             for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
-	        if (!m->name.IsString()) {
-		    printf("Accept: %d\n", (int)(m->name.GetType()));
-		    const Ch s[] = { '0', '\0' };
-		    if (RAPIDJSON_UNLIKELY(!handler.Key(s, 1, true)))
-		        return false;
-		    if (RAPIDJSON_UNLIKELY(!m->value.Accept(handler)))
-		        return false;
-		    continue;
-		}
                 RAPIDJSON_ASSERT(m->name.IsString()); // User may change the type of name by MemberIterator.
                 if (RAPIDJSON_UNLIKELY(!handler.Key(m->name.GetString(), m->name.GetStringLength(), (m->name.data_.f.flags & kCopyFlag) != 0)))
                     return false;
@@ -2850,8 +2839,6 @@ public:
       if (RAPIDJSON_UNLIKELY(!handler.YggdrasilStartObject(*schema_)))
 	return false;
       for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
-	if (!m->name.IsString())
-	  printf("AcceptYggdrasil: %d\n", (int)(m->name.GetType()));
 	RAPIDJSON_ASSERT(m->name.IsString()); // User may change the type of name by MemberIterator.
 	if (RAPIDJSON_UNLIKELY(!handler.Key(m->name.GetString(), m->name.GetStringLength(), (m->name.data_.f.flags & kCopyFlag) != 0)))
 	  return false;
