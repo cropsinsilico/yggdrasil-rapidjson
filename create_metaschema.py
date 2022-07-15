@@ -12,6 +12,75 @@ def create_full_schema(fname):
     s.save(fname, schema=s.full_schema)
 
 
+def get_ygg_tests():
+    import yaml
+    fname = os.path.join(os.path.dirname(__file__),
+                         'test', 'full_schema.yml')
+    if args.create_full_schema or not os.path.isfile(fname):
+        try:
+            create_full_schema(fname)
+        except ImportError:
+            return []
+    with open(fname, 'r') as fd:
+        base = yaml.load(fd, yaml.SafeLoader)
+    try:
+        base['definitions']['file']['allOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
+    except KeyError:
+        pass
+    try:
+        base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
+    except KeyError:
+        pass
+    test_yaml = (
+        {'models': [{
+            'name': 'modelA',
+            'language': 'c',
+            'args': 'model.c',
+            'outputs': [
+                {'name': 'outputA',
+                 'column_names': ['a', 'b'],
+                 'column_units': ['cm', 'g'],
+                 'filter': {
+                     'function': 'example_python:example_filter'}}],
+            'working_dir': os.getcwd()}],
+         'connections': [{
+             'inputs': 'outputA',
+             'outputs': 'fileA.txt',
+             'seritype': 'ply',
+             'working_dir': os.getcwd()}]},
+        {'models': [{
+            'name': 'modelA',
+            'language': 'c',
+            'args': ['model.c'],
+            'inputs': [{'commtype': 'default',
+                        'datatype': {'type': 'bytes'},
+                        'is_default': True,
+                        'name': 'input'}],
+            'outputs': [{'name': 'outputA',
+                         'commtype': 'default',
+                         'datatype': {'type': 'bytes'},
+                         'filter': {
+                             'function': 'example_python:example_filter'},
+                         'field_names': ['a', 'b'],
+                         'field_units': ['cm', 'g']}],
+            'working_dir': os.getcwd()}],
+         'connections': [{
+             'inputs': [
+                 {'name': 'outputA',
+                  'datatype': {'type': 'bytes'},
+                  'commtype': 'default',
+                  'working_dir': os.getcwd()}],
+             'outputs': [
+                 {'name': 'fileA.txt',
+                  'filetype': 'binary',
+                  'serializer': {'seritype': 'ply'},
+                  'working_dir': os.getcwd()}]}]})
+    return (["#define METASCHEMA_YGG_TESTS", ""]
+            + make_function("get_yggschema", base)
+            + make_function("get_testschema", test_yaml[0])
+            + make_function("get_testschema_result", test_yaml[1]))
+
+
 def make_function(name, base):
     return [
         "template<typename T>",
@@ -167,70 +236,7 @@ if __name__ == "__main__":
                  + make_function("get_standard_metaschema", standard))
     ## Create test
     if args.ygg_tests:
-        import yaml
-        # fname = '/Users/langmm/yggdrasil/yggdrasil/.ygg_schema.yml'
-        fname = os.path.join(os.path.dirname(__file__),
-                             'test', 'full_schema.yml')
-        if args.create_full_schema or not os.path.isfile(fname):
-            create_full_schema(fname)
-        with open(fname, 'r') as fd:
-            base = yaml.load(fd, yaml.SafeLoader)
-        try:
-            base['definitions']['file']['allOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
-        except KeyError:
-            pass
-        try:
-            base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
-        except KeyError:
-            pass
-        test_yaml = (
-            {'models': [{
-                'name': 'modelA',
-                'language': 'c',
-                'args': 'model.c',
-                'outputs': [
-                    {'name': 'outputA',
-                     'column_names': ['a', 'b'],
-                     'column_units': ['cm', 'g'],
-                     'filter': {
-                         'function': 'example_python:example_filter'}}],
-                'working_dir': os.getcwd()}],
-             'connections': [{
-                 'inputs': 'outputA',
-                 'outputs': 'fileA.txt',
-                 'seritype': 'ply',
-                 'working_dir': os.getcwd()}]},
-            {'models': [{
-                'name': 'modelA',
-                'language': 'c',
-                'args': ['model.c'],
-                'inputs': [{'commtype': 'default',
-                            'datatype': {'type': 'bytes'},
-                            'is_default': True,
-                            'name': 'input'}],
-                'outputs': [{'name': 'outputA',
-                             'commtype': 'default',
-                             'datatype': {'type': 'bytes'},
-                             'filter': {
-                                 'function': 'example_python:example_filter'},
-                             'field_names': ['a', 'b'],
-                             'field_units': ['cm', 'g']}],
-                'working_dir': os.getcwd()}],
-             'connections': [{
-                 'inputs': [
-                     {'name': 'outputA',
-                      'datatype': {'type': 'bytes'},
-                      'commtype': 'default',
-                      'working_dir': os.getcwd()}],
-                 'outputs': [
-                     {'name': 'fileA.txt',
-                      'filetype': 'binary',
-                      'serializer': {'seritype': 'ply'},
-                      'working_dir': os.getcwd()}]}]})
-        contents += (["#define METASCHEMA_YGG_TESTS", ""]
-                     + make_function("get_yggschema", base)
-                     + make_function("get_testschema", test_yaml[0])
-                     + make_function("get_testschema_result", test_yaml[1]))
+        contents += get_ygg_tests()
     ## End test
     contents += ["", "#endif // METASCHEMA_H_", ""]
     with open(args.dest, 'w') as fd:
