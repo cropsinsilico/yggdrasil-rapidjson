@@ -1451,7 +1451,7 @@ bool GenericUnit<Encoding>::from_table(const std::basic_string<typename Encoding
   std::basic_string<Ch> whitespace = get_whitespace();
   idx_beg = str.find_first_not_of(whitespace);
   idx_end = str.find_last_not_of(whitespace);
-  if (idx_end == std::string::npos)
+  if (idx_end >= str.size())
     idx_end = str.size() - 1;
   std::basic_string<Ch> substr;
   if (str.size() == 0)
