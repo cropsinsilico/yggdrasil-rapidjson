@@ -1491,6 +1491,66 @@ YGGDRASIL_ND_ARRAY_TEST(Complex, 8, std::complex<float>,
      {3 + zero, 0 + zero},					\
      {2 + zero, 0 + zero}};
 
+#define ARRAYS_3D_W(zero)						\
+  double vertices_ ## zero[8][4] =					\
+    {{0.0, 0.0, 0.0, 0.3},						\
+     {0.0, 0.0, 1.0, 0.3},						\
+     {0.0, 1.0, 1.0, 0.3},						\
+     {0.0, 1.0, 0.0, 0.3},						\
+     {1.0, 0.0, 0.0, 0.3},						\
+     {1.0, 0.0, 1.0, 0.3},						\
+     {1.0, 1.0, 1.0, 0.3},						\
+     {1.0, 1.0, 0.0, 0.3}};						\
+  int faces_ ## zero[2][3] =						\
+    {{3 + zero, 0 + zero, 1 + zero},					\
+     {3 + zero, 0 + zero, 2 + zero}};					\
+  int edges_ ## zero[5][2] =						\
+    {{0 + zero, 1 + zero},						\
+     {1 + zero, 2 + zero},						\
+     {2 + zero, 3 + zero},						\
+     {3 + zero, 0 + zero},						\
+     {2 + zero, 0 + zero}};
+
+#define ARRAYS_3D_COLOR(zero)						\
+  double vertices_ ## zero[8][6] =					\
+    {{0.0, 0.0, 0.0, 0, 123, 255},					\
+     {0.0, 0.0, 1.0, 0, 123, 255},					\
+     {0.0, 1.0, 1.0, 0, 123, 255},					\
+     {0.0, 1.0, 0.0, 0, 123, 255},					\
+     {1.0, 0.0, 0.0, 0, 123, 255},					\
+     {1.0, 0.0, 1.0, 0, 123, 255},					\
+     {1.0, 1.0, 1.0, 0, 123, 255},					\
+     {1.0, 1.0, 0.0, 0, 123, 255}};					\
+  int faces_ ## zero[2][3] =						\
+    {{3 + zero, 0 + zero, 1 + zero},					\
+     {3 + zero, 0 + zero, 2 + zero}};					\
+  int edges_ ## zero[5][2] =						\
+    {{0 + zero, 1 + zero},						\
+     {1 + zero, 2 + zero},						\
+     {2 + zero, 3 + zero},						\
+     {3 + zero, 0 + zero},						\
+     {2 + zero, 0 + zero}};
+
+#define ARRAYS_3D_COLOR_W(zero)						\
+  double vertices_ ## zero[8][7] =					\
+    {{0.0, 0.0, 0.0, 0, 123, 255, 0.3},					\
+     {0.0, 0.0, 1.0, 0, 123, 255, 0.3},					\
+     {0.0, 1.0, 1.0, 0, 123, 255, 0.3},					\
+     {0.0, 1.0, 0.0, 0, 123, 255, 0.3},					\
+     {1.0, 0.0, 0.0, 0, 123, 255, 0.3},					\
+     {1.0, 0.0, 1.0, 0, 123, 255, 0.3},					\
+     {1.0, 1.0, 1.0, 0, 123, 255, 0.3},					\
+     {1.0, 1.0, 0.0, 0, 123, 255, 0.3}};				\
+  int faces_ ## zero[2][3] =						\
+    {{3 + zero, 0 + zero, 1 + zero},					\
+     {3 + zero, 0 + zero, 2 + zero}};					\
+  int edges_ ## zero[5][2] =						\
+    {{0 + zero, 1 + zero},						\
+     {1 + zero, 2 + zero},						\
+     {2 + zero, 3 + zero},						\
+     {3 + zero, 0 + zero},						\
+     {2 + zero, 0 + zero}};
+
 #if RAPIDJSON_HAS_CXX11
 #define C_ARR(...) {__VA_ARGS__}
 #define C_ARR1(x) {x}
@@ -1667,6 +1727,11 @@ TEST(Value, ObjWavefront) {
   obj.add_element("trim", ObjRefCurve(0.0, 2.0, 1));
   obj.add_element("sp", C_ARR1(4));
   obj.end_group();
+  // Case with singular values
+  ADD_ELEMENT_STR1("cstype", "taylor");
+  obj.add_element("parm", "u", C_ARR1(0.000));
+  obj.add_element("stech", "cparmb", C_ARR1(1.000000));
+  obj.end_group();
   // Connectivity between two surfaces
   ADD_ELEMENT_STR1("cstype", "bezier");
   obj.add_element("deg", C_ARR(1u, 1u));
@@ -1795,6 +1860,51 @@ TEST(Value, ObjWavefront) {
   EXPECT_EQ(obj, cpy2);
 }
     
+TEST(Value, ObjWavefrontW) {
+  ARRAYS_3D_W(0);
+  ARRAYS_3D_W(1);
+  rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
+  rapidjson::Document doc;
+  rapidjson::Value x(obj);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.IsObjWavefront());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(x.GetObjString(), x.GetYggType());
+  rapidjson::ObjWavefront cpy;
+  x.GetObjWavefront(cpy);
+  EXPECT_EQ(obj, cpy);
+}
+
+TEST(Value, ObjWavefrontColor) {
+  ARRAYS_3D_COLOR(0);
+  ARRAYS_3D_COLOR(1);
+  rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
+  rapidjson::Document doc;
+  rapidjson::Value x(obj);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.IsObjWavefront());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(x.GetObjString(), x.GetYggType());
+  rapidjson::ObjWavefront cpy;
+  x.GetObjWavefront(cpy);
+  EXPECT_EQ(obj, cpy);
+}
+
+TEST(Value, ObjWavefrontColorW) {
+  ARRAYS_3D_COLOR_W(0);
+  ARRAYS_3D_COLOR_W(1);
+  rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
+  rapidjson::Document doc;
+  rapidjson::Value x(obj);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.IsObjWavefront());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(x.GetObjString(), x.GetYggType());
+  rapidjson::ObjWavefront cpy;
+  x.GetObjWavefront(cpy);
+  EXPECT_EQ(obj, cpy);
+}
+
 TEST(Value, Ply) {
   ARRAYS_3D(0);
   ARRAYS_3D(1);

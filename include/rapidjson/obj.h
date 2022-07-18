@@ -1245,9 +1245,10 @@ public:
     y = values[1];
     z = values[2];
     if ((values.size() == 6) || (values.size() == 7)) {
-      color.r = (uint8_t)values[3];
-      color.g = (uint8_t)values[4];
-      color.b = (uint8_t)values[5];
+      color.is_set = true;
+      color.r = static_cast<uint8_t>(values[3]);
+      color.g = static_cast<uint8_t>(values[4]);
+      color.b = static_cast<uint8_t>(values[5]);
     }
     if ((values.size() == 4) || (values.size() == 7))
       w = values[values.size() - 1];
@@ -1259,7 +1260,7 @@ public:
   void write_values(std::ostream &out) const OVERRIDE_CXX11 {
     out << x << " " << y << " " << z;
     if (color.is_set)
-      out << " " << color.r << " " << color.g << " " << color.b;
+      out << " " << (int)color.r << " " << (int)color.g << " " << (int)color.b;
     if (w >= 0)
       out << " " << w;
   }

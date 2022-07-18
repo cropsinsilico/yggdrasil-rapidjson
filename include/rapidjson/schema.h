@@ -1799,8 +1799,26 @@ public:
   { NORM_VALUE_(Uint64, (u)); }
   bool NormDouble(Context& context, const SchemaType& schema, double d)
   { NORM_VALUE_(Double, (d)); }
-  bool NormString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool)
-  { NORM_VALUE_(String, (str, length, true)); }
+  bool NormString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy)
+  {
+    if (schema.yggtype_ & (1 << SchemaType::kYggPythonImportSchemaType) &&
+	schema.yggtype_ != (1 << SchemaType::kYggTotalSchemaType) - 1) {
+      GenericDocument<EncodingType, AllocatorType> valueSchema(kObjectType);
+      valueSchema.AddMember(SValue(schema.GetTypeString(),
+				   GetAllocator(),
+				   true).Move(),
+			    SValue(schema.GetPythonClassString(),
+				   GetAllocator(),
+				   true).Move(),
+			    GetAllocator());
+      if (NormYggdrasilString(context, schema, str, length, copy, valueSchema)) {
+	RecordModified();
+	return true;
+      }
+      return false;
+    }    
+    NORM_VALUE_(String, (str, length, true));
+  }
   template <typename YggSchemaValueType>
   bool NormYggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
     NORM_BEGIN_(YggdrasilString);
@@ -4470,18 +4488,6 @@ public:
     }
 
     bool String(Context& context, const Ch* str, SizeType length, bool copy) const {
-#ifdef RAPIDJSON_YGGDRASIL
-        if (yggtype_ & (1 << kYggPythonImportSchemaType) &&
-	    yggtype_ != (1 << kYggTotalSchemaType) - 1) {
-	  GenericDocument<EncodingType, AllocatorType> valueSchema(kObjectType);
-	  valueSchema.AddMember(SValue(GetTypeString(), *allocator_,
-				       true).Move(),
-				SValue(GetPythonClassString(), *allocator_,
-				       true).Move(),
-				*allocator_);
-	  return YggdrasilString(context, str, length, copy, valueSchema);
-	}
-#endif // RAPIDJSON_YGGDRASIL
         RAPIDJSON_NORMALIZER_(String, str, length, copy);
 	(void)copy;
 #ifdef RAPIDJSON_YGGDRASIL
