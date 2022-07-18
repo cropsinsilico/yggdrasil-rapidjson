@@ -1976,22 +1976,20 @@ public:
 	    (!baseSchemaSet && context.propertyExist[index]) ||
 	    (baseSchemaSet && schema.parentKey_ == baseSchema->properties_[index].name))
 	  continue;
-	if (const SValue* defV = baseSchema->properties_[index].schema->GetDefaultValue()) {
-	  if (CheckSharedMissing(*baseSchema, iP, iS, index)) {
-	    if (!baseSchemaSet)
-	      context.propertyExist[index] = true;
-	  } else {
-	    RecordModifiedAdded(baseSchema->properties_[index].name, *defV);
-	    const Ch* str = baseSchema->properties_[index].name.GetString();
-	    SizeType len = baseSchema->properties_[index].name.GetStringLength();
-	    if (!NormKey(context, *baseSchema, str, len, true))
-	      return false; // GCOVR_EXCL_LINE
-	    if (!Append(context, *baseSchema, *defV))
-	      return false; // GCOVR_EXCL_LINE
-	    if (!baseSchemaSet)
-	      context.propertyExist[index] = true;
-	    memberCount++;
-	  }
+	if (CheckSharedMissing(*baseSchema, iP, iS, index)) {
+	  if (!baseSchemaSet)
+	    context.propertyExist[index] = true;
+	} else if (const SValue* defV = baseSchema->properties_[index].schema->GetDefaultValue()) {
+	  RecordModifiedAdded(baseSchema->properties_[index].name, *defV);
+	  const Ch* str = baseSchema->properties_[index].name.GetString();
+	  SizeType len = baseSchema->properties_[index].name.GetStringLength();
+	  if (!NormKey(context, *baseSchema, str, len, true))
+	    return false; // GCOVR_EXCL_LINE
+	  if (!Append(context, *baseSchema, *defV))
+	    return false; // GCOVR_EXCL_LINE
+	  if (!baseSchemaSet)
+	    context.propertyExist[index] = true;
+	  memberCount++;
 	}
       }
     }

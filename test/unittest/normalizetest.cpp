@@ -799,8 +799,7 @@ TEST(SchemaNormalizer, PullProperties) {
         "      \"properties\": {"
         "        \"street_address\": { \"type\": \"string\","
 	"                              \"default\": \"default_address\"},"
-        "        \"city\":           { \"type\": \"string\","
-	"                              \"default\": \"default_city\"},"
+        "        \"city\":           { \"type\": \"string\"},"
         "        \"state\":          { \"type\": \"string\","
 	"                              \"default\": \"default_state\"},"
         "        \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
@@ -815,6 +814,15 @@ TEST(SchemaNormalizer, PullProperties) {
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"city\": \"Washington\", \"state\": \"DC\" }",
 	      true,
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }");
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"state\": \"DC\" }",
+		     "", "required", "",
+		     "{ \"required\": {"
+		     "    \"errorCode\": 15,"
+		     "    \"instanceRef\": \"#/shipping_address\","
+		     "    \"schemaRef\": \"#/properties/shipping_address\","
+		     "    \"missing\": [\"city\"]"
+		     "}}");
 }
 
 TEST(SchemaNormalizer, PushProperties) {
@@ -828,8 +836,7 @@ TEST(SchemaNormalizer, PushProperties) {
         "      \"properties\": {"
         "        \"street_address\": { \"type\": \"string\","
 	"                              \"default\": \"default_address\"},"
-        "        \"city\":           { \"type\": \"string\","
-	"                              \"default\": \"default_city\"},"
+        "        \"city\":           { \"type\": \"string\"},"
         "        \"state\":          { \"type\": \"string\","
 	"                              \"default\": \"default_state\"},"
         "        \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
@@ -851,6 +858,15 @@ TEST(SchemaNormalizer, PushProperties) {
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"city\": \"Washington\", \"state\": \"DC\" }",
 	      true,
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"},  \"state\": \"DC\" }");
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"state\": \"DC\" }",
+		     "", "required", "",
+		     "{ \"required\": {"
+		     "    \"errorCode\": 15,"
+		     "    \"instanceRef\": \"#/shipping_address\","
+		     "    \"schemaRef\": \"#/properties/shipping_address\","
+		     "    \"missing\": [\"city\"]"
+		     "}}");
 }
 
 TEST(SchemaNormalizer, PullPropertiesPath) {
@@ -865,8 +881,7 @@ TEST(SchemaNormalizer, PullPropertiesPath) {
         "      \"properties\": {"
         "        \"street_address\": { \"type\": \"string\","
 	"                              \"default\": \"default_address\"},"
-        "        \"city\":           { \"type\": \"string\","
-	"                              \"default\": \"default_city\"}"
+        "        \"city\":           { \"type\": \"string\" }"
         "      },"
 	"      \"additionalProperties\": false,"
         "      \"required\": [\"street_address\", \"city\"]"
@@ -881,8 +896,7 @@ TEST(SchemaNormalizer, PullPropertiesPath) {
         "        \"properties\": {"
         "          \"street_address\": { \"type\": \"string\","
 	"                                \"default\": \"default_address\"},"
-        "          \"city\":           { \"type\": \"string\","
-	"                                \"default\": \"default_city\"}"
+        "          \"city\":           { \"type\": \"string\" }"
         "        },"
         "        \"required\": [\"street_address\", \"city\"]"
 	"      }, {"
@@ -925,6 +939,23 @@ TEST(SchemaNormalizer, PullPropertiesPath) {
 	      "    \"city\": \"Washington\""
 	      "  }"
 	      "}");
+    FAILED_NORMALIZE(s,
+		     "{"
+		     "  \"street_address\": \"1600 Pennsylvania Avenue NW\","
+		     "  \"shipping_address\": {"
+		     "  },"
+		     "  \"billing_address\": {"
+		     "    \"state\": \"DC\","
+		     "    \"type\": \"residential\""
+		     "  }"
+		     "}",
+		     "", "required", "",
+		     "{ \"required\": {"
+		     "    \"errorCode\": 15,"
+		     "    \"instanceRef\": \"#/billing_address\","
+		     "    \"schemaRef\": \"#/properties/billing_address\","
+		     "    \"missing\": [\"city\"]"
+		     "}}");
 }
 
 TEST(SchemaNormalizer, PushPropertiesPath) {
@@ -949,8 +980,7 @@ TEST(SchemaNormalizer, PushPropertiesPath) {
         "      \"properties\": {"
         "        \"street_address\": { \"type\": \"string\","
 	"                              \"default\": \"default_address\"},"
-        "        \"city\":           { \"type\": \"string\","
-	"                              \"default\": \"default_city\"}"
+        "        \"city\":           { \"type\": \"string\" }"
         "      },"
         "      \"required\": [\"street_address\", \"city\"]"
         "    },"
@@ -960,8 +990,7 @@ TEST(SchemaNormalizer, PushPropertiesPath) {
         "        \"properties\": {"
         "          \"street_address\": { \"type\": \"string\","
 	"                                \"default\": \"default_address\"},"
-        "          \"city\":           { \"type\": \"string\","
-	"                                \"default\": \"default_city\"}"
+        "          \"city\":           { \"type\": \"string\" }"
         "        },"
         "        \"required\": [\"street_address\", \"city\"]"
 	"      }, {"
@@ -1002,6 +1031,23 @@ TEST(SchemaNormalizer, PushPropertiesPath) {
 	      "    \"city\": \"Washington\""
 	      "  }"
 	      "}");
+    FAILED_NORMALIZE(s,
+		     "{"
+		     "  \"street_address\": \"1600 Pennsylvania Avenue NW\","
+		     "  \"shipping_address\": {"
+		     "  },"
+		     "  \"billing_address\": {"
+		     "    \"state\": \"DC\","
+		     "    \"type\": \"residential\""
+		     "  }"
+		     "}",
+		     "", "required", "",
+		     "{ \"required\": {"
+		     "    \"errorCode\": 15,"
+		     "    \"instanceRef\": \"#/billing_address\","
+		     "    \"schemaRef\": \"#/properties/billing_address\","
+		     "    \"missing\": [\"city\"]"
+		     "}}");
 }
 
 #ifdef METASCHEMA_YGG_TESTS
