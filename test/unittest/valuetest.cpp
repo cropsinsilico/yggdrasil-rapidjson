@@ -1861,7 +1861,6 @@ TEST(Value, ObjWavefront) {
 }
     
 TEST(Value, ObjWavefrontW) {
-  ARRAYS_3D_W(0);
   ARRAYS_3D_W(1);
   rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   rapidjson::Document doc;
@@ -1876,7 +1875,6 @@ TEST(Value, ObjWavefrontW) {
 }
 
 TEST(Value, ObjWavefrontColor) {
-  ARRAYS_3D_COLOR(0);
   ARRAYS_3D_COLOR(1);
   rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   rapidjson::Document doc;
@@ -1891,7 +1889,6 @@ TEST(Value, ObjWavefrontColor) {
 }
 
 TEST(Value, ObjWavefrontColorW) {
-  ARRAYS_3D_COLOR_W(0);
   ARRAYS_3D_COLOR_W(1);
   rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   rapidjson::Document doc;
