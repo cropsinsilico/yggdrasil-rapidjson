@@ -735,7 +735,6 @@ public:
   GenericUnit(const std::basic_string<Ch> str, const double& power=1.0) :
     names_(), abbrs_(), dim_(), factor_(1.0), offset_(0.0), power_(1.0), prefix_() {
     bool errorFlag = (!from_table(str));
-    RAPIDJSON_ASSERT(!errorFlag);
     (void)errorFlag;
     power_ = power; // Base units do not have powers
     RAPIDJSON_ASSERT(!(has_power() && has_offset()));
@@ -1477,7 +1476,6 @@ bool GenericUnit<Encoding>::from_table(const std::basic_string<typename Encoding
 	  return from_table(**it, *p);
   }
   std::cerr << "No match found for \"" << convert_chars<Encoding,UTF8<char> >(substr) << "\"" << std::endl; // GCOVR_EXCL_LINE
-  RAPIDJSON_ASSERT(!sizeof("No match found")); // GCOVR_EXCL_LINE
   return false; // GCOVR_EXCL_LINE
 }
 
