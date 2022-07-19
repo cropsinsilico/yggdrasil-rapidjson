@@ -488,80 +488,80 @@ public:
       allocator.Free(str);
       return out;
     }
-    GenericPointer CompressRelative(Allocator* allocator = 0) const {
-        GenericPointer r;
-        r.allocator_ = allocator;
-	r.CopyFromRaw(*this);
-	size_t levels = 0;
-	size_t origCount = r.tokenCount_;
-	for (size_t j = 0, i = origCount - 1; j < origCount; j++, i--) {
-	  if (r.tokens_[i].length == 2 &&
-	      r.tokens_[i].name[0] == (Ch)'.' &&
-	      r.tokens_[i].name[1] == (Ch)'.') {
-	    levels++;
-	  } else if (levels) {
-	    r = r.Remove((SizeType)(i + 1), r.allocator_);
-	    r = r.Remove((SizeType)i, r.allocator_);
-	    levels--;
-	  }
-	}
-	return r;
-    }
-    GenericPointer Insert(SizeType index, const Token& token,
-			  Allocator* allocator = 0) const {
-        if (index >= tokenCount_)
-	  return Append(token, allocator);
-        GenericPointer r;
-        r.allocator_ = allocator;
-	r.CopyFromRaw(*this, 1, token.length + 1);
-	Token* old_tokens = r.tokens_ + index;
-	Token* new_tokens = old_tokens + 1;
-	size_t size_nameBuffer = 0;
-	for (Token *t = r.tokens_; t != r.tokens_ + index; ++t)
-	  size_nameBuffer += t->length + 1;
-	Ch* old_nameBuffer = r.nameBuffer_ + size_nameBuffer;
-	Ch* new_nameBuffer = old_nameBuffer + token.length + 1;
-	std::ptrdiff_t diff = new_nameBuffer - old_nameBuffer;
-	size_nameBuffer = 0;
-	for (Token *t = r.tokens_ + index; t != r.tokens_ + tokenCount_; ++t)
-	  size_nameBuffer += t->length + 1;
-	std::memmove(new_tokens, old_tokens,
-		     (tokenCount_ - index) * sizeof(Token));
-	std::memmove(new_nameBuffer, old_nameBuffer,
-		     size_nameBuffer * sizeof(Ch));
-	for (Token *t = r.tokens_ + index; t != r.tokens_ + tokenCount_; ++t)
-	  t->name += diff;
-	std::memcpy(old_nameBuffer, token.name,
-		    (token.length + 1) * sizeof(Ch));
-	r.tokens_[index].name = old_nameBuffer;
-	r.tokens_[index].length = token.length;
-	r.tokens_[index].index = token.index;
-        return r;
-    }
-    GenericPointer Insert(SizeType index, const Ch* name, SizeType length,
-			  Allocator* allocator = 0) const {
-        Token token = { name, length, kPointerInvalidIndex };
-        return Insert(index, token, allocator);
-    }
-    GenericPointer Insert(SizeType index, SizeType valueIndex,
-			  Allocator* allocator = 0) const {
-        char buffer[21];
-        char* end = sizeof(SizeType) == 4 ? internal::u32toa(valueIndex, buffer) : internal::u64toa(valueIndex, buffer);
-        SizeType length = static_cast<SizeType>(end - buffer);
-        buffer[length] = '\0';
+    // GenericPointer CompressRelative(Allocator* allocator = 0) const {
+    //     GenericPointer r;
+    //     r.allocator_ = allocator;
+    // 	r.CopyFromRaw(*this);
+    // 	size_t levels = 0;
+    // 	size_t origCount = r.tokenCount_;
+    // 	for (size_t j = 0, i = origCount - 1; j < origCount; j++, i--) {
+    // 	  if (r.tokens_[i].length == 2 &&
+    // 	      r.tokens_[i].name[0] == (Ch)'.' &&
+    // 	      r.tokens_[i].name[1] == (Ch)'.') {
+    // 	    levels++;
+    // 	  } else if (levels) {
+    // 	    r = r.Remove((SizeType)(i + 1), r.allocator_);
+    // 	    r = r.Remove((SizeType)i, r.allocator_);
+    // 	    levels--;
+    // 	  }
+    // 	}
+    // 	return r;
+    // }
+    // GenericPointer Insert(SizeType index, const Token& token,
+    // 			  Allocator* allocator = 0) const {
+    //     if (index >= tokenCount_)
+    // 	  return Append(token, allocator);
+    //     GenericPointer r;
+    //     r.allocator_ = allocator;
+    // 	r.CopyFromRaw(*this, 1, token.length + 1);
+    // 	Token* old_tokens = r.tokens_ + index;
+    // 	Token* new_tokens = old_tokens + 1;
+    // 	size_t size_nameBuffer = 0;
+    // 	for (Token *t = r.tokens_; t != r.tokens_ + index; ++t)
+    // 	  size_nameBuffer += t->length + 1;
+    // 	Ch* old_nameBuffer = r.nameBuffer_ + size_nameBuffer;
+    // 	Ch* new_nameBuffer = old_nameBuffer + token.length + 1;
+    // 	std::ptrdiff_t diff = new_nameBuffer - old_nameBuffer;
+    // 	size_nameBuffer = 0;
+    // 	for (Token *t = r.tokens_ + index; t != r.tokens_ + tokenCount_; ++t)
+    // 	  size_nameBuffer += t->length + 1;
+    // 	std::memmove(new_tokens, old_tokens,
+    // 		     (tokenCount_ - index) * sizeof(Token));
+    // 	std::memmove(new_nameBuffer, old_nameBuffer,
+    // 		     size_nameBuffer * sizeof(Ch));
+    // 	for (Token *t = r.tokens_ + index; t != r.tokens_ + tokenCount_; ++t)
+    // 	  t->name += diff;
+    // 	std::memcpy(old_nameBuffer, token.name,
+    // 		    (token.length + 1) * sizeof(Ch));
+    // 	r.tokens_[index].name = old_nameBuffer;
+    // 	r.tokens_[index].length = token.length;
+    // 	r.tokens_[index].index = token.index;
+    //     return r;
+    // }
+    // GenericPointer Insert(SizeType index, const Ch* name, SizeType length,
+    // 			  Allocator* allocator = 0) const {
+    //     Token token = { name, length, kPointerInvalidIndex };
+    //     return Insert(index, token, allocator);
+    // }
+    // GenericPointer Insert(SizeType index, SizeType valueIndex,
+    // 			  Allocator* allocator = 0) const {
+    //     char buffer[21];
+    //     char* end = sizeof(SizeType) == 4 ? internal::u32toa(valueIndex, buffer) : internal::u64toa(valueIndex, buffer);
+    //     SizeType length = static_cast<SizeType>(end - buffer);
+    //     buffer[length] = '\0';
 
-        if (sizeof(Ch) == 1) {
-            Token token = { reinterpret_cast<Ch*>(buffer), length, valueIndex };
-            return Insert(index, token, allocator);
-        }
-        else {
-            Ch name[21];
-            for (size_t i = 0; i <= length; i++)
-                name[i] = static_cast<Ch>(buffer[i]);
-            Token token = { name, length, valueIndex };
-            return Insert(index, token, allocator);
-        }
-    }
+    //     if (sizeof(Ch) == 1) {
+    //         Token token = { reinterpret_cast<Ch*>(buffer), length, valueIndex };
+    //         return Insert(index, token, allocator);
+    //     }
+    //     else {
+    //         Ch name[21];
+    //         for (size_t i = 0; i <= length; i++)
+    //             name[i] = static_cast<Ch>(buffer[i]);
+    //         Token token = { name, length, valueIndex };
+    //         return Insert(index, token, allocator);
+    //     }
+    // }
     GenericPointer Remove(SizeType index, Allocator* allocator = 0) const {
         if (index >= (tokenCount_ - 1))
 	  return Pop(1, allocator);
@@ -621,15 +621,39 @@ public:
         return r;
     }
 
+    GenericPointer Replace(SizeType index, SizeType tokenIndex,
+			   Allocator* allocator = 0) const {
+        char buffer[21];
+        char* end = sizeof(SizeType) == 4 ? internal::u32toa(tokenIndex, buffer) : internal::u64toa(tokenIndex, buffer);
+        SizeType length = static_cast<SizeType>(end - buffer);
+        buffer[length] = '\0';
+        if (sizeof(Ch) == 1) {
+            Token token = { reinterpret_cast<Ch*>(buffer), length, index };
+	    return Replace(index, token, allocator);
+        }
+        else {
+            Ch name[21];
+            for (size_t i = 0; i <= length; i++)
+                name[i] = static_cast<Ch>(buffer[i]);
+            Token token = { name, length, index };
+	    return Replace(index, token, allocator);
+        }
+	
+    }
     GenericPointer Replace(SizeType index, const Ch* name, SizeType length,
-			   Allocator* allocator) {
+			   Allocator* allocator = 0) const {
+        Token token = { name, length, kPointerInvalidIndex };
+	return Replace(index, token, allocator);
+    }
+    GenericPointer Replace(SizeType index, const Token& token,
+			   Allocator* allocator = 0) const {
         GenericPointer r;
         r.allocator_ = allocator;
 	if (index >= tokenCount_) {
 	  r.CopyFromRaw(*this);
 	  return r;
 	}
-	int diff = (int)length - (int)(tokens_[index].length);
+	int diff = (int)token.length - (int)(tokens_[index].length);
 	if (diff > 0)
 	  r.CopyFromRaw(*this, 0, (size_t)diff);
 	else
@@ -646,8 +670,11 @@ public:
 	  for (Token *t = next; t != r.tokens_ + r.tokenCount_; t++)
 	    t->name += diff;
 	}
-	std::memcpy((void*)(replace->name), name, length * sizeof(Ch));
-	replace->length = length;
+	replace = r.tokens_ + index;
+	next = replace + 1;
+	std::memcpy((void*)(replace->name), token.name, token.length * sizeof(Ch));
+	replace->length = token.length;
+	replace->index = token.index;
 	size_t nameBufferSizeProceeds = 0;
 	for (Token *t = r.tokens_; t != next; t++)
 	  nameBufferSizeProceeds += t->length + 1;

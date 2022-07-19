@@ -1728,3 +1728,76 @@ TEST(Pointer, Issue1899) {
     q = q.Append("");
     EXPECT_TRUE(PointerType("/foo/1234/") == q);
 }
+
+#ifdef RAPIDJSON_YGGDRASIL
+
+TEST(Pointer, PartialCompare) {
+  Pointer p("#/foo");
+  Pointer q("#/foo/0");
+  EXPECT_TRUE(p.PartialCompare(q));
+  EXPECT_FALSE(q.PartialCompare(p));
+  EXPECT_FALSE(q.PartialCompare(Pointer("#/foo/1")));
+  EXPECT_FALSE(q.PartialCompare(Pointer(" ")));
+}
+
+TEST(Pointer, PartialFront) {
+  Pointer q("#/foo/0");
+  EXPECT_EQ(q.PartialFront(1), Pointer("#/foo"));
+  EXPECT_EQ(q.PartialFront(3), q);
+}
+
+TEST(Pointer, PartialBack) {
+  Pointer q("#/foo/0");
+  EXPECT_EQ(q.PartialBack(1), Pointer("#/0"));
+  EXPECT_EQ(q.PartialBack(3), Pointer("#"));
+}
+
+TEST(Pointer, Pop) {
+  Pointer q("#/foo/0");
+  EXPECT_EQ(q.Pop(1), Pointer("#/foo"));
+  EXPECT_EQ(q.Pop(3), Pointer("#"));
+}
+
+TEST(Pointer, Replace) {
+  Pointer p("#/foo/0");
+  EXPECT_EQ(p.Replace(1, 1), Pointer("#/foo/1"));
+  EXPECT_EQ(p.Replace(0, "bar", 3), Pointer("#/bar/0"));
+  EXPECT_EQ(p.Replace(0, "bars", 4), Pointer("#/bars/0"));
+  EXPECT_EQ(p, p.Replace(5, 3));
+}
+
+TEST(Pointer, GetFromUnfinalized) {
+  Document d;
+  d.StartObject();
+  d.Key("a", 1, true);
+  d.StartObject();
+  d.Key("asub", 4, true);
+  d.Int(5);
+  d.EndObject(1);
+  d.Key("b", 1, true);
+  d.StartArray();
+  d.String("bsub", 4, true);
+  d.EndArray(1);
+  d.Key("c", 1, true);
+  d.Uint(3);
+  d.Key("foo", 3, true);
+  d.StartArray();
+  d.String("bar", 3, true);
+  size_t unresolvedTokenIndex;
+  EXPECT_TRUE(Pointer("/foo/1").GetFromUnfinalized(d, &unresolvedTokenIndex) == 0);
+  EXPECT_EQ(1u, unresolvedTokenIndex);
+  EXPECT_TRUE(Pointer("/foos").GetFromUnfinalized(d, &unresolvedTokenIndex) == 0);
+  EXPECT_EQ(0u, unresolvedTokenIndex);
+  EXPECT_TRUE(Pointer("/a/x").GetFromUnfinalized(d, &unresolvedTokenIndex) == 0);
+  EXPECT_EQ(1u, unresolvedTokenIndex);
+  EXPECT_TRUE(Pointer("/b/3").GetFromUnfinalized(d, &unresolvedTokenIndex) == 0);
+  EXPECT_EQ(1u, unresolvedTokenIndex);
+  EXPECT_TRUE(Pointer("/b/0/x").GetFromUnfinalized(d, &unresolvedTokenIndex) == 0);
+  EXPECT_EQ(2u, unresolvedTokenIndex);
+  EXPECT_EQ(Value("bar"), *Pointer("/foo/0").GetFromUnfinalized(d));
+  EXPECT_EQ(Value(5), *Pointer("/a/asub").GetFromUnfinalized(d));
+  EXPECT_EQ(Value("bsub"), *Pointer("/b/0").GetFromUnfinalized(d));
+  EXPECT_EQ(Value(3u), *Pointer("/c").GetFromUnfinalized(d));
+}
+
+#endif // RAPIDJSON_YGGDRASIL

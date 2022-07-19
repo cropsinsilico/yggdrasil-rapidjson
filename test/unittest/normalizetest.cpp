@@ -104,6 +104,16 @@ using namespace rapidjson;
         normalizer.GetError().Accept(w);\
         printf("Validation error: %s\n", sb.GetString());\
     }\
+    if (normalizer.GetNormalized() != d) {\
+        StringBuffer sb;\
+        PrettyWriter<StringBuffer> w(sb);		\
+        normalizer.GetNormalized().Accept(w);\
+	StringBuffer sb0;\
+	PrettyWriter<StringBuffer> w0(sb0);\
+	d.Accept(w0);							\
+        printf("GetNormalized() Expected: %s Actual: %s\n", sb0.GetString(), sb.GetString()); \
+        ADD_FAILURE();\
+    }\
 }
 
 #define FAILED_NORMALIZE(schema, json, invalidSchemaPointer, invalidSchemaKeyword, invalidDocumentPointer, error) \

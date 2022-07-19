@@ -6019,6 +6019,7 @@ protected:
 	  while (!links.Empty())
 	    links.template Pop<LinkEntry>(1)->~LinkEntry();
 	}
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
         void DisplayLinks() const {
 	  std::cerr << "[";
 	  for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
@@ -6035,6 +6036,7 @@ protected:
 	  DisplayLinks();
 	  std::cerr << ")";
 	}
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
         size_t NLinks() const {
 	  return (links.GetSize() / sizeof(LinkEntry));
 	}
@@ -6217,6 +6219,7 @@ protected:
 	SValue propertyNames; // HERE INSTANCE
         internal::Stack<AllocatorType> links;
       };
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       void DisplayInstances() const {
 	std::cerr << "[";
 	for (const InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++) {
@@ -6243,6 +6246,7 @@ protected:
 	DisplayInstances();
 	std::cerr << ")";
       }
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       size_t NInsts() const {
 	return (instances.GetSize() / sizeof(InstanceEntry));
       }
@@ -6324,11 +6328,13 @@ protected:
 							       PointerType(),
 							       this);
 	}
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	if (NInsts() == 0) {
 	  std::cerr << "SortSources: No instances found ";
 	  Display();
 	  std::cerr << std::endl;
 	}
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       }
       void AddObject(PointerType instancePtr0, PointerType schemaPtr0,
 		     NormalizedDocumentType& normalized,
@@ -6546,11 +6552,13 @@ protected:
       }
       if (last == GetPropertiesString())
 	return kPointerOrderNull;
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       std::cerr << "PointersOrdered: Could not order pointers ";
       NormalizedDocumentType::DisplayPointer(a);
       std::cerr << " -> ";
       NormalizedDocumentType::DisplayPointer(b);
       std::cerr << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       return kPointerOrderNull;
     }
     void AddSharedPropertyLink(const PointerType p,
@@ -6665,6 +6673,7 @@ protected:
 	// Error: unresolved token
 	if (unresolvedTokenIndex)
 	  *unresolvedTokenIndex = static_cast<size_t>(t - p.GetTokens());
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	if (t == p.GetTokens() + p.GetTokenCount()) {
 	  std::cerr << "SchemaPointer2InstancePointer: Missing final token \"";
 	  NormalizedDocumentType::DisplayPointer(p);
@@ -6674,6 +6683,7 @@ protected:
 	  NormalizedDocumentType::DisplayPointer(p);
 	  std::cerr << std::endl;
 	}
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	break;
       }
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
