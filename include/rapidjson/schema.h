@@ -1900,7 +1900,7 @@ public:
 	}
       }
     }
-    NORM_BODY_(YggdrasilString, (str, length, copy, valueSchema));
+    NORM_BODY_(YggdrasilString, (str, length, true, valueSchema));
     NORM_END_(YggdrasilString);
   }
   template <typename YggSchemaValueType>
@@ -2433,7 +2433,7 @@ public:
   template <typename YggSchemaValueType>
   bool ExtendYggdrasilString(Context& context, const Ch* str, SizeType length, bool, YggSchemaValueType& valueSchema) {
     bool dont_recurse = false;
-    EXTEND_BEGIN_(YggdrasilString, (str, length, valueSchema));
+    EXTEND_BEGIN_(YggdrasilString, (str, length, GetAllocator(), valueSchema));
     REQUIRED_PROPERTY_(YggdrasilString,
 		       (current && current->IsYggdrasil()),
 		       (str, length, valueSchema));
@@ -3529,9 +3529,9 @@ public:
 #define ADD_NORMALIZE_HANDLER_(method, param, ...)			\
   bool method param {							\
     RAPIDJSON_ASSERT(extending_);					\
-    return method(*extend_context_, *extend_schema_, __VA_ARGS__);	\
+    return Base ## method(*extend_context_, *extend_schema_, __VA_ARGS__); \
   }									\
-  bool method PARAM_WITH_CONTEXT_ param {				\
+  bool Base ## method PARAM_WITH_CONTEXT_ param {			\
     if ((!extending_) || appending_) {					\
       return Norm ## method(context, schema, __VA_ARGS__);		\
     } else {								\
@@ -3541,9 +3541,9 @@ public:
 #define ADD_NORMALIZE_HANDLER_NOARGS_(method)				\
   bool method() {							\
     RAPIDJSON_ASSERT(extending_);					\
-    return method(*extend_context_, *extend_schema_);			\
+    return Base ## method(*extend_context_, *extend_schema_);		\
   }									\
-  bool method(Context& context, const SchemaType& schema) {		\
+  bool Base ## method(Context& context, const SchemaType& schema) {	\
     if ((!extending_) || appending_) {					\
       return Norm ## method(context, schema);				\
     } else {								\
@@ -3554,10 +3554,10 @@ public:
   template <typename YggSchemaValueType>				\
   bool method param {							\
     RAPIDJSON_ASSERT(extending_);					\
-    return method(*extend_context_, *extend_schema_, __VA_ARGS__);	\
+    return Base ## method(*extend_context_, *extend_schema_, __VA_ARGS__); \
   }									\
   template <typename YggSchemaValueType>				\
-  bool method PARAM_WITH_CONTEXT_ param {				\
+  bool Base ## method PARAM_WITH_CONTEXT_ param {			\
     if ((!extending_) || appending_) {					\
       return Norm ## method(context, schema, __VA_ARGS__);		\
     } else {								\
@@ -4398,7 +4398,7 @@ public:
 #define RAPIDJSON_NORMALIZER_BASE_(method, arg)				\
   TemporaryMemory<typename Context::NormalizedDocumentType> __temporary_normalized_memory(context.normalized); \
   if (context.normalized) {						\
-    if (!context.normalized->method arg)				\
+    if (!context.normalized->Base ## method arg)			\
       return false;							\
     __temporary_normalized_memory.stealMemory();			\
   }
