@@ -114,7 +114,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON -DRAPIDJSON_YGGDRASIL_TESTS=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON -DRAPIDJSON_YGGDRASIL_TESTS=ON -DRAPIDJSON_CREATE_METASCHEMA=ON
       - name: Build
         run: |
           cd build
