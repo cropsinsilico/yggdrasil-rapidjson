@@ -274,7 +274,9 @@ public:
     virtual void AddDependencySchemaError(const SValue& souceName, ISchemaValidator* subvalidator) = 0;
     virtual bool EndDependencyErrors() = 0;
 
+#ifndef RAPIDJSON_YGGDRASIL
     virtual void DisallowedValue(const ValidateErrorCode code) = 0;
+#endif // RAPIDJSON_YGGDRASIL
     virtual void StartDisallowedType() = 0;
     virtual void AddExpectedType(const typename SchemaType::ValueType& expectedType) = 0;
     virtual void EndDisallowedType(const typename SchemaType::ValueType& actualType) = 0;
@@ -1217,19 +1219,21 @@ public:
 	ot = &src;
       }
       if (it->set) {
-	if (it->instancePtr == instancePtr && it->schemaPtr == schemaPtr)
-	  return;
-	std::cerr << "PAIR ENTRY CONFLICT: [";
-	DisplayPointer(it->instancePtr);
-	std::cerr << ", ";
-	DisplayPointer(it->schemaPtr);
-	std::cerr << "] vs [";
-	DisplayPointer(instancePtr);
-	std::cerr << ", ";
-	DisplayPointer(schemaPtr);
-	std::cerr << "], prefix: ";
-	DisplayPointer(prefix);
-	std::cerr << std::endl;
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+	if (it->instancePtr != instancePtr || it->schemaPtr != schemaPtr) {
+	  std::cerr << "PAIR ENTRY CONFLICT: [";
+	  DisplayPointer(it->instancePtr);
+	  std::cerr << ", ";
+	  DisplayPointer(it->schemaPtr);
+	  std::cerr << "] vs [";
+	  DisplayPointer(instancePtr);
+	  std::cerr << ", ";
+	  DisplayPointer(schemaPtr);
+	  std::cerr << "], prefix: ";
+	  DisplayPointer(prefix);
+	  std::cerr << std::endl;
+	}
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	return;
       }
       it->instancePtr = instancePtr;
@@ -1820,7 +1824,7 @@ public:
     NORM_VALUE_(String, (str, length, true));
   }
   template <typename YggSchemaValueType>
-  bool NormYggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
+  bool NormYggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool, YggSchemaValueType& valueSchema) {
     NORM_BEGIN_(YggdrasilString);
     // Units
     RAPIDJSON_ASSERT(valueSchema.IsObject());
@@ -6686,7 +6690,6 @@ protected:
 				 const PointerType& p,
 				 size_t* unresolvedTokenIndex = 0) {
       RAPIDJSON_ASSERT(p.IsValid());
-      bool allowFailure = false;
       const SchemaType* v = root;
       for (const typename PointerType::Token *t = p.GetTokens(); t != p.GetTokens() + p.GetTokenCount(); ++t) {
 	if (t->index == kPointerInvalidIndex) {
@@ -6773,7 +6776,6 @@ protected:
 		  t->index != kPointerInvalidIndex &&
 		  t->index < v->anyOf_.count) {
 		v = v->anyOf_.schemas[t->index];
-		allowFailure = true;
 		continue;
 	      }
 	    }
@@ -6784,7 +6786,6 @@ protected:
 		  t->index != kPointerInvalidIndex &&
 		  t->index < v->oneOf_.count) {
 		v = v->oneOf_.schemas[t->index];
-		allowFailure = true;
 		continue;
 	      }
 	    }
@@ -6793,24 +6794,23 @@ protected:
 	// Error: unresolved token
 	if (unresolvedTokenIndex)
 	  *unresolvedTokenIndex = static_cast<size_t>(t - p.GetTokens());
-	allowFailure = false;
-	if (!allowFailure) {
-	  std::cerr << "Get: Error in ";
-	  NormalizedDocumentType::DisplayPointer(v->pointer_);
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+	std::cerr << "Get: Error in ";
+	NormalizedDocumentType::DisplayPointer(v->pointer_);
+	std::cerr << std::endl;
+	if (t == p.GetTokens() + p.GetTokenCount()) {
+	  std::cerr << "Get: Missing final token \"";
+	  NormalizedDocumentType::DisplayPointer(p);
+	  std::cerr << "\"" << std::endl;
+	} else {
+	  std::cerr << "Get: Failing token is \"" << t->name << "\" from ";
+	  NormalizedDocumentType::DisplayPointer(p);
 	  std::cerr << std::endl;
-	  if (t == p.GetTokens() + p.GetTokenCount()) {
-	    std::cerr << "Get: Missing final token \"";
-	    NormalizedDocumentType::DisplayPointer(p);
-	    std::cerr << "\"" << std::endl;
-	  } else {
-	    std::cerr << "Get: Failing token is \"" << t->name << "\" from ";
-	    NormalizedDocumentType::DisplayPointer(p);
-	    std::cerr << std::endl;
-	    std::cerr << "Properties = " << std::endl;
-	    for (SizeType index = 0; index < v->propertyCount_; index++)
-	      std::cerr << "    " << v->properties_[index].name.GetString() << std::endl;
-	  }
+	  std::cerr << "Properties = " << std::endl;
+	  for (SizeType index = 0; index < v->propertyCount_; index++)
+	    std::cerr << "    " << v->properties_[index].name.GetString() << std::endl;
 	}
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 	return 0;
       }
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
@@ -8199,10 +8199,12 @@ public:
         return true;
     }
 
+#ifndef RAPIDJSON_YGGDRASIL
     void DisallowedValue(const ValidateErrorCode code = kValidateErrorEnum) {
         currentError_.SetObject();
         AddCurrentError(code);
     }
+#endif // RAPIDJSON_YGGDRASIL
     void StartDisallowedType() {
         currentError_.SetArray();
     }

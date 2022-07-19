@@ -2229,6 +2229,29 @@ TEST(SchemaValidator, Deprecating) {
 		   "}")
 }
 
+TEST(SchemaValidator, DeprecatingBool) {
+  Document sd;
+  sd.Parse("{"
+	   "  \"type\": \"object\","
+	   "  \"properties\": {"
+	   "     \"deprecated\": {"
+	   "        \"type\": \"string\","
+	   "        \"deprecated\": true},"
+	   "     \"valid\": {"
+	   "        \"type\": \"integer\"}"
+	   "  }"
+	   "}");
+  SchemaDocument s(sd);
+  VALIDATE_WARNING(s, "{\"deprecated\": \"string\", \"valid\": 0}",
+		   "", "warnings", "",
+		   "{ \"deprecated\": {"
+		   "    \"errorCode\": 39,"
+		   "    \"instanceRef\": \"#/deprecated\","
+		   "    \"schemaRef\": \"#/properties/deprecated\""
+		   "  }"
+		   "}")
+}
+
 #endif // RAPIDJSON_YGGDRASIL
 
 // Additional tests
