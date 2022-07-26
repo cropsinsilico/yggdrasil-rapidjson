@@ -129,6 +129,7 @@ public:
     }
 #endif
 
+#ifdef RAPIDJSON_YGGDRASIL
     struct Base64Pair {
       Base64Pair() : s_(0), w_(0), level_(0) {}
       Base64Pair(OutputStream* os) : s_(0), w_(0), level_(0) {
@@ -148,6 +149,7 @@ public:
       RAPIDJSON_ASSERT(w64p_);
       return w64p_->w_;
     }
+#endif // RAPIDJSON_YGGDRASIL
 
     //! Reset the writer with a new stream.
     /*!
