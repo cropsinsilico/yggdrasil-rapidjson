@@ -1816,7 +1816,8 @@ public:
 				   true).Move(),
 			    GetAllocator());
       if (NormYggdrasilString(context, schema, str, length, copy, valueSchema)) {
-	RecordModified();
+	if (!schema.isMetaschema_)
+	  RecordModified();
 	return true;
       }
       return false;
@@ -1919,6 +1920,39 @@ public:
     NORM_END_(YggdrasilEndObject);
   }
   bool NormStartObject(Context& context, const SchemaType& schema) {
+    if (schema.yggtype_ & ((1 << SchemaType::kYggPythonInstanceSchemaType) |
+			   (1 << SchemaType::kYggSchemaSchemaType)) &&
+	schema.yggtype_ != (1 << SchemaType::kYggTotalSchemaType) - 1) {
+      GenericDocument<EncodingType, AllocatorType> valueSchema(kObjectType);
+      if (schema.yggtype_ & (1 << SchemaType::kYggPythonInstanceSchemaType) &&
+	  schema.yggtype_ & (1 << SchemaType::kYggSchemaSchemaType)) {
+	// TODO: Case where type could be either?
+	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Case where a document could be a "
+					  "Python instance or schema is "
+					  "invalid");
+      } else if (schema.yggtype_ & (1 << SchemaType::kYggPythonInstanceSchemaType)) {
+	valueSchema.AddMember(SValue(schema.GetTypeString(),
+				     GetAllocator(),
+				     true).Move(),
+			      SValue(schema.GetPythonInstanceString(),
+				     GetAllocator(),
+				     true).Move(),
+			      GetAllocator());
+      } else {
+	valueSchema.AddMember(SValue(schema.GetTypeString(),
+				     GetAllocator(),
+				     true).Move(),
+			      SValue(schema.GetSchemaString(),
+				     GetAllocator(),
+				     true).Move(),
+			      GetAllocator());
+      }
+      if (NormYggdrasilStartObject(context, schema, valueSchema)) {
+	RecordModified();
+	return true;
+      }
+      return false;
+    }    
     NORM_BEGIN_(StartObject);
     NORM_BODY_(StartObject, ());
     return true;
@@ -4591,16 +4625,18 @@ public:
       DisallowedType(context, v);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
-    return StartObject(context);
+    return StartObject(context, true);
   }
   bool YggdrasilEndObject(Context& context, SizeType memberCount) const {
     RAPIDJSON_NORMALIZER_(YggdrasilEndObject, memberCount);
-    return EndObject(context, memberCount);
+    return EndObject(context, memberCount, true);
   }
 #endif // RAPIDJSON_YGGDRASIL
 
-    bool StartObject(Context& context) const {
-        RAPIDJSON_NORMALIZER_NOARG_(StartObject);
+    bool StartObject(Context& context, bool skip_normalize = false) const {
+        if (!skip_normalize) {
+	  RAPIDJSON_NORMALIZER_NOARG_(StartObject);
+	}
 #ifdef RAPIDJSON_YGGDRASIL
         if (!((type_ & (1 << kObjectSchemaType)) ||
 	      (yggtype_ & ((1 << kYggPythonInstanceSchemaType) |
@@ -4745,8 +4781,11 @@ public:
         return true;
     }
 
-    bool EndObject(Context& context, SizeType memberCount) const {
-        RAPIDJSON_NORMALIZER_(EndObject, memberCount);
+    bool EndObject(Context& context, SizeType memberCount,
+		   bool skip_normalize = false) const {
+        if (!skip_normalize) {
+	  RAPIDJSON_NORMALIZER_(EndObject, memberCount);
+	}
         if (hasRequired_) {
             context.error_handler.StartMissingProperties();
             for (SizeType index = 0; index < propertyCount_; index++)

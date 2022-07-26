@@ -734,10 +734,26 @@ struct TypeHelper<ValueType, Ply> {
   static Ply Get(const ValueType& v) { return v.template GetPly(); }
   static ValueType& Set(ValueType& v, Ply data) { return v.SetPly(data); }
 };
-  
+
 #endif // RAPIDJSON_YGGDRASIL
 
 } // namespace internal
+
+#ifdef RAPIDJSON_YGG_DOCUMENT_DEBUG_
+#define RAPIDJSON_YGG_DOCUMENT_BASE_(method, arg)			\
+  std::cerr << "Document [" << #method << "]: " << StackSize() << std::endl
+#define RAPIDJSON_YGG_DOCUMENT_NOARG_(method)				\
+  RAPIDJSON_YGG_DOCUMENT_BASE_(method, ())
+#define RAPIDJSON_YGG_DOCUMENT_(method, ...)				\
+  RAPIDJSON_YGG_DOCUMENT_BASE_(method, (__VA_ARGS__))
+#else
+#define RAPIDJSON_YGG_DOCUMENT_BASE_(method, arg)	 \
+  {}
+#define RAPIDJSON_YGG_DOCUMENT_NOARG_(method)	\
+  {}
+#define RAPIDJSON_YGG_DOCUMENT_(method, ...)       \
+  {}
+#endif // RAPIDJSON_YGG_DOCUMENT_DEBUG_
 
 // Forward declarations
 template <bool, typename> class GenericArray;
@@ -5005,13 +5021,13 @@ private:
 
 public:
     // Implementation of Handler
-    bool Null() { new (stack_.template Push<ValueType>()) ValueType(); return true; }
-    bool Bool(bool b) { new (stack_.template Push<ValueType>()) ValueType(b); return true; }
-    bool Int(int i) { new (stack_.template Push<ValueType>()) ValueType(i); return true; }
-    bool Uint(unsigned i) { new (stack_.template Push<ValueType>()) ValueType(i); return true; }
-    bool Int64(int64_t i) { new (stack_.template Push<ValueType>()) ValueType(i); return true; }
-    bool Uint64(uint64_t i) { new (stack_.template Push<ValueType>()) ValueType(i); return true; }
-    bool Double(double d) { new (stack_.template Push<ValueType>()) ValueType(d); return true; }
+    bool Null() { RAPIDJSON_YGG_DOCUMENT_NOARG_(Null); new (stack_.template Push<ValueType>()) ValueType(); return true; }
+    bool Bool(bool b) { RAPIDJSON_YGG_DOCUMENT_(Bool, b); new (stack_.template Push<ValueType>()) ValueType(b); return true; }
+    bool Int(int i) { RAPIDJSON_YGG_DOCUMENT_(Int, i); new (stack_.template Push<ValueType>()) ValueType(i); return true; }
+    bool Uint(unsigned i) { RAPIDJSON_YGG_DOCUMENT_(Uint, i); new (stack_.template Push<ValueType>()) ValueType(i); return true; }
+    bool Int64(int64_t i) { RAPIDJSON_YGG_DOCUMENT_(Int64, i); new (stack_.template Push<ValueType>()) ValueType(i); return true; }
+    bool Uint64(uint64_t i) { RAPIDJSON_YGG_DOCUMENT_(Uint64, i); new (stack_.template Push<ValueType>()) ValueType(i); return true; }
+    bool Double(double d) { RAPIDJSON_YGG_DOCUMENT_(Double, d); new (stack_.template Push<ValueType>()) ValueType(d); return true; }
 
     bool RawNumber(const Ch* str, SizeType length, bool copy) { 
         if (copy) 
@@ -5089,8 +5105,9 @@ public:
 #endif // RAPIDJSON_YGGDRASIL
 
     bool String(const Ch* str, SizeType length, bool copy) {
+        RAPIDJSON_YGG_DOCUMENT_(String, str, length, copy);
 #ifdef RAPIDJSON_YGGDRASIL
-      if (FromYggdrasilString(str, length, copy)) return true;
+	if (FromYggdrasilString(str, length, copy)) return true;
 #endif // RAPIDJSON_YGGDRASIL
         if (copy) 
             new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator());
@@ -5099,19 +5116,21 @@ public:
         return true;
     }
 
-    bool StartObject() { new (stack_.template Push<ValueType>()) ValueType(kObjectType); return true; }
+    bool StartObject() { RAPIDJSON_YGG_DOCUMENT_NOARG_(StartObject); new (stack_.template Push<ValueType>()) ValueType(kObjectType); return true; }
     
-    bool Key(const Ch* str, SizeType length, bool copy) { return String(str, length, copy); }
+    bool Key(const Ch* str, SizeType length, bool copy) { RAPIDJSON_YGG_DOCUMENT_(Key, str, length, copy); return String(str, length, copy); }
 
     bool EndObject(SizeType memberCount) {
+        RAPIDJSON_YGG_DOCUMENT_(EndObject, memberCount);
         typename ValueType::Member* members = stack_.template Pop<typename ValueType::Member>(memberCount);
         stack_.template Top<ValueType>()->SetObjectRaw(members, memberCount, GetAllocator());
         return true;
     }
 
-    bool StartArray() { new (stack_.template Push<ValueType>()) ValueType(kArrayType); return true; }
+    bool StartArray() { RAPIDJSON_YGG_DOCUMENT_NOARG_(StartArray); new (stack_.template Push<ValueType>()) ValueType(kArrayType); return true; }
     
     bool EndArray(SizeType elementCount) {
+        RAPIDJSON_YGG_DOCUMENT_(EndArray, elementCount);
         ValueType* elements = stack_.template Pop<ValueType>(elementCount);
         stack_.template Top<ValueType>()->SetArrayRaw(elements, elementCount, GetAllocator());
         return true;
@@ -5156,7 +5175,8 @@ public:
     return out;
   }
   template <typename YggSchemaValueType>
-  bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema) { 
+  bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema) {
+    RAPIDJSON_YGG_DOCUMENT_(YggdrasilString, str, length, copy, schema);
     if (copy) 
       new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator(), schema);
     else
@@ -5165,13 +5185,20 @@ public:
   }
   template <typename YggSchemaValueType>
   bool YggdrasilStartObject(YggSchemaValueType& schema) {
+    RAPIDJSON_YGG_DOCUMENT_(YggdrasilStartObject, schema);
     new (stack_.template Push<ValueType>()) ValueType(kObjectType, schema);
     return true;
   }
-  bool YggdrasilEndObject(SizeType memberCount) { return EndObject(memberCount); }
-    
+  bool YggdrasilEndObject(SizeType memberCount) {
+    RAPIDJSON_YGG_DOCUMENT_(YggdrasilEndObject, memberCount);
+    return EndObject(memberCount);
+  }
 
 #endif // RAPIDJSON_YGGDRASIL
+
+#undef RAPIDJSON_YGG_DOCUMENT_
+#undef RAPIDJSON_YGG_DOCUMENT_NOARG_
+#undef RAPIDJSON_YGG_DOCUMENT_BASE_
 
 };
 

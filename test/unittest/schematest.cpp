@@ -1831,6 +1831,7 @@ TEST(SchemaValidator, PythonClass) { // 31
         "}");
     SchemaDocument s(sd);
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", true);
+    VALIDATE(s, "\"example_python:ExampleSubClass\"", true);
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
 	       "", "class", "",
 	       "{ \"class\" : {"
@@ -1848,6 +1849,7 @@ TEST(SchemaValidator, PythonFunction) { // 31
         "}");
     SchemaDocument s(sd);
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9mdW5jdGlvbgA=-YGG-\"", true);
+    VALIDATE(s, "\"example_python:example_function\"", true);
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
 	       "", "class", "",
 	       "{ \"class\" : {"
@@ -1865,6 +1867,18 @@ TEST(SchemaValidator, PythonInstance) { // 31
         "}");
     SchemaDocument s(sd);
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", true);
+    VALIDATE(s,
+	     "{"
+	     "  \"class\": \"example_python:ExampleSubClass\","
+	     "  \"args\": ["
+	     "    \"hello\","
+	     "    0.5"
+	     "  ],"
+	     "  \"kwargs\": {"
+	     "    \"a\": \"world\","
+	     "    \"b\": 1"
+	     "  }"
+	     "}", true);
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImludmFsaWQiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
 	       "", "schema", "",
 	       "{ \"schema\": {"
@@ -1904,6 +1918,18 @@ TEST(SchemaValidator, PythonInstanceClass) { // 32
     SchemaDocument s(sd);
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", true);
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", true);
+    VALIDATE(s,
+	     "{"
+	     "  \"class\": \"example_python:ExampleSubClass\","
+	     "  \"args\": ["
+	     "    \"hello\","
+	     "    0.5"
+	     "  ],"
+	     "  \"kwargs\": {"
+	     "    \"a\": \"world\","
+	     "    \"b\": 1"
+	     "  }"
+	     "}", true);
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOk90aGVyQ2xhc3MiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
 	       "", "schema", "",
 	       "{ \"schema\": {"

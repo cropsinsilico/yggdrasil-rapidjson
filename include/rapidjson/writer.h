@@ -55,6 +55,7 @@ RAPIDJSON_NAMESPACE_BEGIN
 template<typename OutputStream, typename SourceEncoding, typename TargetEncoding, typename StackAllocator, unsigned writeFlags>
 class Base64Writer;
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // WriteFlag
 
@@ -107,26 +108,46 @@ public:
     explicit
     Writer(OutputStream& os, StackAllocator* stackAllocator = 0, size_t levelDepth = kDefaultLevelDepth) :
 #ifdef RAPIDJSON_YGGDRASIL
-      w64_(nullptr), s64_(nullptr),
+        w64p_(0),
 #endif // RAPIDJSON_YGGDRASIL
         os_(&os), level_stack_(stackAllocator, levelDepth * sizeof(Level)), maxDecimalPlaces_(kDefaultMaxDecimalPlaces), hasRoot_(false) {}
 
     explicit
     Writer(StackAllocator* allocator = 0, size_t levelDepth = kDefaultLevelDepth) :
 #ifdef RAPIDJSON_YGGDRASIL
-      w64_(nullptr), s64_(nullptr),
+        w64p_(0),
 #endif // RAPIDJSON_YGGDRASIL
         os_(0), level_stack_(allocator, levelDepth * sizeof(Level)), maxDecimalPlaces_(kDefaultMaxDecimalPlaces), hasRoot_(false) {}
 
 #if RAPIDJSON_HAS_CXX11_RVALUE_REFS
     Writer(Writer&& rhs) :
 #ifdef RAPIDJSON_YGGDRASIL
-      w64_(nullptr), s64_(nullptr),
+        w64p_(0),
 #endif // RAPIDJSON_YGGDRASIL
         os_(rhs.os_), level_stack_(std::move(rhs.level_stack_)), maxDecimalPlaces_(rhs.maxDecimalPlaces_), hasRoot_(rhs.hasRoot_) {
         rhs.os_ = 0;
     }
 #endif
+
+    struct Base64Pair {
+      Base64Pair() : s_(0), w_(0), level_(0) {}
+      Base64Pair(OutputStream* os) : s_(0), w_(0), level_(0) {
+	s_ = new Base64OutputStreamWrapper<OutputStream>(*os);
+	w_ = new Base64Writer<OutputStream,SourceEncoding,TargetEncoding,StackAllocator,writeFlags>(*s_);
+      }
+      ~Base64Pair() {
+	if (w_) delete w_;
+	if (s_) delete s_;
+      }
+      Base64OutputStreamWrapper<OutputStream>* s_;
+      Base64Writer<OutputStream,SourceEncoding,TargetEncoding,StackAllocator,writeFlags>* w_;
+      size_t level_;
+    };
+
+    Base64Writer<OutputStream,SourceEncoding,TargetEncoding,StackAllocator,writeFlags>* w64_() {
+      RAPIDJSON_ASSERT(w64p_);
+      return w64p_->w_;
+    }
 
     //! Reset the writer with a new stream.
     /*!
@@ -277,7 +298,7 @@ public:
 
 #ifdef RAPIDJSON_YGGDRASIL
 #define RAPIDJSON_WRAP_BASE64_(method, arg1)	\
-  if (w64_) return w64_->method arg1;		\
+  if (w64p_) return w64_()->method arg1;	\
   return method ## _ arg1
 #else // RAPIDJSON_YGGDRASIL
 #define RAPIDJSON_WRAP_BASE64_(method, arg1)	\
@@ -307,16 +328,17 @@ public:
 #undef RAPIDJSON_WRAP_BASE64_
 
 #ifdef RAPIDJSON_YGGDRASIL
-  Base64Writer<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags>* w64_;
-  Base64OutputStreamWrapper<OutputStream>* s64_;
+  Base64Pair* w64p_;
 
 private:
 
   template <typename ValueType>
   bool WriteYggdrasilPrefix(ValueType& schema) {
-    RAPIDJSON_ASSERT(!w64_);
-    s64_ = new Base64OutputStreamWrapper<OutputStream>(*os_);
-    w64_ = new Base64Writer<OutputStream,SourceEncoding,TargetEncoding,StackAllocator,writeFlags>(*s64_);
+    if (w64p_) {
+      w64p_->level_++;
+      return true;
+    }
+    w64p_ = new Base64Pair(os_);
     const Ch ygg[5] = {'-', 'Y', 'G', 'G', '-'};
     size_t len_ygg = 5;
     // Reserve
@@ -326,17 +348,20 @@ private:
     if (!WriteRawValue(ygg, len_ygg)) return false;
     // Schema
     RAPIDJSON_ASSERT(!(schema.IsYggdrasil()));
-    if (!w64_->WriteSchema(schema)) return false;
+    if (!w64_()->WriteSchema(schema)) return false;
     if (!WriteRawValue(ygg, len_ygg)) return false;
     return true;
   }
   bool WriteYggdrasilSuffix() {
-    RAPIDJSON_ASSERT(w64_);
-    w64_->WriteNext();
-    delete w64_;
-    delete s64_;
-    w64_ = nullptr;
-    s64_ = nullptr;
+    RAPIDJSON_ASSERT(w64p_);
+    RAPIDJSON_ASSERT(w64p_->level_ == 0);
+    if (w64p_->level_ > 0) {
+      w64p_->level_--;
+      return true;
+    }
+    w64_()->WriteNext();
+    delete w64p_;
+    w64p_ = 0;
     const Ch ygg[5] = {'-', 'Y', 'G', 'G', '-'};
     size_t len_ygg = 5;
     if (!WriteRawValue(ygg, len_ygg)) return false;
@@ -346,11 +371,12 @@ private:
   }
 public:
   template <typename SchemaValueType>
-  bool YggdrasilString(const Ch* str, SizeType length, bool, SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>))) {
+  bool YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>))) {
     RAPIDJSON_ASSERT(str != 0);
+    if (w64p_) return String(str, length, copy);
     if (!WriteYggdrasilPrefix(schema)) return false;
     // Body
-    if (!w64_->WriteRawBytes(str, length)) return false;
+    if (!w64_()->WriteRawBytes(str, length)) return false;
     if (!WriteYggdrasilSuffix()) return false;
     return true;
   }
@@ -840,13 +866,22 @@ public:
   { RAPIDJSON_WRAP_BASE64_(StartArray, ()); }
   bool EndArray(SizeType elementCount = 0)
   { RAPIDJSON_WRAP_BASE64_(EndArray, (elementCount)); }
+  template <typename SchemaValueType>
+  bool YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>)))
+  { RAPIDJSON_WRAP_BASE64_(String, (str, length, copy)); }
+  template <typename SchemaValueType>
+  bool YggdrasilStartObject(SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>)))
+  { RAPIDJSON_WRAP_BASE64_(StartObject, ()); }
+  bool YggdrasilEndObject(SizeType memberCount = 0)
+  { RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount)); }
 
   template <typename ValueType>
   bool WriteSchema(ValueType& schema) {
+    bool hasRoot0 = this->hasRoot_;
+    size_t levels0 = this->level_stack_.GetSize();
     bool out = schema.Accept(*this);
     WriteNext();
-    this->hasRoot_ = false;
-    this->level_stack_.Clear();
+    this->hasRoot_ = hasRoot0;
     return out;
   }
   void WriteNext() { this->os_->WriteNext(); }

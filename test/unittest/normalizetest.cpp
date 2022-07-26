@@ -175,6 +175,50 @@ using namespace rapidjson;
     }\
 }
 
+TEST(SchemaNormalizer, BaseTypes) {
+    Document sd;
+    sd.Parse(
+        "{"
+	"  \"type\": \"object\","
+	"  \"properties\": {"
+	"    \"a\": {\"type\": \"null\"},"
+	"    \"b\": {\"type\": \"boolean\"},"
+	"    \"c\": {\"type\": \"integer\"},"
+	"    \"d\": {\"type\": \"integer\"},"
+	"    \"e\": {\"type\": \"integer\"},"
+	"    \"f\": {\"type\": \"integer\"},"
+	"    \"g\": {\"type\": \"number\"},"
+	"    \"h\": {\"type\": \"string\"},"
+	"    \"i\": {\"type\": \"array\","
+	"            \"items\": {\"type\": \"integer\"}},"
+	"    \"j\": {\"type\": \"object\","
+	"            \"additionalProperties\": {\"type\": \"integer\"}},"
+	"  }"
+	"}");
+    SchemaDocument s(sd);
+    NO_NORMALIZE(s, "{ \"a\": null, \"b\": false, \"c\": -1, \"d\": -4294967295, \"e\": 1, \"f\": 4294967295, \"g\": 3.583, \"h\": \"foo\", \"i\": [ 2, 4, 8 ], \"j\": { \"x\": 2, \"y\": 7, \"z\": -1} }");
+}
+
+TEST(SchemaNormalizer, YggdrasilTypes) {
+    Document sd;
+    sd.Parse(
+        "{"
+	"  \"type\": \"object\","
+	"  \"properties\": {"
+	"    \"k\": {\"type\": \"scalar\", \"subtype\": \"uint\","
+	"            \"precision\": 1},"
+	"    \"l\": {\"type\": \"function\"},"
+	"    \"m\": {\"type\": \"instance\"},"
+	"    \"n\": {\"type\": \"schema\"}"
+	"  }"
+	"}");
+    SchemaDocument s(sd);
+    NO_NORMALIZE(s, "{ \"k\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\", "
+		 "\"l\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\", "
+		 "\"m\": \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\", "
+		 "\"n\": \"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\" }");
+}
+
 TEST(SchemaNormalizer, Default) {
     Document sd;
     sd.Parse(
