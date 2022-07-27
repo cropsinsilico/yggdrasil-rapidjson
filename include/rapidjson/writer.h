@@ -145,6 +145,7 @@ public:
       size_t level_;
     private:
       Base64Pair(const Base64Pair&); // Disable copy constructor.
+      Base64Pair& operator=(const Base64Pair&); // Disable assignment.
     };
 
     Base64Writer<OutputStream,SourceEncoding,TargetEncoding,StackAllocator,writeFlags>* w64_() {
