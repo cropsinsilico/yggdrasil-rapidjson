@@ -123,6 +123,9 @@ definitions:
           aliases:
           - recv_converter
           - send_converter
+          - transforms
+          - translator
+          - translators
           allowSingular: true
           description: One or more transformations that will be applied to messages
             that are sent/received. Ignored if not provided.
@@ -268,6 +271,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -408,6 +414,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -548,6 +557,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -688,6 +700,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -842,6 +857,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -982,6 +1000,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -1122,6 +1143,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -1265,6 +1289,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -1405,6 +1432,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -1531,8 +1561,10 @@ definitions:
             - $ref: '#/definitions/file'
           minItems: 1
           type: array
-        translator:
+        transform:
           aliases:
+          - transforms
+          - translator
           - translators
           allowSingular: true
           description: Function or string specifying function that should be used
@@ -1547,10 +1579,10 @@ definitions:
             - $ref: '#/definitions/transform'
           type: array
       pushProperties:
-        '!properties/inputs/items': true
-        '!properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
-        '!properties/outputs/items/anyOf/1': true
-        '!properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
+        $properties/inputs/items: true
+        $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
+        $properties/outputs/items/anyOf/1: true
+        $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       required:
       - inputs
       - outputs
@@ -1644,8 +1676,10 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
-          translator:
+          transform:
             aliases:
+            - transforms
+            - translator
             - translators
             allowSingular: true
             description: Function or string specifying function that should be used
@@ -1662,10 +1696,10 @@ definitions:
         title: yggdrasil.drivers.ConnectionDriver.ConnectionDriver
         type: object
         pushProperties:
-          '!properties/inputs/items': true
-          '!properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
-          '!properties/outputs/items/anyOf/1': true
-          '!properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
+          $properties/inputs/items: true
+          $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
+          $properties/outputs/items/anyOf/1: true
+          $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
         description: Schema for connection component ['file_input'] subtype.
         properties:
@@ -1752,8 +1786,10 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
-          translator:
+          transform:
             aliases:
+            - transforms
+            - translator
             - translators
             allowSingular: true
             description: Function or string specifying function that should be used
@@ -1770,10 +1806,10 @@ definitions:
         title: yggdrasil.drivers.FileInputDriver.FileInputDriver
         type: object
         pushProperties:
-          '!properties/inputs/items': true
-          '!properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
-          '!properties/outputs/items/anyOf/1': true
-          '!properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
+          $properties/inputs/items: true
+          $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
+          $properties/outputs/items/anyOf/1: true
+          $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
         description: Schema for connection component ['file_output'] subtype.
         properties:
@@ -1860,8 +1896,10 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
-          translator:
+          transform:
             aliases:
+            - transforms
+            - translator
             - translators
             allowSingular: true
             description: Function or string specifying function that should be used
@@ -1878,10 +1916,10 @@ definitions:
         title: yggdrasil.drivers.FileOutputDriver.FileOutputDriver
         type: object
         pushProperties:
-          '!properties/inputs/items': true
-          '!properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
-          '!properties/outputs/items/anyOf/1': true
-          '!properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
+          $properties/inputs/items: true
+          $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
+          $properties/outputs/items/anyOf/1: true
+          $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
         description: Schema for connection component ['input'] subtype.
         properties:
@@ -1968,8 +2006,10 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
-          translator:
+          transform:
             aliases:
+            - transforms
+            - translator
             - translators
             allowSingular: true
             description: Function or string specifying function that should be used
@@ -1986,10 +2026,10 @@ definitions:
         title: yggdrasil.drivers.InputDriver.InputDriver
         type: object
         pushProperties:
-          '!properties/inputs/items': true
-          '!properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
-          '!properties/outputs/items/anyOf/1': true
-          '!properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
+          $properties/inputs/items: true
+          $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
+          $properties/outputs/items/anyOf/1: true
+          $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
         description: Schema for connection component ['output'] subtype.
         properties:
@@ -2076,8 +2116,10 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
-          translator:
+          transform:
             aliases:
+            - transforms
+            - translator
             - translators
             allowSingular: true
             description: Function or string specifying function that should be used
@@ -2094,10 +2136,10 @@ definitions:
         title: yggdrasil.drivers.OutputDriver.OutputDriver
         type: object
         pushProperties:
-          '!properties/inputs/items': true
-          '!properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
-          '!properties/outputs/items/anyOf/1': true
-          '!properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
+          $properties/inputs/items: true
+          $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
+          $properties/outputs/items/anyOf/1: true
+          $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
         description: Schema for connection component ['rpc_request'] subtype.
         properties:
@@ -2185,8 +2227,10 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
-          translator:
+          transform:
             aliases:
+            - transforms
+            - translator
             - translators
             allowSingular: true
             description: Function or string specifying function that should be used
@@ -2203,10 +2247,10 @@ definitions:
         title: yggdrasil.drivers.RPCRequestDriver.RPCRequestDriver
         type: object
         pushProperties:
-          '!properties/inputs/items': true
-          '!properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
-          '!properties/outputs/items/anyOf/1': true
-          '!properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
+          $properties/inputs/items: true
+          $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
+          $properties/outputs/items/anyOf/1: true
+          $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
         description: Schema for connection component ['rpc_response'] subtype.
         properties:
@@ -2294,8 +2338,10 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
-          translator:
+          transform:
             aliases:
+            - transforms
+            - translator
             - translators
             allowSingular: true
             description: Function or string specifying function that should be used
@@ -2312,10 +2358,10 @@ definitions:
         title: yggdrasil.drivers.RPCResponseDriver.RPCResponseDriver
         type: object
         pushProperties:
-          '!properties/inputs/items': true
-          '!properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
-          '!properties/outputs/items/anyOf/1': true
-          '!properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer': true
+          $properties/inputs/items: true
+          $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
+          $properties/outputs/items/anyOf/1: true
+          $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
     description: Schema for connection components.
     title: connection
   file:
@@ -2423,6 +2469,9 @@ definitions:
           aliases:
           - recv_converter
           - send_converter
+          - transforms
+          - translator
+          - translators
           allowSingular: true
           description: One or more transformations that will be applied to messages
             that are sent/received. Ignored if not provided.
@@ -2574,6 +2623,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -2609,7 +2661,7 @@ definitions:
               is used.
             type: string
         pushProperties:
-          '!properties/serializer/oneOf/0': true
+          $properties/serializer/oneOf/0: true
         required:
         - name
         - serializer
@@ -2720,6 +2772,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -2867,6 +2922,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -3022,6 +3080,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -3175,6 +3236,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -3317,6 +3381,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -3477,6 +3544,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -3619,6 +3689,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -3782,6 +3855,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -3923,6 +3999,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -4065,6 +4144,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -4211,6 +4293,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -4370,6 +4455,9 @@ definitions:
             aliases:
             - recv_converter
             - send_converter
+            - transforms
+            - translator
+            - translators
             allowSingular: true
             description: One or more transformations that will be applied to messages
               that are sent/received. Ignored if not provided.
@@ -4514,6 +4602,7 @@ definitions:
             type: string
           type: array
         client_of:
+          allowSingular: true
           default: []
           description: The names of one or more models that this model will call as
             a server. If there are more than one, this should be specified as a sequence
@@ -4849,6 +4938,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -5255,6 +5345,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -5596,6 +5687,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -5939,6 +6031,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -6264,6 +6357,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -6612,6 +6706,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -6936,6 +7031,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -7240,6 +7336,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -7644,6 +7741,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -7973,6 +8071,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -8307,6 +8406,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -8631,6 +8731,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -8956,6 +9057,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -9327,6 +9429,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -9719,6 +9822,7 @@ definitions:
               type: string
             type: array
           client_of:
+            allowSingular: true
             default: []
             description: The names of one or more models that this model will call
               as a server. If there are more than one, this should be specified as
@@ -10718,10 +10822,12 @@ properties:
     aliases:
     - connection
     allowSingular: true
+    default: []
     items:
       $ref: '#/definitions/connection'
     type: array
 required:
 - models
+- connections
 title: YAML Schema
 type: object

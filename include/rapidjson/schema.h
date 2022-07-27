@@ -5975,7 +5975,7 @@ protected:
 	currentInstance(0),
 	instances(schema0->allocator_, stackCapacity) {
 	inSchema = (path.GetStringLength() > 0 &&
-		    path.GetString()[0] == '!');
+		    path.GetString()[0] == '$');
 	relative = !((path.GetStringLength() > 0 &&
 		      path.GetString()[0] == '/') ||
 		     (inSchema &&
