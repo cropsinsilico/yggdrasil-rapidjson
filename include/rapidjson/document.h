@@ -5057,6 +5057,8 @@ public:
   }
   bool WasFinalized() const { return (stack_.GetSize() == 0); }
   void ConsolidateStack() {
+    // This is not perfect as it dosn't account for the presence of empty
+    // arrays or objects
     if (stack_.GetSize() > sizeof(ValueType)) {
       ValueType* v = stack_.template Top<ValueType>();
       while (true) {
@@ -5064,8 +5066,23 @@ public:
 	  SizeType N = (SizeType)(stack_.template Top<ValueType>() - v);
 	  EndArray(N);
 	} else if (v->IsObject() && v->MemberCount() == 0) {
-	  SizeType N = (SizeType)(stack_.template Top<ValueType>() - v) / 2;
-	  EndObject(N);
+	  SizeType N = (SizeType)(stack_.template Top<ValueType>() - v);
+	  size_t i = 0;
+	  bool allStrings = true;
+	  for (ValueType* k = v + 1; k != stack_.template End<ValueType>();
+	       k++, i++) {
+	    if ((i % 2) == 0 && !k->IsString()) {
+	      allStrings = false;
+	      break;
+	    }
+	  }
+	  if (allStrings) {
+	    if (N % 2) {
+	      Null(); // Add a buffer null
+	      N++;
+	    }
+	    EndObject(N / 2);
+	  }
 	}
 	if (v == stack_.template Bottom<ValueType>())
 	  break;
@@ -5078,6 +5095,14 @@ public:
       RAPIDJSON_ASSERT(stack_.GetSize() == sizeof(ValueType)); // Got one and only one root object
       ValueType::operator=(*stack_.template Pop<ValueType>(1));// Move value from stack to document
     }
+  }
+  template <typename StackWriter>
+  void RecordStack(StackWriter& writer) const {
+    writer.StartArray();
+    for (const ValueType* v = stack_.template Bottom<ValueType>();
+	 v != stack_.template End<ValueType>(); v++)
+      v->Accept(writer);
+    writer.EndArray(static_cast<SizeType>(StackSize()));
   }
   ValueType* StackPop() {
     RAPIDJSON_ASSERT(!stack_.Empty());

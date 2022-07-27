@@ -448,13 +448,17 @@ public:
     static GenericPointer FromRelative(const Ch* source, size_t length,
 				       Allocator& allocator) {
       Ch* str = nullptr;
-      if (length > 0 && source[0] == (Ch)'$') {
+      if (length > 0 && source[0] == (Ch)'!') {
 	length--;
 	str = (Ch*)allocator.Malloc((length + 1) * sizeof(Ch));
 	std::memcpy(str, source + 1, length * sizeof(Ch));
       } else {
 	str = (Ch*)allocator.Malloc((length + 1) * sizeof(Ch));
 	std::memcpy(str, source, length * sizeof(Ch));
+      }
+      if (length > 0 && str[0] == (Ch)'$') {
+	length--;
+	std::memmove(str, str + 1, length * sizeof(Ch));
       }
       if (length > 0 && str[0] != (Ch)'/') {
 	length++;

@@ -3483,6 +3483,21 @@ public:
   void DisplayCurrentPointer() {
     DisplayPointer(GetInstancePointer());
   }
+  void DisplayStack() const {
+    StringBuffer sb;
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    if (pretty) {
+      PrettyWriter<StringBuffer, typename DocumentType::EncodingType, UTF8<> > w(sb);
+      document_.RecordStack(w);
+    } else {
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+      Writer<StringBuffer, typename DocumentType::EncodingType, UTF8<> > w(sb);
+      document_.RecordStack(w);
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    }
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    std::cerr << (const char*)(sb.GetString());
+  }
   template<typename VType>
   static void DisplayValue(VType& value
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
@@ -5769,6 +5784,12 @@ protected:
       kPointerOrderTrue,
       kPointerOrderNull
     };
+    enum SharedPropertyFlag {
+      kSharedPropertyNoFlag = 0,
+      kSharedPropertyIncludeFlag = 1,
+      kSharedPropertyExcludeFlag = 2,
+      kSharedPropertyAllPropsFlag = 3
+    };
     // Pull
     //   - Destination is local
     //   - Source is in links
@@ -5867,21 +5888,26 @@ protected:
 	propertyCount = parent->propertyCount;
 	properties = parent->properties;
       }
-      void AddPropertiesCpy(bool allProperties, const SValue& propertyNames,
+      void AddPropertiesCpy(SharedPropertyFlag flag,
+			    const SValue& propertyNames,
 			    const SchemaType* src = 0) {
 	if (!src) src = schema;
 	ownProperties = true;
 	RAPIDJSON_ASSERT(propertyNames.IsArray());
-	if (allProperties)
+	if (flag == kSharedPropertyAllPropsFlag ||
+	    flag == kSharedPropertyExcludeFlag)
 	  propertyCount = src->propertyCount_;
-	else
+	else if (flag == kSharedPropertyIncludeFlag)
 	  propertyCount = propertyNames.Size();
 	RAPIDJSON_ASSERT(!properties);
 	properties = static_cast<PropertyEntry*>(src->allocator_->Malloc(propertyCount * sizeof(PropertyEntry)));
 	SizeType j = 0;
 	for (SizeType i = 0; i < src->propertyCount_; i++) {
-	  if (allProperties ||
-	      propertyNames.Contains(src->properties_[i].name)) {
+	  if (flag == kSharedPropertyAllPropsFlag ||
+	      (flag == kSharedPropertyIncludeFlag &&
+	       propertyNames.Contains(src->properties_[i].name)) ||
+	      (flag == kSharedPropertyExcludeFlag &&
+	       !propertyNames.Contains(src->properties_[i].name))) {
 	    new (&properties[j]) PropertyEntry(src->properties_[i].name.GetString(),
 					       src->properties_[i].name.GetStringLength(),
 					       *src->allocator_);
@@ -5957,7 +5983,8 @@ protected:
       SharedProperty(AllocatorType* allocator = 0,
 		     size_t stackCapacity = kDefaultStackCapacity) :
 	SharedPropertyBase(allocator),
-	push(false), allProperties(false), relative(false), inSchema(false),
+	propertyFlag(kSharedPropertyNoFlag),
+	push(false), relative(false), inSchema(false),
 	path(),
 	propertyNames(kArrayType),
 	ptr(allocator),
@@ -5967,20 +5994,26 @@ protected:
 		     size_t index0, bool push0 = false,
 		     size_t stackCapacity = kDefaultStackCapacity) :
 	SharedPropertyBase(true, push0, schema0, index0),
-	push(push0), allProperties(false), relative(false), inSchema(false),
+	propertyFlag(kSharedPropertyNoFlag),
+	push(push0), relative(false), inSchema(false),
 	path(path0.GetString(), path0.GetStringLength(),
 	     *schema0->allocator_),
 	propertyNames(kArrayType),
 	ptr(schema0->allocator_),
 	currentInstance(0),
 	instances(schema0->allocator_, stackCapacity) {
-	inSchema = (path.GetStringLength() > 0 &&
-		    path.GetString()[0] == '$');
-	relative = !((path.GetStringLength() > 0 &&
-		      path.GetString()[0] == '/') ||
-		     (inSchema &&
-		      path.GetStringLength() > 1 &&
-		      path.GetString()[1] == '/'));
+	size_t iCheck = 0;
+	if (path.GetStringLength() > iCheck &&
+	    path.GetString()[iCheck] == (Ch)'!') {
+	  propertyFlag = kSharedPropertyExcludeFlag;
+	  iCheck++;
+	}
+	inSchema = (path.GetStringLength() > iCheck &&
+		    path.GetString()[iCheck] == (Ch)'$');
+	if (inSchema)
+	  iCheck++;
+	relative = (!(path.GetStringLength() > iCheck &&
+		      path.GetString()[iCheck] == (Ch)'/'));
 	ptr = PointerType::FromRelative(path.GetString(),
 					path.GetStringLength(),
 					*schema0->allocator_);
@@ -5992,13 +6025,15 @@ protected:
       struct InstanceEntry; // forward declaration
       void Update(const ValueType* v) {
 	if (v->IsBool()) {
-	  if (v->GetBool()) {
-	    allProperties = true;
+	  if (v->GetBool() && propertyFlag != kSharedPropertyExcludeFlag) {
+	    propertyFlag = kSharedPropertyAllPropsFlag;
 	    if (!push)
 	      AddPropertiesPull();
 	  }
 	} else if (v->IsArray() && v->Size() > 0) {
 	  propertyNames.CopyFrom(*v, *this->schema->allocator_);
+	  if (propertyFlag != kSharedPropertyExcludeFlag)
+	    propertyFlag = kSharedPropertyIncludeFlag;
 	  if (!push)
 	    AddPropertiesPull();
 	}
@@ -6024,7 +6059,7 @@ protected:
 	void AddPropertiesPush(SharedProperty* parent) {
 	  // Should only be run for links in push
 	  RAPIDJSON_ASSERT(parent->push);
-	  this->AddPropertiesCpy(parent->allProperties,
+	  this->AddPropertiesCpy(parent->propertyFlag,
 				 parent->propertyNames,
 				 this->schema);
 	  this->SetInSource(parent->schema);
@@ -6319,8 +6354,11 @@ protected:
 	return false;
       }
       bool HasProperty(const SValue& name) const {
-	if (!allProperties)
+	if (propertyFlag == kSharedPropertyIncludeFlag)
 	  return propertyNames.Contains(name);
+	if (propertyFlag == kSharedPropertyExcludeFlag &&
+	    propertyNames.Contains(name))
+	  return false;
 	if (!push)
 	  return (bool)(this->FindProperty(name));
 	for (const InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++)
@@ -6333,7 +6371,7 @@ protected:
       }
       void AddPropertiesPull() {
 	RAPIDJSON_ASSERT(!push && this->schema && !this->properties);
-	this->AddPropertiesCpy(allProperties, propertyNames);
+	this->AddPropertiesCpy(propertyFlag, propertyNames);
       }
       InstanceEntry* AddInstance(const PointerType& schemaPtr0) {
 	InstanceEntry* ref = instances.template Push<InstanceEntry>();
@@ -6395,8 +6433,8 @@ protected:
 	}
       }
       static const size_t kDefaultStackCapacity = 128;
+      SharedPropertyFlag propertyFlag;
       bool push;
-      bool allProperties;
       bool relative;
       bool inSchema;
       SValue path;
