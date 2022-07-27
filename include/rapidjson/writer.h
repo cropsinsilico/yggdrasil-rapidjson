@@ -143,6 +143,8 @@ public:
       Base64OutputStreamWrapper<OutputStream>* s_;
       Base64Writer<OutputStream,SourceEncoding,TargetEncoding,StackAllocator,writeFlags>* w_;
       size_t level_;
+    private:
+      Base64Pair(const Base64Pair&); // Disable copy constructor.
     };
 
     Base64Writer<OutputStream,SourceEncoding,TargetEncoding,StackAllocator,writeFlags>* w64_() {
@@ -869,10 +871,10 @@ public:
   bool EndArray(SizeType elementCount = 0)
   { RAPIDJSON_WRAP_BASE64_(EndArray, (elementCount)); }
   template <typename SchemaValueType>
-  bool YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>)))
+  bool YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType&, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>)))
   { RAPIDJSON_WRAP_BASE64_(String, (str, length, copy)); }
   template <typename SchemaValueType>
-  bool YggdrasilStartObject(SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>)))
+  bool YggdrasilStartObject(SchemaValueType&, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>)))
   { RAPIDJSON_WRAP_BASE64_(StartObject, ()); }
   bool YggdrasilEndObject(SizeType memberCount = 0)
   { RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount)); }
@@ -880,7 +882,6 @@ public:
   template <typename ValueType>
   bool WriteSchema(ValueType& schema) {
     bool hasRoot0 = this->hasRoot_;
-    size_t levels0 = this->level_stack_.GetSize();
     bool out = schema.Accept(*this);
     WriteNext();
     this->hasRoot_ = hasRoot0;
