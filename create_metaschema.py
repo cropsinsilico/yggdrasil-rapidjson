@@ -34,8 +34,8 @@ def get_ygg_tests():
     test_yaml = (
         {'models': [{
             'name': 'modelA',
-            'language': 'c',
-            'args': 'model.c',
+            'language': 'python',
+            'args': ['model.py', '-v'],
             'outputs': [
                 {'name': 'outputA',
                  'column_names': ['a', 'b'],
@@ -50,8 +50,8 @@ def get_ygg_tests():
              'working_dir': os.getcwd()}]},
         {'models': [{
             'name': 'modelA',
-            'language': 'c',
-            'args': ['model.c'],
+            'language': 'python',
+            'args': ['model.py', '-v'],
             'inputs': [{'commtype': 'default',
                         'datatype': {'type': 'bytes'},
                         'is_default': True,

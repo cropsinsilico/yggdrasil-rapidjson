@@ -873,16 +873,17 @@ public:
   struct ValueEntry {
     ValueEntry(ValueType& value) :
       val(&value), ptr(), modified(false), child_modified(false),
-      singular(false), child_singular(false) {}
+      singular(false), child_singular(false), replaced(false) {}
     ValueEntry(ValueType& value, PointerType& p, AllocatorType* allocator = 0) :
       val(&value), ptr(p, allocator), modified(false), child_modified(false),
-      singular(false), child_singular(false) {}
+      singular(false), child_singular(false), replaced(false) {}
     ValueType* val;
     PointerType ptr;
     bool modified;
     bool child_modified;
     bool singular;
     bool child_singular;
+    bool replaced;
   };
   struct ModificationEntry {
     ModificationEntry(const PointerType& before0, const PointerType& after0,
@@ -2388,6 +2389,15 @@ public:
 #define EXTEND_BEGIN_(method, args)					\
   INIT_CHECK(Extend, begin, #method, extend_schema_);			\
   ValueType* current = CurrentValue();					\
+  if (CurrentReplaced()) {						\
+    RAPIDJSON_ASSERT(current && (current->IsArray() || (current->IsObject() && CurrentKey()))); \
+    ValueType child_swap args;						\
+    if (current->IsArray())						\
+      current->PushBack(child_swap, GetAllocator());			\
+    else if (current->IsObject())					\
+      current->AddMember(ValueType(*CurrentKey(), GetAllocator()).Move(), \
+			 child_swap, GetAllocator());			\
+  }									\
   if (current && current->IsObject() && CurrentKey() &&			\
       (!current->HasMember(CurrentKey()->GetString()))) {		\
     current->AddMember(ValueType(CurrentKey()->GetString(),		\
@@ -2404,10 +2414,10 @@ public:
     ValueType child_swap args;						\
     CurrentValue()->Swap(child_swap);					\
     /* CurrentValue()->CopyFrom(child_swap, GetAllocator(), true); */	\
+    valueStack_.template Top<ValueEntry>()->replaced = true;		\
     if (!(CurrentValue()->IsArray() || CurrentValue()->IsObject() ||	\
-	  in_collection)) {						\
+	  in_collection))						\
       StealChildModified();						\
-    }									\
   } else if (!CurrentSingular() && CurrentChildSingular() && extend_child_) { \
     /* ValueType tmp args; */						\
     /* ValueType child_swap(*CurrentValue(), GetAllocator(), true); */	\
@@ -3041,6 +3051,15 @@ private:
       return valueStack_.template Top<ValueEntry>()->child_singular;
     return false;
   }
+  bool CurrentReplaced() {
+    if (extending_ && !appending_ && !valueStack_.Empty()) {
+      for (ValueEntry* v = valueStack_.template Bottom<ValueEntry>();
+	   v != valueStack_.template End<ValueEntry>(); v++)
+	if (v->replaced)
+	  return true;
+    }
+    return false;
+  }
   template<typename VType>
   bool CurrentChildSingular(const VType& key) {
     if (CurrentChildSingular())
@@ -3483,7 +3502,11 @@ public:
   void DisplayCurrentPointer() {
     DisplayPointer(GetInstancePointer());
   }
-  void DisplayStack() const {
+  void DisplayStack(
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+		    bool pretty=false
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+		    ) const {
     StringBuffer sb;
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     if (pretty) {

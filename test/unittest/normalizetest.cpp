@@ -276,6 +276,7 @@ TEST(SchemaNormalizer, Merge) {
 	      "{\"column_names\": [\"a\", \"b\"]}",
 	      true,
 	      "{\"field_names\": [\"a\", \"b\"]}");
+    NO_NORMALIZE(s, "{\"field_names\": [\"a\", \"b\"]}");
 }
 
 TEST(SchemaNormalizer, MergeConflict) {
