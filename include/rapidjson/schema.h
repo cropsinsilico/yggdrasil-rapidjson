@@ -1696,6 +1696,7 @@ public:
     extend_context_ = nullptr;
     extend_schema_ = nullptr;
     PopValue();
+    RAPIDJSON_ASSERT(keyStack_.Empty());
     return out;
   }
 
@@ -1712,6 +1713,16 @@ public:
   }									\
   std::cerr << ")" << std::endl;					\
   __debug_section_idx++
+#define DEBUG_MSG(msg)							\
+  std::cerr << __debug_section << " " << __debug_section_mark <<	\
+    ": " << msg << " (";						\
+  DisplayCurrentPointer();						\
+  if (__debug_section_schema) {						\
+    std::cerr << ", ";							\
+    DisplayPointer(GetSchemaPointer(*__debug_section_schema));		\
+    std::cerr << ", " << __debug_section_schema->isSingular_;		\
+  }									\
+  std::cerr << ")" << std::endl
 #define DEBUG_INIT(section, mark, value, schema)	\
   int __debug_section_idx = 0;				\
   std::string __debug_section = #section;		\
@@ -1727,6 +1738,7 @@ public:
   DEBUG_STEP
 #else // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 #define DEBUG_STEP
+#define DEBUG_MSG(msg)
 #define DEBUG_INIT(section, mark, value, schema)
 #define DEBUG_MOD(section, mark, value)
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
@@ -2336,9 +2348,6 @@ public:
   }
   bool EndExtend(Context& context, bool dont_recurse=false) {
     ValueType* current = CurrentValue();
-    if ((!dont_recurse) && CurrentSingular() && !CurrentChildSingular() &&
-	(current->IsArray() || current->IsObject()))
-      return EndExtend(context, true);
     PopKey();
     if (CurrentIdx()) {
       PopValue();
@@ -2349,6 +2358,12 @@ public:
       current = CurrentValue();
     } else if (CurrentChildModified() && !CurrentModified()) {
       StealChildModified();
+    }
+    if ((!dont_recurse) && CurrentSingular() && !CurrentChildSingular() &&
+	((current->IsArray() && CurrentIdx()) ||
+	 (current->IsObject() && CurrentKey()))) {
+      PopKey();
+      PopKey();
     }
     return true;
   }
@@ -2390,6 +2405,7 @@ public:
   INIT_CHECK(Extend, begin, #method, extend_schema_);			\
   ValueType* current = CurrentValue();					\
   if (CurrentReplaced()) {						\
+    DEBUG_MSG("CurrentReplaced");					\
     RAPIDJSON_ASSERT(current && (current->IsArray() || (current->IsObject() && CurrentKey()))); \
     ValueType child_swap args;						\
     if (current->IsArray())						\
@@ -2411,6 +2427,7 @@ public:
   out = BeginExtend(context, dont_recurse);				\
   CHECK_RESULT;								\
   if ((!CurrentModified()) && CurrentChildModified()) {			\
+    DEBUG_MSG("CurrentChildModified");					\
     ValueType child_swap args;						\
     CurrentValue()->Swap(child_swap);					\
     /* CurrentValue()->CopyFrom(child_swap, GetAllocator(), true); */	\
@@ -2419,6 +2436,7 @@ public:
 	  in_collection))						\
       StealChildModified();						\
   } else if (!CurrentSingular() && CurrentChildSingular() && extend_child_) { \
+    DEBUG_MSG("CurrentChildSingular");					\
     /* ValueType tmp args; */						\
     /* ValueType child_swap(*CurrentValue(), GetAllocator(), true); */	\
     /* CurrentValue()->CopyFrom(tmp, GetAllocator(), true); */		\
@@ -3089,13 +3107,16 @@ private:
 	ref->child_modified = extend_child_->isValueModified(p, false,
 							     kCheckModifiedBoth);
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-      std::cerr << "Push value: ";
+      std::cerr << "PushValue: ";
       DisplayPointer(p);
-      std::cerr << ", " << ref->modified << ", " << ref->child_modified << ", " << ref->singular << ", " << ref->child_singular << std::endl;
+      std::cerr << ", " << ref->modified << ", " << ref->child_modified << ", " << ref->singular << ", " << ref->child_singular << " -> ";
+      DisplayValue(*(ref->val));
+      std::cerr << std::endl;
       std::cerr << "Parent ";
       DisplayModifications();
       std::cerr << "Child ";
       extend_child_->DisplayModifications();
+      DisplayStack(true);
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     }
   }
@@ -3124,6 +3145,7 @@ private:
     std::cerr << "PopValue: ";
     DisplayValue(*(ref->val));
     std::cerr << std::endl;
+    DisplayStack(true);
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     ref->~ValueEntry();
   }
@@ -3502,11 +3524,33 @@ public:
   void DisplayCurrentPointer() {
     DisplayPointer(GetInstancePointer());
   }
-  void DisplayStack(
+  void DisplayStack(bool extension=false
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-		    bool pretty=false
+		    , bool pretty=false
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 		    ) const {
+    if (extension) {
+      std::cerr << "Value Stack:" << std::endl;
+      for (const ValueEntry* v = valueStack_.template Bottom<ValueEntry>();
+	   v != valueStack_.template End<ValueEntry>(); v++) {
+	std::cerr << "    ";
+	DisplayValue(*v->val);
+	std::cerr << std::endl;
+      }
+      std::cerr << "Key Stack:" << std::endl;
+      for (const KeyEntry* k = keyStack_.template Bottom<KeyEntry>();
+	   k != keyStack_.template End<KeyEntry>(); k++) {
+	std::cerr << "    ";
+	if (k->key)
+	  DisplayValue(*k->key);
+	else if (k->idx)
+	  std::cerr << *k->idx;
+	else
+	  std::cerr << "null";
+	std::cerr << std::endl;
+      }
+      return;
+    }
     StringBuffer sb;
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     if (pretty) {
@@ -3817,7 +3861,7 @@ public:
 	    kSingular = kSingularObject;
 	  AssignSingularIfExist(*schemaDocument, p, value, GetAllowSingularString(), document, kSingular, true);
 	  if (allowSingularSchema_.schemas) {
-	    schemaDocument->CreateSchema(&allowSingularSchema_.schemas[0], p, value, document, id_, kSingular);
+	    schemaDocument->CreateSchema(&allowSingularSchema_.schemas[0], p, value, document, id_, &kSingular);
 	    RAPIDJSON_ASSERT(!allowSingularSchema_.schemas[0]->allowSingularSchema_.schemas);
 	    // Reset types so that they are only evaluated within the nested
 	    // schema
@@ -5157,11 +5201,15 @@ protected:
 	allowSingularSchema_.count = 2;
 	allowSingularSchema_.schemas = static_cast<const Schema**>(allocator_->Malloc(allowSingularSchema_.count * sizeof(const Schema*)));
 	memset(allowSingularSchema_.schemas, 0, sizeof(Schema*)* allowSingularSchema_.count);
+	SingularFlag singularFlag = kSingularNoFlags;
+	const ValueType* parentKey = nullptr;
 	if (containerFlag == kSingularObject) {
-	  schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_, kSingularValue, this, &name);
+	  singularFlag = kSingularValue;
+	  parentKey = &name;
 	} else {
-	  schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_, kSingularItem, this);
+	  singularFlag = kSingularItem;
 	}
+	schemaDocument.CreateSchema(&allowSingularSchema_.schemas[1], q, *v0, document, id_, &singularFlag, this, parentKey);
 	allowSingularSchema_.begin = validatorCount_;
 	validatorCount_ += allowSingularSchema_.count;
 	singularPtr_ = q;
@@ -7375,28 +7423,30 @@ private:
     const UriType& CreateSchema(const SchemaType** schema, const PointerType& pointer, const ValueType& v, const ValueType& document, const UriType& id
 #ifdef RAPIDJSON_YGGDRASIL
 		,
-		internal::SingularFlag singular=internal::kSingularNoFlags,
+		internal::SingularFlag* singular=nullptr,
 		const SchemaType* parentSchema=nullptr,
 		const ValueType* parentKey=nullptr
 #endif // RAPIDJSON_YGGDRASIL
 				) {
         RAPIDJSON_ASSERT(pointer.IsValid());
+	typedef internal::GenericNormalizedDocument<GenericSchemaDocument<ValueT, Allocator>, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
         if (v.IsObject()) {
 #ifdef RAPIDJSON_YGGDRASIL
-	    if (singular) {
-	        if (const SchemaType* sc = GetSchema(pointer, singular)) {
-		    if (schema)
-		        *schema = sc;
-		    AddSchemaRefs(const_cast<SchemaType*>(sc));
-		    return id;
-		} else if (!HandleRefSchema(pointer, schema, v, document, id)) {
-		    SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id, isMetaschema_, singular, parentSchema, parentKey);
-		    if (schema)
-		        *schema = s;
-		    return s->GetId();
-		}
+	    if (const SchemaType* sc = GetSchema(pointer, singular)) {
+	        if (schema)
+		    *schema = sc;
+		AddSchemaRefs(const_cast<SchemaType*>(sc));
+	    } else if (!HandleRefSchema(pointer, schema, v, document, id, singular, parentSchema, parentKey)) {
+	        SchemaType* s = nullptr;
+		if (singular)
+		  s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id, isMetaschema_, *singular, parentSchema, parentKey);
+		else
+		  s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id, isMetaschema_);
+		if (schema)
+		    *schema = s;
+		return s->GetId();
 	    }
-#endif // RAPIDJSON_YGGDRASIL
+#else // RAPIDJSON_YGGDRASIL
             if (const SchemaType* sc = GetSchema(pointer)) {
                 if (schema)
                     *schema = sc;
@@ -7404,15 +7454,12 @@ private:
             }
             else if (!HandleRefSchema(pointer, schema, v, document, id)) {
                 // The new schema constructor adds itself and its $ref(s) to schemaMap_
-	        SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id
-#ifdef RAPIDJSON_YGGDRASIL
-		, isMetaschema_, singular, parentSchema, parentKey
-#endif // RAPIDJSON_YGGDRASIL
-		);
+	        SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id);
                 if (schema)
                     *schema = s;
                 return s->GetId();
             }
+#endif // RAPIDJSON_YGGDRASIL
         }
         else {
             if (schema)
@@ -7482,7 +7529,14 @@ private:
 
     // Changed by PR #1393
     // TODO should this return a UriType& ?
-    bool HandleRefSchema(const PointerType& source, const SchemaType** schema, const ValueType& v, const ValueType& document, const UriType& id) {
+    bool HandleRefSchema(const PointerType& source, const SchemaType** schema, const ValueType& v, const ValueType& document, const UriType& id
+#ifdef RAPIDJSON_YGGDRASIL
+		,
+		internal::SingularFlag* singular=nullptr,
+		const SchemaType* parentSchema=nullptr,
+		const ValueType* parentKey=nullptr
+#endif // RAPIDJSON_YGGDRASIL
+			 ) {
         typename ValueType::ConstMemberIterator itr = v.FindMember(SchemaType::GetRefString());
         if (itr == v.MemberEnd())
             return false;
@@ -7511,7 +7565,11 @@ private:
                                 const PointerType pointer(s, len, allocator_);
                                 if (pointer.IsValid()) {
                                     // Get the subschema
+#ifdef RAPIDJSON_YGGDRASIL
+				    if (const SchemaType *sc = remoteDocument->GetSchema(pointer, singular)) {
+#else // RAPIDJSON_YGGDRASIL
                                     if (const SchemaType *sc = remoteDocument->GetSchema(pointer)) {
+#endif // RAPIDJSON_YGGDRASIL
                                         if (schema)
                                             *schema = sc;
                                         AddSchemaRefs(const_cast<SchemaType *>(sc));
@@ -7544,7 +7602,11 @@ private:
                                     // TODO: cache pointer <-> id mapping
                                     size_t unresolvedTokenIndex;
                                     scopeId = pointer.GetUri(document, docId_, &unresolvedTokenIndex, allocator_);
+#ifdef RAPIDJSON_YGGDRASIL
+                                    CreateSchema(schema, pointer, *pv, document, scopeId, singular, parentSchema, parentKey);
+#else // RAPIDJSON_YGGDRASIL
                                     CreateSchema(schema, pointer, *pv, document, scopeId);
+#endif //RAPIDJSON_YGGDRASIL
                                     return true;
                                 }
                             }
@@ -7562,7 +7624,11 @@ private:
                                 // TODO: cache pointer <-> id mapping
                                 size_t unresolvedTokenIndex;
                                 scopeId = pointer.GetUri(document, docId_, &unresolvedTokenIndex, allocator_);
+#ifdef RAPIDJSON_YGGDRASIL
+                                CreateSchema(schema, pointer, *pv, document, scopeId, singular, parentSchema, parentKey);
+#else // RAPIDJSON_YGGDRASIL
                                 CreateSchema(schema, pointer, *pv, document, scopeId);
+#endif // RAPIDJSON_YGGDRASIL
                                 return true;
                             }
                         }
@@ -7636,20 +7702,17 @@ private:
         return false;
     }
 
+    const SchemaType* GetSchema(const PointerType& pointer
 #ifdef RAPIDJSON_YGGDRASIL
-    const SchemaType* GetSchema(const PointerType& pointer,
-				internal::SingularFlag singular) const {
-        for (const SchemaEntry* target = schemaMap_.template Bottom<SchemaEntry>(); target != schemaMap_.template End<SchemaEntry>(); ++target)
-            if (pointer == target->pointer && singular == target->schema->isSingular_)
-                return target->schema;
-        return 0;
-    }
+				,
+				internal::SingularFlag* singular = 0
 #endif // RAPIDJSON_YGGDRASIL
-    const SchemaType* GetSchema(const PointerType& pointer) const {
+				) const {
         for (const SchemaEntry* target = schemaMap_.template Bottom<SchemaEntry>(); target != schemaMap_.template End<SchemaEntry>(); ++target)
 #ifdef RAPIDJSON_YGGDRASIL
 	  {
-	    if (target->schema->isSingular_) continue;
+	    if ((singular && (*singular != target->schema->isSingular_)) ||
+		(!singular && target->schema->isSingular_)) continue;
 #endif // RAPIDJSON_YGGDRASIL
             if (pointer == target->pointer)
                 return target->schema;

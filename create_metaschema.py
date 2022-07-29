@@ -32,38 +32,59 @@ def get_ygg_tests():
     except KeyError:
         pass
     test_yaml = (
-        {'models': [{
-            'name': 'modelA',
-            'language': 'python',
-            'args': ['model.py', '-v'],
-            'outputs': [
-                {'name': 'outputA',
-                 'column_names': ['a', 'b'],
-                 'column_units': ['cm', 'g'],
-                 'filter': {
+        {'models': [
+            {'name': 'modelA',
+             'language': 'python',
+             'args': ['model.py', '-v'],
+             'outputs': [
+                 {'name': 'outputA',
+                  'column_names': ['a', 'b'],
+                  'column_units': ['cm', 'g'],
+                  'filter': {
                      'function': 'example_python:example_filter'}}],
-            'working_dir': os.getcwd()}],
+            'working_dir': os.getcwd()},
+            {'name': 'modelB',
+             'language': 'c',
+             'args': './src/modelA.c',
+             'function': 'fake',
+             'is_server': {'input': 'A', 'output': 'B'},
+             'outputs': 'B',
+             'working_dir': os.getcwd()}],
          'connections': [{
              'inputs': 'outputA',
              'outputs': 'fileA.txt',
              'seritype': 'ply',
-             'working_dir': os.getcwd()}]},
-        {'models': [{
-            'name': 'modelA',
-            'language': 'python',
-            'args': ['model.py', '-v'],
-            'inputs': [{'commtype': 'default',
-                        'datatype': {'type': 'bytes'},
-                        'is_default': True,
-                        'name': 'input'}],
-            'outputs': [{'name': 'outputA',
-                         'commtype': 'default',
+             'working_dir': os.getcwd()}],
+         'working_dir': os.getcwd()},
+        {'models': [
+            {'name': 'modelA',
+             'language': 'python',
+             'args': ['model.py', '-v'],
+             'inputs': [{'commtype': 'default',
                          'datatype': {'type': 'bytes'},
-                         'filter': {
-                             'function': 'example_python:example_filter'},
-                         'field_names': ['a', 'b'],
-                         'field_units': ['cm', 'g']}],
-            'working_dir': os.getcwd()}],
+                         'is_default': True,
+                         'name': 'input'}],
+             'outputs': [{'name': 'outputA',
+                          'commtype': 'default',
+                          'datatype': {'type': 'bytes'},
+                          'filter': {
+                              'function': 'example_python:example_filter'},
+                          'field_names': ['a', 'b'],
+                          'field_units': ['cm', 'g']}],
+             'working_dir': os.getcwd()},
+            {'name': 'modelB',
+             'language': 'c',
+             'args': ['./src/modelA.c'],
+             'function': 'fake',
+             'is_server': {'input': 'A', 'output': 'B'},
+             'inputs': [{'commtype': 'default',
+                         'datatype': {'type': 'bytes'},
+                         'is_default': True,
+                         'name': 'input'}],
+             'outputs': [{'name': 'B',
+                          'commtype': 'default',
+                          'datatype': {'type': 'bytes'}}],
+             'working_dir': os.getcwd()}],
          'connections': [{
              'inputs': [
                  {'name': 'outputA',
@@ -74,7 +95,8 @@ def get_ygg_tests():
                  {'name': 'fileA.txt',
                   'filetype': 'binary',
                   'serializer': {'seritype': 'ply'},
-                  'working_dir': os.getcwd()}]}]})
+                  'working_dir': os.getcwd()}]}],
+         'working_dir': os.getcwd()})
     return (["#define METASCHEMA_YGG_TESTS", ""]
             + make_function("get_yggschema", base)
             + make_function("get_testschema", test_yaml[0])

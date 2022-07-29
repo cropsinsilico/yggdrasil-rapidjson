@@ -46,6 +46,9 @@ using namespace rapidjson;
       EXPECT_TRUE(code == kValidateErrorNone);\
       EXPECT_TRUE(normalizer.GetInvalidSchemaKeyword() == 0);\
       EXPECT_TRUE(normalizer.WasNormalized());\
+      SchemaValidator validator(schema);\
+      EXPECT_TRUE(normalizer.GetNormalized().Accept(validator));\
+      /* TODO: Display validation error? */			\
     }\
     if ((expected) && !normalizer.IsValid()) {\
         normalizer.GetNormalizedDoc().FinalizeFromStack(true);	\
@@ -508,6 +511,49 @@ TEST(SchemaNormalizer, SingularNested) {
   NORMALIZE(s, "\"1600 Pennsylvania Ave.\"", true,
 	    "[ { \"streets\": \"1600 Pennsylvania Ave.\"} ]");
   NO_NORMALIZE(s, "[ { \"streets\": \"1600 Pennsylvania Ave.\"} ]");
+}
+
+TEST(SchemaNormalizer, SingularNestedRef) {
+  Document sd;
+  sd.Parse(
+        "{"
+	"  \"definitions\": {"
+	"    \"asub\": {"
+        "       \"type\": \"object\","
+	"       \"allowSingular\": true,"
+	"       \"properties\": {"
+	"          \"streets\": { \"type\": \"string\" }"
+	"       }"
+	"    }"
+	"  },"
+	"  \"type\": \"object\","
+	"  \"allOf\": ["
+	"    { \"properties\": {"
+	"      \"a\": {"
+	"        \"type\": \"array\","
+	"        \"allowSingular\": true,"
+	"        \"items\": { \"$ref\": \"#/definitions/asub\" }"
+	"      }"
+	"    } },"
+	"    { \"properties\": {"
+	"      \"b\": {"
+	"        \"type\": \"array\","
+	"        \"allowSingular\": true,"
+	"        \"items\": {"
+        "          \"type\": \"object\","
+	"          \"allowSingular\": true,"
+	"          \"properties\": {"
+	"             \"streets\": { \"type\": \"string\" }"
+	"          }"
+	"        }"
+	"      }"
+	"    } }"
+	"  ]"
+        "}");
+  SchemaDocument s(sd);
+  NORMALIZE(s, "{\"a\": \"1600 Pennsylvania Ave.\", \"b\": \"1600 Pennsylvania Ave.\"}", true,
+	    "{\"a\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ], \"b\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ]}");
+  NO_NORMALIZE(s, "{\"a\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ], \"b\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ]}");
 }
 
 TEST(SchemaNormalizer, AliasCircular) {
