@@ -7429,7 +7429,6 @@ private:
 #endif // RAPIDJSON_YGGDRASIL
 				) {
         RAPIDJSON_ASSERT(pointer.IsValid());
-	typedef internal::GenericNormalizedDocument<GenericSchemaDocument<ValueT, Allocator>, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
         if (v.IsObject()) {
 #ifdef RAPIDJSON_YGGDRASIL
 	    if (const SchemaType* sc = GetSchema(pointer, singular)) {
