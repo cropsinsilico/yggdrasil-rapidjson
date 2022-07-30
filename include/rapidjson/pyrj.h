@@ -221,12 +221,24 @@ PyObject* import_python_object(const char* mod_class,
 			       const bool ignore_error=false) {
   char module_name[100] = "";
   char class_name[100] = "";
-  if (sscanf(mod_class, "%[^:]:%s", module_name, class_name) != 2) {
+  size_t mod_class_len = strlen(mod_class);
+  size_t iColon = mod_class_len;
+  for (size_t i = 0; i < mod_class_len; i++) {
+    if (mod_class[i] == ':')
+      iColon = i;
+  }
+  if (iColon < mod_class_len) {
+    memcpy(module_name, mod_class, iColon * sizeof(char));
+    memcpy(class_name, mod_class + iColon + 1, (mod_class_len - (iColon + 1)) * sizeof(char));
+    module_name[iColon] = '\0';
+    class_name[mod_class_len - (iColon + 1)] = '\0';
+  } else {
+    // if (sscanf(mod_class, "%s:%[^:]", module_name, class_name) != 2) {
     if (!(ignore_error))
       throw std::runtime_error(error_prefix + "import_python_object: Failed to import Python object '" + mod_class + "'"); // GCOVR_EXCL_LINE
     return NULL;
   }
-  Py_ssize_t module_name_len = (Py_ssize_t)strlen(module_name);
+  Py_ssize_t module_name_len = (Py_ssize_t)(mod_class_len - (iColon + 1)); // strlen(module_name);
   bool is_file = ((module_name_len > 3) && (strncmp(module_name + ((size_t)module_name_len - 3), ".py", 3) == 0));
   if (is_file) {
     PyObject* path = PyUnicode_FromStringAndSize(module_name, module_name_len - 3);
