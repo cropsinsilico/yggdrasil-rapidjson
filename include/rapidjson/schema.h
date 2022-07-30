@@ -2346,7 +2346,7 @@ public:
     }
     return true;
   }
-  bool EndExtend(Context& context, bool dont_recurse=false) {
+  bool EndExtend(Context&, bool dont_recurse=false) {
     ValueType* current = CurrentValue();
     PopKey();
     if (CurrentIdx()) {
