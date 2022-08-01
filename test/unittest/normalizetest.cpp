@@ -133,6 +133,7 @@ using namespace rapidjson;
     d.Accept(normalizer);\
     EXPECT_FALSE(normalizer.IsValid());\
     ValidateErrorCode code = normalizer.GetInvalidSchemaCode();\
+    normalizer.GetNormalizedDoc().FinalizeFromStack(true);     \
     ASSERT_TRUE(code != kValidateErrorNone);\
     ASSERT_TRUE(strcmp(GetValidateError_En(code), "Unknown error.") != 0);\
     if (normalizer.GetInvalidSchemaPointer() != PointerType(invalidSchemaPointer)) {\
@@ -177,6 +178,37 @@ using namespace rapidjson;
         ADD_FAILURE();\
     }\
 }
+#define MERGE_CONFLICT_ERROR(type, value, method)		\
+  {								\
+    Document sd;						\
+    sd.Parse(							\
+	     "{"						\
+	     "  \"type\": \"object\","				\
+	     "  \"allOf\": ["					\
+	     "    { \"properties\": {"				\
+	     "        \"a\": { \"type\": \"string\","		\
+	     "                 \"default\": \"foo\" }},"	\
+	     "      \"required\": [\"a\"]"			\
+	     "    },"						\
+	     "    { \"properties\": {"				\
+	     "        \"a\": { \"type\": \"" #type "\","	\
+	     "                 \"default\": " #value " }},"	\
+	     "      \"required\": [\"a\"]"			\
+	     "    }"						\
+	     "  ]"						\
+	     "}");						\
+    SchemaDocument s(sd);					\
+    FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",	\
+		     "/a",					\
+		     "{ \"normalization\": {"			\
+		     "    \"errorCode\": 37,"			\
+		     "    \"instanceRef\": \"#/a\","		\
+		     "    \"schemaRef\": \"#/allOf/1\","	\
+		     "    \"conflicting\": \"" #method "\","	\
+		     "    \"expected\": \"foo\","		\
+		     "    \"actual\": " #value			\
+		     "}}");					\
+  }
 
 TEST(SchemaNormalizer, BaseTypes) {
     Document sd;
@@ -195,11 +227,11 @@ TEST(SchemaNormalizer, BaseTypes) {
 	"    \"i\": {\"type\": \"array\","
 	"            \"items\": {\"type\": \"integer\"}},"
 	"    \"j\": {\"type\": \"object\","
-	"            \"additionalProperties\": {\"type\": \"integer\"}},"
+	"            \"additionalProperties\": {\"type\": \"integer\"}}"
 	"  }"
 	"}");
     SchemaDocument s(sd);
-    NO_NORMALIZE(s, "{ \"a\": null, \"b\": false, \"c\": -1, \"d\": -4294967295, \"e\": 1, \"f\": 4294967295, \"g\": 3.583, \"h\": \"foo\", \"i\": [ 2, 4, 8 ], \"j\": { \"x\": 2, \"y\": 7, \"z\": -1} }");
+    NO_NORMALIZE(s, "{ \"a\": null, \"b\": false, \"c\": -1, \"d\": -9223372036854775808, \"e\": 9223372036854775807, \"f\": 1, \"g\": 3.583, \"h\": \"foo\", \"i\": [ 2, 4, 8 ], \"j\": { \"x\": 2, \"y\": 7, \"z\": -1} }");
 }
 
 TEST(SchemaNormalizer, YggdrasilTypes) {
@@ -212,14 +244,20 @@ TEST(SchemaNormalizer, YggdrasilTypes) {
 	"            \"precision\": 1},"
 	"    \"l\": {\"type\": \"function\"},"
 	"    \"m\": {\"type\": \"instance\"},"
-	"    \"n\": {\"type\": \"schema\"}"
+	"    \"n\": {\"type\": \"schema\"},"
+	"    \"o\": {\"type\": \"1darray\", \"subtype\": \"float\","
+	"            \"precision\": 8, \"length\": 4},"
+	"    \"p\": {\"type\": \"ndarray\", \"subtype\": \"float\","
+	"            \"precision\": 4, \"shape\": [2, 3]}"
 	"  }"
 	"}");
     SchemaDocument s(sd);
     NO_NORMALIZE(s, "{ \"k\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\", "
 		 "\"l\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\", "
 		 "\"m\": \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\", "
-		 "\"n\": \"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\" }");
+		 "\"n\": \"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\", "
+		 "\"o\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOls0XX0=-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEA=-YGG-\", "
+		 "\"p\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAgD8AAABAAABAQAAAgEAAAKBA-YGG-\" }");
 }
 
 TEST(SchemaNormalizer, Default) {
@@ -283,6 +321,7 @@ TEST(SchemaNormalizer, Merge) {
 }
 
 TEST(SchemaNormalizer, MergeConflict) {
+  {
     Document sd;
     sd.Parse(
         "{"
@@ -309,6 +348,14 @@ TEST(SchemaNormalizer, MergeConflict) {
 		     "    \"expected\": \"a\","
 		     "    \"actual\": \"b\""
 		     "}}");
+  }
+  MERGE_CONFLICT_ERROR(boolean, false, bool);
+  MERGE_CONFLICT_ERROR(null, null, null);
+  MERGE_CONFLICT_ERROR(integer, -2147483647, int);
+  MERGE_CONFLICT_ERROR(integer, 2147483648, uint);  // 2^31, cannot cast
+  MERGE_CONFLICT_ERROR(integer, -1234567890123456789, int64);
+  MERGE_CONFLICT_ERROR(integer, 9223372036854775808, uint64);
+  MERGE_CONFLICT_ERROR(number, 0.123, double);
 }
 
 TEST(SchemaNormalizer, MergeConflictNested) {
@@ -904,17 +951,24 @@ TEST(SchemaNormalizer, PullProperties) {
         "        \"state\":          { \"type\": \"string\","
 	"                              \"default\": \"default_state\"},"
         "        \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
-	"                              \"default\": \"residential\" }"
+	"                              \"default\": \"residential\" },"
+	"        \"unit\":           { \"type\": \"string\" }"
         "      },"
         "      \"required\": [\"street_address\", \"city\", \"state\", \"type\"]"
-        "    }"
-        "  }"
+        "    },"
+	"    \"zip\": {"
+	"      \"type\": \"string\""
+	"    }"
+        "  },"
+	"  \"pullProperties\": {"
+	"    \"$properties/shipping_address\": [\"zip\"]"
+	"  }"
         "}");
     SchemaDocument s(sd);
     NORMALIZE(s,
-	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"city\": \"Washington\", \"state\": \"DC\" }",
+	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"zip\": \"12345\"}, \"city\": \"Washington\", \"state\": \"DC\" }",
 	      true,
-	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"} }");
+	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"}, \"zip\": \"12345\" }");
     FAILED_NORMALIZE(s,
 		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"state\": \"DC\" }",
 		     "", "required", "",
@@ -941,13 +995,20 @@ TEST(SchemaNormalizer, PushProperties) {
         "        \"state\":          { \"type\": \"string\","
 	"                              \"default\": \"default_state\"},"
         "        \"type\":           { \"enum\": [ \"residential\", \"business\" ],"
-	"                              \"default\": \"residential\" }"
+	"                              \"default\": \"residential\" },"
+	"        \"unit\":           { \"type\": \"string\" }"
         "      },"
-        "      \"required\": [\"street_address\", \"city\", \"state\", \"type\"]"
+        "      \"required\": [\"street_address\", \"city\", \"state\", \"type\"],"
+	"      \"pushProperties\": {"
+	"        \"$../../\": [\"zip\"]"
+	"      }"
         "    },"
         "    \"state\": {"
 	"      \"type\": \"string\","
 	"      \"default\": \"default_state\""
+	"    },"
+	"    \"zip\": {"
+	"      \"type\": \"string\""
 	"    }"
         "  },"
 	"  \"pushProperties\": {"
@@ -956,9 +1017,9 @@ TEST(SchemaNormalizer, PushProperties) {
         "}");
     SchemaDocument s(sd);
     NORMALIZE(s,
-	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"city\": \"Washington\", \"state\": \"DC\" }",
+	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"zip\": \"12345\"}, \"city\": \"Washington\", \"state\": \"DC\" }",
 	      true,
-	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"},  \"state\": \"DC\" }");
+	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"},  \"state\": \"DC\", \"zip\": \"12345\" }");
     FAILED_NORMALIZE(s,
 		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"state\": \"DC\" }",
 		     "", "required", "",

@@ -727,17 +727,12 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 		     ValueType* dest, AllocatorType& allocator) {
   RAPIDJSON_ASSERT(aliases.IsObject());
   typename ValueType::ConstMemberIterator primary = aliases.FindMember(orig);
-  if (primary == aliases.MemberEnd()) {
-    dest->CopyFrom(orig, allocator, true);
-    return true;
-  }
   ValueType path(kArrayType);
   RAPIDJSON_ASSERT(orig.IsString());
   path.PushBack(ValueType(orig.GetString(),
 			  orig.GetStringLength(),
 			  allocator).Move(), allocator);
-  RAPIDJSON_ASSERT(primary->value.IsString());
-  while (aliases.HasMember(primary->value)) {
+  while (primary != aliases.MemberEnd() && aliases.HasMember(primary->value)) {
     for (typename ValueType::ConstValueIterator it = path.Begin(); it != path.End(); ++it) {
       if (primary->value == *it) {
 	dest->CopyFrom(path, allocator, true);
@@ -750,7 +745,8 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
     primary = aliases.FindMember(primary->value);
     RAPIDJSON_ASSERT(primary->value.IsString());
   }
-  dest->CopyFrom(primary->value, allocator, true);
+  if (primary != aliases.MemberEnd())
+    dest->CopyFrom(primary->value, allocator, true);
   return true;
 }
 
@@ -897,7 +893,6 @@ public:
     bool no_after;
   };
   enum ModificationFlag {
-    kCheckModifiedNull,
     kCheckModifiedBefore,
     kCheckModifiedBoth,
     kCheckModifiedAfter
@@ -1272,8 +1267,9 @@ public:
 	if (!normalized.IsFinalizedShared(this, name, source))
 	  return false;
       }
-      // sibling srcs/dsts that assign to the same source
-      if (!src.set) return !properties.Contains(name);
+      // Sibling srcs/dsts that assign to the same source
+      if (!properties.Contains(name)) return true;
+      if (!src.set) return false; // !properties.Contains(name);
       return normalized.IsFinalizedShared(this, name, true);
     }
     ValueType* GetParent(GenericNormalizedDocument& normalized,
@@ -1685,7 +1681,8 @@ public:
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Something is wrong with the state of"
 					" the normalized document at the "
 					" start of an extend call.");
-    PushValue(*document_.StackTop());
+    PointerType pCurrent = GetInstancePointer();
+    PushValue(*document_.StackTop(), pCurrent);
     extending_ = true;
     extend_context_ = &context;
     extend_schema_ = &schema;
@@ -1773,11 +1770,10 @@ public:
       SizeType memberCount = 1;
       RAPIDJSON_ASSERT(schema.parentSchema_ &&
 		       schema.parentSchema_->allowSingularSchema_.schemas);
-      if (!(schema.parentSchema_ &&
-	    schema.parentSchema_->allowSingularSchema_.schemas))
-	return false; // GCOVR_EXCL_LINE
-      return NormEndObject(context, schema, memberCount,
-			   schema.parentSchema_->allowSingularSchema_.schemas[0]);
+      return (schema.parentSchema_ &&
+	      schema.parentSchema_->allowSingularSchema_.schemas &&
+	      NormEndObject(context, schema, memberCount,
+			    schema.parentSchema_->allowSingularSchema_.schemas[0]));
     }
     return true;
   }
@@ -1828,13 +1824,11 @@ public:
 				   GetAllocator(),
 				   true).Move(),
 			    GetAllocator());
-      if (NormYggdrasilString(context, schema, str, length, copy, valueSchema)) {
-	if (!schema.isMetaschema_)
-	  RecordModified();
-	return true;
-      }
-      return false;
-    }    
+      bool out = NormYggdrasilString(context, schema, str, length, copy, valueSchema);
+      if (out && !schema.isMetaschema_)
+	RecordModified();
+      return out;
+    }
     NORM_VALUE_(String, (str, length, true));
   }
   template <typename YggSchemaValueType>
@@ -1847,7 +1841,6 @@ public:
     typename YggSchemaValueType::ConstMemberIterator precisionV = valueSchema.FindMember(SchemaType::GetPrecisionString());
     typename YggSchemaValueType::ConstMemberIterator unitsV = valueSchema.FindMember(SchemaType::GetUnitsString());
     typename YggSchemaValueType::ConstMemberIterator shapeV = valueSchema.FindMember(SchemaType::GetShapeString());
-    typename YggSchemaValueType::ConstMemberIterator lengthV = valueSchema.FindMember(SchemaType::GetLengthString());
     if ((typeV != valueSchema.MemberEnd()) &&
 	(subtypeV != valueSchema.MemberEnd()) &&
 	(precisionV != valueSchema.MemberEnd())) {
@@ -1856,8 +1849,6 @@ public:
       SizeType nelements = 0;
       if (typeV->value == YggSchemaValueType::GetScalarString())
 	nelements = 1;
-      else if (lengthV != valueSchema.MemberEnd())
-	nelements = (SizeType)(lengthV->value.GetUint64());
       else if (shapeV != valueSchema.MemberEnd()) {
 	nelements = 1;
 	for (typename YggSchemaValueType::ConstValueIterator v = shapeV->value.Begin(); v != shapeV->value.End(); ++v)
@@ -2965,16 +2956,10 @@ private:
     return isValueModified(q, exact, kCheckModifiedAfter, false, match);
   }
   bool isValueModified(const PointerType& p, bool exact=false,
-		       ModificationFlag checkFlag=kCheckModifiedNull,
+		       ModificationFlag checkFlag=kCheckModifiedBoth,
 		       bool is_empty=false, ModificationEntry** match=nullptr) {
     if (modifiedStack_.Empty())
       return false;
-    if (checkFlag == kCheckModifiedNull) {
-      if (extending_ && !appending_)
-	checkFlag = kCheckModifiedBoth;
-      else
-	checkFlag = kCheckModifiedBefore;
-    }
     SizeType N = (SizeType)(modifiedStack_.GetSize() / sizeof(ModificationEntry));
     ModificationEntry* it = modifiedStack_.template Bottom<ModificationEntry>();
     for (SizeType i = 0; i < N; i++, it++) {
@@ -3024,50 +3009,35 @@ private:
   }
 
   const ValueType* CurrentValue() const {
-    if (extending_ && !appending_) {
-      RAPIDJSON_ASSERT(!valueStack_.Empty());
-      if (valueStack_.Empty())
-	return nullptr;
-      return valueStack_.template Top<ValueEntry>()->val;
-    } else {
-      RAPIDJSON_ASSERT(document_.StackSize() > 0);
-      if (document_.StackSize() == 0)
-	return nullptr;
-      return document_.StackTop();
-    }
+    return const_cast<GenericNormalizedDocument&>(*this).CurrentValue();
   }
   ValueType* CurrentValue() {
     if (extending_ && !appending_) {
       RAPIDJSON_ASSERT(!valueStack_.Empty());
-      if (valueStack_.Empty())
-	return nullptr;
-      return valueStack_.template Top<ValueEntry>()->val;
+      if (!valueStack_.Empty())
+	return valueStack_.template Top<ValueEntry>()->val;
     } else {
       RAPIDJSON_ASSERT(document_.StackSize() > 0);
-      if (document_.StackSize() == 0)
-	return nullptr;
-      return document_.StackTop();
+      if (document_.StackSize() != 0)
+	return document_.StackTop();
     }
+    return nullptr; // GCOVR_EXCL_LINE
   }
   bool CurrentModified() {
-    if (extending_ && !appending_ && !valueStack_.Empty())
-      return valueStack_.template Top<ValueEntry>()->modified;
-    return false;
+    return (extending_ && !appending_ && !valueStack_.Empty() &&
+	    valueStack_.template Top<ValueEntry>()->modified);
   }
   bool CurrentChildModified() {
-    if (extending_ && !appending_ && !valueStack_.Empty())
-      return valueStack_.template Top<ValueEntry>()->child_modified;
-    return false;
+    return (extending_ && !appending_ && !valueStack_.Empty() &&
+	    valueStack_.template Top<ValueEntry>()->child_modified);
   }
   bool CurrentSingular() {
-    if (extending_ && !appending_ && !valueStack_.Empty())
-      return valueStack_.template Top<ValueEntry>()->singular;
-    return false;
+    return (extending_ && !appending_ && !valueStack_.Empty() &&
+	    valueStack_.template Top<ValueEntry>()->singular);
   }
   bool CurrentChildSingular() {
-    if (extending_ && !appending_ && !valueStack_.Empty())
-      return valueStack_.template Top<ValueEntry>()->child_singular;
-    return false;
+    return (extending_ && !appending_ && !valueStack_.Empty() &&
+	    valueStack_.template Top<ValueEntry>()->child_singular);
   }
   bool CurrentReplaced() {
     if (extending_ && !appending_ && !valueStack_.Empty()) {
@@ -3097,15 +3067,14 @@ private:
     if (ref->singular || modified)
       ref->modified = true;
     else
-      ref->modified = isValueModified(p, false, kCheckModifiedBoth);
+      ref->modified = isValueModified(p);
     if (extend_child_) {
       ref->child_singular = extend_child_->isValueSingular(p, false, nullptr,
 							   appended);
       if (ref->child_singular || child_modified)
 	ref->child_modified = true;
       else
-	ref->child_modified = extend_child_->isValueModified(p, false,
-							     kCheckModifiedBoth);
+	ref->child_modified = extend_child_->isValueModified(p);
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       std::cerr << "PushValue: ";
       DisplayPointer(p);
@@ -3119,15 +3088,6 @@ private:
       DisplayStack(true);
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     }
-  }
-  void PushValue(ValueType& value,
-		 bool modified = false, bool child_modified = false) {
-    PointerType p;
-    if (valueStack_.Empty())
-      p = GetInstancePointer();
-    else
-      p = CurrentPointer();
-    PushValue(value, p, false, modified, child_modified);
   }
   void PushValue(ValueType& value, ValueType& key,
 		 bool modified = false, bool child_modified = false) {
@@ -3165,9 +3125,9 @@ private:
 				   &GetAllocator());
   }
   KeyEntry* AliasedKey() {
-    if (KeyCount() < 2)
-      return nullptr;
-    KeyEntry* ref = (keyStack_.template Top<KeyEntry>() - 1);
+    KeyEntry* ref = nullptr;
+    if (KeyCount() >= 2)
+      ref = (keyStack_.template Top<KeyEntry>() - 1);
     return ref;
   }
   bool InAliasedKey() {
@@ -3294,7 +3254,7 @@ private:
   //     base++;
   //   }
   // }
-  bool HasMember(const ValueType& key, SizeType* memberCount=nullptr) const {
+  bool HasMember(const ValueType& key) const {
     if (extending_ && !appending_) {
       RAPIDJSON_ASSERT(CurrentValue()->IsObject());
       if (CurrentValue()->HasMember(key))
@@ -3304,17 +3264,9 @@ private:
     if (document_.StackSize() == 0)
       return false; // GCOVR_EXCL_LINE
     const ValueType* base = document_.StackTop();
-    if (memberCount) {
-      SizeType i = 0;
-      while ((base != document_.StackBottom()) && (i < (*memberCount * 2))) {
-	base--;
-	i++;
-      }
-    } else {
-      if (base->IsObject())
-	  return false;
-      while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
-    }
+    if (base->IsObject())
+      return false;
+    while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
     RAPIDJSON_ASSERT(base->IsObject());
     base++;
     while (base != document_.StackTop()) {
@@ -3381,19 +3333,16 @@ private:
     }
     return true;
   }
-  ValueType* Address2Value(const ValueType& address, ValueType* base = nullptr,
-			   PointerType* ptr=nullptr, size_t unfinalized=0) {
+  ValueType* Address2Value(const ValueType& address, ValueType* base,
+			   PointerType& ptr, size_t unfinalized) {
     if (!base) base = CurrentValue();
     if (!base) return nullptr;
     size_t idx = 0;
-    PointerType ptr_target;
-    if (!ptr)
-      ptr = &ptr_target;
-    if (!Address2Pointer(address, *ptr, unfinalized))
+    if (!Address2Pointer(address, ptr, unfinalized))
       return nullptr;
     typedef GenericPointer<ValueType, AllocatorType> ValuePointerType;
-    ValuePointerType schema_ptr((typename ValuePointerType::Token*)(ptr->GetTokens()),
-				ptr->GetTokenCount());
+    ValuePointerType schema_ptr((typename ValuePointerType::Token*)(ptr.GetTokens()),
+				ptr.GetTokenCount());
     return schema_ptr.Get(*base, &idx);
   }
   //! Add new aliases and check if the document contains any of them.
@@ -3444,7 +3393,7 @@ private:
 	    root = document_.StackTop();
 	  }
 	  PointerType base_ptr;
-	  ValueType* base = Address2Value(it->name, root, &base_ptr,
+	  ValueType* base = Address2Value(it->name, root, base_ptr,
 					  unfinalized);
 	  if (base && base->IsObject() && (base->HasMember(v->name))) {
 	    typename ValueType::ConstMemberIterator old = base->FindMember(v->name);
@@ -4586,7 +4535,7 @@ public:
         RAPIDJSON_NORMALIZER_(Double, d);
 #ifdef RAPIDJSON_YGGDRASIL
       if ((yggtype_ & (1 << kYggScalarSchemaType))) {
-	if (!(CheckScalar(context, GetFloatSubTypeString(), ValueType(8), ValueType())))
+	if (!(CheckScalar(context, GetFloatSubTypeString(), ValueType(8))))
 	  return false;
       }
 #endif // RAPIDJSON_YGGDRASIL
@@ -4765,7 +4714,6 @@ public:
 	  if (!follow_aliases_(child_aliases_, orig, &dest, *allocator_)) {
 	    context.error_handler.CircularAlias(dest);
 	    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
-	    return false;
 	  }
 	  str = dest.GetString();
 	  len = dest.GetStringLength();
@@ -5335,19 +5283,10 @@ protected:
 #ifdef RAPIDJSON_YGGDRASIL
     bool PointerMatches(const PointerType pattern,
 			const PointerType x,
-			bool patternHasRegex,
-			bool patternIsPrefix = false,
-			bool verbose = false) const {
-      if (!patternHasRegex) {
-	if (patternIsPrefix)
-	  return pattern.PartialCompare(x);
+			bool patternHasRegex) const {
+      if (!patternHasRegex)
 	return (pattern == x);
-      }
-      if (patternIsPrefix) {
-	if (x.GetTokenCount() < pattern.GetTokenCount()) return false;
-      } else {
-	if (x.GetTokenCount() != pattern.GetTokenCount()) return false;
-      }
+      if (x.GetTokenCount() != pattern.GetTokenCount()) return false;
       bool out = true;
       for (size_t i = 0; i < pattern.GetTokenCount(); i++) {
 	if (x.GetTokens()[i].length == pattern.GetTokens()[i].length &&
@@ -5373,13 +5312,6 @@ protected:
 	    break;
 	  }
 	}
-      }
-      if (verbose) {
-	std::cerr << "PointerMatches(";
-	NormalizedDocumentType::DisplayPointer(pattern);
-	std::cerr << ", ";
-	NormalizedDocumentType::DisplayPointer(x);
-	std::cerr << ", " << out << ")" << std::endl;
       }
       return out;
     }
@@ -5527,10 +5459,10 @@ protected:
 #ifdef RAPIDJSON_YGGDRASIL
       if ((yggtype_ & (1 << kYggScalarSchemaType))) {
 	if (i >= 0) {
-	  if (!(CheckScalar(context, GetUintSubTypeString(), ValueType(8), ValueType())))
+	  if (!(CheckScalar(context, GetUintSubTypeString(), ValueType(8))))
 	    return false;
 	} else {
-	  if (!(CheckScalar(context, GetIntSubTypeString(), ValueType(8), ValueType())))
+	  if (!(CheckScalar(context, GetIntSubTypeString(), ValueType(8))))
 	    return false;
 	}
       }
@@ -5585,7 +5517,7 @@ protected:
     bool CheckUint(Context& context, uint64_t i) const {
 #ifdef RAPIDJSON_YGGDRASIL
       if ((yggtype_ & (1 << kYggScalarSchemaType))) {
-	if (!(CheckScalar(context, GetUintSubTypeString(), ValueType(8), ValueType())))
+	if (!(CheckScalar(context, GetUintSubTypeString(), ValueType(8))))
 	  return false;
       }
 #endif // RAPIDJSON_YGGDRASIL
@@ -5700,12 +5632,10 @@ protected:
     return true;
   }
   bool CheckScalar(Context& context, const ValueType& subtype_str,
-		   const ValueType& precision, const ValueType& units) const {
+		   const ValueType& precision) const {
     if (!(CheckSubType(context, &subtype_str, true)))
       return false;
     if (!(CheckPrecision(context, &precision, true)))
-      return false;
-    if (!(CheckUnits(context, &units, true)))
       return false;
     return true;
   }
@@ -5765,6 +5695,7 @@ protected:
   template <typename YggSchemaValueType>
   bool CheckUnits(Context& context, const YggSchemaValueType& schema) const {
     RAPIDJSON_ASSERT(schema.IsObject());
+    if (!schema.HasMember(GetUnitsString())) return true; // Allow missing
     if (!CheckRequiredSchemaProperty(context, schema, GetUnitsString()))
       return false;
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetUnitsString());
@@ -6024,17 +5955,13 @@ protected:
       bool Matches(const PointerType x, bool checkInstance = false,
 		   bool verbose = false) const {
 	if (checkInstance)
-	  return schema->PointerMatches(instancePtr, x, hasRegex,
-					false, verbose);
-	return schema->PointerMatches(schemaPtr, x, false, false, verbose);
+	  return schema->PointerMatches(instancePtr, x, hasRegex);
+	return schema->PointerMatches(schemaPtr, x, false);
       }
       bool PointerMatches(const PointerType pattern,
 			  const PointerType x,
-			  bool patternHasRegex,
-			  bool patternIsPrefix = false,
-			  bool verbose = false) const {
-	return schema->PointerMatches(pattern, x, patternHasRegex,
-				      patternIsPrefix, verbose);
+			  bool patternHasRegex) const {
+	return schema->PointerMatches(pattern, x, patternHasRegex);
       }
       SchemaType* schema;
       size_t index;

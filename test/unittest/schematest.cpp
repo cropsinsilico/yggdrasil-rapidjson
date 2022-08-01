@@ -1743,6 +1743,7 @@ TEST(SchemaValidator, SubType) {
 	       "}}");
 }
 TEST(SchemaValidator, Precision) { // 28
+  { // Scalar
     Document sd;
     sd.Parse(
         "{"
@@ -1760,8 +1761,36 @@ TEST(SchemaValidator, Precision) { // 28
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"expected\": 2, \"actual\": 8"
 	       "}}");
+  }
+  { // Array
+    uint16_t arr[2][3] = {{ 0u, 1u, 2u },
+			  { 3u, 4u, 5u }};
+    DISPLAY_STRING("x", (arr, "g"));
+    uint64_t arr2[2][3] = {{ 0u, 1u, 2u },
+			   { 3u, 4u, 5u }};
+    DISPLAY_STRING("y", (arr2, "g"));
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"ndarray\","
+	"  \"subtype\": \"uint\","
+	"  \"precision\": 2,"
+	"  \"shape\": [2, 3],"
+	"  \"units\": \"g\""
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoyLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAABAAIAAwAEAAUA-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAAAAAAAAAABAAAAAAAAAAIAAAAAAAAAAwAAAAAAAAAEAAAAAAAAAAUAAAAAAAAA-YGG-\"",
+	       "", "precision", "",
+	       "{ \"precision\" : {"
+	       "    \"errorCode\": 28,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": 2, \"actual\": 8"
+	       "}}");
+  }
 }
 TEST(SchemaValidator, Units) { // 29
+  { // Scalar
     Document sd;
     sd.Parse(
         "{"
@@ -1781,6 +1810,33 @@ TEST(SchemaValidator, Units) { // 29
 	       "}}");
     // Test with units that have the same dimensions
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoia2cifQ==-YGG-DA==-YGG-\"", true);
+  }
+  { // Array
+    uint16_t arr[] = { 0u, 1u, 2u };
+    DISPLAY_STRING("x", (arr, "g"));
+    DISPLAY_STRING("y", (arr, "cm"));
+    DISPLAY_STRING("z", (arr, "kg"));
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"1darray\","
+	"  \"subtype\": \"uint\","
+	"  \"length\": 3,"
+	"  \"precision\": 2,"
+	"  \"units\": \"g\""
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoyLCJ1bml0cyI6ImciLCJzaGFwZSI6WzNdfQ==-YGG-AAABAAIA-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoyLCJ1bml0cyI6ImNtIiwic2hhcGUiOlszXX0=-YGG-AAABAAIA-YGG-\"",
+	       "", "units", "",
+	       "{ \"units\" : {"
+	       "    \"errorCode\": 29,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": \"g\", \"actual\": \"cm\""
+	       "}}");
+    // Test with units that have the same dimensions
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoyLCJ1bml0cyI6ImtnIiwic2hhcGUiOlszXX0=-YGG-AAABAAIA-YGG-\"", true);
+  }
 }
 TEST(SchemaValidator, Length) { // 30
     Document sd;
@@ -1906,6 +1962,18 @@ TEST(SchemaValidator, PythonInstance) { // 31
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6e319-YGG-\"", true);
     // No args
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOltdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"", true);
+    // Schema
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"",
+	       "", "type", "",
+	       "{"
+	       "  \"type\": {"
+	       "    \"expected\": [ \"instance\" ],"
+	       "    \"actual\": \"schema\","
+	       "    \"errorCode\": 20,"
+	       "    \"instanceRef\": \"#\","
+	       "    \"schemaRef\": \"#\""
+	       "  }"
+	       "}");
 }
 
 TEST(SchemaValidator, PythonInstanceClass) { // 32
@@ -1999,6 +2067,18 @@ TEST(SchemaValidator, Schema) { // 33
 	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
 	     "            ]"
 	     "}}}}");
+  // Python instnace
+  INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"",
+	     "", "type", "",
+	     "{"
+	     "  \"type\": {"
+	     "    \"expected\": [ \"schema\" ],"
+	     "    \"actual\": \"instance\","
+	     "    \"errorCode\": 20,"
+	     "    \"instanceRef\": \"#\","
+	     "    \"schemaRef\": \"#\""
+	     "  }"
+	     "}");
 }
 
 TEST(SchemaValidator, Alias) {

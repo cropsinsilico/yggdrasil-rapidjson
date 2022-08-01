@@ -144,13 +144,25 @@ public:
   {						\
     rapidjson::finalize_python("test");		\
   }
-#define DISPLAY_STRING(name, value)			\
+#define DISPLAY_STRING_ALLOC(name, value)		\
   {							\
     StringBuffer buffer;				\
     Writer<StringBuffer> writer(buffer);		\
     Value container;							\
     Value::AllocatorType allocator;					\
     Value v2(value, allocator);						\
+    container.SetArray();						\
+    container.PushBack(v2, allocator);					\
+    RAPIDJSON_ASSERT(container.Accept(writer));				\
+    std::cerr << name << ": " << buffer.GetString() << std::endl;	\
+  }
+#define DISPLAY_STRING(name, value)			\
+  {							\
+    StringBuffer buffer;				\
+    Writer<StringBuffer> writer(buffer);		\
+    Value container;							\
+    Value::AllocatorType allocator;					\
+    Value v2 value;							\
     container.SetArray();						\
     container.PushBack(v2, allocator);					\
     RAPIDJSON_ASSERT(container.Accept(writer));				\
