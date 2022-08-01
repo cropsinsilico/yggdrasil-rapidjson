@@ -1856,9 +1856,13 @@ public:
       }
       // Subtype & precision
       YggSubType src_subtype = (YggSubType)subtype;
-      YggSubType dst_subtype = (YggSubType)schema.subtype_;
+      YggSubType dst_subtype = src_subtype;
       SizeType src_precision = precision;
-      SizeType dst_precision = schema.precision_.GetUint();
+      SizeType dst_precision = src_precision;
+      if (schema.precision_.IsUint())
+	dst_precision = schema.precision_.GetUint();
+      if (schema.subtype_ != SchemaType::kYggNullSubType)
+	dst_subtype = (YggSubType)schema.subtype_;
       if (((src_subtype == dst_subtype) &&
 	   (src_precision < dst_precision)) ||
 	  ((src_subtype != dst_subtype) &&
@@ -1881,9 +1885,9 @@ public:
 	  str = (Ch*)dst;
 	  length = dst_nbytes / (SizeType)sizeof(Ch);
 	}
-	subtype = schema.subtype_;
-	precision = schema.precision_.GetUint();
-	const typename SchemaType::ValueType& subtype_str = schema.SubType2String(schema.subtype_);
+	subtype = (typename SchemaType::YggSchemaValueSubType)dst_subtype;
+	precision = dst_precision;
+	const typename SchemaType::ValueType& subtype_str = schema.SubType2String(subtype);
 	valueSchema[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema.GetAllocator());
       }
       // Units
@@ -5952,8 +5956,7 @@ protected:
 	}
 	return nullptr;
       }
-      bool Matches(const PointerType x, bool checkInstance = false,
-		   bool verbose = false) const {
+      bool Matches(const PointerType x, bool checkInstance = false) const {
 	if (checkInstance)
 	  return schema->PointerMatches(instancePtr, x, hasRegex);
 	return schema->PointerMatches(schemaPtr, x, false);

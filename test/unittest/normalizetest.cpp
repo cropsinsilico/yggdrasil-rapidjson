@@ -210,6 +210,38 @@ using namespace rapidjson;
 		     "}}");					\
   }
 
+#define MERGE_CONFLICT_ERROR_STRING(type, value0, value1, method)	\
+  {								\
+    Document sd;						\
+    sd.Parse(							\
+	     "{"						\
+	     "  \"type\": \"object\","				\
+	     "  \"allOf\": ["					\
+	     "    { \"properties\": {"				\
+	     "        \"a\": { \"type\": \"boolean\","		\
+	     "                 \"default\": false }},"		\
+	     "      \"required\": [\"a\"]"			\
+	     "    },"						\
+	     "    { \"properties\": {"				\
+	     "        \"a\": { \"type\": \"" #type "\","	\
+	     "                 \"default\": " value0 " }},"	\
+	     "      \"required\": [\"a\"]"			\
+	     "    }"						\
+	     "  ]"						\
+	     "}");						\
+    SchemaDocument s(sd);					\
+    FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",	\
+		     "/a",					\
+		     "{ \"normalization\": {"			\
+		     "    \"errorCode\": 37,"			\
+		     "    \"instanceRef\": \"#/a\","		\
+		     "    \"schemaRef\": \"#/allOf/1\","	\
+		     "    \"conflicting\": \"" #method "\","	\
+		     "    \"expected\": false,"			\
+		     "    \"actual\": " value1			\
+		     "}}");					\
+  }
+
 TEST(SchemaNormalizer, BaseTypes) {
     Document sd;
     sd.Parse(
@@ -356,6 +388,8 @@ TEST(SchemaNormalizer, MergeConflict) {
   MERGE_CONFLICT_ERROR(integer, -1234567890123456789, int64);
   MERGE_CONFLICT_ERROR(integer, 9223372036854775808, uint64);
   MERGE_CONFLICT_ERROR(number, 0.123, double);
+  MERGE_CONFLICT_ERROR_STRING(scalar, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImcifQ==-YGG-AAAAAABAj0A=-YGG-\"", "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImcifQ==-YGG-AAAAAABAj0A=-YGG-\"", yggString);
+  MERGE_CONFLICT_ERROR_STRING(instance, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-e30=-YGG-\"", yggObject);
 }
 
 TEST(SchemaNormalizer, MergeConflictNested) {

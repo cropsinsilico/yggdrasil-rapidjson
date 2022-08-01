@@ -11,7 +11,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Use explicit allocator for QuantityArray?
 * Add Python wrapper for obj & ply w/ interop to other classes
 * Support for numpy bytes/unitcode scalars arrays
-* Add tests for normalization of additional types within allOf (yggdrasil object, yggdrasil string
 * Add test for conflicting aliases in allOf set
 * Add test for failed normalization of default in shared property
 * Normalize default outside of shared property
