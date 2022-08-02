@@ -305,12 +305,15 @@ public:
   virtual bool EndMissingPropertiesShared(const SValue& instanceRef, const SValue& schemaRef) = 0;
   virtual void DisallowedValueEnum(const typename SchemaType::ValueType& expected) = 0;
   virtual ValidateErrorCode SharedNormalizationError(ISchemaValidator* subvalidator) = 0;
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
   virtual void GenericError(const char* str) = 0;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 #endif // RAPIDJSON_YGGDRASIL
   
 };
 
 #ifdef RAPIDJSON_YGGDRASIL
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 #define RAPIDJSON_YGGDRASIL_GENERIC_SET_ERROR(...)			\
   {									\
     std::string error_msg;						\
@@ -328,8 +331,7 @@ public:
     RAPIDJSON_YGGDRASIL_GENERIC_SET_ERROR(__VA_ARGS__);			\
     RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorGeneric);			\
   }
-#else // RAPIDJSON_YGGDRASIL
-#define RAPIDJSON_YGGDRASIL_GENERIC_ERROR(...) {}
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 #endif // RAPIDJSON_YGGDRASIL
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -934,6 +936,7 @@ public:
       present(kArrayType),
       set(false), local(false), missing(false), multiple(false),
       parent(0) {}
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     void Display(bool useInstance = false) const {
       if (!set) {
 	std::cerr << "NULL (";
@@ -947,6 +950,7 @@ public:
       if (!set)
 	std::cerr << ")";
     }
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     void CopyFrom(const SharedValueEntry& rhs, AllocatorType& allocator) {
       instancePtr = rhs.instancePtr;
       schemaPtr = rhs.schemaPtr;
@@ -989,11 +993,13 @@ public:
       src.CopyFrom(other.src, *allocator);
       dst.CopyFrom(other.dst, *allocator);
     }
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     void Display(bool useInstance = false) const {
       src.Display(useInstance);
       std::cerr << " -> ";
       dst.Display(useInstance);
     }
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     bool missing() const { return dst.missing || src.missing; }
     bool set() const { return dst.set && src.set; }
     bool Completes(const PairEntry& other) const {
@@ -1315,15 +1321,13 @@ public:
 	parent = GetParent(normalized, true);
       RAPIDJSON_ASSERT(parent && parent->IsObject());
       RAPIDJSON_ASSERT(parent && parent->HasMember(name));
-      if (parent && parent->HasMember(name)) {
-	if (!prop->inSource)
-	  src.shared.PushBack(SValue(name.GetString(),
-				     name.GetStringLength(),
-				     normalized.GetAllocator()).Move(),
-			      normalized.GetAllocator());
-	return &(parent->FindMember(name)->value);
-      }
-      return 0; // GCOVR_EXCL_LINE
+      if (!(parent && parent->HasMember(name))) return 0;
+      if (!prop->inSource)
+	src.shared.PushBack(SValue(name.GetString(),
+				   name.GetStringLength(),
+				   normalized.GetAllocator()).Move(),
+			    normalized.GetAllocator());
+      return &(parent->FindMember(name)->value);
     }
     bool SetMember(Context& context, const SValue& name,
 		   const ValueType* value,
@@ -1576,10 +1580,12 @@ public:
 
   bool ExtendChild(Context& context, const SchemaType& schema, unsigned index) {
     GenericNormalizedDocument* child = FindChild(index);
-    RAPIDJSON_ASSERT(child);
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     if (!child)
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Could not find child: %d", // GCOVR_EXCL_LINE
 					(int)index);
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    RAPIDJSON_ASSERT(child);
     child->FinalizeFromStack();
     bool replaced = false;
     if (!child->ExtendAliases(context, aliases_, &replaced)) return false;
@@ -1691,16 +1697,18 @@ public:
 
   bool Extend(Context& context, const SchemaType& schema,
 	      const ValueType& document) {
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    if (extending_ || extend_context_ || extend_schema_ ||
+	document_.WasFinalized() || (document_.StackSize() == 0))
+      RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Something is wrong with the state of"
+					" the normalized document at the "
+					" start of an extend call.");
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     RAPIDJSON_ASSERT(!extending_);
     RAPIDJSON_ASSERT(!extend_context_);
     RAPIDJSON_ASSERT(!extend_schema_);
     RAPIDJSON_ASSERT(!document_.WasFinalized());
     RAPIDJSON_ASSERT(document_.StackSize() > 0);
-    // if (extending_ || extend_context_ || extend_schema_ ||
-    // 	document_.WasFinalized() || (document_.StackSize() == 0))
-    //   RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Something is wrong with the state of"
-    // 					" the normalized document at the "
-    // 					" start of an extend call.");
     PointerType pCurrent = GetInstancePointer();
     PushValue(*document_.StackTop(), pCurrent);
     extending_ = true;
@@ -1952,13 +1960,8 @@ public:
 			   (1 << SchemaType::kYggSchemaSchemaType)) &&
 	schema.yggtype_ != (1 << SchemaType::kYggTotalSchemaType) - 1) {
       GenericDocument<EncodingType, AllocatorType> valueSchema(kObjectType);
-      if (schema.yggtype_ & (1 << SchemaType::kYggPythonInstanceSchemaType) &&
-	  schema.yggtype_ & (1 << SchemaType::kYggSchemaSchemaType)) {
-	// TODO: Case where type could be either?
-	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Case where a document could be a "
-					  "Python instance or schema is "
-					  "invalid");
-      } else if (schema.yggtype_ & (1 << SchemaType::kYggPythonInstanceSchemaType)) {
+      bool out = false;
+      if (schema.yggtype_ & (1 << SchemaType::kYggPythonInstanceSchemaType)) {
 	valueSchema.AddMember(SValue(schema.GetTypeString(),
 				     GetAllocator(),
 				     true).Move(),
@@ -1966,7 +1969,10 @@ public:
 				     GetAllocator(),
 				     true).Move(),
 			      GetAllocator());
-      } else {
+	out = NormYggdrasilStartObject(context, schema, valueSchema);
+      }
+      if (!out &&
+	  schema.yggtype_ & (1 << SchemaType::kYggSchemaSchemaType)) {
 	valueSchema.AddMember(SValue(schema.GetTypeString(),
 				     GetAllocator(),
 				     true).Move(),
@@ -1974,8 +1980,8 @@ public:
 				     GetAllocator(),
 				     true).Move(),
 			      GetAllocator());
+	out = NormYggdrasilStartObject(context, schema, valueSchema);
       }
-      bool out = NormYggdrasilStartObject(context, schema, valueSchema);
       if (out)
 	RecordModified();
       return out;
@@ -2160,6 +2166,7 @@ public:
     }
     return 0;
   }
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
   void DisplayShared(bool useInstance = false) const {
     for (const PairEntry* it = sharedStack_.template Bottom<PairEntry>();
 	 it != sharedStack_.template End<PairEntry>(); it++) {
@@ -2169,6 +2176,7 @@ public:
     }
     std::cerr << std::endl;
   }
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
   void AddSharedObject(const PointerType& instancePtr,
 		       const PointerType& schemaPtr,
 		       const SValue& present) {
@@ -2281,22 +2289,22 @@ public:
     typedef GenericSchemaNormalizer<SchemaDocumentType, BaseReaderHandler<EncodingType>, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizerType;
     NormalizerType n(sd, schema, sb.GetString(), sb.GetLength(), schemaPtr, *this);
     x.Accept(n);
-    if (n.IsValid()) {
-      if (n.WasNormalized())
-	dest.CopyFrom(n.GetNormalized(), GetAllocator(), true);
-      else
-	dest.CopyFrom(x, GetAllocator(), true);
-      if (!n.GetNormalizedDoc().sharedStack_.Empty()) {
-	AddSharedTemp(n.GetNormalizedDoc().sharedStack_);
-	// Don't call the PairEntry destructor, it will be called after the
-	// temporary stack is processed.
-	// while (!n.GetNormalizedDoc().sharedStack_.Empty())
-	//   n.GetNormalizedDoc().sharedStack_.template Pop<PairEntry>(1);
-      }
-      return true;
+    if (!n.IsValid()) {
+      ValidateErrorCode code = context.error_handler.SharedNormalizationError(static_cast<ISchemaValidator*>(&n));
+      RAPIDJSON_INVALID_KEYWORD_RETURN(code);
     }
-    ValidateErrorCode code = context.error_handler.SharedNormalizationError(static_cast<ISchemaValidator*>(&n));
-    RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+    if (n.WasNormalized())
+      dest.CopyFrom(n.GetNormalized(), GetAllocator(), true);
+    else
+      dest.CopyFrom(x, GetAllocator(), true);
+    if (!n.GetNormalizedDoc().sharedStack_.Empty()) {
+      AddSharedTemp(n.GetNormalizedDoc().sharedStack_);
+      // Don't call the PairEntry destructor, it will be called after the
+      // temporary stack is processed.
+      // while (!n.GetNormalizedDoc().sharedStack_.Empty())
+      //   n.GetNormalizedDoc().sharedStack_.template Pop<PairEntry>(1);
+    }
+    return true;
   }
   bool NormEndArray(Context& context, const SchemaType& schema, SizeType elementCount) {
     NORM_BEGIN_STUB_(EndArray);
@@ -2312,17 +2320,19 @@ public:
   //   entries in the process.
   bool BeginExtend(Context& context, bool dont_recurse=false) {
     ValueType* current = CurrentValue();
-    // if (!current)
-    //   RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    if (!current)
+      RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     RAPIDJSON_ASSERT(current);
     if (CurrentIdx()) {
       bool childMod = false;
-      // if (!current->IsArray())
-      // 	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an array,"
-      // 					  " but an index %d is set (type = %d)",
-      // 					  (int)(*CurrentIdx()),
-      // 					  (int)(current->GetType()));
-      RAPIDJSON_ASSERT(current->IsArray());
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+      if (!current->IsArray())
+	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an array,"
+					  " but an index %d is set (type = %d)",
+					  (int)(*CurrentIdx()),
+					  (int)(current->GetType()));
       if (*CurrentIdx() >= current->Size()) {
 	if ((!CurrentModified()) && CurrentChildModified()) {
 	  current->PushBack(ValueType(kNullType).Move(), GetAllocator());
@@ -2334,20 +2344,24 @@ public:
 					    (int)(current->Size()));
 	}
       }
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+      RAPIDJSON_ASSERT(current->IsArray() && *CurrentIdx() < current->Size());
       PushValue((*current)[*CurrentIdx()], *CurrentIdx(), false, childMod);
       CurrentIdx()[0]++;
       current = CurrentValue();
     } else if (CurrentKey()) {
-      // if (!current->IsObject())
-      // 	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an object,"
-      // 					  " but a key \"%s\" is set (type = %d)",
-      // 					  (const char*)(CurrentKey()->GetString()),
-      // 					  (int)(current->GetType()));
-      RAPIDJSON_ASSERT(current->IsObject());
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+      if (!current->IsObject())
+	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an object,"
+					  " but a key \"%s\" is set (type = %d)",
+					  (const char*)(CurrentKey()->GetString()),
+					  (int)(current->GetType()));
       if (!current->HasMember(CurrentKey()->GetString()))
 	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value does not have the "
 					  "expected key: %s",
 					  (const char*)(CurrentKey()->GetString()));
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+      RAPIDJSON_ASSERT(current->IsObject() && current->HasMember(CurrentKey()->GetString()));
       if (InAliasedKey())
 	PushValue((*current)[*CurrentKey()], *(AliasedKey()->aliased));
       else
@@ -2413,9 +2427,6 @@ public:
       DEBUG_STEP;							\
       RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);	\
     } else {								\
-      RAPIDJSON_ASSERT(current);					\
-      if (!current)							\
-	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set when raising NormalizationMergeConflict error"); \
       context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), \
 						       *current, ValueType args.Move()); \
       out = false;							\
@@ -2961,13 +2972,13 @@ private:
     StealChildModified(GetInstancePointer(parent));
   }
   void StealChildModified(const PointerType& p) {
-    if ((!extend_child_) || extend_child_->modifiedStack_.Empty())
-      return;
-    SizeType N = (SizeType)(extend_child_->modifiedStack_.GetSize() / sizeof(ModificationEntry));
-    ModificationEntry* it = extend_child_->modifiedStack_.template Bottom<ModificationEntry>();
-    for (SizeType i = 0; i < N; i++, it++) {
-      if (it->before.StartsWith(p))
-	RecordModified(*it, "steal");
+    if (extend_child_ && !extend_child_->modifiedStack_.Empty()) {
+      SizeType N = (SizeType)(extend_child_->modifiedStack_.GetSize() / sizeof(ModificationEntry));
+      ModificationEntry* it = extend_child_->modifiedStack_.template Bottom<ModificationEntry>();
+      for (SizeType i = 0; i < N; i++, it++) {
+	if (it->before.StartsWith(p))
+	  RecordModified(*it, "steal");
+      }
     }
   }
   void PopModified() {
@@ -3046,16 +3057,17 @@ private:
     return const_cast<GenericNormalizedDocument&>(*this).CurrentValue();
   }
   ValueType* CurrentValue() {
+    ValueType* out = nullptr;
     if (extending_ && !appending_) {
       RAPIDJSON_ASSERT(!valueStack_.Empty());
       if (!valueStack_.Empty())
-	return valueStack_.template Top<ValueEntry>()->val;
+	out = valueStack_.template Top<ValueEntry>()->val;
     } else {
       RAPIDJSON_ASSERT(document_.StackSize() > 0);
       if (document_.StackSize() != 0)
-	return document_.StackTop();
+	out = document_.StackTop();
     }
-    return nullptr; // GCOVR_EXCL_LINE
+    return out;
   }
   bool CurrentModified() {
     return (extending_ && !appending_ && !valueStack_.Empty() &&
@@ -4637,9 +4649,8 @@ public:
   bool YggdrasilString(Context& context, const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema) const {
     RAPIDJSON_ASSERT(schema.IsObject());
     RAPIDJSON_NORMALIZER_(YggdrasilString, str, length, copy, schema);
-    if (!CheckRequiredSchemaProperty(context, schema, GetTypeString()))
-      return false;
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetTypeString());
+    RAPIDJSON_ASSERT(vs != schema.MemberEnd());
     const ValueType v(vs->value.GetString(), vs->value.GetStringLength());
     if ((v == GetScalarString()) &&
 	(yggtype_ & (1 << kYggScalarSchemaType))) {
@@ -4674,9 +4685,8 @@ public:
   bool YggdrasilStartObject(Context& context, YggSchemaValueType& schema) const {
     RAPIDJSON_ASSERT(schema.IsObject());
     RAPIDJSON_NORMALIZER_(YggdrasilStartObject, schema);
-    if (!CheckRequiredSchemaProperty(context, schema, GetTypeString()))
-      return false;
     const typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetTypeString());
+    RAPIDJSON_ASSERT(vs != schema.MemberEnd());
     const ValueType v(vs->value.GetString(), vs->value.GetStringLength());
     if ((isMetaschema_ &&
 	 !((v == GetPythonInstanceString()) || (v == GetSchemaString()))) ||
@@ -4975,7 +4985,9 @@ public:
 	    case kNormalizeErrorConflictingAliases:     return GetAliasesString();
 	    case kNormalizeErrorMergeConflict:          return GetNormalizationString();
 	    case kDeprecatedWarning:                    return GetDeprecatedString();
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 	    case kValidateErrorGeneric:                 return GetGenericString();
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 #endif // RAPIDJSON_YGGDRASIL
 
             default:                                    return GetNullString();
@@ -5076,7 +5088,9 @@ public:
     RAPIDJSON_STRING_(Uint64, 'u', 'i', 'n', 't', '6', '4')
     RAPIDJSON_STRING_(YggdrasilObject, 'y', 'g', 'g', 'O', 'b', 'j', 'e', 'c', 't')
     RAPIDJSON_STRING_(YggdrasilString, 'y', 'g', 'g', 'S', 't', 'r', 'i', 'n', 'g')
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     RAPIDJSON_STRING_(Generic, 'g', 'e', 'n', 'e', 'r', 'i', 'c')
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     RAPIDJSON_STRING_(RelativeUp, '.', '.')
     RAPIDJSON_STRING_(Wildcard, '.', '*')
 #endif // RAPIDJSON_YGGDRASIL
@@ -5327,22 +5341,24 @@ protected:
 			 x.GetTokens()[i].length * sizeof(Ch)) == 0))
 	  continue;
 	RegexType* patternReg = CreatePattern(SValue(pattern.GetTokens()[i].name, pattern.GetTokens()[i].length).Move());
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 	if (!patternReg) {
 	  std::cerr << "PointerMatches: Invalid pattern \"" << pattern.GetTokens()[i].name << "\"" << std::endl;
 	  out = false;
 	  break;
-	} else {
-	  bool match = IsPatternMatch(patternReg,
-				      x.GetTokens()[i].name,
-				      x.GetTokens()[i].length);
+	}
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+	RAPIDJSON_ASSERT(patternReg);
+	bool match = IsPatternMatch(patternReg,
+				    x.GetTokens()[i].name,
+				    x.GetTokens()[i].length);
 #if RAPIDJSON_SCHEMA_HAS_REGEX
-	  patternReg->~RegexType();
-	  AllocatorType::Free(patternReg);
+	patternReg->~RegexType();
+	AllocatorType::Free(patternReg);
 #endif
-	  if (!match) {
-	    out = false;
-	    break;
-	  }
+	if (!match) {
+	  out = false;
+	  break;
 	}
       }
       return out;
@@ -5879,11 +5895,7 @@ protected:
 						    hasRegex,
 						    &invalidToken,
 						    allocator);
-	if (invalidToken != (schemaPtr.GetTokenCount() + 1)) {
-	  std::cerr << "SharedPropertyBase: Error converting schema pointer to instance, failed at token " << invalidToken << " of \"";
-	  NormalizedDocumentType::DisplayPointer(schemaPtr);
-	  std::cerr << "\"" << std::endl;
-	}
+	RAPIDJSON_ASSERT(invalidToken == (schemaPtr.GetTokenCount() + 1));
       }
       ~SharedPropertyBase() {
 	if (ownProperties && properties) {
@@ -5905,17 +5917,20 @@ protected:
 	  std::cerr << name.GetString();
 	}
 	const SValue* GetDefault() const {
+	  const SValue* out = 0;
 	  if (base && base->schema)
-	    return base->schema->GetDefaultValue();
-	  return 0;
+	    out = base->schema->GetDefaultValue();
+	  return out;
 	}
 	SValue name;
 	Property* base;
 	bool inSource;
       };
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       void Display() const {
 	NormalizedDocumentType::DisplayPointer(schemaPtr);
       }
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       void AddPropertiesRef(SharedPropertyBase* parent) {
 	RAPIDJSON_ASSERT(parent->properties && !properties);
 	ownProperties = false;
@@ -6472,153 +6487,6 @@ protected:
       InstanceEntry* currentInstance;
       internal::Stack<AllocatorType> instances;
     };
-#define NESTED_FUNCTION_CALL_APPEND(method, ptr, path, var, name, ...)	\
-    if (var.schemas) {							\
-      PointerType varPath = path.Append(Get ## name ## String().GetString(), \
-					Get ## name ## String().GetStringLength(), \
-					allocator_);			\
-      for (SizeType i = 0; i < var.count; i++)				\
-	method(ptr, varPath.Append(i, allocator_), __VA_ARGS__,		\
-	       var.schemas[i], true);					\
-    }
-#define NESTED_FUNCTION_CALL(method, ptr, path, ...)			\
-    if (ptr.GetTokenCount() > 0) {					\
-      RAPIDJSON_ASSERT(!(ptr.GetTokens()[0].length == 2 &&		\
-			 ptr.GetTokens()[0].name[0] == '.' &&		\
-			 ptr.GetTokens()[0].name[1] == '.'));		\
-      if (ptr.GetTokens()[0].length == 2 &&				\
-	  ptr.GetTokens()[0].name[0] == '.' &&				\
-	  ptr.GetTokens()[0].name[1] == '.') {				\
-	std::cerr << #method << ": parent disallowed" << std::endl;	\
-	return;								\
-      }									\
-    }									\
-    NESTED_FUNCTION_CALL_APPEND(method, ptr, path, allOf_, AllOf,	\
-				__VA_ARGS__);				\
-    NESTED_FUNCTION_CALL_APPEND(method, ptr, path, anyOf_, AnyOf,	\
-				__VA_ARGS__);				\
-    NESTED_FUNCTION_CALL_APPEND(method, ptr, path, oneOf_, OneOf,	\
-				__VA_ARGS__);				\
-    if (allowSingularSchema_.schemas) {					\
-      method(ptr, path, __VA_ARGS__, allowSingularSchema_.schemas[0], true); \
-      if (false) {							\
-      if (allowSingular_) {						\
-	if (type_ & (1 << kArraySchemaType)) {				\
-	  PointerType itemsPath = path.Append(GetItemsString().GetString(), \
-					      GetItemsString().GetStringLength(), \
-					      allocator_);		\
-	  if (itemsList_) {						\
-	    method(ptr, itemsPath,					\
-		   __VA_ARGS__, allowSingularSchema_.schemas[1], true);	\
-	  } else if (itemsTuple_) {					\
-	    method(ptr, itemsPath.Append(0, allocator_),		\
-		   __VA_ARGS__, allowSingularSchema_.schemas[1], true);	\
-	  }								\
-	}								\
-	if (type_ & (1 << kObjectSchemaType)) {				\
-	  PointerType propertiesPath = path.Append(GetPropertiesString().GetString(), \
-						   GetPropertiesString().GetStringLength(), \
-						   allocator_);		\
-	  method(ptr, propertiesPath.Append(allowSingularSchema_.schemas[1]->parentKey_.GetString(), \
-					    allowSingularSchema_.schemas[1]->parentKey_.GetStringLength(), \
-					    allocator_),		\
-		 __VA_ARGS__, allowSingularSchema_.schemas[1], true);	\
-	}								\
-      } else {								\
-	method(ptr, path.Append(GetAllowSingularString().GetString(),	\
-				GetAllowSingularString().GetStringLength(), \
-				allocator_),				\
-	       __VA_ARGS__, allowSingularSchema_.schemas[1], true);	\
-      }									\
-      }									\
-    }									\
-    if (ptr.GetTokenCount() > 0) {					\
-      SizeType index;							\
-      ValueType name;							\
-      if (ptr.GetTokens()[0].index == kPointerInvalidIndex)		\
-	name.SetString(ptr.GetTokens()[0].name,				\
-		       ptr.GetTokens()[0].length);			\
-      else								\
-	name.SetUint(ptr.GetTokens()[0].index);				\
-      if (name.IsString()) {						\
-	bool patternMatched = false;					\
-	if (patternProperties_) {					\
-	  PointerType patternPath = path.Append(GetPatternPropertiesString().GetString(), \
-						GetPatternPropertiesString().GetStringLength(),	\
-						allocator_);		\
-	  for (SizeType i = 0; i < patternPropertyCount_; i++) {	\
-	    if (patternProperties_[i].pattern &&			\
-		IsPatternMatch(patternProperties_[i].pattern,		\
-			       name.GetString(),			\
-			       name.GetStringLength())) {		\
-	      method(ptr, patternPath.Append(name.GetString(),		\
-					     name.GetStringLength(),	\
-					     allocator_),		\
-		     __VA_ARGS__, patternProperties_[i].schema);	\
-	      patternMatched = true;					\
-	    }								\
-	  }								\
-	}								\
-	PointerType propertiesPath = path.Append(GetPropertiesString().GetString(), \
-						 GetPropertiesString().GetStringLength(), \
-						 allocator_);		\
-	if (properties_ && FindPropertyIndex(name, &index))		\
-	  method(ptr, propertiesPath.Append(name.GetString(),		\
-					    name.GetStringLength(),	\
-					    allocator_),		\
-		 __VA_ARGS__, properties_[index].schema);		\
-	else if (additionalPropertiesSchema_)				\
-	  method(ptr, path.Append(GetAdditionalPropertiesString().GetString(), \
-				  GetAdditionalPropertiesString().GetStringLength(), \
-				  allocator_),				\
-		 __VA_ARGS__, additionalPropertiesSchema_);		\
-	else if (itemsList_ && (name == GetWildcardString()))		\
-	  method(ptr, path.Append(GetItemsString().GetString(),		\
-				  GetItemsString().GetStringLength(),	\
-				  allocator_),				\
-		 __VA_ARGS__, itemsList_);				\
-	else if (additionalItemsSchema_ && (name == GetWildcardString())) \
-	  method(ptr, path.Append(GetAdditionalItemsString().GetString(), \
-				  GetAdditionalItemsString().GetStringLength(),	\
-				  allocator_),				\
-		 __VA_ARGS__, additionalItemsSchema_);			\
-	else if (!patternMatched) {					\
-	  std::cerr << #method << ": Failed to find child property: " << name.GetString() << ", "; \
-	  NormalizedDocumentType::DisplayPointer(ptr);			\
-	  std::cerr << std::endl;					\
-	  return;							\
-	}								\
-      } else {								\
-	PointerType itemsPath = path.Append(GetItemsString().GetString(), \
-					    GetItemsString().GetStringLength(), \
-					    allocator_);		\
-	if (itemsList_)							\
-	  method(ptr, itemsPath, __VA_ARGS__, itemsList_);		\
-	else if (itemsTuple_ && name.GetUint() < itemsTupleCount_)	\
-	  method(ptr, itemsPath.Append(name.GetUint(), allocator_),	\
-		 __VA_ARGS__, itemsTuple_[name.GetUint()]);		\
-	else if (additionalItemsSchema_)				\
-	  method(ptr, path.Append(GetAdditionalItemsString().GetString(), \
-				  GetAdditionalItemsString().GetStringLength(),	\
-				  allocator_),				\
-		 __VA_ARGS__, additionalItemsSchema_);			\
-	else {								\
-	  std::cerr << #method << ": Failed to find child item: " << name.GetUint() << ", "; \
-	  NormalizedDocumentType::DisplayPointer(ptr);			\
-	  std::cerr << std::endl;					\
-	  return;							\
-	}								\
-      }									\
-      return;								\
-    }
-#define NESTED_FUNCTION_CALL_VERBOSE(method, ptr, path, ...)		\
-    std::cerr << #method << " [";					\
-    NormalizedDocumentType::DisplayPointer(ptr);			\
-    std::cerr << "]: ";							\
-    NormalizedDocumentType::DisplayPointer(path);			\
-    std::cerr << std::endl;						\
-    NESTED_FUNCTION_CALL(method, ptr, path, __VA_ARGS__)
-    
     void GetUniqueSharedProperties(const ValueType* v, SValue& dest,
 				   bool push=false,
 				   const ValueType* key0=nullptr) {
@@ -6667,14 +6535,23 @@ protected:
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       return kPointerOrderNull;
     }
-    void AddSharedPropertyLink(const PointerType p,
+#define NESTED_FUNCTION_CALL_APPEND(method, ptr, path, var, name, ...)	\
+    if (var.schemas) {							\
+      PointerType varPath = path.Append(Get ## name ## String().GetString(), \
+					Get ## name ## String().GetStringLength(), \
+					allocator_);			\
+      for (SizeType i = 0; i < var.count; i++)				\
+	method(ptr, varPath.Append(i, allocator_), __VA_ARGS__,		\
+	       var.schemas[i], true);					\
+    }
+    void AddSharedPropertyLink(const PointerType ptr,
 			       const PointerType path,
 			       SharedProperty* sharedProp,
 			       const SchemaType* childSchema=nullptr,
 			       bool parallelSchema=false) {
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       std::cerr << "AddSharedPropertyLink: ";
-      NormalizedDocumentType::DisplayPointer(p);
+      NormalizedDocumentType::DisplayPointer(ptr);
       std::cerr << ", ";
       NormalizedDocumentType::DisplayPointer(path);
       std::cerr << " [";
@@ -6683,26 +6560,170 @@ protected:
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       if (childSchema) {
 	if (parallelSchema) {
-	  const_cast<SchemaType*>(childSchema)->AddSharedPropertyLink(p,
+	  const_cast<SchemaType*>(childSchema)->AddSharedPropertyLink(ptr,
 								      path,
 								      sharedProp,
 								      nullptr,
 								      true);
 	} else {
-	  PointerType p_up = p.Remove(0, allocator_);
+	  PointerType p_up = ptr.Remove(0, allocator_);
 	  const_cast<SchemaType*>(childSchema)->AddSharedPropertyLink(p_up,
 								      path,
 								      sharedProp);
 	}
 	return;
       }
-      NESTED_FUNCTION_CALL(AddSharedPropertyLink, p, path, sharedProp);
+      /// NESTED SECTION
+      if (ptr.GetTokenCount() > 0) {
+	RAPIDJSON_ASSERT(!(ptr.GetTokens()[0].length == 2 &&
+			   ptr.GetTokens()[0].name[0] == '.' &&
+			   ptr.GetTokens()[0].name[1] == '.'));
+	if (ptr.GetTokens()[0].length == 2 &&
+	    ptr.GetTokens()[0].name[0] == '.' &&
+	    ptr.GetTokens()[0].name[1] == '.') {
+	  std::cerr << "AddSharedPropertyLink: parent disallowed" << std::endl;
+	  return;
+	}
+      }
+      NESTED_FUNCTION_CALL_APPEND(AddSharedPropertyLink, ptr, path,
+				  allOf_, AllOf, sharedProp);
+      NESTED_FUNCTION_CALL_APPEND(AddSharedPropertyLink, ptr, path,
+				  anyOf_, AnyOf, sharedProp);
+      NESTED_FUNCTION_CALL_APPEND(AddSharedPropertyLink, ptr, path,
+				  oneOf_, OneOf, sharedProp);
+      if (allowSingularSchema_.schemas) {
+	AddSharedPropertyLink(ptr, path, sharedProp,
+			      allowSingularSchema_.schemas[0], true);
+	// if (false) {
+	//   if (allowSingular_) {
+	//     if (type_ & (1 << kArraySchemaType)) {
+	//       PointerType itemsPath = path.Append(GetItemsString().GetString(),
+	// 					  GetItemsString().GetStringLength(),
+	// 					  allocator_);
+	//       if (itemsList_) {
+	// 	AddSharedPropertyLink(ptr, itemsPath, sharedProp,
+	// 			      allowSingularSchema_.schemas[1], true);
+	//       } else if (itemsTuple_) {
+	// 	AddSharedPropertyLink(ptr, itemsPath.Append(0, allocator_),
+	// 			      sharedProp, allowSingularSchema_.schemas[1], true);
+	//       }
+	//     }
+	//     if (type_ & (1 << kObjectSchemaType)) {
+	//       PointerType propertiesPath = path.Append(GetPropertiesString().GetString(),
+	// 					       GetPropertiesString().GetStringLength(),
+	// 					       allocator_);
+	//       AddSharedPropertyLink(ptr, propertiesPath.Append(allowSingularSchema_.schemas[1]->parentKey_.GetString(),
+	// 						       allowSingularSchema_.schemas[1]->parentKey_.GetStringLength(),
+	// 						       allocator_),
+	// 			    sharedProp, allowSingularSchema_.schemas[1], true);
+	//     }
+	//   } else {
+	//     AddSharedPropertyLink(ptr, path.Append(GetAllowSingularString().GetString(),
+	// 					   GetAllowSingularString().GetStringLength(),
+	// 					   allocator_),
+	// 			  sharedProp, allowSingularSchema_.schemas[1], true);
+	//   }
+	// }
+      }
+      if (ptr.GetTokenCount() > 0) {
+	SizeType index;
+	ValueType name;
+	if (ptr.GetTokens()[0].index == kPointerInvalidIndex)
+	  name.SetString(ptr.GetTokens()[0].name,
+			 ptr.GetTokens()[0].length);
+	else
+	  name.SetUint(ptr.GetTokens()[0].index);
+	if (name.IsString()) {
+	  bool patternMatched = false;
+	  if (patternProperties_) {
+	    PointerType patternPath = path.Append(GetPatternPropertiesString().GetString(),
+						  GetPatternPropertiesString().GetStringLength(),
+						  allocator_);
+	    for (SizeType i = 0; i < patternPropertyCount_; i++) {
+	      if (patternProperties_[i].pattern &&
+		  IsPatternMatch(patternProperties_[i].pattern,
+				 name.GetString(),
+				 name.GetStringLength())) {
+		AddSharedPropertyLink(ptr,
+				      patternPath.Append(name.GetString(),
+							 name.GetStringLength(),
+							 allocator_),
+				      sharedProp, patternProperties_[i].schema);
+		patternMatched = true;
+	      }
+	    }
+	  }
+	  PointerType propertiesPath = path.Append(GetPropertiesString().GetString(),
+						   GetPropertiesString().GetStringLength(),
+						   allocator_);
+	  if (properties_ && FindPropertyIndex(name, &index))
+	    AddSharedPropertyLink(ptr,
+				  propertiesPath.Append(name.GetString(),
+							name.GetStringLength(),
+							allocator_),
+				  sharedProp, properties_[index].schema);
+	  else if (additionalPropertiesSchema_)
+	    AddSharedPropertyLink(ptr,
+				  path.Append(GetAdditionalPropertiesString().GetString(),
+					      GetAdditionalPropertiesString().GetStringLength(),
+					      allocator_),
+				  sharedProp, additionalPropertiesSchema_);
+	  else if (itemsList_ && (name == GetWildcardString()))
+	    AddSharedPropertyLink(ptr,
+				  path.Append(GetItemsString().GetString(),
+					      GetItemsString().GetStringLength(),
+					      allocator_),
+				  sharedProp, itemsList_);
+	  else if (additionalItemsSchema_ && (name == GetWildcardString()))
+	    AddSharedPropertyLink(ptr,
+				  path.Append(GetAdditionalItemsString().GetString(),
+					      GetAdditionalItemsString().GetStringLength(),
+					      allocator_),
+				  sharedProp, additionalItemsSchema_);
+	  else if (!patternMatched) {
+	    std::cerr << "AddSharedPropertyLink: Failed to find child property: " << name.GetString() << ", ";
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+	    NormalizedDocumentType::DisplayPointer(ptr);
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+	    std::cerr << std::endl;
+	    return;
+	  }
+	} else {
+	  PointerType itemsPath = path.Append(GetItemsString().GetString(),
+					      GetItemsString().GetStringLength(),
+					      allocator_);
+	  if (itemsList_)
+	    AddSharedPropertyLink(ptr, itemsPath, sharedProp, itemsList_);
+	  else if (itemsTuple_ && name.GetUint() < itemsTupleCount_)
+	    AddSharedPropertyLink(ptr,
+				  itemsPath.Append(name.GetUint(),
+						   allocator_),
+				  sharedProp, itemsTuple_[name.GetUint()]);
+	  else if (additionalItemsSchema_)
+	    AddSharedPropertyLink(ptr,
+				  path.Append(GetAdditionalItemsString().GetString(),
+					      GetAdditionalItemsString().GetStringLength(),
+				  allocator_),
+				  sharedProp, additionalItemsSchema_);
+	  else {
+	    std::cerr << "AddSharedPropertyLink: Failed to find child item: " << name.GetUint() << ", ";
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+	    NormalizedDocumentType::DisplayPointer(ptr);
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+	    std::cerr << std::endl;
+	    return;
+	  }
+	}
+	return;
+      }
+      /// NESTED SECTION
       if (allowSingularSchema_.schemas)
 	return;
       if (!sharedProperties_)
 	sharedProperties_ = new SharedPropertiesType();
       sharedProperties_->AddOtherProperty(this, sharedProp, path);
     }
+#undef NESTED_FUNCTION_CALL_APPEND
     static PointerType SchemaPointer2InstancePointer(const PointerType& p,
 						     bool& hasRegex,
 						     size_t* unresolvedTokenIndex = 0,
@@ -7047,9 +7068,6 @@ protected:
 	sharedProperties_->AddLocalProperty(this, key, v, push);
       }
     }
-#undef NESTED_FUNCTION_CALL_VERBOSE
-#undef NESTED_FUNCTION_CALL
-#undef NESTED_FUNCTION_CALL_APPEND
 #endif // RAPIDJSON_YGGDRASIL
 
     AllocatorType* allocator_;
@@ -8269,8 +8287,9 @@ public:
       MergeError(sharedError);
       return static_cast<ValidateErrorCode>(vcode->value.GetUint());
     }
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     void GenericError(const char* str) {
-      // std::cerr << "GenericError: " << str << std::endl;
+      std::cerr << "GenericError: " << str << std::endl;
       currentError_.SetObject();
       std::basic_string<Ch> msg = units::convert_chars<UTF8<char>, EncodingType>(std::basic_string<char>(str));
       currentError_.AddMember(GetMessageString(),
@@ -8279,6 +8298,7 @@ public:
 			      GetStateAllocator());
       AddCurrentError(kValidateErrorGeneric);
     }
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 #endif // RAPIDJSON_YGGDRASIL
     void PropertyViolations(ISchemaValidator** subvalidators, SizeType count) {
         for (SizeType i = 0; i < count; ++i)

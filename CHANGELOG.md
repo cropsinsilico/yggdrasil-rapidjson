@@ -13,7 +13,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Support for numpy bytes/unitcode scalars arrays
 * Add test for conflicting aliases in allOf set
 * Add test for array of strings & complex
-* Test void Missing( with source
+* Test void Missing( with source / test for AddMissingObject on local
+* Test failures in anyOf, oneOf, metaschema, instance, allowSingular nested schemas
+* Tests for shared properties by schema path with patternProperties, additionalProperties, items (with index), additionalItems, allowSingular
+* Test for shared property with invalid schema path
 
 ### IN PROGRESS
 * Add docstrings to new methods

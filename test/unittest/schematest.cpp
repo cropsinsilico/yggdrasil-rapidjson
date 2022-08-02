@@ -244,9 +244,12 @@ TEST(SchemaValidator, Hasher) {
     e.Parse(warning);\
     if (validator.GetWarning() != e) {\
         StringBuffer sb;\
-        Writer<StringBuffer> w(sb);\
+        PrettyWriter<StringBuffer> w(sb);		\
         validator.GetWarning().Accept(w);\
-        printf("GetWarning() Expected: %s Actual: %s\n", warning, sb.GetString());\
+	StringBuffer sb_e;\
+	PrettyWriter<StringBuffer> w_e(sb_e);\
+	e.Accept(w_e);\
+        printf("GetWarning() Expected: %s Actual: %s\n", sb_e.GetString(), sb.GetString()); \
         ADD_FAILURE();\
     }\
 }
@@ -1999,6 +2002,22 @@ TEST(SchemaValidator, InvalidSchema) {
     SchemaDocument s(sd);
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOlsyLDNdLCJ1bml0cyI6ImcifQ==-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEAAAAAAAAAQQAAAAAAAABZA-YGG-\"", true);
   }
+  { // array invalid type
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"integer\""
+        "}");
+    SchemaDocument s(sd);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOlsyLDNdLCJ1bml0cyI6ImcifQ==-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEAAAAAAAAAQQAAAAAAAABZA-YGG-\"",
+	       "", "type", "",
+	       "{ \"type\": {"
+	       "    \"expected\": [ \"integer\" ],"
+	       "    \"actual\": \"ndarray\","
+	       "    \"errorCode\": 20,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\""
+	       "}}");
+  }
 }
 
 TEST(SchemaValidator, PythonClass) { // 31
@@ -2478,6 +2497,76 @@ TEST(SchemaValidator, DeprecatingBool) {
 		   "    \"schemaRef\": \"#/properties/deprecated\""
 		   "  }"
 		   "}")
+}
+
+TEST(SchemaValidator, DeprecatingArray) {
+  Document sd;
+  sd.Parse("{"
+	   "  \"type\": \"object\","
+	   "  \"allOf\": ["
+	   "    {"
+	   "      \"properties\": {"
+	   "         \"deprecated\": {"
+	   "            \"type\": \"string\","
+	   "            \"deprecated\": true},"
+	   "         \"valid\": {"
+	   "            \"type\": \"integer\"}"
+	   "      }"
+	   "    },"
+	   "    {"
+	   "      \"allOf\": ["
+	   "        {"
+	   "          \"properties\": {"
+	   "             \"deprecated2\": {"
+	   "                \"type\": \"string\","
+	   "                \"deprecated\": true}"
+	   "          }"
+	   "        },"
+	   "        {"
+	   "          \"properties\": {"
+	   "             \"deprecated3\": {"
+	   "                \"type\": \"string\","
+	   "                \"deprecated\": true}"
+	   "          }"
+	   "        }"
+	   "      ]"
+	   "    }"
+	   "  ]"
+	   "}");
+  SchemaDocument s(sd);
+  VALIDATE_WARNING(s, "{\"deprecated\": \"string\", \"valid\": 0, \"deprecated2\": \"string\"}",
+		   "", "warnings", "",
+		   "{ \"deprecated\": ["
+		   "  {"
+		   "    \"errorCode\": 39,"
+		   "    \"instanceRef\": \"#/deprecated\","
+		   "    \"schemaRef\": \"#/allOf/0/properties/deprecated\""
+		   "  },"
+		   "  {"
+		   "    \"errorCode\": 39,"
+		   "    \"instanceRef\": \"#/deprecated2\","
+		   "    \"schemaRef\": \"#/allOf/1/allOf/0/properties/deprecated2\""
+		   "  }"
+		   "]}")
+  VALIDATE_WARNING(s, "{\"deprecated\": \"string\", \"valid\": 0, \"deprecated2\": \"string\", \"deprecated3\": \"string\"}",
+		   "", "warnings", "",
+		   "{ \"deprecated\": ["
+		   "  {"
+		   "    \"errorCode\": 39,"
+		   "    \"instanceRef\": \"#/deprecated\","
+		   "    \"schemaRef\": \"#/allOf/0/properties/deprecated\""
+		   "  },"
+		   "  {"
+		   "    \"errorCode\": 39,"
+		   "    \"instanceRef\": \"#/deprecated2\","
+		   "    \"schemaRef\": \"#/allOf/1/allOf/0/properties/deprecated2\""
+		   "  },"
+		   "  {"
+		   "    \"errorCode\": 39,"
+		   "    \"instanceRef\": \"#/deprecated3\","
+		   "    \"schemaRef\": \"#/allOf/1/allOf/1/properties/deprecated3\""
+		   "  }"
+		   "]}")
 }
 
 #endif // RAPIDJSON_YGGDRASIL
