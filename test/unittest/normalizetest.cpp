@@ -247,44 +247,41 @@ TEST(SchemaNormalizer, BaseTypes) {
     sd.Parse(
         "{"
 	"  \"type\": \"object\","
-	"  \"properties\": {"
-	"    \"a\": {\"type\": \"null\"},"
-	"    \"b\": {\"type\": \"boolean\"},"
-	"    \"c\": {\"type\": \"integer\"},"
-	"    \"d\": {\"type\": \"integer\"},"
-	"    \"e\": {\"type\": \"integer\"},"
-	"    \"f\": {\"type\": \"integer\"},"
-	"    \"g\": {\"type\": \"number\"},"
-	"    \"h\": {\"type\": \"string\"},"
-	"    \"i\": {\"type\": \"array\","
-	"            \"items\": {\"type\": \"integer\"}},"
-	"    \"j\": {\"type\": \"object\","
-	"            \"additionalProperties\": {\"type\": \"integer\"}}"
-	"  }"
+	"  \"allOf\": ["
+	"    {"
+	"      \"properties\": {"
+	"        \"a\": {\"type\": \"null\"},"
+	"        \"b\": {\"type\": \"boolean\"},"
+	"        \"c\": {\"type\": \"integer\"},"
+	"        \"d\": {\"type\": \"integer\"},"
+	"        \"e\": {\"type\": \"integer\"},"
+	"        \"f\": {\"type\": \"integer\"},"
+	"        \"g\": {\"type\": \"number\"},"
+	"        \"h\": {\"type\": \"string\"},"
+	"        \"i\": {\"type\": \"array\","
+	"                \"items\": {\"type\": \"integer\"}},"
+	"        \"j\": {\"type\": \"object\","
+	"                \"additionalProperties\": {\"type\": \"integer\"}}"
+	"      }"
+	"    },"
+        "    {"
+	"      \"properties\": {"
+	"        \"k\": {\"type\": \"scalar\", \"subtype\": \"uint\","
+	"                \"precision\": 1},"
+	"        \"l\": {\"type\": \"function\"},"
+	"        \"m\": {\"type\": \"instance\"},"
+	"        \"n\": {\"type\": \"schema\"},"
+	"        \"o\": {\"type\": \"1darray\", \"subtype\": \"float\","
+	"                \"precision\": 8, \"length\": 4},"
+	"        \"p\": {\"type\": \"ndarray\", \"subtype\": \"float\","
+	"                \"precision\": 4, \"shape\": [2, 3]}"
+	"      }"
+	"    }"
+	"  ]"
 	"}");
     SchemaDocument s(sd);
-    NO_NORMALIZE(s, "{ \"a\": null, \"b\": false, \"c\": -1, \"d\": -9223372036854775808, \"e\": 9223372036854775807, \"f\": 1, \"g\": 3.583, \"h\": \"foo\", \"i\": [ 2, 4, 8 ], \"j\": { \"x\": 2, \"y\": 7, \"z\": -1} }");
-}
-
-TEST(SchemaNormalizer, YggdrasilTypes) {
-    Document sd;
-    sd.Parse(
-        "{"
-	"  \"type\": \"object\","
-	"  \"properties\": {"
-	"    \"k\": {\"type\": \"scalar\", \"subtype\": \"uint\","
-	"            \"precision\": 1},"
-	"    \"l\": {\"type\": \"function\"},"
-	"    \"m\": {\"type\": \"instance\"},"
-	"    \"n\": {\"type\": \"schema\"},"
-	"    \"o\": {\"type\": \"1darray\", \"subtype\": \"float\","
-	"            \"precision\": 8, \"length\": 4},"
-	"    \"p\": {\"type\": \"ndarray\", \"subtype\": \"float\","
-	"            \"precision\": 4, \"shape\": [2, 3]}"
-	"  }"
-	"}");
-    SchemaDocument s(sd);
-    NO_NORMALIZE(s, "{ \"k\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\", "
+    NO_NORMALIZE(s, "{ \"a\": null, \"b\": false, \"c\": -1, \"d\": -9223372036854775808, \"e\": 9223372036854775807, \"f\": 1, \"g\": 3.583, \"h\": \"foo\", \"i\": [ 2, 4, 8 ], \"j\": { \"x\": 2, \"y\": 7, \"z\": -1}, "
+		 "\"k\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\", "
 		 "\"l\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\", "
 		 "\"m\": \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\", "
 		 "\"n\": \"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\", "
@@ -358,34 +355,155 @@ TEST(SchemaNormalizer, InvalidDefault) {
 		     "}}");
 }
 
-TEST(SchemaNormalizer, Merge) {
+TEST(SchemaNormalizer, MergeAllOf) {
+    // TODO: Allow normalization when aliases not in base schema
     Document sd;
     sd.Parse(
         "{"
         "  \"type\": \"object\","
 	"  \"allOf\": ["
         "    { \"properties\": {"
-	"        \"field_names\": {"
-	"          \"type\": \"array\","
-	"          \"items\": { \"type\": \"string\" },"
-	"          \"aliases\": [ \"column_names\" ]"
-	"        }}"
+	"        \"field\": {"
+	"          \"type\": \"string\","
+	"          \"default\": \"b\","
+	"          \"aliases\": [ \"column\" ]"
+	"        }"
+	"      },"
+	"      \"required\": [\"field\"]"
 	"    },"
         "    { \"properties\": {"
-	"        \"field_names\": {"
-	"          \"type\": \"array\","
-	"          \"items\": { \"type\": \"string\" },"
-	"          \"aliases\": [ \"column_names\" ]"
-	"        }}"
+	"        \"field\": {"
+	"          \"type\": \"string\","
+	"          \"default\": \"c\","
+	"          \"aliases\": [ \"column\" ]"
+	"        }"
+	"      },"
+	"      \"required\": [\"field\"]"
 	"    }"
 	"  ]"
         "}");
     SchemaDocument s(sd);
     NORMALIZE(s,
-	      "{\"column_names\": [\"a\", \"b\"]}",
+	      "{\"column\": \"foo\"}",
 	      true,
-	      "{\"field_names\": [\"a\", \"b\"]}");
-    NO_NORMALIZE(s, "{\"field_names\": [\"a\", \"b\"]}");
+	      "{\"field\": \"foo\"}");
+    NO_NORMALIZE(s, "{\"field\": \"foo\"}");
+    FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",
+		     "/field",
+		     "{ \"normalization\": {"
+		     "    \"errorCode\": 37,"
+		     "    \"instanceRef\": \"#/field\","
+		     "    \"schemaRef\": \"#/allOf/1\","
+		     "    \"conflicting\": \"string\","
+		     "    \"expected\": \"b\","
+		     "    \"actual\": \"c\""
+		     "}}");
+}
+
+TEST(SchemaNormalizer, MergeAnyOf) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"field\": {"
+	"      \"default\": \"a\","
+	"      \"aliases\": [ \"column\" ]"
+	"    }"
+	"  },"
+	"  \"required\": [\"field\"],"
+	"  \"anyOf\": ["
+        "    { \"properties\": {"
+	"        \"field\": {"
+	"          \"type\": \"string\","
+	"          \"default\": \"b\","
+	"          \"aliases\": [ \"column\" ]"
+	"        }"
+	"      },"
+	"      \"required\": [\"field\"]"
+	"    },"
+        "    { \"properties\": {"
+	"        \"field\": {"
+	"          \"type\": \"string\","
+	"          \"default\": \"c\","
+	"          \"aliases\": [ \"column\" ]"
+	"        }"
+	"      },"
+	"      \"required\": [\"field\"]"
+	"    }"
+	"  ]"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "{\"column\": \"foo\"}",
+	      true,
+	      "{\"field\": \"foo\"}");
+    NO_NORMALIZE(s, "{\"field\": \"foo\"}");
+    FAILED_NORMALIZE(s, "{}", "/anyOf/0", "normalization",
+		     "/field",
+		     "{ \"normalization\": {"
+		     "    \"errorCode\": 37,"
+		     "    \"instanceRef\": \"#/field\","
+		     "    \"schemaRef\": \"#/anyOf/0\","
+		     "    \"conflicting\": \"string\","
+		     "    \"expected\": \"a\","
+		     "    \"actual\": \"b\""
+		     "}}");
+}
+
+TEST(SchemaNormalizer, MergeOneOf) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+        "    \"field\": {"
+	"      \"default\": \"a\","
+	"      \"aliases\": [ \"column\" ]"
+	"    }"
+	"  },"
+	"  \"required\": [\"field\"],"
+	"  \"oneOf\": ["
+        "    { \"properties\": {"
+	"        \"field\": {"
+	"          \"type\": \"string\","
+	"          \"default\": \"b\","
+	"          \"aliases\": [ \"column\" ]"
+	"        }"
+	"      },"
+	"      \"required\": [\"field\"],"
+	"      \"additionalProperties\": false"
+	"    },"
+        "    { \"properties\": {"
+	"        \"field\": {"
+	"          \"type\": \"string\","
+	"          \"default\": \"c\","
+	"          \"aliases\": [ \"column\" ]"
+	"        },"
+	"        \"color\": {"
+	"          \"type\": \"string\""
+	"        }"
+	"      },"
+	"      \"required\": [\"field\", \"color\"]"
+	"    }"
+	"  ]"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "{\"column\": \"foo\", \"color\": \"red\"}",
+	      true,
+	      "{\"field\": \"foo\", \"color\": \"red\"}");
+    NO_NORMALIZE(s, "{\"field\": \"foo\", \"color\": \"red\"}");
+    FAILED_NORMALIZE(s, "{}", "/oneOf/0", "normalization",
+		     "/field",
+		     "{ \"normalization\": {"
+		     "    \"errorCode\": 37,"
+		     "    \"instanceRef\": \"#/field\","
+		     "    \"schemaRef\": \"#/oneOf/0\","
+		     "    \"conflicting\": \"string\","
+		     "    \"expected\": \"a\","
+		     "    \"actual\": \"b\""
+		     "}}");
 }
 
 TEST(SchemaNormalizer, MergeConflict) {

@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add test for conflicting aliases in allOf set
 * Add test for array of strings & complex
 * Test void Missing( with source / test for AddMissingObject on local
-* Test failures in anyOf, oneOf, metaschema, instance, allowSingular nested schemas
+* Test failures in metaschema, instance, allowSingular nested schema normalization
 * Tests for shared properties by schema path with patternProperties, additionalProperties, items (with index), additionalItems, allowSingular
 * Test for shared property with invalid schema path
 

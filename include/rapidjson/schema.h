@@ -2600,7 +2600,9 @@ public:
       str = primary.GetString();
       copy = true;
     }
-    if (orig.IsString())
+    // Conflicting values for aliased objects will be reported as merge
+    //   errors unless primary is checked below
+    if (orig.IsString() && primary.IsString())
       PushKey(str, len, &orig);
     else
       PushKey(str, len);
