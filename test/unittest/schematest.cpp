@@ -1763,12 +1763,6 @@ TEST(SchemaValidator, Precision) { // 28
 	       "}}");
   }
   { // Array
-    uint16_t arr[2][3] = {{ 0u, 1u, 2u },
-			  { 3u, 4u, 5u }};
-    DISPLAY_STRING("x", (arr, "g"));
-    uint64_t arr2[2][3] = {{ 0u, 1u, 2u },
-			   { 3u, 4u, 5u }};
-    DISPLAY_STRING("y", (arr2, "g"));
     Document sd;
     sd.Parse(
         "{"
@@ -1812,10 +1806,6 @@ TEST(SchemaValidator, Units) { // 29
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoia2cifQ==-YGG-DA==-YGG-\"", true);
   }
   { // Array
-    uint16_t arr[] = { 0u, 1u, 2u };
-    DISPLAY_STRING("x", (arr, "g"));
-    DISPLAY_STRING("y", (arr, "cm"));
-    DISPLAY_STRING("z", (arr, "kg"));
     Document sd;
     sd.Parse(
         "{"
