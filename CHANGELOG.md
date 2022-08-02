@@ -12,12 +12,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add Python wrapper for obj & ply w/ interop to other classes
 * Support for numpy bytes/unitcode scalars arrays
 * Add test for conflicting aliases in allOf set
-* Add test for failed normalization of default in shared property
-* Normalize default outside of shared property
 * Add test for array of strings & complex
 * Add test for failed subtype on base scalar (e.g. double, int)
 * Add tests for missing schema properties (subtype, precision, shape), including on base scalar
 * Add test for validating ndarray without shape specified
+* Test with unique array elements with YggdrasilString and YggdrasilObject
+* Test void Missing( with source
 
 ### IN PROGRESS
 * Add docstrings to new methods

@@ -2049,7 +2049,15 @@ public:
 	  SizeType len = baseSchema->properties_[index].name.GetStringLength();
 	  if (!NormKey(context, *baseSchema, str, len, true))
 	    return false; // GCOVR_EXCL_LINE
-	  if (!Append(context, *baseSchema, *defV))
+	  SValue defVN;
+	  if (!NormalizeShared(context, *defV, defVN,
+			       iP.Append(str, len, &GetAllocator()),
+			       iS.Append(SchemaType::GetPropertiesString().GetString(),
+					 SchemaType::GetPropertiesString().GetStringLength(),
+					 &GetAllocator()).Append(str, len, &GetAllocator()),
+			       *baseSchema->properties_[index].schema))
+	    return false;
+	  if (!Append(context, *baseSchema->properties_[index].schema, defVN))
 	    return false; // GCOVR_EXCL_LINE
 	  if (!baseSchemaSet)
 	    context.propertyExist[index] = true;
@@ -4648,15 +4656,13 @@ public:
       return false;
     const typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetTypeString());
     const ValueType v(vs->value.GetString(), vs->value.GetStringLength());
-    if (isMetaschema_) {
-      if (!((v == GetPythonInstanceString()) || (v == GetSchemaString()))) {
-	DisallowedType(context, v);
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
-      }
-    } else if (!(((v == GetPythonInstanceString()) &&
-		  (yggtype_ & (1 << kYggPythonInstanceSchemaType)))
-		 || ((v == GetSchemaString()) &&
-		     (yggtype_ & (1 << kYggSchemaSchemaType))))) {
+    if ((isMetaschema_ &&
+	 !((v == GetPythonInstanceString()) || (v == GetSchemaString()))) ||
+	(!isMetaschema_ &&
+	 !((v == GetPythonInstanceString() &&
+	    yggtype_ & (1 << kYggPythonInstanceSchemaType)) ||
+	   (v == GetSchemaString() &&
+	    yggtype_ & (1 << kYggSchemaSchemaType))))) {
       DisallowedType(context, v);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
