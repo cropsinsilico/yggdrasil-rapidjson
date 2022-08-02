@@ -370,11 +370,29 @@ public:
 
 #ifdef RAPIDJSON_YGGDRASIL
   template <typename YggSchemaValueType>
-  bool YggdrasilString(const Ch* str, SizeType len, bool copy, YggSchemaValueType&) {
-    return String(str, len, copy); }
+  bool YggdrasilString(const Ch* str, SizeType len, bool copy, YggSchemaValueType& schema) {
+    if (!schema.Accept(*this)) return false;
+    if (!String(str, len, copy)) return false;
+    uint64_t h = Hash(0, kStringType);
+    uint64_t* e = stack_.template Pop<uint64_t>(2);
+    for (SizeType i = 0; i < 2; i++)
+      h = Hash(h, e[i]); // Use hash to achieve element order sensitive
+    *stack_.template Push<uint64_t>() = h;
+    return true;
+  }
   template <typename YggSchemaValueType>
-  bool YggdrasilStartObject(YggSchemaValueType&) { return StartObject(); }
-  bool YggdrasilEndObject(SizeType memberCount) { return EndObject(memberCount); }
+  bool YggdrasilStartObject(YggSchemaValueType& schema) {
+    if (!schema.Accept(*this)) return false;
+    return StartObject(); }
+  bool YggdrasilEndObject(SizeType memberCount) {
+    if (!EndObject(memberCount)) return false;
+    uint64_t h = Hash(0, kObjectType);
+    uint64_t* e = stack_.template Pop<uint64_t>(2);
+    for (SizeType i = 0; i < 2; i++)
+      h = Hash(h, e[i]); // Use hash to achieve element order sensitive
+    *stack_.template Push<uint64_t>() = h;
+    return true;
+  }
 #endif // RAPIDJSON_YGGDRASIL
 
     bool StartObject() { return true; }
@@ -1334,10 +1352,8 @@ public:
 					   dst.schemaPtr.Append(SchemaType::GetPropertiesString(), &normalized.GetAllocator()).Append(name.GetString(), name.GetStringLength(), &normalized.GetAllocator()),
 					   *prop->base->schema))
 	      value = &value0;
-	    else {
-	      std::cerr << "SetMember: Error in normalizing new value for \"" << name.GetString() << "\"" << std::endl; // GCOVR_EXCL_LINE
+	    else
 	      return false; // GCOVR_EXCL_LINE
-	    }
 	  }
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	  std::cerr << "SETTING [" << name.GetString() << "]: ";
@@ -1533,12 +1549,16 @@ public:
     childStack_.template Pop<GenericNormalizedDocument*>(1);
   }
   GenericNormalizedDocument* FindChild(unsigned index) {
+    GenericNormalizedDocument* out = nullptr;
     for (GenericNormalizedDocument** ref = childStack_.template Bottom<GenericNormalizedDocument*>();
 	 ref != childStack_.template End<GenericNormalizedDocument*>(); ref++) {
       if (!ref[0]) continue;
-      if ((*ref)->index_ == index) return *ref;
+      if ((*ref)->index_ == index) {
+	out = *ref;
+	break;
+      }
     }
-    return nullptr;
+    return out;
   }
 
   //! Get the current normalized document.
@@ -1676,11 +1696,11 @@ public:
     RAPIDJSON_ASSERT(!extend_schema_);
     RAPIDJSON_ASSERT(!document_.WasFinalized());
     RAPIDJSON_ASSERT(document_.StackSize() > 0);
-    if (extending_ || extend_context_ || extend_schema_ ||
-	document_.WasFinalized() || (document_.StackSize() == 0))
-      RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Something is wrong with the state of"
-					" the normalized document at the "
-					" start of an extend call.");
+    // if (extending_ || extend_context_ || extend_schema_ ||
+    // 	document_.WasFinalized() || (document_.StackSize() == 0))
+    //   RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Something is wrong with the state of"
+    // 					" the normalized document at the "
+    // 					" start of an extend call.");
     PointerType pCurrent = GetInstancePointer();
     PushValue(*document_.StackTop(), pCurrent);
     extending_ = true;
@@ -1955,11 +1975,10 @@ public:
 				     true).Move(),
 			      GetAllocator());
       }
-      if (NormYggdrasilStartObject(context, schema, valueSchema)) {
+      bool out = NormYggdrasilStartObject(context, schema, valueSchema);
+      if (out)
 	RecordModified();
-	return true;
-      }
-      return false;
+      return out;
     }    
     NORM_BEGIN_(StartObject);
     NORM_BODY_(StartObject, ());
@@ -2278,7 +2297,6 @@ public:
     }
     ValidateErrorCode code = context.error_handler.SharedNormalizationError(static_cast<ISchemaValidator*>(&n));
     RAPIDJSON_INVALID_KEYWORD_RETURN(code);
-    return false;
   }
   bool NormEndArray(Context& context, const SchemaType& schema, SizeType elementCount) {
     NORM_BEGIN_STUB_(EndArray);
@@ -2294,15 +2312,17 @@ public:
   //   entries in the process.
   bool BeginExtend(Context& context, bool dont_recurse=false) {
     ValueType* current = CurrentValue();
-    if (!current)
-      RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
+    // if (!current)
+    //   RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
+    RAPIDJSON_ASSERT(current);
     if (CurrentIdx()) {
       bool childMod = false;
-      if (!current->IsArray())
-	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an array,"
-					  " but an index %d is set (type = %d)",
-					  (int)(*CurrentIdx()),
-					  (int)(current->GetType()));
+      // if (!current->IsArray())
+      // 	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an array,"
+      // 					  " but an index %d is set (type = %d)",
+      // 					  (int)(*CurrentIdx()),
+      // 					  (int)(current->GetType()));
+      RAPIDJSON_ASSERT(current->IsArray());
       if (*CurrentIdx() >= current->Size()) {
 	if ((!CurrentModified()) && CurrentChildModified()) {
 	  current->PushBack(ValueType(kNullType).Move(), GetAllocator());
@@ -2318,11 +2338,12 @@ public:
       CurrentIdx()[0]++;
       current = CurrentValue();
     } else if (CurrentKey()) {
-      if (!current->IsObject())
-	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an object,"
-					  " but a key \"%s\" is set (type = %d)",
-					  (const char*)(CurrentKey()->GetString()),
-					  (int)(current->GetType()));
+      // if (!current->IsObject())
+      // 	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an object,"
+      // 					  " but a key \"%s\" is set (type = %d)",
+      // 					  (const char*)(CurrentKey()->GetString()),
+      // 					  (int)(current->GetType()));
+      RAPIDJSON_ASSERT(current->IsObject());
       if (!current->HasMember(CurrentKey()->GetString()))
 	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value does not have the "
 					  "expected key: %s",
@@ -2589,16 +2610,17 @@ public:
   }
   bool ExtendStartArray(Context& context, bool dont_recurse=false) {
     EXTEND_BEGIN_(Array, (kArrayType));
-    if (extend_child_ && CurrentModified() && CurrentChildModified()) {
-      PointerType p = GetInstancePointer();
-      if (!isValueSingular(p) && extend_child_->isValueSingular(p)) {
-	ValueType tmp(kArrayType);
-	tmp.PushBack(*current, GetAllocator());
-	// current->CopyFrom(tmp, GetAllocator(), true);
-	current->Swap(tmp);
-	StealChildModified();
-      }
-    }
+    // Unclear if this case would ever occur
+    // if (extend_child_ && CurrentModified() && CurrentChildModified()) {
+    //   PointerType p = GetInstancePointer();
+    //   if (!isValueSingular(p) && extend_child_->isValueSingular(p)) {
+    // 	ValueType tmp(kArrayType);
+    // 	tmp.PushBack(*current, GetAllocator());
+    // 	// current->CopyFrom(tmp, GetAllocator(), true);
+    // 	current->Swap(tmp);
+    // 	StealChildModified();
+    //   }
+    // }
     REQUIRED_PROPERTY_(Array, current->IsArray(), (kArrayType));
     PushKey(0);
     return true;
@@ -4646,7 +4668,7 @@ public:
       DisallowedType(context, v);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
-    return true;
+    return CreateParallelValidator(context);
   }
   template <typename YggSchemaValueType>
   bool YggdrasilStartObject(Context& context, YggSchemaValueType& schema) const {

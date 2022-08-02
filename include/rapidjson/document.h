@@ -3321,19 +3321,6 @@ public:
     if (schema_ == NULL)
       InitSchema(allocator);
     schema_->CopyFrom(schema, schema_->GetAllocator(), true);
-    CheckValueSchema();
-  }
-  void CheckValueSchema() const {
-    RAPIDJSON_ASSERT(schema_ && schema_->IsObject() && schema_->HasMember(GetTypeString()));
-    if (((*schema_)[GetTypeString()] == GetScalarString()) ||
-	((*schema_)[GetTypeString()] == Get1DArrayString()) ||
-	((*schema_)[GetTypeString()] == GetNDArrayString())) {
-      RAPIDJSON_ASSERT(schema_->HasMember(GetSubTypeString()));
-      RAPIDJSON_ASSERT(schema_->HasMember(GetPrecisionString()));
-      if (((*schema_)[GetTypeString()] == GetNDArrayString()) ||
-	  ((*schema_)[GetTypeString()] == Get1DArrayString()))
-	RAPIDJSON_ASSERT(schema_->HasMember(GetShapeString()));
-    }
   }
   bool HasSchema() const {
     if (schema_ == NULL) return false;

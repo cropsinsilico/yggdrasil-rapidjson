@@ -1048,6 +1048,15 @@ TEST(SchemaNormalizer, PullProperties) {
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"missing\": [\"city\"]"
 		     "}}");
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"zip\": \"12345\"}, \"city\": \"Washington\", \"state\": \"DC\", \"type\": 1 }",
+		     "", "enum", "",
+		     "{ \"enum\": {"
+		     "    \"expected\": [\"residential\", \"business\"],"
+		     "    \"errorCode\": 19,"
+		     "    \"instanceRef\": \"#/shipping_address/type\","
+		     "    \"schemaRef\": \"#/properties/shipping_address/properties/type\""
+		     "}}");
 }
 
 TEST(SchemaNormalizer, PushProperties) {

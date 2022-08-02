@@ -1723,7 +1723,29 @@ TEST(SchemaValidator, Null) {
 }
 
 #ifdef RAPIDJSON_YGGDRASIL
+TEST(SchemaValidator, Array_UniqueItems_Yggdrasil) {
+    Document sd;
+    sd.Parse("{\"type\": \"array\", \"uniqueItems\": true}");
+    SchemaDocument s(sd);
+    
+    VALIDATE(s, "[1, 2, 3, \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\", \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6MSwidW5pdHMiOiJnIn0=-YGG-DA==-YGG-\", \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"]", true);
+    INVALIDATE(s, "[1, 2, \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-BQ==-YGG-\", \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-BQ==-YGG-\"]",
+	       "", "uniqueItems", "/3",
+        "{ \"uniqueItems\": {"
+        "    \"errorCode\": 11,"
+        "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+        "    \"duplicates\": [2, 3]"
+        "}}");
+    INVALIDATE(s, "[1, 2, \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\", \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\", \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"]", "", "uniqueItems", "/3",
+        "{ \"uniqueItems\": {"
+        "    \"errorCode\": 11,"
+        "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+        "    \"duplicates\": [2, 3]"
+        "}}"); // fail fast
+}
+
 TEST(SchemaValidator, SubType) {
+  { // Uint
     Document sd;
     sd.Parse(
         "{"
@@ -1741,6 +1763,40 @@ TEST(SchemaValidator, SubType) {
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"expected\": \"uint\", \"actual\": \"int\""
 	       "}}");
+    INVALIDATE(s, "0.15",
+	       "", "subtype", "",
+	       "{ \"subtype\" : {"
+	       "    \"errorCode\": 27,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": \"uint\", \"actual\": \"float\""
+	       "}}");
+  }
+  { // Float
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": \"float\","
+	"  \"precision\": 8,"
+	"  \"units\": \"g\""
+        "}");
+    SchemaDocument s(sd);
+    // VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6MSwidW5pdHMiOiJnIn0=-YGG-DA==-YGG-\"",
+	       "", "subtype", "",
+	       "{ \"subtype\" : {"
+	       "    \"errorCode\": 27,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": \"float\", \"actual\": \"int\""
+	       "}}");
+    INVALIDATE(s, "-1",
+	       "", "subtype", "",
+	       "{ \"subtype\" : {"
+	       "    \"errorCode\": 27,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": \"float\", \"actual\": \"int\""
+	       "}}");
+  }
 }
 TEST(SchemaValidator, Precision) { // 28
   { // Scalar
@@ -1867,6 +1923,82 @@ TEST(SchemaValidator, Shape) { // 30
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"expected\": [2, 3], \"actual\": [2, 4]"
 	       "}}");
+}
+TEST(SchemaValidator, InvalidSchema) {
+  { // scalar
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": \"uint\","
+	"  \"precision\": 1,"
+	"  \"units\": \"g\""
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-BQ==-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImcifQ==-YGG-BQ==-YGG-\"",
+	       "", "required", "",
+	       "{ \"class\" : {"
+	       "    \"errorCode\": 31,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"missing\": \"subtype\""
+	       "}}");
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJ1bml0cyI6ImcifQ==-YGG-BQ==-YGG-\"",
+	       "", "required", "",
+	       "{ \"class\" : {"
+	       "    \"errorCode\": 31,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"missing\": \"precision\""
+	       "}}");
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjF9-YGG-BQ==-YGG-\"", true);
+  }
+  { // array
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"ndarray\","
+	"  \"subtype\": \"float\","
+	"  \"precision\": 8,"
+	"  \"shape\": [2, 3],"
+	"  \"units\": \"g\""
+        "}");
+    // {
+    //   Value schema(kObjectType);
+    //   Value::AllocatorType allocator;
+    //   double val[2][3] = {{0.0, 1.0, 2.0},
+    // 			  {3.0, 4.0, 5.5}};
+    //   schema.AddMember(Value("type").Move(), Value("ndarray").Move(), allocator);
+    //   schema.AddMember(Value("subtype").Move(), Value("float").Move(), allocator);
+    //   schema.AddMember(Value("precision").Move(), Value(8).Move(), allocator);
+    //   Value shape(kArrayType);
+    //   shape.PushBack(Value(2).Move(), allocator);
+    //   shape.PushBack(Value(3).Move(), allocator);
+    //   schema.AddMember(Value("shape").Move(), shape, allocator);
+    //   schema.AddMember(Value("units").Move(), Value("g").Move(), allocator);
+    //   DISPLAY_STRING("valid", ((char*)(&val[0][0]), sizeof(double) * 6, schema));
+    // }
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOlsyLDNdLCJ1bml0cyI6ImcifQ==-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEAAAAAAAAAQQAAAAAAAABZA-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwidW5pdHMiOiJnIn0=-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEAAAAAAAAAQQAAAAAAAABZA-YGG-\"",
+	       "", "required", "",
+	       "{ \"class\" : {"
+	       "    \"errorCode\": 31,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"missing\": \"shape\""
+	       "}}");
+  }
+  { // array, no shape in schema for validation
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"ndarray\","
+	"  \"subtype\": \"float\","
+	"  \"precision\": 8,"
+	"  \"units\": \"g\""
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOlsyLDNdLCJ1bml0cyI6ImcifQ==-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEAAAAAAAAAQQAAAAAAAABZA-YGG-\"", true);
+  }
 }
 
 TEST(SchemaValidator, PythonClass) { // 31
