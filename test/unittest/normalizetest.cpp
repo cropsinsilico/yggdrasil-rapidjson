@@ -250,32 +250,41 @@ TEST(SchemaNormalizer, BaseTypes) {
 	"  \"allOf\": ["
 	"    {"
 	"      \"properties\": {"
-	"        \"a\": {\"type\": \"null\"},"
-	"        \"b\": {\"type\": \"boolean\"},"
-	"        \"c\": {\"type\": \"integer\"},"
-	"        \"d\": {\"type\": \"integer\"},"
-	"        \"e\": {\"type\": \"integer\"},"
-	"        \"f\": {\"type\": \"integer\"},"
-	"        \"g\": {\"type\": \"number\"},"
-	"        \"h\": {\"type\": \"string\"},"
-	"        \"i\": {\"type\": \"array\","
+	"        \"a\": {\"type\": \"null\", \"default\": null},"
+	"        \"b\": {\"type\": \"boolean\", \"default\": false},"
+	"        \"c\": {\"type\": \"integer\", \"default\": -1},"
+	"        \"d\": {\"type\": \"integer\", \"default\": -9223372036854775808},"
+	"        \"e\": {\"type\": \"integer\", \"default\": 9223372036854775807},"
+	"        \"f\": {\"type\": \"integer\", \"default\": 1},"
+	"        \"g\": {\"type\": \"number\", \"default\": 3.583},"
+	"        \"h\": {\"type\": \"string\", \"default\": \"foo\"},"
+	"        \"i\": {\"type\": \"array\", \"default\": [ 2, 4, 8 ]," 
 	"                \"items\": {\"type\": \"integer\"}},"
-	"        \"j\": {\"type\": \"object\","
+	"        \"j\": {\"type\": \"object\", "
+	"                \"default\": { \"x\": 2, \"y\": 7, \"z\": -1},"
 	"                \"additionalProperties\": {\"type\": \"integer\"}}"
-	"      }"
+	"      },"
+	"      \"required\": [\"a\", \"b\", \"c\", \"d\", \"e\", \"f\", \"g\", \"h\", \"i\", \"j\"]"
 	"    },"
         "    {"
 	"      \"properties\": {"
 	"        \"k\": {\"type\": \"scalar\", \"subtype\": \"uint\","
-	"                \"precision\": 1},"
-	"        \"l\": {\"type\": \"function\"},"
-	"        \"m\": {\"type\": \"instance\"},"
-	"        \"n\": {\"type\": \"schema\"},"
+	"                \"precision\": 1,"
+	"                \"default\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\"},"
+	"        \"l\": {\"type\": \"function\","
+	"                \"default\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"},"
+	"        \"m\": {\"type\": \"instance\","
+	"                \"default\": \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"},"
+	"        \"n\": {\"type\": \"schema\","
+	"                \"default\": \"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"},"
 	"        \"o\": {\"type\": \"1darray\", \"subtype\": \"float\","
-	"                \"precision\": 8, \"length\": 4},"
+	"                \"precision\": 8, \"length\": 4,"
+	"                \"default\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOls0XX0=-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEA=-YGG-\"},"
 	"        \"p\": {\"type\": \"ndarray\", \"subtype\": \"float\","
-	"                \"precision\": 4, \"shape\": [2, 3]}"
-	"      }"
+	"                \"precision\": 4, \"shape\": [2, 3],"
+	"                \"default\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAgD8AAABAAABAQAAAgEAAAKBA-YGG-\"}"
+	"      },"
+	"      \"required\": [\"k\", \"l\", \"m\", \"n\", \"o\", \"p\"]"
 	"    }"
 	"  ]"
 	"}");
@@ -287,6 +296,14 @@ TEST(SchemaNormalizer, BaseTypes) {
 		 "\"n\": \"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\", "
 		 "\"o\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOls0XX0=-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEA=-YGG-\", "
 		 "\"p\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAgD8AAABAAABAQAAAgEAAAKBA-YGG-\" }");
+    NORMALIZE(s, "{}", true,
+	      "{ \"a\": null, \"b\": false, \"c\": -1, \"d\": -9223372036854775808, \"e\": 9223372036854775807, \"f\": 1, \"g\": 3.583, \"h\": \"foo\", \"i\": [ 2, 4, 8 ], \"j\": { \"x\": 2, \"y\": 7, \"z\": -1}, "
+	      "\"k\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\", "
+	      "\"l\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\", "
+	      "\"m\": \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\", "
+	      "\"n\": \"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\", "
+	      "\"o\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOls0XX0=-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEA=-YGG-\", "
+	      "\"p\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAgD8AAABAAABAQAAAgEAAAKBA-YGG-\" }");
 }
 
 TEST(SchemaNormalizer, Default) {
@@ -687,6 +704,42 @@ TEST(SchemaNormalizer, AliasArray) {
 	      "{\"shipping_address\": {\"street_addresses\": [\"a\", \"b\"]}}");
 }
 
+TEST(SchemaNormalizer, AliasConflict) {
+    Document sd;
+    sd.Parse(
+        "{"
+	"  \"allOf\": ["
+	"    {"
+	"      \"type\": \"object\","
+	"      \"properties\": {"
+	"        \"a\": {\"aliases\": [\"a2\"]},"
+	"        \"b\": {\"default\": \"foobar\","
+	"                \"aliases\": [\"b3\"]}"
+	"      },"
+	"      \"required\": [\"b\"]"
+	"    },"
+	"    {"
+	"      \"type\": \"object\","
+	"      \"properties\": {"
+	"        \"b\": {\"aliases\": [\"b2\"]}"
+	"      }"
+	"    }"
+	"  ]"
+        "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s, "{\"b3\": \"foo\"}", true,
+	      "{\"b\": \"foo\"}");
+    FAILED_NORMALIZE(s,
+		     "{\"b2\": \"bar\"}",
+		     "", "aliases", "",
+		     "{ \"aliases\": {"
+		     "    \"errorCode\": 34,"
+		     "    \"instanceRef\": \"#\","
+		     "    \"schemaRef\": \"#\","
+		     "    \"duplicates\": [\"b\", \"b2\"]"
+		     "}}");
+}
+
 TEST(SchemaNormalizer, SingularArray) {
   Document sd;
   sd.Parse(
@@ -746,6 +799,9 @@ TEST(SchemaNormalizer, SingularNested) {
   NORMALIZE(s, "\"1600 Pennsylvania Ave.\"", true,
 	    "[ { \"streets\": \"1600 Pennsylvania Ave.\"} ]");
   NO_NORMALIZE(s, "[ { \"streets\": \"1600 Pennsylvania Ave.\"} ]");
+  NORMALIZE(s, "[ \"1600 Pennsylvania Ave.\", \"1700 Pennsylvania Ave.\" ]",
+	    true,
+	    "[ { \"streets\": \"1600 Pennsylvania Ave.\"}, { \"streets\": \"1700 Pennsylvania Ave.\"} ]");
 }
 
 TEST(SchemaNormalizer, SingularNestedRef) {
@@ -1123,6 +1179,85 @@ TEST(SchemaNormalizer, NDArray) {
 		     "}}");
 }
 
+TEST(SchemaNormalizer, SharedProperties) {
+  { // Pull a, pull b
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+	"    \"a\": {"
+	"      \"type\": \"object\","
+	"      \"properties\": {"
+	"        \"asub\": {\"type\": \"integer\"}"
+	"      },"
+	"      \"required\": [\"asub\"],"
+	"      \"pullProperties\": {\"../b\": true}"
+	"    },"
+	"    \"b\": {"
+	"      \"type\": \"object\","
+	"      \"properties\": {"
+	"        \"bsub\": {\"type\": \"integer\"}"
+	"      },"
+	"      \"required\": [\"bsub\"],"
+	"      \"pullProperties\": {\"../a\": true}"
+	"    }"
+	"  },"
+	"  \"required\": [\"a\", \"b\"],"
+	"  \"pullProperties\": {"
+	"    \"a\": true,"
+	"    \"b\": true"
+	"  }"
+	"}");
+    SchemaDocument s(sd);
+    NORMALIZE(s, "{\"a\": {\"asub\": 1, \"b\": {\"bsub\": 2}}}", true,
+	      "{\"a\": {\"asub\": 1}, \"b\": {\"bsub\": 2}}");
+    NORMALIZE(s, "{\"b\": {\"bsub\": 2, \"a\": {\"asub\": 1}}}", true,
+	      "{\"a\": {\"asub\": 1}, \"b\": {\"bsub\": 2}}");
+    NORMALIZE(s, "{\"a\": {\"asub\": 1, \"bsub\": 2, \"b\": {}}}", true,
+	      "{\"a\": {\"asub\": 1}, \"b\": {\"bsub\": 2}}");
+    NORMALIZE(s, "{\"b\": {\"asub\": 1, \"bsub\": 2, \"a\": {}}}", true,
+	      "{\"a\": {\"asub\": 1}, \"b\": {\"bsub\": 2}}");
+  }
+  { // Push a, push b
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+        "  \"properties\": {"
+	"    \"a\": {"
+	"      \"type\": \"object\","
+	"      \"properties\": {"
+	"        \"asub\": {\"type\": \"integer\"}"
+	"      },"
+	"      \"required\": [\"asub\"],"
+	"      \"pushProperties\": {"
+	"        \"../b\": true,"
+	"        \"..\": true"
+	"      }"
+	"    },"
+	"    \"b\": {"
+	"      \"type\": \"object\","
+	"      \"properties\": {"
+	"        \"bsub\": {\"type\": \"integer\"}"
+	"      },"
+	"      \"required\": [\"bsub\"],"
+	"      \"pushProperties\": {"
+	"        \"../a\": true,"
+	"        \"..\": true"
+	"      }"
+	"    }"
+	"  },"
+	"  \"required\": [\"a\", \"b\"]"
+	"}");
+    SchemaDocument s(sd);
+    NORMALIZE(s, "{\"a\": {\"asub\": 1, \"bsub\": 2, \"b\": {}}}", true,
+	      "{\"a\": {\"asub\": 1}, \"b\": {\"bsub\": 2}}");
+    NORMALIZE(s, "{\"b\": {\"asub\": 1, \"bsub\": 2, \"a\": {}}}", true,
+	      "{\"a\": {\"asub\": 1}, \"b\": {\"bsub\": 2}}");
+  }
+}
+
 TEST(SchemaNormalizer, PullProperties) {
     Document sd;
     sd.Parse(
@@ -1148,6 +1283,7 @@ TEST(SchemaNormalizer, PullProperties) {
 	"      \"type\": \"string\""
 	"    }"
         "  },"
+	"  \"required\": [\"zip\"],"
 	"  \"pullProperties\": {"
 	"    \"$properties/shipping_address\": [\"zip\"]"
 	"  }"
@@ -1158,7 +1294,7 @@ TEST(SchemaNormalizer, PullProperties) {
 	      true,
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"}, \"zip\": \"12345\" }");
     FAILED_NORMALIZE(s,
-		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"state\": \"DC\" }",
+		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"zip\": \"12345\"}, \"state\": \"DC\" }",
 		     "", "required", "",
 		     "{ \"required\": {"
 		     "    \"errorCode\": 15,"
@@ -1174,6 +1310,15 @@ TEST(SchemaNormalizer, PullProperties) {
 		     "    \"errorCode\": 19,"
 		     "    \"instanceRef\": \"#/shipping_address/type\","
 		     "    \"schemaRef\": \"#/properties/shipping_address/properties/type\""
+		     "}}");
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"city\": \"Washington\", \"state\": \"DC\" }",
+		     "", "required", "",
+		     "{ \"required\": {"
+		     "    \"errorCode\": 15,"
+		     "    \"instanceRef\": \"#\","
+		     "    \"schemaRef\": \"#\","
+		     "    \"missing\": [\"zip\"]"
 		     "}}");
 }
 
@@ -1208,6 +1353,7 @@ TEST(SchemaNormalizer, PushProperties) {
 	"      \"type\": \"string\""
 	"    }"
         "  },"
+	"  \"required\": [\"zip\"],"
 	"  \"pushProperties\": {"
 	"    \"shipping_address\": [\"city\", \"state\"]"
 	"  }"
@@ -1218,13 +1364,22 @@ TEST(SchemaNormalizer, PushProperties) {
 	      true,
 	      "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"city\": \"Washington\", \"state\": \"DC\", \"type\": \"residential\"},  \"state\": \"DC\", \"zip\": \"12345\" }");
     FAILED_NORMALIZE(s,
-		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"state\": \"DC\" }",
+		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\", \"zip\": \"12345\"}, \"state\": \"DC\" }",
 		     "", "required", "",
 		     "{ \"required\": {"
 		     "    \"errorCode\": 15,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"missing\": [\"city\"]"
+		     "}}");
+    FAILED_NORMALIZE(s,
+		     "{\"shipping_address\": {\"street_address\": \"1600 Pennsylvania Avenue NW\"}, \"city\": \"Washington\", \"state\": \"DC\" }",
+		     "", "required", "",
+		     "{ \"required\": {"
+		     "    \"errorCode\": 15,"
+		     "    \"instanceRef\": \"#\","
+		     "    \"schemaRef\": \"#\","
+		     "    \"missing\": [\"zip\"]"
 		     "}}");
 }
 
@@ -1247,7 +1402,7 @@ TEST(SchemaNormalizer, PullPropertiesInvalidDefault) {
 	"                              \"default\": 1 },"
 	"        \"unit\":           { \"type\": \"string\" }"
         "      },"
-        "      \"required\": [\"street_address\", \"city\", \"state\", \"type\"]"
+        "      \"required\": [\"street_address\", \"city\", \"state\", \"type\", \"zip\"]"
         "    },"
 	"    \"zip\": {"
 	"      \"type\": \"string\""

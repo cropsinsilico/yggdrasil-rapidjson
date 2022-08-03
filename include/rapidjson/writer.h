@@ -359,7 +359,6 @@ private:
   }
   bool WriteYggdrasilSuffix() {
     RAPIDJSON_ASSERT(w64p_);
-    RAPIDJSON_ASSERT(w64p_->level_ == 0);
     if (w64p_->level_ > 0) {
       w64p_->level_--;
       return true;

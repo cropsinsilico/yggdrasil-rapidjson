@@ -1102,11 +1102,14 @@ public:
 		       src.properties.IsArray() &&
 		       dst.properties.IsArray());
       if (property && properties.Size() == 0) {
-	for (SizeType i = 0; i < property->propertyCount; i++)
+	for (SizeType i = 0; i < property->propertyCount; i++) {
+	  if (!property->properties[i].base)
+	    continue;
 	  properties.PushBack(SValue(property->properties[i].name.GetString(),
 				     property->properties[i].name.GetStringLength(),
 				     *allocator).Move(),
 			      *allocator);
+	}
       }
       bool setSrc = src.set && src.properties.Size() == 0;
       bool setDst = dst.set && dst.properties.Size() == 0;
@@ -1463,10 +1466,6 @@ public:
 	typename SchemaType::SharedProperty::PropertyEntry* prop = dst.parent->FindProperty(copy[i]);
 	RAPIDJSON_ASSERT(prop);
 	if (!prop) continue;
-	if (!prop->base->required) {
-	  RemoveMember(copy[i]);
-	  continue;
-	}
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	std::cerr << "RecordMissing: " << copy[i].GetString() << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
@@ -2266,8 +2265,7 @@ public:
       if (it == skip || !it->dst.set || !it->src.set ||
 	  !it->HasMissing(name) ||
 	  !it->Matches(skipV->instancePtr, true, true)) continue;
-      if (!it->SetMember(context, name, value, *this))
-	return false;
+      if (!it->SetMember(context, name, value, *this)) return false;
     }
     return true;
   }
@@ -3448,6 +3446,7 @@ private:
 	    if (base->HasMember(primary)) {
 	      typename ValueType::ConstMemberIterator alt = base->FindMember(primary);
 	      if (alt->value != old->value) {
+		// TODO: Check for default that was set?
 		context.error_handler.DuplicateAlias(v->value, v->name);
 		RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
 	      }
@@ -4410,13 +4409,13 @@ public:
 		if (!context.normalized->ExtendChild(context,
 						     *metaschema_,
 						     context.validators[metaschemaValidatorIndex_]->GetValidatorID()))
-		  return false;
+		  return false; // GCOVR_EXCL_LINE
 
 	      if (instance_)
 		if (!context.normalized->ExtendChild(context,
 						     *instance_,
 						     context.validators[instanceValidatorIndex_]->GetValidatorID()))
-		  return false;
+		  return false; // GCOVR_EXCL_LINE
 
 	      if (allowSingularSchema_.schemas) {
                 for (SizeType i = 0; i < allowSingularSchema_.count; i++) {
@@ -4424,7 +4423,7 @@ public:
 		    if (!context.normalized->ExtendChild(context,
 							 *allowSingularSchema_.schemas[i],
 							 context.validators[i + allowSingularSchema_.begin]->GetValidatorID()))
-		      return false;
+		      return false;// GCOVR_EXCL_LINE
 		    break;
 		  }
 		}
@@ -5939,26 +5938,25 @@ protected:
 	propertyCount = parent->propertyCount;
 	properties = parent->properties;
       }
-      void AddPropertiesCpy(SharedPropertyFlag flag,
-			    const SValue& propertyNames,
+      void AddPropertiesCpy(const SharedProperty* property,
 			    const SchemaType* src = 0) {
 	if (!src) src = schema;
 	ownProperties = true;
-	RAPIDJSON_ASSERT(propertyNames.IsArray());
-	if (flag == kSharedPropertyAllPropsFlag ||
-	    flag == kSharedPropertyExcludeFlag)
+	RAPIDJSON_ASSERT(property->propertyNames.IsArray());
+	if (property->propertyFlag == kSharedPropertyAllPropsFlag ||
+	    property->propertyFlag == kSharedPropertyExcludeFlag)
 	  propertyCount = src->propertyCount_;
-	else if (flag == kSharedPropertyIncludeFlag)
-	  propertyCount = propertyNames.Size();
+	else if (property->propertyFlag == kSharedPropertyIncludeFlag)
+	  propertyCount = property->propertyNames.Size();
 	RAPIDJSON_ASSERT(!properties);
 	properties = static_cast<PropertyEntry*>(src->allocator_->Malloc(propertyCount * sizeof(PropertyEntry)));
 	SizeType j = 0;
 	for (SizeType i = 0; i < src->propertyCount_; i++) {
-	  if (flag == kSharedPropertyAllPropsFlag ||
-	      (flag == kSharedPropertyIncludeFlag &&
-	       propertyNames.Contains(src->properties_[i].name)) ||
-	      (flag == kSharedPropertyExcludeFlag &&
-	       !propertyNames.Contains(src->properties_[i].name))) {
+	  if (property->propertyFlag == kSharedPropertyAllPropsFlag ||
+	      (property->propertyFlag == kSharedPropertyIncludeFlag &&
+	       property->propertyNames.Contains(src->properties_[i].name)) ||
+	      (property->propertyFlag == kSharedPropertyExcludeFlag &&
+	       !property->propertyNames.Contains(src->properties_[i].name))) {
 	    new (&properties[j]) PropertyEntry(src->properties_[i].name.GetString(),
 					       src->properties_[i].name.GetStringLength(),
 					       *src->allocator_);
@@ -5976,28 +5974,22 @@ protected:
 	}
       }
       template<typename VT>
-      const PropertyEntry* FindProperty(const VT& name) const {
-	return FindProperty(name.GetString(), name.GetStringLength());
-      }
-      const PropertyEntry* FindProperty(const Ch* str, SizeType length) const {
-	for (SizeType i = 0; i < propertyCount; i++) {
-	  if (length == properties[i].name.GetStringLength() &&
-	      std::memcmp(str, properties[i].name.GetString(),
-			  length * sizeof(Ch)) == 0)
-	    return &properties[i];
-	}
-	return nullptr;
-      }
+      const PropertyEntry* FindProperty(const VT& name) const
+      { return const_cast<SharedPropertyBase&>(*this).FindProperty(name); }
+      const PropertyEntry* FindProperty(const Ch* str, SizeType length) const
+      { return const_cast<SharedPropertyBase&>(*this).FindProperty(str, length); }
       template<typename VT>
-      PropertyEntry* FindProperty(const VT& name) {
-	return FindProperty(name.GetString(), name.GetStringLength());
-      }
+      PropertyEntry* FindProperty(const VT& name)
+      { return FindProperty(name.GetString(), name.GetStringLength()); }
       PropertyEntry* FindProperty(const Ch* str, SizeType length) {
 	for (SizeType i = 0; i < propertyCount; i++) {
 	  if (length == properties[i].name.GetStringLength() &&
 	      std::memcmp(str, properties[i].name.GetString(),
-			  length * sizeof(Ch)) == 0)
-	    return &properties[i];
+			  length * sizeof(Ch)) == 0) {
+	    if (properties[i].base)
+	      return &properties[i];
+	    return nullptr;
+	  }
 	}
 	return nullptr;
       }
@@ -6105,9 +6097,7 @@ protected:
 	void AddPropertiesPush(SharedProperty* parent) {
 	  // Should only be run for links in push
 	  RAPIDJSON_ASSERT(parent->push);
-	  this->AddPropertiesCpy(parent->propertyFlag,
-				 parent->propertyNames,
-				 this->schema);
+	  this->AddPropertiesCpy(parent, this->schema);
 	  this->SetInSource(parent->schema);
 	}
       };
@@ -6222,8 +6212,28 @@ protected:
 	    RAPIDJSON_ASSERT(first == iSchema->PointersOrdered(this->schemaPtr, ref->schemaPtr));
 	  }
 	  // HERE INSTANCE
+	  // ADDING PROPERTIES TO INSTANCE FROM LINK (MIGHT BE BORROWED)
+	  SharedPropertyBase* src = 0;
+	  SharedPropertyBase* dst = 0;
+	  if (parentProperty->push) {
+	    src = this;
+	    dst = ref;
+	  } else {
+	    src = ref;
+	    dst = this;
+	  }
+	  ValueType skip;
+	  if ((dst->instancePtr.GetTokenCount() == 0 ||
+	       src->instancePtr.StartsWith(dst->instancePtr)) &&
+	      src->instancePtr.GetTokenCount() > dst->instancePtr.GetTokenCount() &&
+	      src->instancePtr.GetTokens()[dst->instancePtr.GetTokenCount()].index == kPointerInvalidIndex) {
+	    skip.SetString(src->instancePtr.GetTokens()[dst->instancePtr.GetTokenCount()].name,
+			   src->instancePtr.GetTokens()[dst->instancePtr.GetTokenCount()].length);
+	  }
 	  for (SizeType i = 0; i < ref->propertyCount; i++) {
-	    if (firstLink || !propertyNames.Contains(ref->properties[i].name))
+	    if (skip == ref->properties[i].name)
+	      ref->properties[i].base = 0;
+	    else if (firstLink || !propertyNames.Contains(ref->properties[i].name))
 	      propertyNames.PushBack(SValue(ref->properties[i].name,
 					    *iSchema->allocator_, true).Move(),
 				     *iSchema->allocator_);
@@ -6417,7 +6427,7 @@ protected:
       }
       void AddPropertiesPull() {
 	RAPIDJSON_ASSERT(!push && this->schema && !this->properties);
-	this->AddPropertiesCpy(propertyFlag, propertyNames);
+	this->AddPropertiesCpy(this);
       }
       InstanceEntry* AddInstance(const PointerType& schemaPtr0) {
 	InstanceEntry* ref = instances.template Push<InstanceEntry>();
