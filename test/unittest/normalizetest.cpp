@@ -836,7 +836,8 @@ TEST(SchemaNormalizer, SingularNestedRef) {
 	"          \"properties\": {"
 	"             \"streets\": { \"type\": \"string\" }"
 	"          }"
-	"        }"
+	"        },"
+	"        \"aliases\": [\"bb\"]"
 	"      }"
 	"    } }"
 	"  ]"
@@ -845,6 +846,8 @@ TEST(SchemaNormalizer, SingularNestedRef) {
   NORMALIZE(s, "{\"a\": \"1600 Pennsylvania Ave.\", \"b\": \"1600 Pennsylvania Ave.\"}", true,
 	    "{\"a\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ], \"b\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ]}");
   NO_NORMALIZE(s, "{\"a\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ], \"b\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ]}");
+  NORMALIZE(s, "{\"a\": \"1600 Pennsylvania Ave.\", \"bb\": \"1600 Pennsylvania Ave.\"}", true,
+	    "{\"a\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ], \"b\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ]}");
 }
 
 TEST(SchemaNormalizer, AliasCircular) {
