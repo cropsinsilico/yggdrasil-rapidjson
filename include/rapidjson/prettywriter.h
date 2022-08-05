@@ -27,6 +27,12 @@ RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(c++98-compat)
 #endif
 
+#if RAPIDJSON_HAS_CXX11
+#define OVERRIDE_CXX11 override
+#else // RAPIDJSON_HAS_CXX11
+#define OVERRIDE_CXX11
+#endif // RAPIDJSON_HAS_CXX11
+  
 RAPIDJSON_NAMESPACE_BEGIN
 
 //! Combination of PrettyWriter format flags.
@@ -92,13 +98,20 @@ public:
     */
     //@{
 
-    bool Null()                 { PrettyPrefix(kNullType);   return Base::EndValue(Base::WriteNull()); }
-    bool Bool(bool b)           { PrettyPrefix(b ? kTrueType : kFalseType); return Base::EndValue(Base::WriteBool(b)); }
-    bool Int(int i)             { PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteInt(i)); }
-    bool Uint(unsigned u)       { PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteUint(u)); }
-    bool Int64(int64_t i64)     { PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteInt64(i64)); }
-    bool Uint64(uint64_t u64)   { PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteUint64(u64));  }
-    bool Double(double d)       { PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteDouble(d)); }
+#ifdef RAPIDJSON_YGGDRASIL
+#define RAPIDJSON_WRAP_BASE64_(method, arg1)		\
+  if (this->w64p_) return this->w64_()->method arg1
+#else // RAPIDJSON_YGGDRASIL
+#define RAPIDJSON_WRAP_BASE64_(method, arg1)
+#endif // RAPIDJSON_YGGDRASIL
+  
+    bool Null()                 { RAPIDJSON_WRAP_BASE64_(Null, ()); PrettyPrefix(kNullType);   return Base::EndValue(Base::WriteNull()); }
+    bool Bool(bool b)           { RAPIDJSON_WRAP_BASE64_(Bool, (b)); PrettyPrefix(b ? kTrueType : kFalseType); return Base::EndValue(Base::WriteBool(b)); }
+    bool Int(int i)             { RAPIDJSON_WRAP_BASE64_(Int, (i)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteInt(i)); }
+    bool Uint(unsigned u)       { RAPIDJSON_WRAP_BASE64_(Uint, (u)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteUint(u)); }
+    bool Int64(int64_t i64)     { RAPIDJSON_WRAP_BASE64_(Int64, (i64)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteInt64(i64)); }
+    bool Uint64(uint64_t u64)   { RAPIDJSON_WRAP_BASE64_(Uint64, (u64)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteUint64(u64));  }
+    bool Double(double d)       { RAPIDJSON_WRAP_BASE64_(Double, (d)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteDouble(d)); }
 
     bool RawNumber(const Ch* str, SizeType length, bool copy = false) {
         RAPIDJSON_ASSERT(str != 0);
@@ -108,6 +121,7 @@ public:
     }
 
     bool String(const Ch* str, SizeType length, bool copy = false) {
+        RAPIDJSON_WRAP_BASE64_(String, (str, length, copy));
         RAPIDJSON_ASSERT(str != 0);
         (void)copy;
         PrettyPrefix(kStringType);
@@ -121,6 +135,7 @@ public:
 #endif
 
     bool StartObject() {
+        RAPIDJSON_WRAP_BASE64_(StartObject, ());
         PrettyPrefix(kObjectType);
         new (Base::level_stack_.template Push<typename Base::Level>()) typename Base::Level(false);
         return Base::WriteStartObject();
@@ -135,6 +150,7 @@ public:
 #endif
 	
     bool EndObject(SizeType memberCount = 0) {
+        RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount));
         (void)memberCount;
         RAPIDJSON_ASSERT(Base::level_stack_.GetSize() >= sizeof(typename Base::Level)); // not inside an Object
         RAPIDJSON_ASSERT(!Base::level_stack_.template Top<typename Base::Level>()->inArray); // currently inside an Array, not Object
@@ -155,12 +171,14 @@ public:
     }
 
     bool StartArray() {
+        RAPIDJSON_WRAP_BASE64_(StartArray, ());
         PrettyPrefix(kArrayType);
         new (Base::level_stack_.template Push<typename Base::Level>()) typename Base::Level(true);
         return Base::WriteStartArray();
     }
 
     bool EndArray(SizeType memberCount = 0) {
+        RAPIDJSON_WRAP_BASE64_(EndArray, (memberCount));
         (void)memberCount;
         RAPIDJSON_ASSERT(Base::level_stack_.GetSize() >= sizeof(typename Base::Level));
         RAPIDJSON_ASSERT(Base::level_stack_.template Top<typename Base::Level>()->inArray);
@@ -205,7 +223,12 @@ public:
         return Base::EndValue(Base::WriteRawValue(json, length));
     }
 
+#undef RAPIDJSON_WRAP_BASE64_
+
 protected:
+#ifdef RAPIDJSON_YGGDRASIL
+    void Prefix(Type type) OVERRIDE_CXX11 { PrettyPrefix(type); }
+#endif // RAPIDJSON_YGGDRASIL
     void PrettyPrefix(Type type) {
         (void)type;
         if (Base::level_stack_.GetSize() != 0) { // this value is not at root

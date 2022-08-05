@@ -337,6 +337,18 @@ public:
     }
 
 #ifdef RAPIDJSON_YGGDRASIL
+    template<typename VType>
+    GenericPointer Append(const VType& key, Allocator* allocator = 0,
+			  RAPIDJSON_DISABLEIF((
+       internal::OrExpr<YGGDRASIL_IS_INT_TYPE(VType),
+       internal::OrExpr<YGGDRASIL_IS_UINT_TYPE(VType),
+       internal::OrExpr<internal::IsSame<VType, bool>,
+       internal::OrExpr<internal::IsSame<VType, ValueType>,
+       internal::IsPointer<VType> > > > >))) const {
+      if (key.IsString())
+	return Append(key.GetString(), key.GetStringLength(), allocator);
+      return Append((SizeType)(key.GetUint()), allocator);
+    }
     bool StartsWith(const GenericPointer& rhs) const {
       if (!IsValid() || !rhs.IsValid() || tokenCount_ <= rhs.tokenCount_)
 	return (*this == rhs);

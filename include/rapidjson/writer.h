@@ -130,6 +130,8 @@ public:
 #endif
 
 #ifdef RAPIDJSON_YGGDRASIL
+    virtual ~Writer() {}
+  
     struct Base64Pair {
       Base64Pair() : s_(0), w_(0), level_(0) {}
       Base64Pair(OutputStream* os) : s_(0), w_(0), level_(0) {
@@ -606,6 +608,9 @@ protected:
         return true;
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+    virtual
+#endif // RAPIDJSON_YGGDRASIL
     void Prefix(Type type) {
         (void)type;
         if (RAPIDJSON_LIKELY(level_stack_.GetSize() != 0)) { // this value is not at root

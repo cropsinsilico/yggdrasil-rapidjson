@@ -1512,9 +1512,6 @@ definitions:
           - input_file
           - input_files
           allowSingular: true
-          default:
-          - is_default: true
-            name: input
           description: One or more name(s) of model output channel(s) and/or new channel/file
             objects that the connection should receive messages from. A full description
             of file entries and the available options can be found :ref:`here<yaml_file_options>`.
@@ -1549,9 +1546,6 @@ definitions:
           - output_file
           - output_files
           allowSingular: true
-          default:
-          - is_default: true
-            name: output
           description: One or more name(s) of model input channel(s) and/or new channel/file
             objects that the connection should send messages to. A full description
             of file entries and the available options can be found :ref:`here<yaml_file_options>`.
@@ -1561,6 +1555,9 @@ definitions:
             - $ref: '#/definitions/file'
           minItems: 1
           type: array
+        read_meth:
+          deprecated: true
+          type: string
         transform:
           aliases:
           - transforms
@@ -1578,6 +1575,13 @@ definitions:
             - type: function
             - $ref: '#/definitions/transform'
           type: array
+        working_dir:
+          description: Working directory. If not provided, the current working directory
+            is used.
+          type: string
+        write_meth:
+          deprecated: true
+          type: string
       pushProperties:
         '!$properties/inputs/items':
         - transform
@@ -1627,9 +1631,6 @@ definitions:
             - input_file
             - input_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: input
             description: One or more name(s) of model output channel(s) and/or new
               channel/file objects that the connection should receive messages from.
               A full description of file entries and the available options can be
@@ -1665,9 +1666,6 @@ definitions:
             - output_file
             - output_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: output
             description: One or more name(s) of model input channel(s) and/or new
               channel/file objects that the connection should send messages to. A
               full description of file entries and the available options can be found
@@ -1678,6 +1676,9 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
+          read_meth:
+            deprecated: true
+            type: string
           transform:
             aliases:
             - transforms
@@ -1695,6 +1696,13 @@ definitions:
               - type: function
               - $ref: '#/definitions/transform'
             type: array
+          working_dir:
+            description: Working directory. If not provided, the current working directory
+              is used.
+            type: string
+          write_meth:
+            deprecated: true
+            type: string
         title: yggdrasil.drivers.ConnectionDriver.ConnectionDriver
         type: object
         pushProperties:
@@ -1739,9 +1747,6 @@ definitions:
             - input_file
             - input_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: input
             description: One or more name(s) of model output channel(s) and/or new
               channel/file objects that the connection should receive messages from.
               A full description of file entries and the available options can be
@@ -1777,9 +1782,6 @@ definitions:
             - output_file
             - output_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: output
             description: One or more name(s) of model input channel(s) and/or new
               channel/file objects that the connection should send messages to. A
               full description of file entries and the available options can be found
@@ -1790,6 +1792,9 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
+          read_meth:
+            deprecated: true
+            type: string
           transform:
             aliases:
             - transforms
@@ -1807,6 +1812,13 @@ definitions:
               - type: function
               - $ref: '#/definitions/transform'
             type: array
+          working_dir:
+            description: Working directory. If not provided, the current working directory
+              is used.
+            type: string
+          write_meth:
+            deprecated: true
+            type: string
         title: yggdrasil.drivers.FileInputDriver.FileInputDriver
         type: object
         pushProperties:
@@ -1851,9 +1863,6 @@ definitions:
             - input_file
             - input_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: input
             description: One or more name(s) of model output channel(s) and/or new
               channel/file objects that the connection should receive messages from.
               A full description of file entries and the available options can be
@@ -1889,9 +1898,6 @@ definitions:
             - output_file
             - output_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: output
             description: One or more name(s) of model input channel(s) and/or new
               channel/file objects that the connection should send messages to. A
               full description of file entries and the available options can be found
@@ -1902,6 +1908,9 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
+          read_meth:
+            deprecated: true
+            type: string
           transform:
             aliases:
             - transforms
@@ -1919,6 +1928,13 @@ definitions:
               - type: function
               - $ref: '#/definitions/transform'
             type: array
+          working_dir:
+            description: Working directory. If not provided, the current working directory
+              is used.
+            type: string
+          write_meth:
+            deprecated: true
+            type: string
         title: yggdrasil.drivers.FileOutputDriver.FileOutputDriver
         type: object
         pushProperties:
@@ -1963,9 +1979,6 @@ definitions:
             - input_file
             - input_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: input
             description: One or more name(s) of model output channel(s) and/or new
               channel/file objects that the connection should receive messages from.
               A full description of file entries and the available options can be
@@ -2001,9 +2014,6 @@ definitions:
             - output_file
             - output_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: output
             description: One or more name(s) of model input channel(s) and/or new
               channel/file objects that the connection should send messages to. A
               full description of file entries and the available options can be found
@@ -2014,6 +2024,9 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
+          read_meth:
+            deprecated: true
+            type: string
           transform:
             aliases:
             - transforms
@@ -2031,6 +2044,13 @@ definitions:
               - type: function
               - $ref: '#/definitions/transform'
             type: array
+          working_dir:
+            description: Working directory. If not provided, the current working directory
+              is used.
+            type: string
+          write_meth:
+            deprecated: true
+            type: string
         title: yggdrasil.drivers.InputDriver.InputDriver
         type: object
         pushProperties:
@@ -2075,9 +2095,6 @@ definitions:
             - input_file
             - input_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: input
             description: One or more name(s) of model output channel(s) and/or new
               channel/file objects that the connection should receive messages from.
               A full description of file entries and the available options can be
@@ -2113,9 +2130,6 @@ definitions:
             - output_file
             - output_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: output
             description: One or more name(s) of model input channel(s) and/or new
               channel/file objects that the connection should send messages to. A
               full description of file entries and the available options can be found
@@ -2126,6 +2140,9 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
+          read_meth:
+            deprecated: true
+            type: string
           transform:
             aliases:
             - transforms
@@ -2143,6 +2160,13 @@ definitions:
               - type: function
               - $ref: '#/definitions/transform'
             type: array
+          working_dir:
+            description: Working directory. If not provided, the current working directory
+              is used.
+            type: string
+          write_meth:
+            deprecated: true
+            type: string
         title: yggdrasil.drivers.OutputDriver.OutputDriver
         type: object
         pushProperties:
@@ -2188,9 +2212,6 @@ definitions:
             - input_file
             - input_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: input
             description: One or more name(s) of model output channel(s) and/or new
               channel/file objects that the connection should receive messages from.
               A full description of file entries and the available options can be
@@ -2226,9 +2247,6 @@ definitions:
             - output_file
             - output_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: output
             description: One or more name(s) of model input channel(s) and/or new
               channel/file objects that the connection should send messages to. A
               full description of file entries and the available options can be found
@@ -2239,6 +2257,9 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
+          read_meth:
+            deprecated: true
+            type: string
           transform:
             aliases:
             - transforms
@@ -2256,6 +2277,13 @@ definitions:
               - type: function
               - $ref: '#/definitions/transform'
             type: array
+          working_dir:
+            description: Working directory. If not provided, the current working directory
+              is used.
+            type: string
+          write_meth:
+            deprecated: true
+            type: string
         title: yggdrasil.drivers.RPCRequestDriver.RPCRequestDriver
         type: object
         pushProperties:
@@ -2301,9 +2329,6 @@ definitions:
             - input_file
             - input_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: input
             description: One or more name(s) of model output channel(s) and/or new
               channel/file objects that the connection should receive messages from.
               A full description of file entries and the available options can be
@@ -2339,9 +2364,6 @@ definitions:
             - output_file
             - output_files
             allowSingular: true
-            default:
-            - is_default: true
-              name: output
             description: One or more name(s) of model input channel(s) and/or new
               channel/file objects that the connection should send messages to. A
               full description of file entries and the available options can be found
@@ -2352,6 +2374,9 @@ definitions:
               - $ref: '#/definitions/file'
             minItems: 1
             type: array
+          read_meth:
+            deprecated: true
+            type: string
           transform:
             aliases:
             - transforms
@@ -2369,6 +2394,13 @@ definitions:
               - type: function
               - $ref: '#/definitions/transform'
             type: array
+          working_dir:
+            description: Working directory. If not provided, the current working directory
+              is used.
+            type: string
+          write_meth:
+            deprecated: true
+            type: string
         title: yggdrasil.drivers.RPCResponseDriver.RPCResponseDriver
         type: object
         pushProperties:
@@ -10141,6 +10173,8 @@ definitions:
           - wofost
           - yaml
           type: string
+      required:
+      - seritype
       title: serializer_base
       type: object
     - anyOf:
