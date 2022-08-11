@@ -8252,6 +8252,14 @@ public:
     //! Gets the warning object.
     ValueType& GetWarning() { return warning_; }
     const ValueType& GetWarning() const { return warning_; }
+    template<typename ErrorType>
+    bool GetWarningMsg(ErrorType& out,
+		       typename ErrorType::AllocatorType& allocator,
+		       const ValueType* err = nullptr) const {
+      if (!err)
+	err = &warning_;
+      return GetErrorMsg(out, allocator, err);
+    }
 #endif // RAPIDJSON_YGGDRASIL
 
     //! Gets the JSON pointer pointed to the invalid schema.

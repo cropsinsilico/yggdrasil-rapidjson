@@ -221,7 +221,7 @@ TEST(SchemaValidator, Hasher) {
     d.Accept(validator);\
     EXPECT_TRUE(validator.IsValid());\
     ValidateErrorCode code = validator.GetInvalidSchemaCode();\
-    ASSERT_TRUE(code != kValidateErrorNone);\
+    ASSERT_TRUE(code == kValidateWarnings);\
     ASSERT_TRUE(strcmp(GetValidateError_En(code), "Unknown error.") != 0);\
     if (validator.GetInvalidSchemaPointer() != PointerType(invalidSchemaPointer)) {\
         StringBuffer sb;\
@@ -242,6 +242,18 @@ TEST(SchemaValidator, Hasher) {
     }\
     Document e;\
     e.Parse(warning);\
+    RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;\
+    Value e_msg;\
+    if (!validator.GetWarningMsg(e_msg, error_msg_allocator)) {	\
+      StringBuffer sb_t;					\
+      PrettyWriter<StringBuffer> w_t(sb_t);			\
+      printf("WarningMsg = %s\n", sb_t.GetString());		\
+      StringBuffer sb;						\
+      PrettyWriter<StringBuffer> w(sb);				\
+      validator.GetWarning().Accept(w);				\
+      printf("GetWarning(): %s", sb.GetString());		\
+      ADD_FAILURE();						\
+    }\
     if (validator.GetWarning() != e) {\
         StringBuffer sb;\
         PrettyWriter<StringBuffer> w(sb);		\
