@@ -39,8 +39,10 @@
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 #define RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
 #define RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-#include "prettywriter.h"
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#include "prettywriter.h"
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
 #endif // RAPIDJSON_YGGDRASIL
 
 #if !defined(RAPIDJSON_SCHEMA_USE_INTERNALREGEX)
@@ -890,6 +892,11 @@ public:
     SizeType* idx;
     ValueType* aliased;
   };
+  enum AliasType {
+    kAliasSrc = 0,
+    kAliasDst = 1,
+    kAliasExists = 2
+  };
   struct ModificationEntry;
   struct ValueEntry {
     ValueEntry(ValueType& value) :
@@ -1014,16 +1021,16 @@ public:
   };
   struct PairEntry {
     PairEntry() :
-      complete(false), properties(kArrayType),
+      complete(false), inShared(false), properties(kArrayType),
       prefix(), src(), dst() {}
     PairEntry(const PointerType& prefix0,
 	      AllocatorType* allocator) :
-      complete(false), properties(kArrayType),
+      complete(false), inShared(false), properties(kArrayType),
       prefix(prefix0, allocator),
       src(allocator), dst(allocator) {}
     PairEntry(const PairEntry& other,
 	      AllocatorType* allocator) :
-      complete(other.complete),
+      complete(other.complete), inShared(false),
       properties(other.properties, *allocator),
       prefix(other.prefix, allocator),
       src(allocator), dst(allocator) {
@@ -1316,7 +1323,25 @@ public:
       SetProperties(it->parent, allocator);
       return;
     }
-    bool HasUnvisitedProperty(const SValue& name, bool source) const {
+    bool BeginCircular(const char* msg = 0) {
+      if (inShared) {
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+	if (msg) {
+	  std::cerr << msg << " [CIRCULAR SHARED]: ";
+	  Display();
+	  std::cerr << std::endl;
+	}
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+	return true;
+      }
+      inShared = true;
+      return false;
+    }
+    bool EndCircular(bool val) {
+      inShared = false;
+      return val;
+    }
+    bool HasUnvisitedProperty(const SValue& name, bool source) {
       if ((source && !src.set && dst.set && dst.properties.Contains(name)) ||
 	  (!source && !dst.set && src.set && src.properties.Contains(name)) ||
 	  (!src.set && !dst.set && properties.Contains(name)))
@@ -1324,7 +1349,7 @@ public:
       return false;
     }
     bool IsFinalized(const SValue& name, bool source,
-		     const GenericNormalizedDocument& normalized) const {
+		     GenericNormalizedDocument& normalized) {
       if (!source) {
 	// Sibling srcs/dsts that assign to the same destination
 	if (!dst.set) return false;
@@ -1554,6 +1579,7 @@ public:
       }
     }
     bool complete;
+    bool inShared;
     SValue properties;
     PointerType prefix;
     SharedValueEntry src;
@@ -2041,55 +2067,73 @@ public:
     return true;
   }
   bool AliasKey(Context& context, const Ch* str, SizeType len, bool,
-		bool dont_check_aliases,
-		ValueType& orig, ValueType& primary,
-		const SchemaType* schema=nullptr) {
-    bool exists = false;
-    bool aliased = false;
+		ValueType& orig, ValueType& primary, unsigned& flag,
+		const SchemaType* schema=nullptr,
+		bool dont_check_aliases = false) {
     if (!dont_check_aliases) {
       const ValueType& aliases = AddAliases(schema);
       RAPIDJSON_ASSERT(aliases.IsObject());
       orig.SetString(str, len, GetAllocator());
       ConstMemberIterator match = aliases.MemberEnd();
+      flag = 0;
       if (FindAliasName(aliases, orig, match)) {
 	if (!GetFinalAlias(context, aliases, orig, &primary))
 	  return false;
 	RecordModifiedAlias(primary, orig);
 	len = primary.GetStringLength();
 	str = primary.GetString();
-	aliased = true;
+	flag = (1 << kAliasSrc);
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+	std::cerr << "AliasKey [src]: ";
+	DisplayValue(orig);
+	std::cerr << " -> ";
+	DisplayValue(primary);
+	std::cerr << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       } else if (FindAliasValue(aliases, orig, match)) {
+	ConstMemberIterator existMatch = aliases.MemberEnd();
+	if (extending_ && !appending_ &&
+	    FindAliasValueExisting(aliases, match, existMatch)) {
+	  match = existMatch;
+	  RecordModifiedAlias(match->value, match->name);
+	}
 	primary.CopyFrom(orig, GetAllocator(), true);
 	orig.CopyFrom(match->name, GetAllocator(), true);
-	if (extending_ && !appending_ && HasMember(orig))
-	  RecordModifiedAlias(primary, orig);
+	flag = (1 << kAliasDst);
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+	std::cerr << "AliasKey [dst]: ";
+	DisplayValue(orig);
+	std::cerr << " -> ";
+	DisplayValue(primary);
+	std::cerr << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       }
       // Check previous keys for alias target
       if (match != aliases.MemberEnd()) {
 	if (HasMember(primary)) {
-	  exists = true;
+	  flag |= (1 << kAliasExists);
 	  if ((!extending_) || appending_) {
 	    // TODO: Check equivalence when the value is added?
+	    //   This would require recording the alias and then checking in
+	    //   subsequent nested calls or retrieving the subsequent value
+	    //   in advanced based on teh pointer address
 	    context.error_handler.DuplicateAlias(orig, primary);
 	    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
 	  }
 	}
       }
     }
-    if (!exists)
-      orig.SetNull();
-    if (!aliased)
-      primary.SetNull();
     return true;
   }
   bool NormKey(Context& context, const SchemaType& schema, const Ch* str, SizeType len, bool copy, bool dont_check_aliases=false) {
+    INIT_CHECK(Norm, key, (const char*)str, &schema);
     ValueType orig;
     ValueType primary;
-    INIT_CHECK(Norm, key, (const char*)str, &schema);
-    out = AliasKey(context, str, len, copy, dont_check_aliases,
-		   orig, primary, &schema);
+    unsigned flag = 0;
+    out = AliasKey(context, str, len, copy, orig, primary, flag, &schema,
+		   dont_check_aliases);
     CHECK_RESULT;
-    if (primary.IsString()) {
+    if (flag & (1 << kAliasSrc)) {
       len = primary.GetStringLength();
       str = primary.GetString();
       copy = true;
@@ -2281,30 +2325,32 @@ public:
 		   &GetAllocator(), multiplePartners);
   }
   bool IsFinalizedShared(const PairEntry* skip, const SValue& name,
-			 bool source) const {
+			 bool source) {
     const SharedValueEntry* skipV = skip->GetValue(source);
     RAPIDJSON_ASSERT(skipV->set);
     if (!skipV->set) return false;
-    for (const PairEntry* it = sharedStack_.template Bottom<PairEntry>();
+    for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
 	 it != sharedStack_.template End<PairEntry>(); it++) {
-      if (it == skip) continue;
-      if (!it->Matches(skipV->instancePtr, false, true)) continue;
-      if (!it->IsFinalized(name, true, *this))
+      if (it == skip ||
+	  !it->Matches(skipV->instancePtr, false, true)) continue;
+      if (it->BeginCircular("IsFinalizedShared")) continue;
+      if (!it->EndCircular(it->IsFinalized(name, true, *this)))
 	return false;
     }
     return true;
   }
   bool HasUnvisitedSharedSiblings(PairEntry* skip, const SValue& name,
-				  bool source) const {
+				  bool source) {
     SharedValueEntry* skipV = skip->GetValue(!source);
     RAPIDJSON_ASSERT(skipV->set);
     if (!skipV->set) return true;
-    for (const PairEntry* it = sharedStack_.template Bottom<PairEntry>();
+    for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
 	 it != sharedStack_.template End<PairEntry>(); it++) {
       if (it == skip ||
 	  it->GetValue(source)->set || !it->GetValue(!source)->set)
 	continue;
-      if (it->HasUnvisitedProperty(name, source) &&
+      if (it->BeginCircular("HasUnvisitedSharedSiblings")) continue;
+      if (it->EndCircular(it->HasUnvisitedProperty(name, source)) &&
 	  it->Matches(skipV->instancePtr, !source, true))
 	return true;
     }
@@ -2323,7 +2369,8 @@ public:
       if (it == skip || !it->dst.set || !it->src.set ||
 	  !it->HasMissing(name) ||
 	  !it->Matches(skipV->instancePtr, true, true)) continue;
-      if (!it->SetMember(context, name, value, *this)) return false;
+      if (it->BeginCircular("SetSharedSiblings")) continue;
+      if (!it->EndCircular(it->SetMember(context, name, value, *this))) return false;
     }
     return true;
   }
@@ -2597,14 +2644,16 @@ public:
     bool dont_recurse = false;
     EXTEND_BEGIN_(YggdrasilString, (str, length, GetAllocator(), valueSchema));
     REQUIRED_PROPERTY_(YggdrasilString,
-		       (current && current->IsYggdrasil()),
+		       (current &&
+			(current->IsYggdrasil() || current->IsString())),
 		       (str, length, valueSchema));
-    REQUIRED_PROPERTY_(YggdrasilString,
-		       (current->GetValueSchema() == valueSchema),
-		       (str, length, valueSchema));
-    REQUIRED_PROPERTY_(YggdrasilString,
-		       current->IsString(),
-		       (str, length, valueSchema));
+    if (current->IsYggdrasil()) {
+      REQUIRED_PROPERTY_(YggdrasilString,
+			 (current->GetValueSchema() == valueSchema),
+			 (str, length, valueSchema));
+    } else {
+      current->SetValueSchema(valueSchema, &GetAllocator());
+    }
     REQUIRED_PROPERTY_(YggdrasilString,
 		       (internal::StrCmp(str, current->GetString()) == 0),
 		       (str, length, valueSchema));
@@ -2614,14 +2663,15 @@ public:
   bool ExtendYggdrasilStartObject(Context& context, YggSchemaValueType& valueSchema, bool dont_recurse=false) {
     EXTEND_BEGIN_(YggdrasilObject, (kObjectType, valueSchema));
     REQUIRED_PROPERTY_(YggdrasilObject,
-		       (current && current->IsYggdrasil()),
+		       (current && (current->IsYggdrasil() || current->IsString())),
 		       (kObjectType, valueSchema));
-    REQUIRED_PROPERTY_(YggdrasilObject,
-		       (current->GetValueSchema() == valueSchema),
-		       (kObjectType, valueSchema));
-    REQUIRED_PROPERTY_(YggdrasilObject,
-		       current->IsObject(),
-		       (kObjectType, valueSchema));
+    if (current->IsYggdrasil()) {
+      REQUIRED_PROPERTY_(YggdrasilObject,
+			 (current->GetValueSchema() == valueSchema),
+			 (kObjectType, valueSchema));
+    } else {
+      current->SetValueSchema(valueSchema, &GetAllocator());
+    }
     return true;
   }
   bool ExtendYggdrasilEndObject(Context& context, SizeType, bool dont_recurse=false) {
@@ -2647,19 +2697,20 @@ public:
     return true;
   }
   bool ExtendKey(Context& context, const Ch* str, SizeType len, bool copy) {
+    INIT_CHECK(Extend, key, (const char*)str, extend_schema_);
     ValueType orig;
     ValueType primary;
-    INIT_CHECK(Extend, key, (const char*)str, extend_schema_);
-    out = AliasKey(context, str, len, copy, false, orig, primary);
+    unsigned flag = 0;
+    out = AliasKey(context, str, len, copy, orig, primary, flag);
     CHECK_RESULT;
-    if (primary.IsString()) {
+    if (flag & (1 << kAliasSrc)) {
       len = primary.GetStringLength();
       str = primary.GetString();
       copy = true;
     }
     // Conflicting values for aliased objects will be reported as merge
     //   errors unless primary is checked below
-    if (orig.IsString() && primary.IsString())
+    if (flag == ((1 << kAliasSrc) | (1 << kAliasExists)))
       PushKey(str, len, &orig);
     else
       PushKey(str, len);
@@ -3111,14 +3162,14 @@ private:
     }
     return false;
   }
-  void ResetModifiedVisited(const PointerType p) {
-    return ResetModifiedVisited(&p);
+  void ResetModifiedVisited(const PointerType p, bool value = false) {
+    return ResetModifiedVisited(&p, value);
   }
-  void ResetModifiedVisited(const PointerType* p = 0) {
+  void ResetModifiedVisited(const PointerType* p = 0, bool value = false) {
     for (ModificationEntry* it = modifiedStack_.template Bottom<ModificationEntry>();
 	 it != modifiedStack_.template End<ModificationEntry>(); it++) {
       if (!p || it->after.StartsWith(*p))
-	it->visited = false;
+	it->visited = value;
     }
   }
   bool PointerStartsWith(const PointerType& a, const PointerType& b,
@@ -3590,6 +3641,16 @@ private:
 	break;
     return (match != aliases.MemberEnd());
   }
+  bool FindAliasValueExisting(const ValueType& aliases,
+			      ConstMemberIterator& start,
+			      ConstMemberIterator& match) {
+    match = aliases.MemberBegin() + (start - aliases.MemberBegin());
+    for ( ; match != aliases.MemberEnd(); ++match)
+      if (match->value == start->value && HasMember(match->name))
+	return true;
+    RAPIDJSON_ASSERT(match != start);
+    return false;
+  }
   ValueType& GetAliases() {
     GenericStringBuffer<EncodingType> address;
     GetInstanceRef(address, ((!extending_) || appending_));
@@ -3635,9 +3696,9 @@ public:
     DisplayPointer(GetInstancePointer());
   }
   void DisplayStack(bool extension=false
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
 		    , bool pretty=false
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
 		    ) const {
     if (extension) {
       std::cerr << "Value Stack:" << std::endl;
@@ -3664,37 +3725,37 @@ public:
       return;
     }
     StringBuffer sb;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
     if (pretty) {
       PrettyWriter<StringBuffer, typename DocumentType::EncodingType, UTF8<> > w(sb);
       document_.RecordStack(w);
     } else {
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
       Writer<StringBuffer, typename DocumentType::EncodingType, UTF8<> > w(sb);
       document_.RecordStack(w);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
     }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
     std::cerr << (const char*)(sb.GetString());
   }
   template<typename VType>
   static void DisplayValue(VType& value
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
 			   , bool pretty=false
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
 			   ) {
     StringBuffer sb;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
     if (pretty) {
       PrettyWriter<StringBuffer, typename VType::EncodingType, UTF8<> > w(sb);
       value.Accept(w);
     } else {
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
       Writer<StringBuffer, typename VType::EncodingType, UTF8<> > w(sb);
       value.Accept(w);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
     }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
     std::cerr << (const char*)(sb.GetString());
   }
   void DisplayAliases() {
@@ -8620,16 +8681,20 @@ public:
   }
   ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) {
     error_.CopyFrom(static_cast<GenericSchemaValidator*>(subvalidator[0])->GetError(), GetStateAllocator(), true);
-    RAPIDJSON_ASSERT(error_.IsObject() && (error_.MemberCount() == 1));
-    typename ValueType::ConstMemberIterator m = error_.MemberBegin();
-    RAPIDJSON_ASSERT(m->value.IsObject());
-    typename ValueType::ConstMemberIterator vcode = m->value.FindMember(GetErrorCodeString());
-    RAPIDJSON_ASSERT(vcode != m->value.MemberEnd());
+    RAPIDJSON_ASSERT(error_.IsObject());
+    ValidateErrorCode vcode = kValidateErrors;
+    if (error_.MemberCount() == 1) {
+      typename ValueType::ConstMemberIterator m = error_.MemberBegin();
+      RAPIDJSON_ASSERT(m->value.IsObject());
+      typename ValueType::ConstMemberIterator m_vcode = m->value.FindMember(GetErrorCodeString());
+      RAPIDJSON_ASSERT(m_vcode != m->value.MemberEnd());
+      vcode = static_cast<ValidateErrorCode>(m_vcode->value.GetUint());
+    }
     error_.AddMember(GetSingularString(),
 		     ValueType(static_cast<GenericSchemaValidator*>(subvalidator[1])->GetError(),
 			       GetStateAllocator()).Move(),
 		     GetStateAllocator());
-    return static_cast<ValidateErrorCode>(vcode->value.GetUint());
+    return vcode;
   }
   void NormalizationMergeConflict(const typename SchemaType::ValueType& cond,
 				  const SValue& expected, const SValue& actual) {

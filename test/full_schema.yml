@@ -113,6 +113,11 @@ definitions:
           description: Name used for component in log messages.
           pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+$
           type: string
+        onexit:
+          deprecated: true
+          description: '[DEPRECATED] Method of input/output driver to call when the
+            connection closes'
+          type: string
         outside_loop:
           default: false
           description: If True, and the comm is an input/outputs to/from a model being
@@ -261,6 +266,11 @@ definitions:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+$
             type: string
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           outside_loop:
             default: false
             description: If True, and the comm is an input/outputs to/from a model
@@ -403,6 +413,11 @@ definitions:
           name:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+$
+            type: string
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
             type: string
           outside_loop:
             default: false
@@ -547,6 +562,11 @@ definitions:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+$
             type: string
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           outside_loop:
             default: false
             description: If True, and the comm is an input/outputs to/from a model
@@ -689,6 +709,11 @@ definitions:
           name:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+$
+            type: string
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
             type: string
           outside_loop:
             default: false
@@ -847,6 +872,11 @@ definitions:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+$
             type: string
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           outside_loop:
             default: false
             description: If True, and the comm is an input/outputs to/from a model
@@ -990,6 +1020,11 @@ definitions:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+$
             type: string
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           outside_loop:
             default: false
             description: If True, and the comm is an input/outputs to/from a model
@@ -1132,6 +1167,11 @@ definitions:
           name:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+$
+            type: string
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
             type: string
           outside_loop:
             default: false
@@ -1279,6 +1319,11 @@ definitions:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+$
             type: string
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           outside_loop:
             default: false
             description: If True, and the comm is an input/outputs to/from a model
@@ -1422,6 +1467,11 @@ definitions:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+$
             type: string
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           outside_loop:
             default: false
             description: If True, and the comm is an input/outputs to/from a model
@@ -1557,6 +1607,22 @@ definitions:
           type: array
         read_meth:
           deprecated: true
+          enum:
+          - all
+          - line
+          - table_array
+          - ascii
+          - binary
+          - json
+          - map
+          - mat
+          - netcdf
+          - obj
+          - pandas
+          - ply
+          - table
+          - wofost
+          - yaml
           type: string
         transform:
           aliases:
@@ -1581,12 +1647,30 @@ definitions:
           type: string
         write_meth:
           deprecated: true
+          enum:
+          - all
+          - line
+          - table_array
+          - ascii
+          - binary
+          - json
+          - map
+          - mat
+          - netcdf
+          - obj
+          - pandas
+          - ply
+          - table
+          - wofost
+          - yaml
           type: string
       pushProperties:
         '!$properties/inputs/items':
         - transform
+        - onexit
         '!$properties/outputs/items/anyOf/1':
         - transform
+        - onexit
         $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
         $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       required:
@@ -1678,6 +1762,22 @@ definitions:
             type: array
           read_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
           transform:
             aliases:
@@ -1702,14 +1802,32 @@ definitions:
             type: string
           write_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
         title: yggdrasil.drivers.ConnectionDriver.ConnectionDriver
         type: object
         pushProperties:
           '!$properties/inputs/items':
           - transform
+          - onexit
           '!$properties/outputs/items/anyOf/1':
           - transform
+          - onexit
           $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
           $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
@@ -1794,6 +1912,22 @@ definitions:
             type: array
           read_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
           transform:
             aliases:
@@ -1818,14 +1952,32 @@ definitions:
             type: string
           write_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
         title: yggdrasil.drivers.FileInputDriver.FileInputDriver
         type: object
         pushProperties:
           '!$properties/inputs/items':
           - transform
+          - onexit
           '!$properties/outputs/items/anyOf/1':
           - transform
+          - onexit
           $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
           $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
@@ -1910,6 +2062,22 @@ definitions:
             type: array
           read_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
           transform:
             aliases:
@@ -1934,14 +2102,32 @@ definitions:
             type: string
           write_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
         title: yggdrasil.drivers.FileOutputDriver.FileOutputDriver
         type: object
         pushProperties:
           '!$properties/inputs/items':
           - transform
+          - onexit
           '!$properties/outputs/items/anyOf/1':
           - transform
+          - onexit
           $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
           $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
@@ -2026,6 +2212,22 @@ definitions:
             type: array
           read_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
           transform:
             aliases:
@@ -2050,14 +2252,32 @@ definitions:
             type: string
           write_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
         title: yggdrasil.drivers.InputDriver.InputDriver
         type: object
         pushProperties:
           '!$properties/inputs/items':
           - transform
+          - onexit
           '!$properties/outputs/items/anyOf/1':
           - transform
+          - onexit
           $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
           $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
@@ -2142,6 +2362,22 @@ definitions:
             type: array
           read_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
           transform:
             aliases:
@@ -2166,14 +2402,32 @@ definitions:
             type: string
           write_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
         title: yggdrasil.drivers.OutputDriver.OutputDriver
         type: object
         pushProperties:
           '!$properties/inputs/items':
           - transform
+          - onexit
           '!$properties/outputs/items/anyOf/1':
           - transform
+          - onexit
           $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
           $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
@@ -2259,6 +2513,22 @@ definitions:
             type: array
           read_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
           transform:
             aliases:
@@ -2283,14 +2553,32 @@ definitions:
             type: string
           write_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
         title: yggdrasil.drivers.RPCRequestDriver.RPCRequestDriver
         type: object
         pushProperties:
           '!$properties/inputs/items':
           - transform
+          - onexit
           '!$properties/outputs/items/anyOf/1':
           - transform
+          - onexit
           $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
           $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
       - additionalProperties: false
@@ -2376,6 +2664,22 @@ definitions:
             type: array
           read_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
           transform:
             aliases:
@@ -2400,14 +2704,32 @@ definitions:
             type: string
           write_meth:
             deprecated: true
+            enum:
+            - all
+            - line
+            - table_array
+            - ascii
+            - binary
+            - json
+            - map
+            - mat
+            - netcdf
+            - obj
+            - pandas
+            - ply
+            - table
+            - wofost
+            - yaml
             type: string
         title: yggdrasil.drivers.RPCResponseDriver.RPCResponseDriver
         type: object
         pushProperties:
           '!$properties/inputs/items':
           - transform
+          - onexit
           '!$properties/outputs/items/anyOf/1':
           - transform
+          - onexit
           $properties/inputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
           $properties/outputs/items/anyOf/1/allOf/1/anyOf/0/properties/serializer: true
     description: Schema for connection components.
@@ -2513,6 +2835,11 @@ definitions:
           description: Map from pointer variable names to the names of variables where
             their length will be stored. Defaults to {}.
           type: object
+        onexit:
+          deprecated: true
+          description: '[DEPRECATED] Method of input/output driver to call when the
+            connection closes'
+          type: string
         transform:
           aliases:
           - recv_converter
@@ -2667,6 +2994,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -2816,6 +3148,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -2966,6 +3303,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -3124,6 +3466,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -3280,6 +3627,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -3425,6 +3777,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -3588,6 +3945,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -3733,6 +4095,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -3899,6 +4266,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -4043,6 +4415,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -4188,6 +4565,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -4337,6 +4719,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
@@ -4499,6 +4886,11 @@ definitions:
             description: Map from pointer variable names to the names of variables
               where their length will be stored. Defaults to {}.
             type: object
+          onexit:
+            deprecated: true
+            description: '[DEPRECATED] Method of input/output driver to call when
+              the connection closes'
+            type: string
           transform:
             aliases:
             - recv_converter
