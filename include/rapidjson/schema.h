@@ -1323,7 +1323,13 @@ public:
       SetProperties(it->parent, allocator);
       return;
     }
-    bool BeginCircular(const char* msg = 0) {
+    bool BeginCircular(
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+		       const char* msg = 0
+#else // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+		       const char* = 0
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+		       ) {
       if (inShared) {
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	if (msg) {
