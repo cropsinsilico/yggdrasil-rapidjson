@@ -349,14 +349,18 @@ public:
 	return Append(key.GetString(), key.GetStringLength(), allocator);
       return Append((SizeType)(key.GetUint()), allocator);
     }
-    bool StartsWith(const GenericPointer& rhs) const {
-      if (!IsValid() || !rhs.IsValid() || tokenCount_ <= rhs.tokenCount_)
+    bool StartsWith(const GenericPointer& rhs, size_t* nMatch = 0) const {
+      if (!IsValid() || !rhs.IsValid() || tokenCount_ <= rhs.tokenCount_) {
+	if (nMatch) nMatch[0] = 0;
 	return (*this == rhs);
-      return (CountMatchingTokens(rhs) == rhs.tokenCount_);
+      }
+      size_t nMatch0 = CountMatchingTokens(rhs);
+      if (nMatch) nMatch[0] = nMatch0;
+      return nMatch0 == rhs.tokenCount_;
     }
     size_t CountMatchingTokens(const GenericPointer& rhs) const {
         if (!IsValid() || !rhs.IsValid())
-            return false;
+            return 0;
 
         for (size_t i = 0; i < tokenCount_; i++) {
 	    if (i >= rhs.tokenCount_ ||

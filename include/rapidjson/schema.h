@@ -507,11 +507,20 @@ public:
   }
   void AddOtherProperty(SchemaType* schema, SharedPropertyType* link,
 			const PointerType& path) {
-    otherPropertyCount++;
-    propertyCount++;
-    otherProperties = static_cast<SharedPropertyType**>(schema->allocator_->Realloc(otherProperties, sizeof(SharedPropertyType*) * (otherPropertyCount - 1), sizeof(SharedPropertyType*) * otherPropertyCount));
-    otherProperties[otherPropertyCount - 1] = link;
-    link->currentInstance->AddLink(schema, otherPropertyCount - 1, path);
+    SizeType idx = otherPropertyCount;
+    for (SizeType i = 0; i < otherPropertyCount; i++) {
+      if (otherProperties[i] == link) {
+	idx = i;
+	break;
+      }
+    }
+    if (idx == otherPropertyCount) {
+      otherPropertyCount++;
+      propertyCount++;
+      otherProperties = static_cast<SharedPropertyType**>(schema->allocator_->Realloc(otherProperties, sizeof(SharedPropertyType*) * (otherPropertyCount - 1), sizeof(SharedPropertyType*) * otherPropertyCount));
+      otherProperties[otherPropertyCount - 1] = link;
+    }
+    link->currentInstance->AddLink(schema, idx, path);
   }
   void SortSources(const SchemaType* root, const PointerType path) {
     if (localProperties) {
@@ -519,6 +528,8 @@ public:
 	localProperties[i].SortSources(root, path);
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       std::cerr << "SortSources: ";
+      NormalizedDocumentType::DisplayPointer(path);
+      std::cerr << std::endl;
       Display();
       std::cerr << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
@@ -584,22 +595,19 @@ public:
 		 const SValue& present,
 		 NormalizedDocumentType& normalized) {
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-    std::cerr << "AddObject [";
-    NormalizedDocumentType::DisplayPointer(schemaPtr);
-    std::cerr << "]:" << std::endl;
-    Display();
+    // std::cerr << "AddObject [";
+    // NormalizedDocumentType::DisplayPointer(schemaPtr);
+    // std::cerr << "]:" << std::endl;
+    // Display();
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
     for (SizeType i = 0; i < propertyCount; i++)
       GetProperty(i)->AddObject(instancePtr, schemaPtr,
 				normalized, present, isLocal(i));
   }
-  void AddMissingObject(const SValue& name,
-			const PointerType& instancePtr,
+  void AddMissingObject(const PointerType& instancePtr,
 			NormalizedDocumentType& normalized) {
-    PointerType iP = instancePtr.Append(name.GetString(),
-					name.GetStringLength());
     for (SizeType i = 0; i < propertyCount; i++)
-      GetProperty(i)->AddMissingObject(iP, normalized, isLocal(i));
+      GetProperty(i)->AddMissingObject(instancePtr, normalized, isLocal(i));
   }
   SizeType localPropertyCount;
   SizeType otherPropertyCount;
@@ -658,7 +666,8 @@ struct SchemaValidationContext {
 	, normalized(0),
 	schemaPointerAbs(),
 	valuePointer(),
-	patternPropertiesPointers(0)
+	patternPropertiesPointers(0),
+	python_disabled(false)
 #endif //RAPIDJSON_YGGDRASIL
     {}
 
@@ -720,6 +729,7 @@ struct SchemaValidationContext {
     PointerType schemaPointerAbs;
     PointerType valuePointer;
     PointerType* patternPropertiesPointers;
+    bool python_disabled;
 #endif //RAPIDJSON_YGGDRASIL
 };
 
@@ -897,19 +907,31 @@ public:
     kAliasDst = 1,
     kAliasExists = 2
   };
+  enum ValueFlag {
+    kValueFlagTemp
+  };
   struct ModificationEntry;
+  // TODO: Move replaced, modified, and child_modified into flags
   struct ValueEntry {
     ValueEntry(ValueType& value) :
-      val(&value), ptr(), replaced(false),
+      val(&value), ptr(), flags(0), replaced(false),
       modified(false), child_modified(false),
       singular(nullptr), child_singular(nullptr) {}
-    ValueEntry(ValueType& value, const PointerType& p,
-	       AllocatorType* allocator = 0) :
-      val(&value), ptr(p, allocator), replaced(false),
+    ValueEntry(ValueType& value, const PointerType& p, unsigned flags0,
+	       AllocatorType& allocator) :
+      val(&value), ptr(p, &allocator), flags(flags0), replaced(false),
       modified(false), child_modified(false),
-      singular(nullptr), child_singular(nullptr) {}
+      singular(nullptr), child_singular(nullptr) {
+      if (flags & (1 << kValueFlagTemp))
+	val = new ValueType(value, allocator);
+    }
+    ~ValueEntry() {
+      if (val && (flags & (1 << kValueFlagTemp)))
+	delete val;
+    }
     ValueType* val;
     PointerType ptr;
+    unsigned flags;
     bool replaced;
     bool modified;
     bool child_modified;
@@ -1007,6 +1029,17 @@ public:
       multiple = rhs.multiple;
       parent = rhs.parent;
     }
+    bool operator==(const SharedValueEntry& rhs) const {
+      return (set == rhs.set &&
+	      local == rhs.local &&
+	      missing == rhs.missing &&
+	      multiple == rhs.multiple &&
+	      instancePtr == rhs.instancePtr &&
+	      schemaPtr == rhs.schemaPtr &&
+	      shared == rhs.shared &&
+	      properties == rhs.properties &&
+	      present == rhs.present);
+    }
     PointerType instancePtr;
     PointerType schemaPtr;
     SValue shared;
@@ -1042,10 +1075,21 @@ public:
       src.Display(useInstance);
       std::cerr << " -> ";
       dst.Display(useInstance);
+      if (!useInstance) {
+	std::cerr << " [";
+	DisplayPointer(src.instancePtr);
+	// src.Display(true);
+	// std::cerr << " -> ";
+	// dst.Display(true);
+	std::cerr << "]";
+      }
     }
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
     bool missing() const { return dst.missing || src.missing; }
     bool set() const { return dst.set && src.set; }
+    bool operator==(const PairEntry& rhs) const {
+      return (src == rhs.src) && (dst == rhs.dst);
+    }
     bool Completes(const PairEntry& other) const {
       bool source = src.set;
       const SharedValueEntry* iVi = GetValue(source);
@@ -1582,6 +1626,9 @@ public:
 	if (it != src.properties.End())
 	  src.properties.Erase(it);
 	src.shared.Erase(src.shared.Index(copy[i]));
+	normalized.RecordModified(kModificationTypeRemoved,
+				  src.instancePtr.Append(copy[i]),
+				  src.instancePtr);
       }
     }
     bool complete;
@@ -1651,6 +1698,9 @@ public:
     if (!child)
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Could not find child: %d", // GCOVR_EXCL_LINE
 					(int)index);
+    std::cerr << "ExtendChild: ";
+    DisplayPointer(context.schemaPointerAbs);
+    std::cerr << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     RAPIDJSON_ASSERT(child);
     child->FinalizeFromStack();
@@ -1713,7 +1763,7 @@ public:
       std::cerr << "ExtendShared Child: " << std::endl;
       for (SizeType i = 0; i < childSharedCount; i++) {
 	std::cerr << "    ";
-	(childShared + i)->Display(true);
+	(childShared + i)->Display();
 	std::cerr << std::endl;
       }
       std::cerr << std::endl;
@@ -1732,7 +1782,10 @@ public:
 	bool source = ot->src.set;
 	for (size_t iStack = 0; iStack < NStack; iStack++) {
 	  PairEntry* it = sharedStack_.template Bottom<PairEntry>() + iStack;
-	  if (!ot->Completes(*it)) continue;
+	  if (!ot->Completes(*it)) {
+	    match = (match || (*ot == *it));
+	    continue;
+	  }
 	  if (it->GetValue(source)->multiple) {
 	    PairEntry* pair = sharedStack_.template Push<PairEntry>();
 	    new (pair) PairEntry(*(sharedStack_.template Bottom<PairEntry>() + iStack), &GetAllocator());
@@ -2035,6 +2088,10 @@ public:
   bool NormYggdrasilEndObject(Context& context, const SchemaType& schema, SizeType memberCount) {
     NORM_BEGIN_STUB_(YggdrasilEndObject);
     NORM_BODY_(YggdrasilEndObject, (memberCount));
+    PointerType iP = GetInstancePointer(false, true);
+    PointerType iS = context.schemaPointerAbs;
+    out = FinalizeShared(context, schema, iP, iS);
+    CHECK_RESULT;
     NORM_END_(YggdrasilEndObject);
   }
   bool NormStartObject(Context& context, const SchemaType& schema) {
@@ -2212,6 +2269,7 @@ public:
     std::cerr << ", ";
     DisplayPointer(iP);
     std::cerr << std::endl;
+    schema.sharedProperties_->Display();
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
     ValueType* v = CurrentValue();
     SValue present(kArrayType);
@@ -2230,8 +2288,11 @@ public:
 			  const PointerType& schemaPtr,
 			  SizeType index) {
     // The property itself is shared
-    if (schema.properties_[index].schema->sharedProperties_)
-      schema.properties_[index].schema->sharedProperties_->AddMissingObject(schema.properties_[index].name, instancePtr, *this);
+    if (schema.properties_[index].schema->HasSharedProperties()) {
+      PointerType instancePtrChild = instancePtr.Append(schema.properties_[index].name.GetString(),
+							 schema.properties_[index].name.GetStringLength());
+      schema.properties_[index].schema->AddMissingObject(instancePtrChild, *this);
+    }
     return (schema.sharedProperties_ &&
 	    schema.sharedProperties_->isDst(schemaPtr,
 					    schema.properties_[index].name.GetString(),
@@ -2274,9 +2335,11 @@ public:
     return 0;
   }
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
-  void DisplayShared(bool useInstance = false) const {
+  void DisplayShared(bool useInstance = false,
+		     bool unsetOnly = false) const {
     for (const PairEntry* it = sharedStack_.template Bottom<PairEntry>();
 	 it != sharedStack_.template End<PairEntry>(); it++) {
+      if (unsetOnly && it->set()) continue;
       std::cerr << "    ";
       it->Display(useInstance);
       std::cerr << std::endl;
@@ -2284,6 +2347,16 @@ public:
     std::cerr << std::endl;
   }
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+  void PruneDuplicatePair() {
+    PairEntry* check = sharedStack_.template Top<PairEntry>();
+    for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
+	 it != check; it++) {
+      if (*it == *check) {
+	sharedStack_.template Pop<PairEntry>(1)->~PairEntry();
+	return;
+      }
+    }
+  }
   void AddSharedObject(const PointerType& instancePtr,
 		       const PointerType& schemaPtr,
 		       const SValue& present) {
@@ -2296,6 +2369,10 @@ public:
 	  !it->prefix.PartialCompare(instancePtr) ||
 	  !it->Matches(instancePtr, source, true)) continue;
       it->Complete(source, instancePtr, schemaPtr, present, &GetAllocator());
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+      std::cerr << "AddSharedObject [COMPLETE]: " << std::endl;
+      DisplayShared();
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
     }
   }
   void AddSharedObject(const PointerType& prefix0,
@@ -2313,6 +2390,11 @@ public:
 		   &GetAllocator(), parent);
     pair->Template(partner->source, partner,
 		   &GetAllocator(), multiplePartners);
+    PruneDuplicatePair();
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+    std::cerr << "AddSharedObject: " << std::endl;
+    DisplayShared();
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
   }
   void AddMissingObject(const PointerType& prefix0,
 			const PointerType& instancePtr,
@@ -2329,6 +2411,11 @@ public:
 		  &GetAllocator(), multiplePairs);
     pair->Template(partner->source, partner,
 		   &GetAllocator(), multiplePartners);
+    PruneDuplicatePair();
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+    std::cerr << "AddMissingObject: " << std::endl;
+    DisplayShared();
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
   }
   bool IsFinalizedShared(const PairEntry* skip, const SValue& name,
 			 bool source) {
@@ -2361,6 +2448,26 @@ public:
 	return true;
     }
     return false;
+  }
+  void DisplayUnvisitedSharedSiblings(PairEntry* skip, const SValue& name,
+				      bool source) {
+    SharedValueEntry* skipV = skip->GetValue(!source);
+    std::cerr << "UnvisitedSharedSiblings: " << name.GetString() << ", ";
+    skip->Display();
+    std::cerr << std::endl;
+    for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
+	 it != sharedStack_.template End<PairEntry>(); it++) {
+      if (it == skip ||
+	  it->GetValue(source)->set || !it->GetValue(!source)->set)
+	continue;
+      if (it->BeginCircular("HasUnvisitedSharedSiblings")) continue;
+      if (it->EndCircular(it->HasUnvisitedProperty(name, source)) &&
+	  it->Matches(skipV->instancePtr, !source, true)) {
+	std::cerr << "    ";
+	it->Display();
+	std::cerr << std::endl;
+      }
+    }
   }
   bool SetSharedSiblings(Context& context,
 			 PairEntry* skip, const SValue& name,
@@ -2397,6 +2504,8 @@ public:
     // TODO: Move intializer to factory?
     typedef GenericSchemaNormalizer<SchemaDocumentType, BaseReaderHandler<EncodingType>, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizerType;
     NormalizerType n(sd, schema, sb.GetString(), sb.GetLength(), schemaPtr, *this);
+    if (context.python_disabled)
+      n.DisablePython();
     x.Accept(n);
     if (!n.IsValid()) {
       ValidateErrorCode code = context.error_handler.SharedNormalizationError(static_cast<ISchemaValidator*>(&n));
@@ -2436,14 +2545,15 @@ public:
   
   // Methods for extending a document, checking and/or merging parallel
   //   entries in the process.
-  bool BeginExtend(Context& context, bool dont_recurse=false) {
+  bool BeginExtend(Context& context, bool dont_recurse=false,
+		   bool skipPush=false) {
     ValueType* current = CurrentValue();
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     if (!current)
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     RAPIDJSON_ASSERT(current);
-    if (CurrentIdx()) {
+    if (CurrentIdx() && !skipPush) {
       bool childMod = false;
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       if (!current->IsArray())
@@ -2467,7 +2577,7 @@ public:
       PushValue((*current)[*CurrentIdx()], *CurrentIdx(), false, childMod);
       CurrentIdx()[0]++;
       current = CurrentValue();
-    } else if (CurrentKey()) {
+    } else if (CurrentKey() && !skipPush) {
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       if (!current->IsObject())
 	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an object,"
@@ -2522,10 +2632,8 @@ public:
     }
     if ((!dont_recurse) && !CurrentReplaced() &&
 	CurrentSingular() && !CurrentChildSingular() &&
-	((current->IsArray() && CurrentIdx()) ||
-	 (current->IsObject() && CurrentKey()))) {
-      PopKey();
-      if (current->IsObject() && CurrentKey())
+	(current->IsArray() || current->IsObject())) {
+      if (current->IsArray())
 	PopKey();
       return EndExtend(context, true);
     }
@@ -2553,6 +2661,7 @@ public:
   INIT_CHECK(Extend, stub, #method, extend_schema_)
 #define EXTEND_BEGIN_(method, args)					\
   INIT_CHECK(Extend, begin, #method, extend_schema_);			\
+  bool skipPush = false;						\
   ValueType* current = CurrentValue();					\
   if (CurrentReplaced()) {						\
     DEBUG_MSG("CurrentReplaced");					\
@@ -2566,14 +2675,19 @@ public:
   }									\
   if (current && current->IsObject() && CurrentKey() &&			\
       (!current->HasMember(CurrentKey()->GetString()))) {		\
-    current->AddMember(ValueType(CurrentKey()->GetString(),		\
-				 CurrentKey()->GetStringLength(),	\
-				 GetAllocator()).Move(),		\
-		       ValueType args.Move(),				\
-		       GetAllocator());					\
+    if (FindValueModified(CurrentPointer().Append(*CurrentKey()), true, kCheckModifiedBefore, kModificationTypeRemoved)) { \
+      PushValue(ValueType args.Move(), *CurrentKey(), true, false, 1 << kValueFlagTemp); \
+      skipPush = true;							\
+    } else {								\
+      current->AddMember(ValueType(CurrentKey()->GetString(),		\
+				   CurrentKey()->GetStringLength(),	\
+				   GetAllocator()).Move(),		\
+			 ValueType args.Move(),				\
+			 GetAllocator());				\
+    }									\
   }									\
   /* Delay marking collections as modified until after it is complete */\
-  out = BeginExtend(context, dont_recurse);				\
+  out = BeginExtend(context, dont_recurse, skipPush);			\
   CHECK_RESULT;								\
   ValueType key_;							\
   if ((!CurrentModified()) && CurrentChildModified() && !CurrentReplaced()) { \
@@ -2746,7 +2860,7 @@ public:
       StealChildModified();
     }
     REQUIRED_PROPERTY_(Array, current->IsArray(), (kArrayType));
-    PushKey(0);
+    PushKey((SizeType)0);
     return true;
   }
   bool ExtendEndArray(Context& context, SizeType elementCount, bool dont_recurse=false) {
@@ -3251,12 +3365,13 @@ private:
     return false;
   }
   void PushValue(ValueType& value, const PointerType& p, bool appended=false,
-		 bool modified = false, bool child_modified = false) {
+		 bool modified = false, bool child_modified = false,
+		 unsigned flags = 0) {
     ModificationEntry* last = 0;
     PointerType pParent = ReplaceSingular(p, &last);
     bool replaced = CurrentReplaced();
     ValueEntry* ref = valueStack_.template Push<ValueEntry>();
-    new (ref) ValueEntry(value, p, &GetAllocator());
+    new (ref) ValueEntry(value, p, flags, GetAllocator());
     ref->replaced = replaced;
     if (appended && pParent.GetTokenCount() == p.GetTokenCount() + 1 &&
 	last && last->isSingular())
@@ -3304,14 +3419,16 @@ private:
     }
   }
   void PushValue(ValueType& value, ValueType& key,
-		 bool modified = false, bool child_modified = false) {
+		 bool modified = false, bool child_modified = false,
+		 unsigned flags = 0) {
     PointerType p = CurrentPointer(key);
-    PushValue(value, p, true, modified, child_modified);
+    PushValue(value, p, true, modified, child_modified, flags);
   }
   void PushValue(ValueType& value, SizeType index,
-		 bool modified = false, bool child_modified = false) {
+		 bool modified = false, bool child_modified = false,
+		 unsigned flags = 0) {
     PointerType p = CurrentPointer(index);
-    PushValue(value, p, true, modified, child_modified);
+    PushValue(value, p, true, modified, child_modified, flags);
   }
   void PopValue() {
     ValueEntry* ref = valueStack_.template Pop<ValueEntry>(1);
@@ -3366,29 +3483,47 @@ private:
       return keyStack_.template Top<KeyEntry>()->idx;
   }
   void PushKey(SizeType idx) {
-    KeyEntry* ref = keyStack_.template Push<KeyEntry>();
-    ref->idx = new SizeType(idx);
-    ref->key = nullptr;
-    ref->aliased = nullptr;
+    PushKey(0, new SizeType(idx), 0);
   }
   void PushKey(const Ch* str, SizeType len, ValueType* aliased=nullptr) {
-    KeyEntry* ref = keyStack_.template Push<KeyEntry>();
-    ref->key = new ValueType(str, len, GetAllocator());
-    ref->idx = nullptr;
-    ref->aliased = nullptr;
+    ValueType* aliasedCopy = 0;
     if (aliased)
-      ref->aliased = new ValueType(aliased->GetString(),
-				   aliased->GetStringLength(),
-				   GetAllocator());
+      aliasedCopy = new ValueType(aliased->GetString(),
+				  aliased->GetStringLength(),
+				  GetAllocator());
+    PushKey(new ValueType(str, len, GetAllocator()), 0, aliasedCopy);
   }
-  void PushKey() {
+  void PushKey() { return PushKey(nullptr, nullptr, nullptr); }
+  void PushKey(ValueType* key, SizeType* idx, ValueType* aliased) {
     KeyEntry* ref = keyStack_.template Push<KeyEntry>();
-    ref->key = nullptr;
-    ref->idx = nullptr;
-    ref->aliased = nullptr;
+    ref->key = key;
+    ref->idx = idx;
+    ref->aliased = aliased;
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    std::cerr << "PushKey: ";
+    if (ref->key)
+      DisplayValue(*(ref->key));
+    else if (ref->idx)
+      std::cerr << *(ref->idx);
+    else
+      std::cerr << "null";
+    std::cerr << std::endl;
+    DisplayStack(true);
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
   }
   void PopKey() {
     KeyEntry* ref = keyStack_.template Pop<KeyEntry>(1);
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    std::cerr << "PopKey: ";
+    if (ref->key)
+      DisplayValue(*(ref->key));
+    else if (ref->idx)
+      std::cerr << *(ref->idx);
+    else
+      std::cerr << "null";
+    std::cerr << std::endl;
+    DisplayStack(true);
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     if (ref->key)
       delete ref->key;
     if (ref->idx)
@@ -3974,7 +4109,7 @@ public:
 	args_(),
 	kwargs_(),
 	isMetaschema_(isMetaschema),
-	inSort_(false),
+	inSort_(0),
 	metaschema_(0),
 	metaschemaValidatorIndex_(),
 	instance_(0),
@@ -5951,6 +6086,8 @@ protected:
     return true;
   }
   bool CheckPythonImport(Context& context, const Ch* str, SizeType length) const {
+    if (context.python_disabled)
+      return true;
     PyObject* pyobj = import_python_object(reinterpret_cast<const char*>(str),
 					   "CheckPythonImport", true);
     if (!(pyobj)) {
@@ -6536,6 +6673,7 @@ protected:
 	for (const InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++) {
 	  if (it != InstsBegin())
 	    std::cerr << ", ";
+	  std::cerr << std::endl << "      ";
 	  it->Display();
 	}
 	std::cerr << "]";
@@ -6630,7 +6768,11 @@ protected:
 	if (inSchema) {
 	  const SchemaType* s = SchemaType::Get(root, localPtr);
 	  if (!s) {
-	    std::cerr << "SortSources: Could not find schema document" << std::endl;
+	    std::cerr << "SortSources: Could not find schema document: ";
+	    NormalizedDocumentType::DisplayPointer(rootPath);
+	    std::cerr << ", ";
+	    NormalizedDocumentType::DisplayPointer(localPtr);
+	    std::cerr << std::endl;
 	    instances.template Pop<InstanceEntry>(1)->~InstanceEntry();
 	  } else {
 	    const_cast<SchemaType*>(s)->AddSharedPropertyLink(PointerType(),
@@ -6728,6 +6870,38 @@ protected:
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       return kPointerOrderNull;
     }
+    bool HasSharedProperties() const {
+      if (sharedProperties_) return true;
+#define NESTED_CHECK_(var)			\
+      if (var.schemas) {						\
+	for (SizeType i = 0; i < var.count; i++) {			\
+	  if (var.schemas[i]->HasSharedProperties()) return true;	\
+	}								\
+      }
+      NESTED_CHECK_(allOf_);
+      NESTED_CHECK_(anyOf_);
+      NESTED_CHECK_(oneOf_);
+#undef NESTED_CHECK_
+      return false;
+    }
+    void AddMissingObject(const PointerType& instancePtr,
+			  NormalizedDocumentType& normalized) const {
+      if (sharedProperties_)
+	sharedProperties_->AddMissingObject(instancePtr, normalized);
+#define NESTED_CHECK_(var)						\
+      if (var.schemas) {						\
+	for (SizeType i = 0; i < var.count; i++) {			\
+	  var.schemas[i]->AddMissingObject(instancePtr, normalized);	\
+	}								\
+      }
+      NESTED_CHECK_(allOf_);
+      NESTED_CHECK_(anyOf_);
+      NESTED_CHECK_(oneOf_);
+#undef NESTED_CHECK_
+    }
+#undef NESTED_SHARED_PROPERTY_CALL
+#undef NESTED_SHARED_PROPERTY_CALL_NESTED
+    
 #define NESTED_FUNCTION_CALL_APPEND(method, ptr, path, var, name, ...)	\
     if (var.schemas) {							\
       PointerType varPath = path.Append(Get ## name ## String().GetString(), \
@@ -6784,6 +6958,9 @@ protected:
 				  anyOf_, AnyOf, sharedProp);
       NESTED_FUNCTION_CALL_APPEND(AddSharedPropertyLink, ptr, path,
 				  oneOf_, OneOf, sharedProp);
+      if (metaschema_)
+	AddSharedPropertyLink(ptr, path, sharedProp, metaschema_, true);
+	
       if (allowSingularSchema_.schemas) {
 	AddSharedPropertyLink(ptr, path, sharedProp,
 			      allowSingularSchema_.schemas[0], true);
@@ -7166,11 +7343,11 @@ protected:
       }									\
     }
     void SortSharedProperties(const SchemaType* root, const PointerType path) {
+      if (isMetaschema_) return;
+      if (inSort_ >= 1) return;
       if (sharedProperties_)
 	sharedProperties_->SortSources(root, path);
-      if (inSort_)
-	return;
-      inSort_ = true;
+      inSort_++;
       if (properties_) {
 	PointerType propertiesPath = path.Append(GetPropertiesString().GetString(),
 						 GetPropertiesString().GetStringLength(),
@@ -7227,6 +7404,7 @@ protected:
 	  NESTED_CONST_CALL(SortSharedProperties, allowSingularSchema_.schemas[i],
 			    root, path);
       }
+      inSort_--;
     }
 #undef NESTED_CONST_CALL_ARRAY
 #undef NESTED_CONST_CALL
@@ -7322,7 +7500,7 @@ protected:
     SValue args_;
     SValue kwargs_;
     bool isMetaschema_;
-    bool inSort_;
+    int inSort_;
     const SchemaType* metaschema_;
     SizeType metaschemaValidatorIndex_;
     const SchemaType* instance_;
@@ -7992,7 +8170,8 @@ public:
 #endif
 #ifdef RAPIDJSON_YGGDRASIL
 	, warning_(kObjectType),
-	currentWarning_()
+	currentWarning_(),
+	python_disabled_(false)
 #endif // RAPIDJSON_YGGDRASIL
     {
     }
@@ -8028,7 +8207,8 @@ public:
 #endif
 #ifdef RAPIDJSON_YGGDRASIL
 	, warning_(kObjectType),
-	currentWarning_()
+	currentWarning_(),
+	python_disabled_(false)
 #endif // RAPIDJSON_YGGDRASIL
     {
     }
@@ -8079,6 +8259,13 @@ public:
     const ValueType& GetError() const { return error_; }
 
 #ifdef RAPIDJSON_YGGDRASIL
+
+    void DisablePython() {
+      python_disabled_ = true;
+    }
+    void EnablePython() {
+      python_disabled_ = false;
+    }
 
     template<typename ErrorType, typename OtherType>
     void CheckErrorReplace_(ErrorType* curr, OtherType* other,
@@ -8908,6 +9095,10 @@ RAPIDJSON_MULTILINEMACRO_END
 #endif
         &GetStateAllocator());
         sv->SetValidateFlags(inheritContinueOnErrors ? GetValidateFlags() : GetValidateFlags() & ~(unsigned)kValidateContinueOnErrorFlag);
+#ifdef RAPIDJSON_YGGDRASIL
+	if (python_disabled_)
+	  static_cast<GenericSchemaValidator*>(sv)->DisablePython();
+#endif // RAPIDJSON_YGGDRASIL
         return sv;
     }
 
@@ -8972,7 +9163,8 @@ private:
 #endif
 #ifdef RAPIDJSON_YGGDRASIL
 	, warning_(kObjectType),
-	currentWarning_()
+	currentWarning_(),
+	python_disabled_(false)
 #endif // RAPIDJSON_YGGDRASIL
     {
         if (basePath && basePathSize)
@@ -9035,6 +9227,9 @@ private:
 	    CurrentContext().schemaPointerAbs = prevValuePointer;
 #endif // RAPIDJSON_YGGDRASIL
         }
+#ifdef RAPIDJSON_YGGDRASIL
+	CurrentContext().python_disabled = python_disabled_;
+#endif // RAPIDJSON_YGGDRASIL
         return true;
     }
 
@@ -9253,6 +9448,7 @@ private:
 #ifdef RAPIDJSON_YGGDRASIL
     ValueType warning_;
     ValueType currentWarning_;
+    bool python_disabled_;
 #endif // RAPIDJSON_YGGDRASIL
 };
 
@@ -9521,6 +9717,8 @@ public:
         p,
         &this->GetStateAllocator());
     sv->SetValidateFlags(inheritContinueOnErrors ? this->GetValidateFlags() : this->GetValidateFlags() & ~(unsigned)kValidateContinueOnErrorFlag);
+    if (this->python_disabled_)
+      static_cast<GenericSchemaNormalizer*>(sv)->DisablePython();
     return sv;
   }
 

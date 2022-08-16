@@ -9,7 +9,7 @@ def create_full_schema(fname):
     import yaml
     from yggdrasil import schema
     s = schema.get_schema()
-    s.save(fname, schema=s.full_schema)
+    s.save(fname, schema=s.get_schema(full=False))
 
 
 def get_ygg_tests():
@@ -27,10 +27,11 @@ def get_ygg_tests():
         base['definitions']['file']['allOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
     except KeyError:
         pass
-    try:
-        base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][1]['anyOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
-    except KeyError:
-        pass
+    for x in base['definitions']['file']['allOf'][1]['anyOf']:
+        try:
+            x['properties']['name']['pattern'] = x['properties']['name']['pattern'].replace('\\', '\\\\')
+        except KeyError:
+            pass
     test_yaml = (
         {'models': [
             {'name': 'modelA',
@@ -164,6 +165,7 @@ def get_ygg_tests():
               'working_dir': os.getcwd()},
              {'inputs': [{'name': '/var/folders/6y/tnvg4kjn4n72pcpqw__8jjmh0000gn/T/tmp_7c25e645_0.yml',
                           'filetype': 'binary',
+                          'serializer': {'seritype': 'default'},
                           'working_dir': os.getcwd()}],
               'outputs': [{'name': 'inputA',
                            'commtype': 'default',
