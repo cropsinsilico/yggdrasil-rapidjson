@@ -908,19 +908,19 @@ public:
     kAliasExists = 2
   };
   enum ValueFlag {
-    kValueFlagTemp
+    kValueFlagTemp,
+    kValueFlagReplaced,
+    kValueFlagParentModified,
+    kValueFlagChildModified
   };
   struct ModificationEntry;
-  // TODO: Move replaced, modified, and child_modified into flags
   struct ValueEntry {
     ValueEntry(ValueType& value) :
-      val(&value), ptr(), flags(0), replaced(false),
-      modified(false), child_modified(false),
+      val(&value), ptr(), flags(0),
       singular(nullptr), child_singular(nullptr) {}
     ValueEntry(ValueType& value, const PointerType& p, unsigned flags0,
 	       AllocatorType& allocator) :
-      val(&value), ptr(p, &allocator), flags(flags0), replaced(false),
-      modified(false), child_modified(false),
+      val(&value), ptr(p, &allocator), flags(flags0),
       singular(nullptr), child_singular(nullptr) {
       if (flags & (1 << kValueFlagTemp))
 	val = new ValueType(value, allocator);
@@ -929,12 +929,18 @@ public:
       if (val && (flags & (1 << kValueFlagTemp)))
 	delete val;
     }
+    bool replaced() const {
+      return (flags & (1 << kValueFlagReplaced));
+    }
+    bool modified() const {
+      return (flags & (1 << kValueFlagParentModified));
+    }
+    bool child_modified() const {
+      return (flags & (1 << kValueFlagChildModified));
+    }
     ValueType* val;
     PointerType ptr;
     unsigned flags;
-    bool replaced;
-    bool modified;
-    bool child_modified;
     ModificationEntry* singular;
     ModificationEntry* child_singular;
   };
@@ -2695,7 +2701,7 @@ public:
     ValueType child_swap args;						\
     CurrentValue()->Swap(child_swap);					\
     /* CurrentValue()->CopyFrom(child_swap, GetAllocator(), true); */	\
-    valueStack_.template Top<ValueEntry>()->replaced = true;		\
+    valueStack_.template Top<ValueEntry>()->flags |= (1 << kValueFlagReplaced);	\
     StealChildModified();						\
   } else if (!CurrentSingular() && CurrentChildSingular(&key_) && extend_child_ && !CurrentReplaced()) { \
     DEBUG_MSG("CurrentChildSingular");					\
@@ -2974,7 +2980,7 @@ public:
     }
     if (!valueStack_.Empty() && setStack) {
       ValueEntry* last = valueStack_.template Top<ValueEntry>();
-      last->modified = true;
+      last->flags |= (1 << kValueFlagParentModified);
       if (ref->isSingular())
 	last->singular = ref;
     }
@@ -3099,9 +3105,9 @@ private:
     RecordModified(type, GetInstancePointer(parent));
     if (extending_ && !appending_ && !valueStack_.Empty()) {
       if (parent)
-	(valueStack_.template Top<ValueEntry>() - 1)->modified = true;
+	(valueStack_.template Top<ValueEntry>() - 1)->flags |= (1 << kValueFlagParentModified);
       else
-	valueStack_.template Top<ValueEntry>()->modified = true;
+	valueStack_.template Top<ValueEntry>()->flags |= (1 << kValueFlagParentModified);
     }
   }
   template <typename VType>
@@ -3322,11 +3328,11 @@ private:
   }
   bool CurrentModified() {
     return (extending_ && !appending_ && !valueStack_.Empty() &&
-	    valueStack_.template Top<ValueEntry>()->modified);
+	    valueStack_.template Top<ValueEntry>()->modified());
   }
   bool CurrentChildModified() {
     return (extending_ && !appending_ && !valueStack_.Empty() &&
-	    valueStack_.template Top<ValueEntry>()->child_modified);
+	    valueStack_.template Top<ValueEntry>()->child_modified());
   }
   bool CurrentSingular(ValueType* out = 0) {
     if (extending_ && !appending_ && !valueStack_.Empty() &&
@@ -3357,11 +3363,10 @@ private:
       return true;
     }
     return false;
-    // return isValueSingular(GetInstancePointer());
   }
   bool CurrentReplaced() {
     if (extending_ && !appending_ && !valueStack_.Empty())
-      return valueStack_.template Top<ValueEntry>()->replaced;
+      return valueStack_.template Top<ValueEntry>()->replaced();
     return false;
   }
   void PushValue(ValueType& value, const PointerType& p, bool appended=false,
@@ -3369,20 +3374,18 @@ private:
 		 unsigned flags = 0) {
     ModificationEntry* last = 0;
     PointerType pParent = ReplaceSingular(p, &last);
-    bool replaced = CurrentReplaced();
+    if (CurrentReplaced())
+      flags = flags | (1 << kValueFlagReplaced);
     ValueEntry* ref = valueStack_.template Push<ValueEntry>();
     new (ref) ValueEntry(value, p, flags, GetAllocator());
-    ref->replaced = replaced;
     if (appended && pParent.GetTokenCount() == p.GetTokenCount() + 1 &&
 	last && last->isSingular())
       ref->singular = last;
     else
       ref->singular = FindValueModified(pParent, false, kCheckModifiedAfter,
 					kModificationTypeSingular, true);
-    if (ref->singular || modified)
-      ref->modified = true;
-    else
-      ref->modified = isValueModified(pParent);
+    if (ref->singular || modified || isValueModified(pParent))
+      ref->flags |= (1 << kValueFlagParentModified);
     if (extend_child_) {
       PointerType pChild(pParent);
       ModificationEntry* child_last = 0;
@@ -3396,18 +3399,16 @@ private:
 							       kCheckModifiedAfter,
 							       kModificationTypeSingular,
 							       true);
-      if (ref->child_singular || child_modified)
-	ref->child_modified = true;
-      else
-	ref->child_modified = extend_child_->isValueModified(pChild);
+      if (ref->child_singular || child_modified || extend_child_->isValueModified(pChild))
+	ref->flags = (ref->flags | (1 << kValueFlagChildModified));
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       std::cerr << "PushValue (" << appended << "): ";
       DisplayPointer(p);
       std::cerr << " [";
       DisplayPointer(pParent);
-      std::cerr << "] " << ref->modified << ", " << ref->singular << " vs [";
+      std::cerr << "] " << ref->modified() << ", " << ref->singular << " vs [";
       DisplayPointer(pChild);
-      std::cerr << "] " << ref->child_modified << ", " << ref->child_singular << " -> ";
+      std::cerr << "] " << ref->child_modified() << ", " << ref->child_singular << " -> ";
       DisplayValue(*(ref->val));
       std::cerr << std::endl;
       std::cerr << "Parent ";
