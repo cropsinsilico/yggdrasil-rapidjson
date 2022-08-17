@@ -2016,6 +2016,11 @@ definitions:
             (implies equivalence with the base variable in everything but name and
             units) or mappings with the keys:'
           type: object
+      pushProperties:
+        $properties/inputs/items/allOf/0/properties/default_file:
+        - working_dir
+        $properties/outputs/items/allOf/0/properties/default_file:
+        - working_dir
       required:
       - args
       - inputs

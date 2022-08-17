@@ -118,8 +118,13 @@ TEST(Unit, Exponent) {
   units::Quantity<double> b(1.0, "kg**2");
   units::Quantity<double> c(1.0, "kg^2");
   units::Quantity<double> d = a.pow(2);
+  units::Quantity<double> e(1.0, "kg2");
   CHECK_QUANTITY_EQUIVALENCE(d, b, true);
   CHECK_QUANTITY_EQUIVALENCE(d, c, true);
+  CHECK_QUANTITY_EQUIVALENCE(e, b, true);
+  units::Quantity<double> x(1.0, "g2 km s-2");
+  units::Quantity<double> y(1.0, "(g**2)*km*(s**-2)");
+  CHECK_QUANTITY_EQUIVALENCE(x, y, true);
 };
 
 #if defined(_MSC_VER) || defined(__clang__)

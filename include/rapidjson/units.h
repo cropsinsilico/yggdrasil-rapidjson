@@ -1058,6 +1058,10 @@ public:
       units_.pop_back();
     return true;
   }
+  //! \brief Clear all units.
+  void clear() {
+    units_.clear();
+  }
   //! \brief Display the units instance.
   //! \param os Output stream.
   void display(std::ostream& os) const {
@@ -1438,7 +1442,7 @@ typedef GenericUnits<UTF8<char> > Units;
     PACK_UNIT("acre", "ac", dimensions::area, 4046.86),
     PACK_UNIT("are", "a", dimensions::area, 100.0),
     PACK_UNIT("hectare", "ha", dimensions::area, 10000.0),
-    PACK_UNIT(VSTR(""), VSTR("", "n/a"), dimensions::dimensionless, 1.0),
+    PACK_UNIT(VSTR(""), VSTR("", "n/a", "dimensionless"), dimensions::dimensionless, 1.0),
     (void*)nullptr
   );
 
@@ -1488,6 +1492,16 @@ enum TokenType {
   kWordToken = 2,
   kGroupToken = 3
 };
+enum TokenFinalization {
+  kTokenFinalizeNull,
+  kTokenFinalizeAlways,
+  kTokenFinalizeBracket,
+  kTokenFinalizeSpace,
+  kTokenFinalizeValue,
+  kTokenFinalizeNext,
+  kTokenFinalizeGroup,
+  kTokenFinalizeFinal
+};
 
 template<typename Encoding>
 class GroupToken; // Forward declaration
@@ -1499,16 +1513,22 @@ class TokenBase {
 private:
   TokenBase(const TokenBase<Encoding>& rhs);
 public:
-  TokenBase(const TokenType t0, TokenBase *parent0=nullptr) : t(t0), units(), finalized(false), parent(parent0), value_(0.0), errorFlag(false) {}
+  TokenBase(const TokenType t0, TokenBase *parent0=nullptr) : t(t0), units(), finalized(kTokenFinalizeNull), parent(parent0), value_(0.0), errorFlag(false) {}
   virtual ~TokenBase() {}
   virtual TokenBase<Encoding>* current_token() { return this; }
-  virtual GenericUnits<Encoding> finalize() {
-    finalized = true;
+  virtual GenericUnits<Encoding> finalize(TokenFinalization x) {
+    if (!finalized)
+      finalized = x;
     return units;
+  }
+  void reset() {
+    finalized = kTokenFinalizeNull;
+    units.clear();
+    value_ = 0.0;
   }
   double value() {
     RAPIDJSON_ASSERT(is_numeric());
-    finalize();
+    finalize(kTokenFinalizeValue);
     return value_;
   }
   virtual bool is_numeric() { return false; }
@@ -1522,7 +1542,7 @@ public:
   TokenBase<Encoding>& operator=(const TokenBase<Encoding>& other);
   TokenType t;
   GenericUnits<Encoding> units;
-  bool finalized;
+  TokenFinalization finalized;
   TokenBase<Encoding> *parent;
   double value_;
   bool errorFlag;
@@ -1538,7 +1558,7 @@ template<typename Encoding>
 class OperatorToken : public TokenBase<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
-  OperatorToken(const Ch op0, TokenBase<Encoding> *parent0=nullptr) : TokenBase<Encoding>(kOperatorToken, parent0), op(op0) { this->finalize(); }
+  OperatorToken(const Ch op0, TokenBase<Encoding> *parent0=nullptr) : TokenBase<Encoding>(kOperatorToken, parent0), op(op0) { this->finalize(kTokenFinalizeAlways); }
   void append(const Ch c) OVERRIDE_CXX11 { RAPIDJSON_ASSERT(!c); (void)c; } // GCOVR_EXCL_LINE
   GenericUnits<Encoding> operate(const GenericUnits<Encoding>& a, const GenericUnits<Encoding>& b) {
     switch (op) {
@@ -1601,13 +1621,13 @@ public:
   void append(const Ch c) OVERRIDE_CXX11 {
     word.push_back(c);
   }
-  GenericUnits<Encoding> finalize() OVERRIDE_CXX11 {
+  GenericUnits<Encoding> finalize(TokenFinalization x) OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT(word.size());
     if (!(this->finalized))
       if (!this->units.add_unit(word))
 	this->set_error();
       // this->units = GenericUnits<Encoding>({GenericUnit<Encoding>(word)});
-    return TokenBase<Encoding>::finalize();
+    return TokenBase<Encoding>::finalize(x);
   }
   std::ostream & display(std::ostream &os) const OVERRIDE_CXX11 {
     os << "WordToken(" << convert_chars<Encoding,UTF8<char> >(word) << ")";
@@ -1623,10 +1643,10 @@ class NumberToken : public WordToken<Encoding> {
 public:
   NumberToken(const Ch c, TokenBase<Encoding> *parent0=nullptr) : WordToken<Encoding>(c, parent0) {}
   bool is_numeric() OVERRIDE_CXX11 { return true; }
-  GenericUnits<Encoding> finalize() OVERRIDE_CXX11 {
+  GenericUnits<Encoding> finalize(TokenFinalization x) OVERRIDE_CXX11 {
     if (!(this->finalized))
       this->value_ = char_to_double<Ch>(this->word);
-    return TokenBase<Encoding>::finalize();
+    return TokenBase<Encoding>::finalize(x);
   }
   std::ostream & display(std::ostream &os) const OVERRIDE_CXX11 {
     os << "NumericToken(" << convert_chars<Encoding,UTF8<char> >(this->word) << ")";
@@ -1690,6 +1710,14 @@ public:
       return;
     }
     RAPIDJSON_ASSERT(curr->t == kWordToken);
+    if ((!curr->is_numeric()) &&
+	(c == '0' || c == '1' || c == '2' || c == '3' || c == '4' ||
+	 c == '5' || c == '6' || c == '7' || c == '8' || c == '9')) {
+      append_op('^');
+      append(c);
+      return;
+    }
+    RAPIDJSON_ASSERT(curr->t == kWordToken);
     WordToken<Encoding>* word = static_cast<WordToken<Encoding>*>(curr);
     word->append(c);
   }
@@ -1702,7 +1730,26 @@ public:
       if (curr->tokens.size() > 0) {
 	TokenBase<Encoding>* prev = curr->current_token();
 	if (!(prev->finalized))
-	  prev->finalize();
+	  prev->finalize(kTokenFinalizeNext);
+	// Handle special case where exponent is set by having number
+	// directly following the unit
+	if (curr->tokens.size() >= 2) {
+	  TokenBase<Encoding>* prev2 = curr->tokens[curr->tokens.size() - 2];
+	  if (prev->t == kOperatorToken &&
+	      prev2->t == kWordToken && !prev2->is_numeric() &&
+	      prev2->finalized == kTokenFinalizeNext &&
+	      x->t == kWordToken && x->is_numeric() &&
+	      (static_cast<OperatorToken<Encoding>*>(prev)->op == '-' ||
+	       static_cast<OperatorToken<Encoding>*>(prev)->op == '+')) {
+	    OperatorToken<Encoding>* prev_op = static_cast<OperatorToken<Encoding>*>(prev);
+	    if (prev_op->op == '-') {
+	      prev2->reset();
+	      static_cast<WordToken<Encoding>*>(x)->word.insert(0, 1, prev_op->op);
+	      prev2->finalize(kTokenFinalizeNext);
+	    }
+	    prev_op->op = '^';
+	  }
+	}
 	if ((x->t != kOperatorToken) && (prev->t != kOperatorToken))
 	  curr->append_op('*', true);
       }
@@ -1739,7 +1786,7 @@ public:
 	    tokens[ii] = nullptr;
 	  }
 	  tokens[i + 1] = (TokenBase<Encoding>*)(new_group);
-	  new_group->finalize();
+	  new_group->finalize(kTokenFinalizeAlways);
 	  exponents.push_back(i - 1);
 	  exponents.push_back(i);
 	  i++;
@@ -1749,7 +1796,7 @@ public:
     for (std::vector<size_t>::reverse_iterator it = exponents.rbegin(); it != exponents.rend(); it++)
       tokens.erase(tokens.begin() + (int)(*it));
   }
-  GenericUnits<Encoding> finalize() OVERRIDE_CXX11 {
+  GenericUnits<Encoding> finalize(TokenFinalization x) OVERRIDE_CXX11 {
     if ((tokens.size() == 0) || this->finalized)
       return this->units;
     // Group operators first in order of operations
@@ -1759,7 +1806,7 @@ public:
       group_operators('+', '-');
     }
     // Complete operations from left to right
-    GenericUnits<Encoding> out = tokens[0]->finalize();
+    GenericUnits<Encoding> out = tokens[0]->finalize(kTokenFinalizeGroup);
     if (is_numeric()) {
       this->value_ = tokens[0]->value();
       for (size_t i = 1; i < tokens.size(); i = i+2) {
@@ -1776,12 +1823,12 @@ public:
 	if (tokens[i + 1]->is_numeric()) {
 	  out = op->operate(out, tokens[i + 1]->value());
 	} else {
-	  out = op->operate(out, tokens[i + 1]->finalize());
+	  out = op->operate(out, tokens[i + 1]->finalize(kTokenFinalizeGroup));
 	}
       }
     }
     this->units = out;
-    return TokenBase<Encoding>::finalize();
+    return TokenBase<Encoding>::finalize(x);
   }
   bool is_numeric() OVERRIDE_CXX11 {
     for (typename std::vector<TokenBase<Encoding>*>::iterator it = tokens.begin(); it != tokens.end(); it++) {
@@ -1827,7 +1874,7 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
     case ')':
     case ']':
     case '}': {
-      token.current_group()->finalize();
+      token.current_group()->finalize(parser::kTokenFinalizeBracket);
       break;
     }
     // + and - operators will be handled by the word token append
@@ -1852,7 +1899,7 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
     case '\r': {
       parser::TokenBase<Encoding>* word = token.current_token();
       if (word->t == parser::kWordToken)
-	word->finalize();
+	word->finalize(parser::kTokenFinalizeSpace);
       break;
     }
     case 'n': {
@@ -1880,7 +1927,7 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
     if (token.errorFlag)
       break;
   }
-  GenericUnits<Encoding> out = token.finalize();
+  GenericUnits<Encoding> out = token.finalize(parser::kTokenFinalizeFinal);
   if (len == 0) {
     RAPIDJSON_ASSERT(!token.errorFlag);
     token.errorFlag = (!out.add_unit(std::basic_string<Ch>()));
