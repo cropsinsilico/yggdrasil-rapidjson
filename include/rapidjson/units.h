@@ -1391,7 +1391,7 @@ typedef GenericUnits<UTF8<char> > Units;
     PACK_UNIT("smoot", "smoot", dimensions::length, 1.7018),
     PACK_UNIT("percent", "%", dimensions::dimensionless, 0.01),
     PACK_UNIT("minute", "min", dimensions::time, constants::sec_per_min),
-    PACK_UNIT("hour", "hr", dimensions::time, constants::sec_per_hr),
+    PACK_UNIT(VSTR("hour"), VSTR("hr", "h", "hrs"), dimensions::time, constants::sec_per_hr),
     PACK_UNIT(VSTR("day"), VSTR("day", "d"), dimensions::time, constants::sec_per_day),
     // Astronomy units
     PACK_UNIT("c", "c", dimensions::velocity, constants::speed_of_light_m_per_s),
