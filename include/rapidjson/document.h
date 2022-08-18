@@ -2851,6 +2851,10 @@ public:
   RAPIDJSON_STRING_(Args, 'a', 'r', 'g', 's')
   RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
   RAPIDJSON_STRING_(Encoding, 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g')
+  RAPIDJSON_STRING_(ASCIIEncoding, 'A', 'S', 'C', 'I', 'I')
+  RAPIDJSON_STRING_(UCS4Encoding, 'U', 'C', 'S', '4')
+  RAPIDJSON_STRING_(UTF8Encoding, 'U', 'T', 'F', '8')
+    
   // Subtypes
   RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
   RAPIDJSON_STRING_(UintSubType, 'u', 'i', 'n', 't')
@@ -3621,6 +3625,7 @@ public:
     RAPIDJSON_ASSERT(x_attr != NULL);
     if (x_attr == NULL)
       return false;
+    // TODO: Check for function
     bool ret = out.SetPythonObjectRaw(x_attr, &allocator);
     Py_DECREF(x_attr);
     return ret;
@@ -3682,36 +3687,68 @@ public:
 	return GetPythonFunction();
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
       else if (IsScalar()) {
-	int typenum = GetSubTypeNumpyType();
+	ValueType enc;
+	int typenum = GetSubTypeNumpyType(enc);
 	if (typenum < 0)
 	  return NULL;
+	if (typenum == NPY_STRING) {
+	  return PyBytes_FromString(GetString());
+	} else if (typenum == NPY_UNICODE) {
+	  PyObject* pyBytes = PyBytes_FromString(GetString());
+	  out = PyUnicode_FromEncodedObject(pyBytes, enc.GetString(), NULL);
+	  Py_DECREF(pyBytes);
+	  return out;
+	}
 	PyArray_Descr* desc = PyArray_DescrNewFromType(typenum);
-	if (desc == NULL)
-	  return NULL;
+	if (desc == NULL) return NULL;
+	if (PyTypeNum_ISFLEXIBLE(typenum))
+	  desc->elsize = GetPrecision();
 	out = PyArray_Scalar((void*)GetString(), desc, NULL);
 	return out;
       } else if (IsNDArray()) {
-	int typenum = GetSubTypeNumpyType();
-	if (typenum < 0)
-	  return NULL;
+	ValueType enc;
+	int typenum = GetSubTypeNumpyType(enc);
+	if (typenum < 0) return NULL;
+	PyArray_Descr* desc = PyArray_DescrNewFromType(typenum);
+	if (desc == NULL) return NULL;
+	SizeType nbytes = GetStringLength() * sizeof(Ch);
+	if (PyTypeNum_ISFLEXIBLE(typenum))
+	  desc->elsize = GetPrecision();
 	SizeType ndim = 0;
 	SizeType* shape = GetShape(ndim, schema_->GetAllocator());
-	if (!shape)
+	if (!shape) {
+	  Py_DECREF(desc);
 	  return NULL;
+	}
 	npy_intp* np_shape = (npy_intp*)(schema_->GetAllocator().Malloc(sizeof(npy_intp) * ndim));
-	if (!np_shape)
+	if (!np_shape) {
+	  schema_->GetAllocator().Free(shape);
+	  Py_DECREF(desc);
 	  return NULL;
+	}
 	for (SizeType i = 0; i < ndim; i++)
 	  np_shape[i] = (npy_intp)shape[i];
-	PyObject* tmp = PyArray_SimpleNewFromData((int)ndim, np_shape, typenum,
-						  (void*)GetString());
 	schema_->GetAllocator().Free(shape);
-	schema_->GetAllocator().Free(np_shape);
-	if (tmp == NULL)
+	// don't use allocator so that python array is responsible for freeing
+	if (typenum == NPY_UNICODE && enc != GetUCS4EncodingString()) {
+	  // TODO: Change precison/size to match encoding
+	  // nbytes =
+	  // desc->elsize = 
+	}
+	void* data = malloc(nbytes);
+	if (!data) {
+	  schema_->GetAllocator().Free(np_shape);
+	  Py_DECREF(desc);
 	  return NULL;
-	// Create copy since PyArray_SimpleNewFromData dosn't copy
-	out = PyArray_NewCopy((PyArrayObject*)tmp, NPY_CORDER);
-	Py_DECREF(tmp);
+	}
+	if (typenum == NPY_UNICODE && enc != GetUCS4EncodingString()) {
+	  // TODO: Change encoding
+	  std::cerr << "CHANGE THE ENCODING" << std::endl;
+	}
+	memcpy(data, (void*)GetString(), nbytes);
+	out = PyArray_NewFromDescr(&PyArray_Type, desc, (int)ndim, np_shape,
+				   NULL, data, NPY_ARRAY_OWNDATA, NULL);
+	schema_->GetAllocator().Free(np_shape);
 	return out;
       }
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
@@ -3773,12 +3810,14 @@ public:
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
-      // TODO: Encode as yggdrasil?
-      SetStringRaw(StringRef(PyBytes_AsString(x),
-                             (size_t)(PyBytes_Size(x))),
+      ResetSchema(allocator);
+      SetStringRaw(StringRef(PyBytes_AsString(x), (size_t)(PyBytes_Size(x))),
 		   *allocator);
+      schema_->MemberReserve(5, schema_->GetAllocator());
+      AddSchemaMember(GetTypeString(), GetScalarString());
+      AddSchemaMember(GetSubTypeString(), GetStringSubTypeString());
+      AddSchemaMember(GetPrecisionString(), GetStringLength());
     } else if (PyUnicode_CheckExact(x)) {
-      // TODO: Pass encoding?
       PyObject* x_bytes = PyUnicode_AsUTF8String(x);
       out = SetPythonObjectRaw(x_bytes, allocator);
       Py_DECREF(x_bytes);
@@ -3818,15 +3857,14 @@ public:
       schema_->GetAllocator().Free(mod_cls);
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
     } else if (PyArray_CheckScalar(x)) {
-      // TODO: Handle string/bytes, PyArray_ScalarAsCtype is different
-      //   and elsize will be 0
       ResetSchema(allocator);
       PyArray_Descr* desc = PyArray_DescrFromScalar(x);
       if (desc == NULL)
 	return false;
       SizeType precision;
       ValueType subtype;
-      if (!NumpyType2SubType(desc, subtype, precision,
+      ValueType encoding;
+      if (!NumpyType2SubType(desc, subtype, precision, encoding, 0,
 			     schema_->GetAllocator()))
 	return false;
       void* data = schema_->GetAllocator().Malloc(precision);
@@ -3836,10 +3874,14 @@ public:
       SetStringRaw(StringRef(static_cast<Ch*>(data), precision),
 		   schema_->GetAllocator());
       schema_->GetAllocator().Free(data);
+      if (desc->type_num == NPY_UNICODE && encoding == GetUTF8EncodingString())
+	return true;
       schema_->MemberReserve(5, schema_->GetAllocator());
       AddSchemaMember(GetTypeString(), GetScalarString());
       AddSchemaMember(GetSubTypeString(), subtype);
       AddSchemaMember(GetPrecisionString(), precision);
+      if (!encoding.IsNull())
+	AddSchemaMember(GetEncodingString(), encoding);
       return true;
     } else if (PyArray_Check(x)) {
       ResetSchema(allocator);
@@ -3848,7 +3890,9 @@ public:
 	return false;
       SizeType precision;
       ValueType subtype;
-      if (!NumpyType2SubType(desc, subtype, precision,
+      ValueType encoding;
+      if (!NumpyType2SubType(desc, subtype, precision, encoding,
+			     (SizeType)PyArray_ITEMSIZE((PyArrayObject*)x),
 			     schema_->GetAllocator()))
 	return false;
       SizeType nelements = (SizeType)PyArray_SIZE((PyArrayObject*)x);
@@ -3876,6 +3920,8 @@ public:
       AddSchemaMember(GetSubTypeString(), subtype);
       AddSchemaMember(GetPrecisionString(), precision);
       AddSchemaMember(GetShapeString(), shape);
+      if (!encoding.IsNull())
+	AddSchemaMember(GetEncodingString(), encoding);
       return true;
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
     } else {
@@ -4083,11 +4129,23 @@ public:
   static bool NumpyType2SubType(PyArray_Descr* desc,
 				ValueType& subtype,
 				SizeType& precision,
+				ValueType& encoding,
+				SizeType itemsize,
 				Allocator& allocator) {
-    // TODO: handle string/bytes, elsize will be 0
-    if (!(PyDataType_ISNUMBER(desc)))
+    if (desc->type_num == NPY_STRING || desc->type_num == NPY_UNICODE) {
+      if (itemsize == 0) return false;
+      precision = itemsize;
+      if (desc->type_num == NPY_UNICODE)
+	encoding.CopyFrom(GetUCS4EncodingString(), allocator);
+      subtype.CopyFrom(GetStringSubTypeString(), allocator);
+      return true;
+    }
+    if (!(PyDataType_ISNUMBER(desc))) {
+      std::cerr << "NumpyType2SubType: Non-number numpy element (itemsize = " << itemsize << ")" << std::endl;
       return false;
+    }
     precision = (SizeType)(desc->elsize);
+    RAPIDJSON_ASSERT(itemsize == precision);
     if (PyDataType_ISUNSIGNED(desc))
       subtype.CopyFrom(GetUintSubTypeString(), allocator);
     else if (PyDataType_ISSIGNED(desc))
@@ -4101,7 +4159,7 @@ public:
     return true;
   }
 
-  int GetSubTypeNumpyType() const {
+  int GetSubTypeNumpyType(ValueType& enc) const {
     switch (GetSubTypeCode()) {
     case (kYggIntSubType): {
       switch (GetPrecision()) {
@@ -4154,7 +4212,10 @@ public:
       }
     }
     case (kYggStringSubType): {
-      return -1;
+      enc.CopyFrom(GetEncoding(), schema_->GetAllocator());
+      if (enc.IsNull() || enc == GetASCIIEncodingString())
+	return NPY_STRING;
+      return NPY_UNICODE;
     }
     default: 
       return -1;
@@ -4180,6 +4241,13 @@ public:
     RAPIDJSON_ASSERT(IsYggdrasil());
     RAPIDJSON_ASSERT(schema_->HasMember(GetPrecisionString()));
     return static_cast<SizeType>(schema_->FindMember(GetPrecisionString())->value.GetUint());
+  }
+
+  const ValueType& GetEncoding() const {
+    ConstMemberIterator encoding = schema_->FindMember(GetEncodingString());
+    if (encoding != schema_->MemberEnd())
+      return encoding->value;
+    return ValueType(kNullType).Move();
   }
 
   SizeType* GetShape(SizeType &ndim, Allocator& allocator) const {

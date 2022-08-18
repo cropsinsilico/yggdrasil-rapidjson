@@ -267,6 +267,10 @@ if __name__ == "__main__":
             "minimum": 1,
             "type": "number"
         },
+        "encoding": {
+            "description": "The encoding of string elements",
+            "enum": ["UTF8", "UTF16", "UTF32", "ASCII", "UCS4"]
+        },
         "shape": {
             "description": "Shape of the ND array in each dimension.",
             "items": {
