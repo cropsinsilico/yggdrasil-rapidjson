@@ -3618,14 +3618,23 @@ public:
     return true;
   }
   bool GetPythonObjectClassAttr(PyObject* x, const Ch* attr,
-                                Allocator& allocator, ValueType& out) {
+                                Allocator& allocator, ValueType& out,
+				bool call_function = false) {
     if (!PyObject_HasAttrString(x, attr))
       return false;
     PyObject* x_attr = PyObject_GetAttrString(x, reinterpret_cast<const char*>(attr));
     RAPIDJSON_ASSERT(x_attr != NULL);
     if (x_attr == NULL)
       return false;
-    // TODO: Check for function
+    if (call_function && PyCallable_Check(x_attr)) {
+      PyObject* py_args = PyTuple_New(0);
+      PyObject* x_attr_res = PyObject_Call(x_attr, py_args, NULL);
+      Py_DECREF(py_args);
+      if (!x_attr_res)
+	return false;
+      Py_DECREF(x_attr);
+      x_attr = x_attr_res;
+    }
     bool ret = out.SetPythonObjectRaw(x_attr, &allocator);
     Py_DECREF(x_attr);
     return ret;
@@ -3738,8 +3747,10 @@ public:
 	PyObject* tmp = PyArray_NewFromDescr(&PyArray_Type, desc,
 					     (int)ndim, np_shape,
 					     NULL, data, 0, NULL);
-	if (tmp)
+	if (tmp) {
 	  out = PyArray_NewCopy((PyArrayObject*)tmp, NPY_CORDER);
+	  Py_DECREF(tmp);
+	}
 	schema_->GetAllocator().Free(np_shape);
 	return out;
       }
@@ -3903,14 +3914,14 @@ public:
       PyArrayObject* cpy = PyArray_GETCONTIGUOUS((PyArrayObject*)x);
       if (cpy == NULL)
 	return false;
-      void* data;
-      data = (void*)PyArray_BYTES(cpy);
+      void* data = (void*)PyArray_BYTES(cpy);
       if (data == NULL) {
 	if (!PyArray_IS_C_CONTIGUOUS((PyArrayObject*)x))
 	  Py_DECREF(cpy);
 	return false;
       }
-      SetStringRaw(StringRef(static_cast<Ch*>(data), precision * nelements),
+      SetStringRaw(StringRef(static_cast<Ch*>(data),
+			     precision * nelements / sizeof(Ch)),
 		   schema_->GetAllocator());
       if (!PyArray_IS_C_CONTIGUOUS((PyArrayObject*)x))
 	Py_DECREF(cpy);
@@ -3960,11 +3971,11 @@ public:
 	"get_input_keyword_arguments",
 	"get_input_kwargs"};
       for (SizeType i = 0; i < sizeof(args_keys); i++) {
-	if (GetPythonObjectClassAttr(x, args_keys[i], schema_->GetAllocator(), args))
+	if (GetPythonObjectClassAttr(x, args_keys[i], schema_->GetAllocator(), args, true))
 	  break;
       }
       for (SizeType i = 0; i < sizeof(kwargs_keys); i++) {
-	if (GetPythonObjectClassAttr(x, kwargs_keys[i], schema_->GetAllocator(), kwargs))
+	if (GetPythonObjectClassAttr(x, kwargs_keys[i], schema_->GetAllocator(), kwargs, true))
 	  break;
       }
       if (args.IsNull() && kwargs.IsNull())

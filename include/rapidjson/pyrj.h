@@ -255,16 +255,15 @@ PyObject* import_python_object(const char* mod_class,
       return NULL;
     }
     PyObject* path_split = PyObject_GetAttrString(os_path, "split");
+    Py_DECREF(os_path);
     if (path_split == NULL) {
       Py_DECREF(path);
-      Py_DECREF(os_path);
       return NULL;
     }
     PyObject* split_args = PyTuple_Pack(1, path);
     if (split_args == NULL) {
       Py_DECREF(path);
       Py_DECREF(path_split);
-      Py_DECREF(os_path);
       return NULL;
     }
     PyObject* path_parts = PyObject_Call(path_split, split_args, NULL);
@@ -279,18 +278,17 @@ PyObject* import_python_object(const char* mod_class,
       Py_DECREF(path_parts);
       return NULL;
     }
+    PyObject* path_base = PyTuple_GetItem(path_parts, 1);
+    if (path_base == NULL) {
+      Py_DECREF(path_parts);
+      return NULL;
+    }
     PyObject* sys_path = PySys_GetObject("path");
     if (sys_path == NULL) {
       Py_DECREF(path_parts);
       return NULL;
     }
-    int res = PyList_Append(sys_path, path_dir);
-    if (res < 0) {
-      Py_DECREF(path_parts);
-      return NULL;
-    }
-    PyObject* path_base = PyTuple_GetItem(path_parts, 1);
-    if (path_base == NULL) {
+    if (PyList_Append(sys_path, path_dir) < 0) {
       Py_DECREF(path_parts);
       return NULL;
     }
