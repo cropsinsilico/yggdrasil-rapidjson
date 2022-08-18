@@ -3711,7 +3711,6 @@ public:
 	if (typenum < 0) return NULL;
 	PyArray_Descr* desc = PyArray_DescrNewFromType(typenum);
 	if (desc == NULL) return NULL;
-	SizeType nbytes = GetStringLength() * sizeof(Ch);
 	if (PyTypeNum_ISFLEXIBLE(typenum))
 	  desc->elsize = GetPrecision();
 	SizeType ndim = 0;
@@ -3734,7 +3733,6 @@ public:
 	if (typenum == NPY_UNICODE && enc != GetUCS4EncodingString()) {
 	  std::cerr << "CHANGE THE ENCODING" << std::endl;
 	  // TODO: Change precison/size to match encoding
-	  // nbytes =
 	  // desc->elsize = 
 	}
 	PyObject* tmp = PyArray_NewFromDescr(&PyArray_Type, desc,
