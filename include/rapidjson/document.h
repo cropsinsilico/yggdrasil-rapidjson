@@ -3730,24 +3730,18 @@ public:
 	  np_shape[i] = (npy_intp)shape[i];
 	schema_->GetAllocator().Free(shape);
 	// don't use allocator so that python array is responsible for freeing
+	void* data = (void*)GetString();
 	if (typenum == NPY_UNICODE && enc != GetUCS4EncodingString()) {
+	  std::cerr << "CHANGE THE ENCODING" << std::endl;
 	  // TODO: Change precison/size to match encoding
 	  // nbytes =
 	  // desc->elsize = 
 	}
-	void* data = malloc(nbytes);
-	if (!data) {
-	  schema_->GetAllocator().Free(np_shape);
-	  Py_DECREF(desc);
-	  return NULL;
-	}
-	if (typenum == NPY_UNICODE && enc != GetUCS4EncodingString()) {
-	  // TODO: Change encoding
-	  std::cerr << "CHANGE THE ENCODING" << std::endl;
-	}
-	memcpy(data, (void*)GetString(), nbytes);
-	out = PyArray_NewFromDescr(&PyArray_Type, desc, (int)ndim, np_shape,
-				   NULL, data, NPY_ARRAY_OWNDATA, NULL);
+	PyObject* tmp = PyArray_NewFromDescr(&PyArray_Type, desc,
+					     (int)ndim, np_shape,
+					     NULL, data, 0, NULL);
+	if (tmp)
+	  out = PyArray_NewCopy((PyArrayObject*)tmp, NPY_CORDER);
 	schema_->GetAllocator().Free(np_shape);
 	return out;
       }
