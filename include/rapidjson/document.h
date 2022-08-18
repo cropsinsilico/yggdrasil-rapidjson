@@ -3818,8 +3818,13 @@ public:
       AddSchemaMember(GetSubTypeString(), GetStringSubTypeString());
       AddSchemaMember(GetPrecisionString(), GetStringLength());
     } else if (PyUnicode_CheckExact(x)) {
+      RAPIDJSON_ASSERT(allocator);
+      if (!allocator)
+	return false;
       PyObject* x_bytes = PyUnicode_AsUTF8String(x);
-      out = SetPythonObjectRaw(x_bytes, allocator);
+      SetStringRaw(StringRef(PyBytes_AsString(x_bytes),
+			     (size_t)(PyBytes_Size(x_bytes))),
+		   *allocator);
       Py_DECREF(x_bytes);
     } else if (PyLong_Check(x)) {
       int overflow = 0;
@@ -3909,12 +3914,14 @@ public:
       void* data;
       data = (void*)PyArray_BYTES(cpy);
       if (data == NULL) {
-	Py_DECREF(cpy);
+	if (!PyArray_IS_C_CONTIGUOUS((PyArrayObject*)x))
+	  Py_DECREF(cpy);
 	return false;
       }
       SetStringRaw(StringRef(static_cast<Ch*>(data), precision * nelements),
 		   schema_->GetAllocator());
-      Py_DECREF(cpy);
+      if (!PyArray_IS_C_CONTIGUOUS((PyArrayObject*)x))
+	Py_DECREF(cpy);
       schema_->MemberReserve(5, schema_->GetAllocator());
       AddSchemaMember(GetTypeString(), GetNDArrayString());
       AddSchemaMember(GetSubTypeString(), subtype);
