@@ -4145,7 +4145,6 @@ public:
       return false;
     }
     precision = (SizeType)(desc->elsize);
-    RAPIDJSON_ASSERT(itemsize == precision);
     if (PyDataType_ISUNSIGNED(desc))
       subtype.CopyFrom(GetUintSubTypeString(), allocator);
     else if (PyDataType_ISSIGNED(desc))
