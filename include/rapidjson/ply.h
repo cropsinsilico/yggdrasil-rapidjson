@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include "units.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -77,38 +78,58 @@ inline uint16_t type2flag<float>();
 template<>
 inline uint16_t type2flag<double>();
 
+//! \brief Convert from an alias for a geometry element to the base.
+//! \param alias Name to check.
+//! \return Base name associated with the provided alias.
+static inline
+std::string alias2base(const std::string& alias) {
+  if      (alias == "vertices") return std::string("vertex");
+  else if (alias == "vertexes") return std::string("vertex");
+  else if (alias == "faces"   ) return std::string("face");
+  else if (alias == "edges"   ) return std::string("edge");
+  return std::string(alias);
+}
+
 //! Generic ply geometry element
 class PlyElement {
 public:
   //! Empty constructor.
-  PlyElement() : property_order(), properties() {}
+  PlyElement() : property_order(), colors(), properties() {}
   //! \brief Copy constructor.
   //! \param rhs Element to copy.
-  PlyElement(const PlyElement &rhs) : property_order(rhs.property_order), properties(rhs.properties) {}
+  PlyElement(const PlyElement &rhs) : property_order(rhs.property_order), colors(rhs.colors), properties(rhs.properties) {}
   //! \brief Create an element by reading from an input stream.
   //! \param property_order0 The names of properties of this element in the
   //!   order they should be read.
+  //! \param colors0 The names of properties defining the color of this
+  //!   element.
   //! \param properties0 Mapping between element properties and a flag
   //!   indicating the data type used for the property.
   //! \param in Input stream.
   PlyElement(const std::vector<std::string> &property_order0,
+	     const std::vector<std::string> &colors0,
 	     const std::map<std::string, uint16_t> &properties0,
 	     std::istream &in) :
-    property_order(), properties() {
+    property_order(), colors(colors0), properties() {
     read(property_order0, properties0, in);
   }
   //! \brief Create an element from a vector of property values.
   //! \tparam Type of property values.
   //! \param property_order0 The names of properties of this element in the
   //!   order they are in arr.
+  //! \param colors0 The names of properties defining the color of this
+  //!   element.
   //! \param properties0 Mapping between element properties and a flag
   //!   indicating the data type used for the property.
   //! \param arr Property values.
+  //! \param ignore Value to ignore. After this value is encountered for an
+  //!   element will be added.
   template<typename T>
   PlyElement(const std::vector<std::string> &property_order0,
+	     const std::vector<std::string> &colors0,
 	     const std::map<std::string, uint16_t> &properties0,
-	     const std::vector<T> &arr) :
-    property_order(), properties() {
+	     const std::vector<T> &arr, const T* ignore = 0) :
+    property_order(), colors(colors0), properties() {
     size_t N = arr.size();
     size_t i = 0;
     for (std::vector<std::string>::const_iterator name = property_order0.begin(); name != property_order0.end(); name++, i++) {
@@ -121,12 +142,13 @@ public:
 #if RAPIDJSON_HAS_CXX11
 	  properties.emplace(std::piecewise_construct,
 			     std::forward_as_tuple(it->first),
-			     std::forward_as_tuple(it->second, arr));
+			     std::forward_as_tuple(it->second, arr, ignore));
 #else // RAPIDJSON_HAS_CXX11
-	  properties[it->first] = Data(it->second, arr);
+	  properties[it->first] = Data(it->second, arr, ignore);
 #endif // RAPIDJSON_HAS_CXX11
 	  i = i + N;
 	} else {
+	  if (ignore && units::values_eq(arr[i], *ignore)) return;
 #if RAPIDJSON_HAS_CXX11
 	  properties.emplace(std::piecewise_construct,
 			     std::forward_as_tuple(it->first),
@@ -186,6 +208,45 @@ private:
     Number(const uint16_t &flag, const T &x) :
       i64(0), f(0.0), i8(0), u8(0), i16(0), u16(0), i32(0), u32(0), d(0.0) {
       this->assign(flag, x);
+    }
+    //! \brief Determine if the value is the default.
+    //! \param flag Flag indicating what type is stored.
+    //! \return true if the value is default, false otherwise.
+    bool is_default(const uint16_t &flag) const {
+      switch (flag) {
+      case (kInt8Flag) :
+      case (kUint8Flag) :
+      case (kInt16Flag) :
+      case (kUint16Flag) :
+      case (kInt32Flag) :
+      case (kUint32Flag) :
+	return (get_value_as<int>(flag) == default_value<int>(flag));
+      case (kFloatFlag) :
+      case (kDoubleFlag) :
+	return units::values_eq(get_value_as<double>(flag),
+				default_value<double>(flag));
+      default: return false;
+      }
+    }
+    //! \brief Get default value.
+    //! \param flag Flag indicating what type to store x as.
+    //! \return The default value for a value of the specified type.
+    template<typename T>
+    static T default_value(const uint16_t &flag) {
+      switch (flag & ~kListFlag) {
+      case (kUint8Flag) :
+      case (kUint16Flag) :
+      case (kUint32Flag) :
+	return 0;
+      case (kInt8Flag) :
+      case (kInt16Flag) :
+      case (kInt32Flag) :
+	return -1;
+      default:
+	if (std::is_same<T, double>::value)
+	  return NAN;
+	return -1;
+      }
     }
     //! \brief Assign a scalar value to this instance.
     //! \tparam T Type of scalar.
@@ -259,6 +320,42 @@ private:
       }
       return false;
     }
+    //! \brief Get a value as cast to a new type.
+    //! \tparam Type to return.
+    //! \param flag Type flag indicating the type of data stored.
+    //! \returns Cast value.
+    template <typename T>
+    T get_value_as(const uint16_t &flag) const {
+      switch (flag) {
+      case (kInt8Flag) : return (T)(i8.v);
+      case (kUint8Flag) : return (T)(u8.v);
+      case (kInt16Flag) : return (T)(i16.v);
+      case (kUint16Flag) : return (T)(u16.v);
+      case (kInt32Flag) : return (T)(i32.v);
+      case (kUint32Flag) : return (T)(u32.v);
+      case (kFloatFlag) : return (T)(f.v);
+      case (kDoubleFlag) : return (T)(d);
+      default: RAPIDJSON_ASSERT(false);
+      }
+      return 0;
+    }
+    //! \brief Increment the data inplace.
+    //! \param x Scalar to increment by.
+    //! \param flag Type flag indicating the type of data stored.
+    template <typename T>
+    void add_inplace(const uint16_t &flag, const T& x) {
+      switch (flag) {
+      case (kInt8Flag) : i8.v += (int8_t)x; break;
+      case (kUint8Flag) : u8.v += (uint8_t)x; break;
+      case (kInt16Flag) : i16.v += (int16_t)x; break;
+      case (kUint16Flag) : u16.v += (uint16_t)x; break;
+      case (kInt32Flag) : i32.v += (int32_t)x; break;
+      case (kUint32Flag) : u32.v += (uint32_t)x; break;
+      case (kFloatFlag) : f.v += (float)x; break;
+      case (kDoubleFlag) : d += (double)x; break;
+      default: RAPIDJSON_ASSERT(false);
+      }
+    }
   }; // 8 bytes
   struct Data {
     Data() : f(0), n(0), elements() {}  //  memset(this, 0, sizeof(Data)); }
@@ -303,18 +400,40 @@ private:
     //! \param flag Flag indicating the type that should be used to store the
     //!    data.
     //! \param x Vector of values.
+    //! \param ignore Value to ignore. After this value is encountered for an
+    //!   element will be added.
     template<typename T>
-    Data(const uint16_t flag, const std::vector<T> &x) :
+    Data(const uint16_t flag, const std::vector<T> &x, const T* ignore = 0) :
       f(flag), n(flag), elements() {
       RAPIDJSON_ASSERT(flag & kListFlag);
       uint16_t element_flags = (uint16_t)(flag & ~kListFlag);
 #if RAPIDJSON_HAS_CXX11
-      for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++)
+      for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++) {
+	if (ignore && units::values_eq(*ignore, *it)) return;
 	elements.emplace_back(element_flags, *it);
+      }
 #else // RAPIDJSON_HAS_CXX11
-      for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++)
+      for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++) {
+	if (ignore && units::values_eq(*ignore, *it)) return;
 	elements.push_back(Number(element_flags, *it));
+      }
 #endif // RAPIDJSON_HAS_CXX11
+    }
+    //! \brief Increment the data inplace.
+    //! \param x Scalar to increment by.
+    //! \return Result of addition.
+    template<typename T>
+    Data& operator+=(const T& x) {
+      uint16_t element_flags = (uint16_t)(f & ~kListFlag);
+      if (f & kListFlag) {
+	for (std::vector<Number>::iterator it = elements.begin();
+	     it != elements.end(); it++) {
+	  it->add_inplace(element_flags, x);
+	}
+      } else {
+	n.add_inplace(element_flags, x);
+      }
+      return *this;
     }
     //! \brief Write data to an output stream.
     //! \param out Output stream.
@@ -347,6 +466,60 @@ private:
 	return n.is_equal(f, y.n);
       }
     }
+    //! \brief Get the number of elements in the data object.
+    //! \return Number of elements.
+    size_t size() const {
+      if (f & kListFlag) return elements.size();
+      return 1;
+    }
+    //! \brief Determine if the data contains multiple elements.
+    //! \return true if there are multiple elements, false otherwise.
+    bool is_vector() const {
+      return (f & kListFlag);
+    }
+    //! \brief Determine if the value is the default.
+    //! \return true if the value is default, false otherwise.
+    bool is_default() const {
+      if (is_vector()) return false;
+      return n.is_default(f);
+    }
+    //! \brief Get default value.
+    //! \return The default value for a value of the specified type.
+    template<typename T>
+    T default_value() const {
+      return Number::default_value<T>(f);
+    }
+    //! \brief Remove defaults from list
+    void prune_defaults() {
+      if (!(f & kListFlag)) return;
+      for (std::vector<Number>::iterator it = elements.begin();
+	   it != elements.end(); it++) {
+	if (it->is_default(f & ~kListFlag)) {
+	  elements.erase(it, elements.end());
+	  return;
+	}
+      }
+    }
+    //! \brief Determine if the data contains floating point values.
+    //! \return true if there are floating point values, false otherwise.
+    bool requires_double() const {
+      return f & (kFloatFlag | kDoubleFlag);
+    }
+    //! \brief Get a value as cast to a new type.
+    //! \tparam Type to return.
+    //! \returns Cast value.
+    template <typename T>
+    T get_value_as() const {
+      return n.get_value_as<T>(f);
+    }
+    //! \brief Get a list element as cast to a new type.
+    //! \tparam Type to return.
+    //! \param i Index of element to return.
+    //! \returns Cast value.
+    template <typename T>
+    T get_value_as(size_t i) const {
+      return elements[i].get_value_as<T>(f & ~kListFlag);
+    }
     //! Flag indicating the data type.
     uint16_t f;
     // union {
@@ -376,7 +549,6 @@ private:
     }
     return out;
   }
-
   //! \brief Add a property value from a Number instance to a vector.
   //! \param x Number instance.
   //! \param flag Type flag indicating the type of data stored in x.
@@ -411,17 +583,64 @@ private:
     }
   }
 
-  //! Names of properties defining the element in the order they are read/
-  //!   written when serialized.
-  std::vector<std::string> property_order;
-  //! Mapping between property names and the property values.
-  std::map<std::string, Data> properties;
-  
   friend class PlyElementSet;
   template<typename T>
   friend inline uint16_t type2flag();
   
 public:
+  //! Names of properties defining the element in the order they are read/
+  //!   written when serialized.
+  std::vector<std::string> property_order;
+  //! Names of colors properties for the element.
+  std::vector<std::string> colors;
+  //! Mapping between property names and the property values.
+  std::map<std::string, Data> properties;
+  
+  //! \brief Determine if the data contains multiple elements.
+  //! \param name Property to check.
+  //! \return true if there are multiple elements, false otherwise.
+  bool is_vector(const std::string name) const {
+    std::map<std::string, Data>::const_iterator it = properties.find(name);
+    bool out = false;
+    if (it != properties.end())
+      out = it->second.is_vector();
+    return out;
+  }
+  //! \brief Determine if a property contains floating point values.
+  //! \param name Property to check.
+  //! \return true if there are floating point values, false otherwise.
+  bool requires_double(const std::string name) const {
+    std::map<std::string, Data>::const_iterator it = properties.find(name);
+    bool out = false;
+    if (it != properties.end())
+      out = it->second.requires_double();
+    return out;
+  }
+  //! \brief Get a property value as cast to a new type.
+  //! \tparam Type to return.
+  //! \param name Property to return.
+  //! \returns Cast value.
+  template <typename T>
+  T get_value_as(const std::string name) const {
+    std::map<std::string, Data>::const_iterator it = properties.find(name);
+    T out = 0;
+    if (it != properties.end())
+      out = it->second.get_value_as<T>();
+    return out;
+  }
+  //! \brief Get a list property element as cast to a new type.
+  //! \tparam Type to return.
+  //! \param name Property to return.
+  //! \param i Index of element to return.
+  //! \returns Cast value.
+  template <typename T>
+  T get_value_as(const std::string name, size_t i) const {
+    std::map<std::string, Data>::const_iterator it = properties.find(name);
+    T out = 0;
+    if (it != properties.end())
+      out = it->second.get_value_as<T>(i);
+    return out;
+  }
   //! \brief Convert a ply serialized type name to a type flag.
   //! \param type Ply serialized type name.
   //! \return Type flag.
@@ -501,13 +720,20 @@ public:
   //! \brief Write element properties to an output stream.
   //! \param out Output stream.
   //! \return Output stream.
-  std::ostream & write(std::ostream &out) const {
+  std::ostream & write(std::ostream &out,
+		       std::map<std::string, uint16_t> property_flags) const {
     for (std::vector<std::string>::const_iterator name = property_order.begin(); name != property_order.end(); name++) {
       std::map<std::string, Data>::const_iterator it = properties.find(*name);
-      RAPIDJSON_ASSERT(it != properties.end());
-      if (it != properties.end()) {
-	if (it != properties.begin())
-	  out << " ";
+      if (name != property_order.begin())
+	out << " ";
+      if (it == properties.end()) {
+	std::map<std::string, uint16_t>::const_iterator it_flag = property_flags.find(*name);
+	if ((it_flag != property_flags.end()) ||
+	    (it_flag->second & (kFloatFlag | kDoubleFlag)))
+	  out << Number::default_value<double>(it_flag->second);
+	else
+	  out << Number::default_value<int>(it_flag->second);
+      } else {
 	it->second.write(out);
       }
     }
@@ -528,6 +754,7 @@ public:
       property_order.push_back(*name);
       std::map<std::string, uint16_t>::const_iterator it = properties0.find(*name);
       RAPIDJSON_ASSERT(it != properties0.end());
+      if (it == properties0.end()) continue;
 #if RAPIDJSON_HAS_CXX11
       properties.emplace(std::piecewise_construct,
 			 std::forward_as_tuple(it->first),
@@ -535,6 +762,10 @@ public:
 #else // RAPIDJSON_HAS_CXX11
       properties[it->first] = Data(it->second, in);
 #endif // RAPIDJSON_HAS_CXX11
+      if (properties[it->first].is_vector())
+	properties[it->first].prune_defaults();
+      else if (properties[it->first].is_default())
+	properties.erase(it->first);
     }
     return in;
   }
@@ -564,33 +795,186 @@ public:
     RAPIDJSON_ASSERT(!sizeof("Cannot get scalar for type"));
     return T(0);
   }
-  //! \brief Get element values as an array of ints.
-  //! \param nvert Number of vertices previously added to an ObjWavefront
-  //!   object being constructed from this geometry.
-  //! \return Array of int values.
-  std::vector<int> get_int_array(const size_t nvert=0) const {
-    std::vector<int> out;
+  //! \brief Get the number of values in the element.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  //! \return Number of values.
+  size_t size(bool skipColors=false) const {
+    size_t out = 0;
     for (std::vector<std::string>::const_iterator name = property_order.begin(); name != property_order.end(); name++) {
       std::map<std::string, Data>::const_iterator it = properties.find(*name);
-      RAPIDJSON_ASSERT(it != properties.end());
-      extend_aray_data(it->second, out);
-    }
-    if (nvert > 0) {
-      for (size_t i = 0; i < out.size(); i++)
-	out[i] = out[i] + 1;
+      if (skipColors && !colors.empty() && *name == colors[0]) break;
+      if (it != properties.end())
+	out += it->second.size();
     }
     return out;
   }
-  //! \brief Get element values as an array of doubles.
-  //! \return Array of double values.
-  std::vector<double> get_double_array() const {
-    std::vector<double> out;
+  //! \brief Get element values as an array of ints.
+  //! \param nvert Number of vertices previously added to an ObjWavefront
+  //!   object being constructed from this geometry.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  //! \param minSize Minimum number of values that should be added for the
+  //!   element. If the number of values is smaller, the vector will be
+  //!   padded with defaultValue.
+  //! \param defaultValue Value to pad vector with if there are fewer values
+  //!   than minSize.
+  //! \return Array of int values.
+  std::vector<int> get_int_array(const size_t nvert=0,
+				 bool skipColors=false,
+				 const size_t minSize=0,
+				 const int defaultValue=-1) const {
+    std::vector<int> out;
+    get_int_array(out, nvert, skipColors, minSize, defaultValue);
+    return out;
+  }
+  //! \brief Get element values as an array of ints.
+  //! \param out Vector to add values to.
+  //! \param nvert Number of vertices previously added to an ObjWavefront
+  //!   object being constructed from this geometry.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  //! \param minSize Minimum number of values that should be added for the
+  //!   element. If the number of values is smaller, the vector will be
+  //!   padded with defaultValue.
+  //! \param defaultValue Value to pad vector with if there are fewer values
+  //!   than minSize.
+  void get_int_array(std::vector<int>& out,
+		     const size_t nvert=0,
+		     bool skipColors=false,
+		     const size_t minSize = 0,
+		     const int defaultValue = -1) const {
+    size_t nPrev = out.size();
     for (std::vector<std::string>::const_iterator name = property_order.begin(); name != property_order.end(); name++) {
+      if (skipColors && !colors.empty() && colors[0] == *name) break;
       std::map<std::string, Data>::const_iterator it = properties.find(*name);
       RAPIDJSON_ASSERT(it != properties.end());
-      extend_aray_data(it->second, out);
+      if (it != properties.end())
+	extend_aray_data(it->second, out);
     }
+    if (nvert > 0) {
+      for (size_t i = nPrev; i < out.size(); i++)
+	out[i] = out[i] + 1;
+    }
+    size_t nValue = out.size() - nPrev;
+    if (nValue < minSize) {
+      for (size_t i = nValue; i < minSize; i++)
+	out.push_back(defaultValue);
+    }
+  }
+  //! \brief Get element values as an array of doubles.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  //! \param minSize Minimum number of values that should be added for the
+  //!   element. If the number of values is smaller, the vector will be
+  //!   padded with defaultValue.
+  //! \param defaultValue Value to pad vector with if there are fewer values
+  //!   than minSize.
+  //! \return Array of double values.
+  std::vector<double> get_double_array(bool skipColors=false,
+				       const size_t minSize=0,
+				       const double defaultValue=NAN) const {
+    std::vector<double> out;
+    get_double_array(out, skipColors, minSize, defaultValue);
     return out;
+  }
+  //! \brief Get element values as an array of doubles.
+  //! \param out Array to add values to.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  //! \param minSize Minimum number of values that should be added for the
+  //!   element. If the number of values is smaller, the vector will be
+  //!   padded with defaultValue.
+  //! \param defaultValue Value to pad vector with if there are fewer values
+  //!   than minSize.
+  void get_double_array(std::vector<double>& out,
+			bool skipColors=false,
+			const size_t minSize=0,
+			const double defaultValue=NAN) const {
+    size_t nPrev = out.size();
+    for (std::vector<std::string>::const_iterator name = property_order.begin(); name != property_order.end(); name++) {
+      if (skipColors && !colors.empty() && colors[0] == *name) break;
+      std::map<std::string, Data>::const_iterator it = properties.find(*name);
+      RAPIDJSON_ASSERT(it != properties.end());
+      if (it != properties.end())
+	extend_aray_data(it->second, out);
+    }
+    size_t nValue = out.size() - nPrev;
+    if (nValue < minSize) {
+      for (size_t i = nValue; i < minSize; i++)
+	out.push_back(defaultValue);
+    }
+  }
+  //! \brief Get the colors for an element set in arrayform.
+  //! \returns The colors for the requirested type in array form.
+  std::vector<uint8_t> get_colors_array() const {
+    std::vector<uint8_t> out;
+    get_colors_array(out);
+    return out;
+  }
+  //! \brief Get the colors for an element set in arrayform.
+  //! \param out Array to add values to.
+  void get_colors_array(std::vector<uint8_t>& out) const {
+    for (std::vector<std::string>::const_iterator name = colors.begin(); name != colors.end(); name++) {
+      std::map<std::string, Data>::const_iterator it = properties.find(*name);
+      if (it != properties.end())
+	extend_aray_data(it->second, out);
+    }
+  }
+  //! \brief Add element colors to this element.
+  //! \param arr Colors for this element.
+  //! \param properties0 Map between property names and a flag indicating
+  //!   the data type for the property values.
+  //! \param property_colors The names of color properties defined in arr.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool add_colors(const T* arr,
+		  const std::map<std::string, uint16_t> &properties0,
+		  const std::vector<std::string>& property_colors) {
+    if (colors.empty()) {
+      colors = property_colors;
+      size_t i = 0;
+      for (std::vector<std::string>::const_iterator name = colors.begin();
+	   name != colors.end(); name++, i++) {
+	property_order.push_back(*name);
+	std::map<std::string, uint16_t>::const_iterator it = properties0.find(*name);
+	RAPIDJSON_ASSERT(it != properties0.end());
+	if (it == properties0.end()) return false;
+#if RAPIDJSON_HAS_CXX11
+	properties.emplace(std::piecewise_construct,
+			   std::forward_as_tuple(*name),
+			   std::forward_as_tuple(it->second, arr[i]));
+#else // RAPIDJSON_HAS_CXX11
+	properties[*name] = Data(it->second, arr[i]);
+#endif // RAPIDJSON_HAS_CXX11
+      }
+    } else {
+      if (colors != property_colors)
+	return false;
+      size_t i = 0;
+      for (std::vector<std::string>::const_iterator name = colors.begin();
+	   name != colors.end(); name++, i++) {
+	std::map<std::string, uint16_t>::const_iterator it = properties0.find(*name);
+	RAPIDJSON_ASSERT(it != properties0.end());
+	if (it == properties0.end()) return false;
+	properties[*name].n.assign(it->second, arr[i]);
+      }
+    }
+    return true;
+  }
+  //! \brief Increase indexes.
+  //! \param N Amount to increment indexes by.
+  //! \param maxProp Maximum number of properties to increase the index of.
+  //!   Ignored if 0.
+  void increase_index(const size_t N, size_t maxProp = 0) {
+    size_t iProp = 0;
+    for (std::vector<std::string>::iterator name = property_order.begin(); name != property_order.end(); name++, iProp++) {
+      if (maxProp > 0 && iProp >= maxProp) break;
+      std::map<std::string, Data>::iterator it = properties.find(*name);
+      if (it != properties.end()) {
+	it->second += N;
+      }
+    }
   }
   
   friend bool operator == (const PlyElement& lhs, const PlyElement& rhs);
@@ -640,7 +1024,7 @@ public:
   //! \param name0 Name of the element type in the set.
   //! \param count0 Number of elements in the set.
   PlyElementSet(const std::string& name0="", const uint32_t& count0=0) :
-    name(name0), count(count0), elements(), property_order(), property_flags(), property_size_flags() {}
+    name(name0), count(count0), elements(), property_order(), colors(), property_flags(), property_size_flags() {}
   //! \brief Create an empty element set with property information.
   //! \tparam T Data type that will be expected for element property values.
   //!   This is determined by the unused third parameter.
@@ -651,10 +1035,11 @@ public:
   template <typename T>
   PlyElementSet(const std::string& name0,
 		const std::vector<std::string> &property_names,
+		const std::vector<std::string> &property_colors,
 		const T&,
 		const bool is_array = false) :
     name(name0), count(0), elements(), property_order(),
-    property_flags(), property_size_flags() {
+    colors(property_colors), property_flags(), property_size_flags() {
     set_flags<T>(property_names, is_array);
   }
   //! \brief Create an element set from an array of property values.
@@ -663,21 +1048,63 @@ public:
   //! \tparam N Number of property values for each element.
   //! \param name0 Name of the element type in the set.
   //! \param arr Array of property values for each element in the set.
-  //! \param property_names Names of properties defining each element in the
-  //!   order they were read or will be written.
+  //! \param property_colors Names of properties defining colors for each
+  //!   element.
+  //! \param ignore Value to ignore. After this value is encountered for an
+  //!   element will be added.
   template <typename T, size_t M, size_t N>
   PlyElementSet(const std::string& name0,
 		const T (&arr)[M][N],
-		const std::vector<std::string> &property_names) :
+		const std::vector<std::string> &property_names,
+		const std::vector<std::string> &property_colors,
+		const T* ignore = 0) :
     name(name0), count(0), elements(), property_order(),
-    property_flags(), property_size_flags() {
+    colors(property_colors), property_flags(), property_size_flags() {
     set_flags<T>(property_names, bool(N != (property_names.size())));
     RAPIDJSON_ASSERT((N == property_names.size())
 		     || (property_names.size() == 1));
     count = M;
     for (size_t i = 0; i < M; i++)
-      add_element(std::vector<T>(arr[i], arr[i] + N));
+      add_element(std::vector<T>(arr[i], arr[i] + N), ignore);
   }
+  //! \brief Create an element set from an array of property values.
+  //! \tparam T Type of property values.
+  //! \param name0 Name of the element type in the set.
+  //! \param arr Array of property values for each element in the set.
+  //! \param M Number of elements in the set.
+  //! \param N Number of property values for each element.
+  //! \param property_names Names of properties defining each element in the
+  //!   order they were read or will be written.
+  //! \param property_colors Names of properties defining colors for each
+  //!   element.
+  //! \param ignore Value to ignore. After this value is encountered for an
+  //!   element will be added.
+  template <typename T>
+  PlyElementSet(const std::string& name0,
+		const T* arr, size_t M, size_t N,
+		const std::vector<std::string> &property_names,
+		const std::vector<std::string> &property_colors,
+		const T* ignore = 0) :
+    name(name0), count(0), elements(), property_order(),
+    colors(property_colors), property_flags(), property_size_flags() {
+    set_flags<T>(property_names, bool(N != (property_names.size())));
+    RAPIDJSON_ASSERT((N == property_names.size())
+		     || (property_names.size() == 1));
+    count = (SizeType)M;
+    for (size_t i = 0; i < count; i++)
+      add_element(std::vector<T>(arr + (i * N), arr + (i * N) + N), ignore);
+  }
+  //! \brief Copy constructor.
+  //! \param other Set to copy.
+  PlyElementSet(const PlyElementSet& other) :
+    name(other.name), count(other.count), elements(),
+    property_order(other.property_order), colors(other.colors),
+    property_flags(other.property_flags),
+    property_size_flags(other.property_size_flags) {
+    for (size_t i = 0; i < count; i++)
+      add_element(other.elements[i]);
+  }
+    
   //! Name of the type of element in the set.
   std::string name;
   //! Number of elements in the set.
@@ -687,6 +1114,8 @@ public:
   //! The names of properties defining each element in the order that they
   //!   were read or will be written.
   std::vector<std::string> property_order;
+  //! Names of colors properties for the element.
+  std::vector<std::string> colors;
   //! Mapping between properties and flags defining the types used for the
   //!   property values.
   std::map<std::string, uint16_t> property_flags;
@@ -697,9 +1126,12 @@ public:
   //! \brief Set the type flags for the element set.
   //! \tparam T Data type that will be used to store element properties.
   //! \param property_names Names of properties defining each element.
+  //! \param property_colors Names of properties defining colors for each
+  //!   element.
   //! \param is_array If true, the provided property is recorded as an array.
   template<typename T>
-  void set_flags(const std::vector<std::string> &property_names, const bool is_array) {
+  void set_flags(const std::vector<std::string> &property_names,
+		 const bool is_array) {
     uint16_t flags = type2flag<T>();
     uint16_t size_flags = 0;
     if (is_array) {
@@ -725,14 +1157,156 @@ public:
   //! \brief Add an element to the set.
   //! \tparam Type of property values.
   //! \param arr Property values for the new element.
+  //! \param ignore Value to ignore. After this value is encountered for an
+  //!   element will be added.
   template<typename T>
-  void add_element(const std::vector<T> &arr)
+  void add_element(const std::vector<T> &arr, const T* ignore = 0)
   {
 #if RAPIDJSON_HAS_CXX11
-    elements.emplace_back(property_order, property_flags, arr);
+    elements.emplace_back(property_order, colors, property_flags, arr, ignore);
 #else // RAPIDJSON_HAS_CXX11
-    elements.push_back(PlyElement(property_order, property_flags, arr));
+    elements.push_back(PlyElement(property_order, colors, property_flags, arr, ignore));
 #endif // RAPIDJSON_HAS_CXX11
+  }
+  //! \brief Add an element to the set by copying an existing element.
+  //! \param other Element to copy.
+  void add_element(const PlyElement& other) {
+#if RAPIDJSON_HAS_CXX11
+    elements.emplace_back(other);
+#else // RAPIDJSON_HAS_CXX11
+    elements.push_back(PlyElement(other));
+#endif // RAPIDJSON_HAS_CXX11
+  }
+  //! \brief Determine if an element set requires doubles to be represented
+  //!   as an array.
+  //! \return True if the set requires doubles, false otherwise.
+  bool requires_double() const {
+    for (std::vector<std::string>::const_iterator iname = property_order.begin(); iname != property_order.end(); iname++) {
+      std::map<std::string, uint16_t>::const_iterator it = property_flags.find(*iname);
+      RAPIDJSON_ASSERT(it != property_flags.end());
+      if (it->second & (PlyElement::kFloatFlag | PlyElement::kDoubleFlag))
+	return true;
+    }
+    return false;
+  }
+  //! \brief Get element values as an array of ints.
+  //! \param nvert Number of vertices previously added to an ObjWavefront
+  //!   object being constructed from this geometry.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  //! \return Array of int values.
+  std::vector<int> get_int_array(const size_t nvert=0,
+				 bool skipColors=false) const {
+    std::vector<int> out;
+    get_int_array(out, nvert, skipColors);
+    return out;
+  }
+  //! \brief Get element values as an array of ints.
+  //! \param out Vector to add values to.
+  //! \param nvert Number of vertices previously added to an ObjWavefront
+  //!   object being constructed from this geometry.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  void get_int_array(std::vector<int>& out,
+		     const size_t nvert=0,
+		     bool skipColors=false) const {
+    size_t minSize = 0;
+    if (minSize == 0) {
+      for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
+	minSize = std::max(minSize, it->size(skipColors));
+    }
+    for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
+      it->get_int_array(out, nvert, skipColors, minSize, -1);
+  }
+  //! \brief Get element values as an array of doubles.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  //! \return Array of double values.
+  std::vector<double> get_double_array(bool skipColors=false) const {
+    std::vector<double> out;
+    get_double_array(out, skipColors);
+    return out;
+  }
+  //! \brief Get element values as an array of doubles.
+  //! \param out Array to add values to.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  void get_double_array(std::vector<double>& out,
+			bool skipColors=false) const {
+    double defaultValue = NAN;
+    size_t minSize = 0;
+    for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
+      minSize = std::max(minSize, it->size(skipColors));
+    for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
+      it->get_double_array(out, skipColors, minSize, defaultValue);
+  }
+  //! \brief Get the colors for an element set in arrayform.
+  //! \returns The colors for the requirested type in array form.
+  std::vector<uint8_t> get_colors_array() const {
+    std::vector<uint8_t> out;
+    get_colors_array(out);
+    return out;
+  }
+  //! \brief Get the colors for an element set in arrayform.
+  //! \param out Array to add values to.
+  void get_colors_array(std::vector<uint8_t>& out) const {
+    for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
+      it->get_colors_array(out);
+  }
+  //! \brief Add element colors to a set.
+  //! \param arr Colors for each of the elements in the set.
+  //! \param M Number of elements in the set.
+  //! \param N Number of color properties for each element.
+  //! \param property_colors The names of color properties defined in arr.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool add_colors(const T* arr, SizeType M, SizeType N,
+		  const std::vector<std::string>& property_colors) {
+    if (elements.size() != M || property_colors.size() != N) return false;
+    if (colors.size() == 0) {
+      colors = property_colors;
+      set_flags<T>(property_colors, false);
+    } else if (colors != property_colors) {
+      return false;
+    }
+    const T* p = arr;
+    for (std::vector<PlyElement>::iterator it = elements.begin();
+	 it != elements.end(); it++, p += N) {
+      if (!it->add_colors(p, property_flags, colors)) return false;
+    }
+    return true;
+  }
+  //! \brief Add colors to an existing element.
+  //! \param idx Index of the element to add colors to.
+  //! \param arr Colors.
+  //! \param property_colors Names of the colors.
+  //! \return true if successful, false otherwise.
+  bool add_element_colors(const size_t idx,
+			  const std::vector<uint8_t>& arr) {
+    std::vector<std::string> property_colors = colors;
+    if (property_colors.empty()) {
+      property_colors.push_back("red");
+      property_colors.push_back("green");
+      property_colors.push_back("blue");
+    }
+    return add_element_colors(idx, arr, property_colors);
+  }
+  //! \brief Add colors to an existing element.
+  //! \param idx Index of the element to add colors to.
+  //! \param arr Colors.
+  //! \param property_colors Names of the colors.
+  //! \return true if successful, false otherwise.
+  bool add_element_colors(const size_t idx,
+			  const std::vector<uint8_t>& arr,
+			  const std::vector<std::string>& property_colors) {
+    if (idx >= elements.size()) return false;
+    if (colors.size() == 0) {
+      colors = property_colors;
+      set_flags<uint8_t>(property_colors, false);
+    } else if (colors != property_colors) {
+      return false;
+    }
+    return elements[idx].add_colors(arr.data(), property_flags, colors);
   }
   //! \brief Check if this element set is equivalent to another.
   //! \param rhs Element set to compare against.
@@ -751,7 +1325,7 @@ public:
   //! \return Output stream.
   std::ostream & write(std::ostream &out) const {
     for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
-      it->write(out);
+      it->write(out, property_flags);
     return out;
   }
   //! \brief Write the header entry defining an element set to an output
@@ -781,10 +1355,10 @@ public:
   std::istream & read(std::istream &in) {
 #if RAPIDJSON_HAS_CXX11
     for (size_t i = 0; i < count; i++)
-      elements.emplace_back(property_order, property_flags, in);
+      elements.emplace_back(property_order, colors, property_flags, in);
 #else // RAPIDJSON_HAS_CXX11
     for (size_t i = 0; i < count; i++)
-      elements.push_back(PlyElement(property_order, property_flags, in));
+      elements.push_back(PlyElement(property_order, colors, property_flags, in));
 #endif // RAPIDJSON_HAS_CXX11
     return in;
   }
@@ -833,7 +1407,7 @@ public:
   template<typename Tv, SizeType Mv, SizeType Nv>
   Ply(const Tv (&vertices)[Mv][Nv]) :
     comments(), format("ascii 1.0"), elements(), element_order() {
-    add_element_set_vertex(vertices);
+    add_element_set("vertex", vertices);
   }
   //! \brief Create an Ply instance from C arrays of vertices and faces.
   //! \tparam Tv Type of value in vertex value arrays.
@@ -848,10 +1422,8 @@ public:
 	   typename Tf, SizeType Mf, SizeType Nf>
   Ply(const Tv (&vertices)[Mv][Nv], const Tf (&faces)[Mf][Nf]) :
     comments(), format("ascii 1.0"), elements(), element_order() {
-    add_element_set_vertex(vertices);
-    std::vector<std::string> names;
-    names.push_back("vertex_index");
-    add_element_set("face", faces, names);
+    add_element_set("vertex", vertices);
+    add_element_set("face", faces);
   }
   //! \brief Create an Ply instance from C arrays of vertices, faces, and
   //!   edges.
@@ -873,11 +1445,9 @@ public:
   Ply(const Tv (&vertices)[Mv][Nv], const Tf (&faces)[Mf][Nf],
       const Te (&edges)[Me][Ne]) :
     comments(), format("ascii 1.0"), elements(), element_order() {
-    add_element_set_vertex(vertices);
-    std::vector<std::string> names;
-    names.push_back("vertex_index");
-    add_element_set("face", faces, names);
-    add_element_set_edge(edges);
+    add_element_set("vertex", vertices);
+    add_element_set("face", faces);
+    add_element_set("edge", edges);
   }
 
   //! \brief Add a set of vertex elements.
@@ -887,17 +1457,7 @@ public:
   //! \param vertices Property values for each element in the set.
   template<typename Tv, SizeType Mv, SizeType Nv>
   void add_element_set_vertex(const Tv (&vertices)[Mv][Nv]) {
-    RAPIDJSON_ASSERT((Nv == 3) || (Nv == 6));
-    std::vector<std::string> names;
-    names.push_back("x");
-    names.push_back("y");
-    names.push_back("z");
-    if (Nv == 6) {
-      names.push_back("red");
-      names.push_back("blue");
-      names.push_back("green");
-    }
-    add_element_set("vertex", vertices, names);
+    add_element_set("vertex", vertices);
   }
 
   //! \brief Add a set of edge elements.
@@ -907,16 +1467,7 @@ public:
   //! \param edges Property values for each element in the set.
   template<typename Te, SizeType Me, SizeType Ne>
   void add_element_set_edge(const Te (&edges)[Me][Ne]) {
-    RAPIDJSON_ASSERT((Ne == 2) || (Ne == 5));
-    std::vector<std::string> property_names;
-    property_names.push_back("vertex1");
-    property_names.push_back("vertex2");
-    if (Ne == 5) {
-      property_names.push_back("red");
-      property_names.push_back("blue");
-      property_names.push_back("green");
-    }
-    add_element_set("edge", edges, property_names);
+    add_element_set("edge", edges);
   }
 
   //! Comments at the beginning of the serialized geometry.
@@ -928,56 +1479,188 @@ public:
   //! Element type names in the order that they were read or should be written.
   std::vector<std::string> element_order;
 
+  //! \brief Get the property names associated with an element set.
+  //! \param name0 Type of elements in the set.
+  //! \param N Number of properties in each element.
+  //! \param[out] colors Array to put color property names in.
+  //! \returns Array of properties associated with the element set.
+  std::vector<std::string> get_property_names(const std::string& name0,
+					      SizeType N,
+					      std::vector<std::string>& colors) const {
+    std::string name = alias2base(name0);
+    std::vector<std::string> property_names;
+    if (name == "vertex") {
+      RAPIDJSON_ASSERT((N == 3) || (N == 6));
+      property_names.push_back("x");
+      property_names.push_back("y");
+      property_names.push_back("z");
+      if (N == 6) {
+	property_names.push_back("red");
+	property_names.push_back("green");
+	property_names.push_back("blue");
+	colors.push_back("red");
+	colors.push_back("green");
+	colors.push_back("blue");
+      }
+    } else if (name == "face") {
+      property_names.push_back("vertex_index");
+    } else if (name == "edge") {
+      RAPIDJSON_ASSERT((N == 2) || (N == 5));
+      property_names.push_back("vertex1");
+      property_names.push_back("vertex2");
+      if (N == 5) {
+	property_names.push_back("red");
+	property_names.push_back("green");
+	property_names.push_back("blue");
+	colors.push_back("red");
+	colors.push_back("green");
+	colors.push_back("blue");
+      }
+    }
+    return property_names;
+  }
   //! \brief Add a single element to the geometry.
-  //! \param name Name of the type of element being added.
+  //! \param name0 Name of the type of element being added.
   //! \param arr Vector of element properties.
   //! \param property_names Vector of element property names.
+  //! \param property_colors Names of properties defining colors for each
+  //!   element.
+  //! \param ignore Value to ignore. After this value is encountered for an
+  //!   element will be added.
   template <typename T>
-  void add_element(const std::string& name,
+  void add_element(const std::string& name0,
 		   const std::vector<T> &arr,
-		   const std::vector<std::string> &property_names) {
+		   const std::vector<std::string> &property_names,
+		   const std::vector<std::string> &property_colors,
+		   const T* ignore = 0) {
+    std::string name = alias2base(name0);
     bool is_array = bool(arr.size() != property_names.size());
     RAPIDJSON_ASSERT((!is_array) || (property_names.size() == 1));
     if (elements.find(name) == elements.end()) {
-      element_order.push_back(name);
-#if RAPIDJSON_HAS_CXX11
-      elements.emplace(std::piecewise_construct,
-		       std::forward_as_tuple(name),
-		       std::forward_as_tuple(name));
-#else // RAPIDJSON_HAS_CXX11
-      elements[name] = PlyElementSet(name);
-#endif // RAPIDJSON_HAS_CXX11
+      add_element_set(name);
       elements[name].set_flags<T>(property_names, is_array);
+      elements[name].colors = property_colors;
     }
     elements[name].count++;
-    elements[name].add_element(arr);
+    elements[name].add_element(arr, ignore);
+  }
+  //! \brief Add a single element to the geometry.
+  //! \param name Name of the type of element being added.
+  //! \param arr Vector of element properties.
+  //! \param ignore Value to ignore. After this value is encountered for an
+  //!   element will be added.
+  template <typename T>
+  void add_element(const std::string& name,
+		   const std::vector<T> &arr,
+		   const T* ignore = 0) {
+    std::vector<std::string> property_colors;
+    std::vector<std::string> property_names = get_property_names(name,
+								 (SizeType)arr.size(),
+								 property_colors);
+    add_element(name, arr, property_names, property_colors, ignore);
   }
   //! \brief Add a new element set to the geometry.
   //! \tparam T Type of property values.
   //! \tparam M Number of elements in the set.
   //! \tparam N Number of properties for each element.
-  //! \param name Name fo the type of element in the set.
+  //! \param name0 Name of the type of element in the set.
   //! \param arr Property values for each of the elements in the set.
   //! \param property_names The names of properties defining each element in
   //!   the set in the order they were read or will be written.
+  //! \param property_colors Names of properties defining colors for each
+  //!   element.
+  //! \param ignore Value to ignore. After this value is encountered for an
+  //!   element will be added.
   template <typename T, SizeType M, SizeType N>
-  void add_element_set(const std::string& name,
+  void add_element_set(const std::string& name0,
 		       const T (&arr)[M][N],
-		       const std::vector<std::string> &property_names) {
+		       const std::vector<std::string>& property_names,
+		       const std::vector<std::string>& property_colors,
+		       const T* ignore = 0) {
+    std::string name = alias2base(name0);
     RAPIDJSON_ASSERT(elements.find(name) == elements.end());
     element_order.push_back(name);
 #if RAPIDJSON_HAS_CXX11
     elements.emplace(std::piecewise_construct,
 		     std::forward_as_tuple(name),
-		     std::forward_as_tuple(name, arr, property_names));
+		     std::forward_as_tuple(name, arr, property_names,
+					   property_colors, ignore));
 #else // RAPIDJSON_HAS_CXX11
-    elements[name] = PlyElementSet(name, arr, property_names);
+    elements[name] = PlyElementSet(name, arr, property_names,
+				   property_colors, ignore);
 #endif // RAPIDJSON_HAS_CXX11
   }
-  //! \brief Add a new element set to the geometry and allocates for elements.
+  //! \brief Add a new element set to the geometry.
+  //! \tparam T Type of property values.
+  //! \tparam M Number of elements in the set.
+  //! \tparam N Number of properties for each element.
   //! \param name Name of the type of element in the set.
+  //! \param arr Property values for each of the elements in the set.
+  //! \param property_names The names of properties defining each element in
+  //!   the set in the order they were read or will be written.
+  //! \param ignore Value to ignore. After this value is encountered for an
+  //!   element will be added.
+  template <typename T, SizeType M, SizeType N>
+  void add_element_set(const std::string& name,
+		       const T (&arr)[M][N], const T* ignore = 0) {
+    std::vector<std::string> colors;
+    std::vector<std::string> property_names = get_property_names(name, N,
+								 colors);
+    add_element_set(name, arr, property_names, colors, ignore);
+  }
+  //! \brief Add a new element set to the geometry.
+  //! \tparam T Type of property values.
+  //! \param name0 Name of the type of element in the set.
+  //! \param arr Property values for each of the elements in the set.
+  //! \param M Number of elements in the set.
+  //! \param N Number of properties for each element.
+  //! \param property_names Vector of element property names.
+  //! \param property_colors Names of properties defining colors for each
+  //!   element.
+  //! \param ignore Value to ignore. After this value is encountered for an
+  //!   element will be added.
+  template <typename T>
+  void add_element_set(const std::string& name0,
+		       const T* arr, SizeType M, SizeType N,
+		       const std::vector<std::string>& property_names,
+		       const std::vector<std::string>& property_colors,
+		       const T* ignore = 0) {
+    std::string name = alias2base(name0);
+    RAPIDJSON_ASSERT(elements.find(name) == elements.end());
+    element_order.push_back(name);
+#if RAPIDJSON_HAS_CXX11
+    elements.emplace(std::piecewise_construct,
+		     std::forward_as_tuple(name),
+		     std::forward_as_tuple(name, arr, (size_t)M, (size_t)N,
+					   property_names, property_colors,
+					   ignore));
+#else // RAPIDJSON_HAS_CXX11
+    elements[name] = PlyElementSet(name, arr, (size_t)M, (size_t)N,
+				   property_names, property_colors, ignore);
+#endif // RAPIDJSON_HAS_CXX11
+  }
+  //! \brief Add a new element set to the geometry.
+  //! \tparam T Type of property values.
+  //! \param name Name of the type of element in the set.
+  //! \param arr Property values for each of the elements in the set.
+  //! \param M Number of elements in the set.
+  //! \param N Number of properties for each element.
+  //! \param ignore Value to ignore. After this value is encountered for an
+  //!   element will be added.
+  template <typename T>
+  void add_element_set(const std::string& name,
+		       const T* arr, SizeType M, SizeType N,
+		       const T* ignore = 0) {
+    std::vector<std::string> colors;
+    std::vector<std::string> property_names = get_property_names(name, N,
+								 colors);
+    add_element_set(name, arr, M, N, property_names, colors, ignore);
+  }
+  //! \brief Add a new element set to the geometry and allocates for elements.
+  //! \param name0 Name of the type of element in the set.
   //! \param count Number of elements that should be allocated for in the set.
-  void add_element_set(const std::string& name, uint32_t count=0) {
+  void add_element_set(const std::string& name0, uint32_t count=0) {
+    std::string name = alias2base(name0);
     element_order.push_back(name);
 #if RAPIDJSON_HAS_CXX11
     elements.emplace(std::piecewise_construct,
@@ -986,6 +1669,125 @@ public:
 #else // RAPIDJSON_HAS_CXX11
     elements[name] = PlyElementSet(name, count);
 #endif // RAPIDJSON_HAS_CXX11
+  }
+  //! \brief Add a new element set to the geometry by copying an existing set.
+  //! \param name0 Name of the type of element in the set.
+  //! \param other Element set to copy.
+  void add_element_set(const std::string& name0,
+		       const PlyElementSet& other) {
+    std::string name = alias2base(name0);
+    element_order.push_back(name);
+#if RAPIDJSON_HAS_CXX11
+    elements.emplace(std::piecewise_construct,
+		     std::forward_as_tuple(name),
+		     std::forward_as_tuple(other));
+#else // RAPIDJSON_HAS_CXX11
+    elements[name] = PlyElementSet(other);
+#endif // RAPIDJSON_HAS_CXX11
+  }
+  //! \brief Add element colors to a set.
+  //! \param name Name of the type of element in the set.
+  //! \param arr Colors for each of the elements in the set.
+  //! \param M Number of elements in the set.
+  //! \param N Number of color properties for each element.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool add_element_set_colors(const std::string& name,
+			      const T* arr, SizeType M, SizeType N) {
+    if (N == 3) {
+      std::vector<std::string> property_colors({"red", "green", "blue"});
+      return add_element_set_colors(name, arr, M, N, property_colors);
+    }
+    return false;
+  }
+  //! \brief Add element colors to a set.
+  //! \param name Name of the type of element in the set.
+  //! \param arr Colors for each of the elements in the set.
+  //! \param M Number of elements in the set.
+  //! \param N Number of color properties for each element.
+  //! \param property_colors The names of color properties defined in arr.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool add_element_set_colors(const std::string& name,
+			      const T* arr, SizeType M, SizeType N,
+			      const std::vector<std::string>& property_colors) {
+    if (property_colors.empty() || property_colors.size() != N) return false;
+    PlyElementSet* elementSet = get_element_set(name);
+    if (elementSet)
+      return elementSet->add_colors(arr, M, N, property_colors);
+    return false;
+  }
+  //! \brief Get an element set.
+  //! \param name0 Name of the element set to get.
+  //! \returns The element set of the requested type if it exists and NULL
+  //!   otherwise.
+  const PlyElementSet* get_element_set(const std::string& name0) const {
+    return const_cast<Ply&>(*this).get_element_set(name0);
+  }
+  //! \brief Get an element set.
+  //! \param name0 Name of the element set to get.
+  //! \returns The element set of the requested type if it exists and NULL
+  //!   otherwise.
+  PlyElementSet* get_element_set(const std::string& name0) {
+    std::string name = alias2base(name0);
+    std::map<std::string,PlyElementSet>::iterator eit = elements.find(name);
+    if (eit == elements.end())
+      return NULL;
+    return &(eit->second);
+  }
+  //! \brief Get an element set in an array form.
+  //! \param name0 Name of the element set to get.
+  //! \param[out] N Number of elements in the returned array.
+  //! \param[out[ M Number of values for each element in the returned array.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  //! \returns The element set of the requested type in array form.
+  std::vector<int> get_int_array(const std::string& name0,
+				 size_t &N, size_t &M,
+				 bool skipColors=false) const {
+    std::string name = alias2base(name0);
+    std::vector<int> out;
+    const PlyElementSet* s = get_element_set(name);
+    if (s == NULL) return out;
+    out = s->get_int_array(0, skipColors);
+    N = s->elements.size();
+    M = out.size() / N;
+    return out;
+  }
+  //! \brief Get an element set in an array form.
+  //! \param name0 Name of the element set to get.
+  //! \param[out] N Number of elements in the returned array.
+  //! \param[out[ M Number of values for each element in the returned array.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
+  //! \returns The element set of the requested type in array form.
+  std::vector<double> get_double_array(const std::string& name0,
+				       size_t &N, size_t &M,
+				       bool skipColors=false) const {
+    std::string name = alias2base(name0);
+    std::vector<double> out;
+    const PlyElementSet* s = get_element_set(name);
+    if (s == NULL) return out;
+    out = s->get_double_array(skipColors);
+    N = s->elements.size();
+    M = out.size() / N;
+    return out;
+  }
+  //! \brief Get the colors for an element set in arrayform.
+  //! \param name0 Name of the element set to get.
+  //! \param[out] N Number of elements in the returned array.
+  //! \param[out[ M Number of values for each element in the returned array.
+  //! \returns The colors for the requirested type in array form.
+  std::vector<uint8_t> get_colors_array(const std::string& name0,
+					size_t &N, size_t &M) const {
+    std::string name = alias2base(name0);
+    std::vector<uint8_t> out;
+    const PlyElementSet* s = get_element_set(name);
+    if (s == NULL) return out;
+    out = s->get_colors_array();
+    N = s->elements.size();
+    M = out.size() / N;
+    return out;
   }
   //! \brief Check if this geometry is equivalent to another.
   //! \param rhs Geometry to compare against.
@@ -998,6 +1800,118 @@ public:
     if (this->elements != rhs.elements)
       return false;
     return true;
+  }
+  //! \brief Get the minimum bounds of the structure in 3D.
+  //! \return Minimum extend of structure in x, y, z.
+  std::vector<double> minimums() const {
+    std::vector<double> out = {NAN, NAN, NAN};
+    const PlyElementSet* elementSet = get_element_set("vertex");
+    if (elementSet) {
+      std::vector<PlyElement>::const_iterator it = elementSet->elements.begin();
+      out = it->get_double_array(true);
+      it++;
+      for (; it != elementSet->elements.end(); it++) {
+	std::vector<double> iarr = it->get_double_array(true);
+	out[0] = std::min(out[0], iarr[0]);
+	out[1] = std::min(out[1], iarr[1]);
+	out[2] = std::min(out[2], iarr[2]);
+      }
+    }
+    return out;
+  }
+  //! \brief Get the maximum bounds of the structure in 3D.
+  //! \return Maximum extend of structure in x, y, z.
+  std::vector<double> maximums() const {
+    std::vector<double> out = {NAN, NAN, NAN};
+    const PlyElementSet* elementSet = get_element_set("vertex");
+    if (elementSet) {
+      std::vector<PlyElement>::const_iterator it = elementSet->elements.begin();
+      out = it->get_double_array(true);
+      it++;
+      for (; it != elementSet->elements.end(); it++) {
+	std::vector<double> iarr = it->get_double_array(true);
+	out[0] = std::max(out[0], iarr[0]);
+	out[1] = std::max(out[1], iarr[1]);
+	out[2] = std::max(out[2], iarr[2]);
+      }
+    }
+    return out;
+  }
+  //! \brief Determine if a structure is valid and there are vertexes for
+  //!   all those referenced in faces and edges.
+  //! \return true if the structure is valid, false otherwise.
+  bool is_valid() const {
+    int nvert = 0;
+    const PlyElementSet* vertices = get_element_set("vertex");
+    if (vertices) nvert = (int)vertices->elements.size();
+    for (std::map<std::string,PlyElementSet>::const_iterator it = elements.begin();
+	 it != elements.end(); it++) {
+      if (it->first == "vertex" || it->second.requires_double()) continue;
+      const std::vector<int> idx = it->second.get_int_array(0, true);
+      for (std::vector<int>::const_iterator f = idx.begin(); f != idx.end(); f++)
+	if (*f >= nvert) return false;
+    }
+    return true;
+  }
+  //! \brief Get the mesh for the structure.
+  //! \return Structure mesh with each row representing a face with vertex
+  //!    information provided in sequence for each face.
+  std::vector<std::vector<double>> mesh() const {
+    std::vector<std::vector<double>> out;
+    const PlyElementSet* faces = get_element_set("face");
+    const PlyElementSet* vertices = get_element_set("vertex");
+    if (!(faces && vertices)) return out;
+    size_t iFace = 0;
+    for (std::vector<PlyElement>::const_iterator it = faces->elements.begin();
+	 it != faces->elements.end(); it++, iFace++) {
+      const std::vector<int> idx = it->get_int_array();
+      out.push_back(std::vector<double>());
+      for (std::vector<int>::const_iterator f = idx.begin(); f != idx.end(); f++) {
+	RAPIDJSON_ASSERT(*f < (int)vertices->elements.size());
+	if (*f >= (int)vertices->elements.size()) {
+	  out.clear();
+	  return out;
+	}
+	vertices->elements[(size_t)(*f)].get_double_array(out[iFace], true);
+      }
+    }
+    return out;
+  }
+  //! \brief Append elements from another structure to this one.
+  //! \param other Structure to append.
+  void append(const Ply& other) {
+    size_t nvert = 0;
+    const PlyElementSet* vertices = get_element_set("vertex");
+    if (vertices) nvert = vertices->elements.size();
+    for (std::map<std::string,PlyElementSet>::const_iterator it = other.elements.begin();
+	 it != other.elements.end(); it++) {
+      size_t nPrev = 0;
+      PlyElementSet* elementSet = get_element_set(it->first);
+      if (!elementSet) {
+	add_element_set(it->first, it->second);
+	elementSet = get_element_set(it->first);
+      } else {
+	nPrev = elementSet->elements.size();
+	for (std::vector<PlyElement>::const_iterator iit = it->second.elements.begin();
+	     iit != it->second.elements.end(); iit++)
+	  elementSet->add_element(*iit);
+      }
+      if (nvert > 0 && it->first != "vertex") {
+	size_t maxProp = 0;
+	if (it->first == "edge") maxProp = 2;
+	for (std::vector<PlyElement>::iterator iit = elementSet->elements.begin() + (long)nPrev;
+	     iit != elementSet->elements.end(); iit++)
+	  iit->increase_index(nvert, maxProp);
+      }
+    }
+  }
+  //! \brief Combine this structure with another.
+  //! \param rhs Structure to be added to this one.
+  //! \param Result of addition.
+  friend Ply operator+(const Ply& lhs, const Ply& rhs) {
+    Ply out(lhs);
+    out.append(rhs);
+    return out;
   }
   //! \brief Write geometry elements to an output stream.
   //! \param out Output stream.
@@ -1075,6 +1989,7 @@ public:
   }
   
   friend bool operator == (const Ply& lhs, const Ply& rhs);
+  friend bool operator != (const Ply& lhs, const Ply& rhs);
   friend std::ostream & operator << (std::ostream &out, const Ply &p);
   friend std::istream & operator >> (std::istream &in,  Ply &p);
 };
@@ -1086,6 +2001,14 @@ public:
 inline
 bool operator == (const Ply& lhs, const Ply& rhs)
 { return lhs.is_equal(rhs); }
+
+//! \brief Check for inequality between two ply geometries.
+//! \param lhs First geometry for comparison.
+//! \param rhs Second geometry for comparison.
+//! \return true if the two geometries are not equivalent.
+inline
+bool operator != (const Ply& lhs, const Ply& rhs)
+{ return !lhs.is_equal(rhs); }
 
 //! \brief Write a Ply geometry to an output stream.
 //! \param out Output stream.

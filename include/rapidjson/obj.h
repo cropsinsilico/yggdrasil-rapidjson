@@ -2321,6 +2321,7 @@ public:
   }
 
   friend bool operator == (const ObjWavefront& lhs, const ObjWavefront& rhs);
+  friend bool operator != (const ObjWavefront& lhs, const ObjWavefront& rhs);
   friend std::ostream & operator << (std::ostream &out, const ObjWavefront &p);
   friend std::istream & operator >> (std::istream &in,  ObjWavefront &p);
 };
@@ -2332,6 +2333,15 @@ public:
 inline
 bool operator == (const ObjWavefront& lhs, const ObjWavefront& rhs)
 { return lhs.is_equal(&rhs); }
+
+//! \brief Check the inequivalance of two ObjWavefront instances by comparing
+//!   elements (calls ObjWavefront::is_equal method).
+//! \param lhs First instance for comparison.
+//! \param rhs Second instance for comparison.
+//! \return true if the two instances are not equivalent.
+inline
+bool operator != (const ObjWavefront& lhs, const ObjWavefront& rhs)
+{ return !lhs.is_equal(&rhs); }
 
 //! \brief Write an ObjWavefront object to an output stream.
 //! \param out Output stream.

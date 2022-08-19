@@ -4678,21 +4678,12 @@ public:
       size_t nvert = 0;
       for (std::vector<ObjElement*>::const_iterator it = o.elements.begin(); it != o.elements.end(); it++) {
 	if ((*it)->code == "v") {
-	  std::vector<std::string> property_names;
-	  property_names.push_back("x");
-	  property_names.push_back("y");
-	  property_names.push_back("z");
-	  p.add_element("vertex", (*it)->get_double_array(), property_names);
+	  p.add_element("vertex", (*it)->get_double_array());
 	  nvert++;
 	} else if ((*it)->code == "f") {
-	  std::vector<std::string> property_names;
-	  property_names.push_back("vertex_index");
-	  p.add_element("face", (*it)->get_int_array(nvert), property_names);
+	  p.add_element("face", (*it)->get_int_array(nvert));
 	} else if ((*it)->code == "l") {
-	  std::vector<std::string> property_names;
-	  property_names.push_back("vertex1");
-	  property_names.push_back("vertex2");
-	  p.add_element("edge", (*it)->get_int_array(nvert), property_names);
+	  p.add_element("edge", (*it)->get_int_array(nvert));
 	}
 	else
 	  RAPIDJSON_ASSERT(((*it)->code == "v") ||
