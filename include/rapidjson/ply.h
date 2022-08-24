@@ -344,17 +344,8 @@ private:
     //! \param flag Type flag indicating the type of data stored.
     template <typename T>
     void add_inplace(const uint16_t &flag, const T& x) {
-      switch (flag) {
-      case (kInt8Flag) : i8.v += (int8_t)x; break;
-      case (kUint8Flag) : u8.v += (uint8_t)x; break;
-      case (kInt16Flag) : i16.v += (int16_t)x; break;
-      case (kUint16Flag) : u16.v += (uint16_t)x; break;
-      case (kInt32Flag) : i32.v += (int32_t)x; break;
-      case (kUint32Flag) : u32.v += (uint32_t)x; break;
-      case (kFloatFlag) : f.v += (float)x; break;
-      case (kDoubleFlag) : d += (double)x; break;
-      default: RAPIDJSON_ASSERT(false);
-      }
+      T new_value = get_value_as<T>(flag) + x;
+      assign<T>(flag, new_value);
     }
   }; // 8 bytes
   struct Data {
@@ -494,7 +485,7 @@ private:
       if (!(f & kListFlag)) return;
       for (std::vector<Number>::iterator it = elements.begin();
 	   it != elements.end(); it++) {
-	if (it->is_default(f & ~kListFlag)) {
+	if (it->is_default((uint16_t)(f & ~kListFlag))) {
 	  elements.erase(it, elements.end());
 	  return;
 	}
@@ -518,7 +509,7 @@ private:
     //! \returns Cast value.
     template <typename T>
     T get_value_as(size_t i) const {
-      return elements[i].get_value_as<T>(f & ~kListFlag);
+      return elements[i].get_value_as<T>((uint16_t)(f & ~kListFlag));
     }
     //! Flag indicating the data type.
     uint16_t f;
