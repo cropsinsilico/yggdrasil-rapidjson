@@ -1204,7 +1204,7 @@ public:
     size_t minSize = 0;
     if (minSize == 0) {
       for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
-	minSize = std::max(minSize, it->size(skipColors));
+	minSize = (std::max)(minSize, it->size(skipColors));
     }
     for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
       it->get_int_array(out, nvert, skipColors, minSize, -1);
@@ -1227,7 +1227,7 @@ public:
     double defaultValue = NAN;
     size_t minSize = 0;
     for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
-      minSize = std::max(minSize, it->size(skipColors));
+      minSize = (std::max)(minSize, it->size(skipColors));
     for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
       it->get_double_array(out, skipColors, minSize, defaultValue);
   }
@@ -1803,9 +1803,9 @@ public:
       it++;
       for (; it != elementSet->elements.end(); it++) {
 	std::vector<double> iarr = it->get_double_array(true);
-	out[0] = std::min(out[0], iarr[0]);
-	out[1] = std::min(out[1], iarr[1]);
-	out[2] = std::min(out[2], iarr[2]);
+	out[0] = (std::min)(out[0], iarr[0]);
+	out[1] = (std::min)(out[1], iarr[1]);
+	out[2] = (std::min)(out[2], iarr[2]);
       }
     }
     return out;
@@ -1821,9 +1821,9 @@ public:
       it++;
       for (; it != elementSet->elements.end(); it++) {
 	std::vector<double> iarr = it->get_double_array(true);
-	out[0] = std::max(out[0], iarr[0]);
-	out[1] = std::max(out[1], iarr[1]);
-	out[2] = std::max(out[2], iarr[2]);
+	out[0] = (std::max)(out[0], iarr[0]);
+	out[1] = (std::max)(out[1], iarr[1]);
+	out[2] = (std::max)(out[2], iarr[2]);
       }
     }
     return out;
