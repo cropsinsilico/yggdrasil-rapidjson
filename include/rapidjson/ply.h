@@ -244,7 +244,7 @@ private:
 	return -1;
       default:
 	if (std::is_same<T, double>::value)
-	  return NAN;
+	  return (T)NAN;
 	return -1;
       }
     }
