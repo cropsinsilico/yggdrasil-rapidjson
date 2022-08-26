@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <map>
-#include "units.h"
+#include "internal/meta.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -82,7 +82,7 @@ inline uint16_t type2flag<double>();
 //! \param alias Name to check.
 //! \return Base name associated with the provided alias.
 static inline
-std::string alias2base(const std::string& alias) {
+std::string ply_alias2base(const std::string& alias) {
   if      (alias == "vertices") return std::string("vertex");
   else if (alias == "vertexes") return std::string("vertex");
   else if (alias == "faces"   ) return std::string("face");
@@ -148,7 +148,7 @@ public:
 #endif // RAPIDJSON_HAS_CXX11
 	  i = i + N;
 	} else {
-	  if (ignore && units::values_eq(arr[i], *ignore)) return;
+	  if (ignore && internal::values_eq(arr[i], *ignore)) return;
 #if RAPIDJSON_HAS_CXX11
 	  properties.emplace(std::piecewise_construct,
 			     std::forward_as_tuple(it->first),
@@ -223,7 +223,7 @@ private:
 	return (get_value_as<int>(flag) == default_value<int>(flag));
       case (kFloatFlag) :
       case (kDoubleFlag) :
-	return units::values_eq(get_value_as<double>(flag),
+	return internal::values_eq(get_value_as<double>(flag),
 				default_value<double>(flag));
       default: return false;
       }
@@ -400,12 +400,12 @@ private:
       uint16_t element_flags = (uint16_t)(flag & ~kListFlag);
 #if RAPIDJSON_HAS_CXX11
       for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++) {
-	if (ignore && units::values_eq(*ignore, *it)) return;
+	if (ignore && internal::values_eq(*ignore, *it)) return;
 	elements.emplace_back(element_flags, *it);
       }
 #else // RAPIDJSON_HAS_CXX11
       for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++) {
-	if (ignore && units::values_eq(*ignore, *it)) return;
+	if (ignore && internal::values_eq(*ignore, *it)) return;
 	elements.push_back(Number(element_flags, *it));
       }
 #endif // RAPIDJSON_HAS_CXX11
@@ -897,19 +897,24 @@ public:
     }
   }
   //! \brief Get the colors for an element set in arrayform.
+  //! \param defaultValue Value to add if colors are missing.
   //! \returns The colors for the requirested type in array form.
-  std::vector<uint8_t> get_colors_array() const {
+  std::vector<uint8_t> get_colors_array(uint8_t defaultValue=0) const {
     std::vector<uint8_t> out;
-    get_colors_array(out);
+    get_colors_array(out, defaultValue);
     return out;
   }
   //! \brief Get the colors for an element set in arrayform.
   //! \param out Array to add values to.
-  void get_colors_array(std::vector<uint8_t>& out) const {
+  //! \param defaultValue Value to add if colors are missing.
+  void get_colors_array(std::vector<uint8_t>& out,
+			uint8_t defaultValue=0) const {
     for (std::vector<std::string>::const_iterator name = colors.begin(); name != colors.end(); name++) {
       std::map<std::string, Data>::const_iterator it = properties.find(*name);
       if (it != properties.end())
 	extend_aray_data(it->second, out);
+      else
+	out.push_back(defaultValue);
     }
   }
   //! \brief Add element colors to this element.
@@ -1232,17 +1237,21 @@ public:
       it->get_double_array(out, skipColors, minSize, defaultValue);
   }
   //! \brief Get the colors for an element set in arrayform.
-  //! \returns The colors for the requirested type in array form.
-  std::vector<uint8_t> get_colors_array() const {
+  //! \param defaultValue Value to add if colors are missing.
+  //! \return The colors for the requirested type in array form.
+  std::vector<uint8_t> get_colors_array(uint8_t defaultValue=0) const {
     std::vector<uint8_t> out;
-    get_colors_array(out);
+    get_colors_array(out, defaultValue);
     return out;
   }
   //! \brief Get the colors for an element set in arrayform.
   //! \param out Array to add values to.
-  void get_colors_array(std::vector<uint8_t>& out) const {
+  //! \param defaultValue Value to add if colors are missing.
+  void get_colors_array(std::vector<uint8_t>& out,
+			uint8_t defaultValue=0) const {
+    if (colors.empty()) return;
     for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
-      it->get_colors_array(out);
+      it->get_colors_array(out, defaultValue);
   }
   //! \brief Add element colors to a set.
   //! \param arr Colors for each of the elements in the set.
@@ -1478,7 +1487,7 @@ public:
   std::vector<std::string> get_property_names(const std::string& name0,
 					      SizeType N,
 					      std::vector<std::string>& colors) const {
-    std::string name = alias2base(name0);
+    std::string name = ply_alias2base(name0);
     std::vector<std::string> property_names;
     if (name == "vertex") {
       RAPIDJSON_ASSERT((N == 3) || (N == 6));
@@ -1524,7 +1533,7 @@ public:
 		   const std::vector<std::string> &property_names,
 		   const std::vector<std::string> &property_colors,
 		   const T* ignore = 0) {
-    std::string name = alias2base(name0);
+    std::string name = ply_alias2base(name0);
     bool is_array = bool(arr.size() != property_names.size());
     RAPIDJSON_ASSERT((!is_array) || (property_names.size() == 1));
     if (elements.find(name) == elements.end()) {
@@ -1568,7 +1577,7 @@ public:
 		       const std::vector<std::string>& property_names,
 		       const std::vector<std::string>& property_colors,
 		       const T* ignore = 0) {
-    std::string name = alias2base(name0);
+    std::string name = ply_alias2base(name0);
     RAPIDJSON_ASSERT(elements.find(name) == elements.end());
     element_order.push_back(name);
 #if RAPIDJSON_HAS_CXX11
@@ -1616,7 +1625,7 @@ public:
 		       const std::vector<std::string>& property_names,
 		       const std::vector<std::string>& property_colors,
 		       const T* ignore = 0) {
-    std::string name = alias2base(name0);
+    std::string name = ply_alias2base(name0);
     RAPIDJSON_ASSERT(elements.find(name) == elements.end());
     element_order.push_back(name);
 #if RAPIDJSON_HAS_CXX11
@@ -1651,7 +1660,7 @@ public:
   //! \param name0 Name of the type of element in the set.
   //! \param count Number of elements that should be allocated for in the set.
   void add_element_set(const std::string& name0, uint32_t count=0) {
-    std::string name = alias2base(name0);
+    std::string name = ply_alias2base(name0);
     element_order.push_back(name);
 #if RAPIDJSON_HAS_CXX11
     elements.emplace(std::piecewise_construct,
@@ -1666,7 +1675,7 @@ public:
   //! \param other Element set to copy.
   void add_element_set(const std::string& name0,
 		       const PlyElementSet& other) {
-    std::string name = alias2base(name0);
+    std::string name = ply_alias2base(name0);
     element_order.push_back(name);
 #if RAPIDJSON_HAS_CXX11
     elements.emplace(std::piecewise_construct,
@@ -1720,7 +1729,7 @@ public:
   //! \returns The element set of the requested type if it exists and NULL
   //!   otherwise.
   PlyElementSet* get_element_set(const std::string& name0) {
-    std::string name = alias2base(name0);
+    std::string name = ply_alias2base(name0);
     std::map<std::string,PlyElementSet>::iterator eit = elements.find(name);
     if (eit == elements.end())
       return NULL;
@@ -1736,7 +1745,7 @@ public:
   std::vector<int> get_int_array(const std::string& name0,
 				 size_t &N, size_t &M,
 				 bool skipColors=false) const {
-    std::string name = alias2base(name0);
+    std::string name = ply_alias2base(name0);
     std::vector<int> out;
     const PlyElementSet* s = get_element_set(name);
     if (s == NULL) return out;
@@ -1755,7 +1764,7 @@ public:
   std::vector<double> get_double_array(const std::string& name0,
 				       size_t &N, size_t &M,
 				       bool skipColors=false) const {
-    std::string name = alias2base(name0);
+    std::string name = ply_alias2base(name0);
     std::vector<double> out;
     const PlyElementSet* s = get_element_set(name);
     if (s == NULL) return out;
@@ -1768,14 +1777,16 @@ public:
   //! \param name0 Name of the element set to get.
   //! \param[out] N Number of elements in the returned array.
   //! \param[out[ M Number of values for each element in the returned array.
+  //! \param defaultValue Value to add if colors are missing.
   //! \returns The colors for the requirested type in array form.
   std::vector<uint8_t> get_colors_array(const std::string& name0,
-					size_t &N, size_t &M) const {
-    std::string name = alias2base(name0);
+					size_t &N, size_t &M,
+					uint8_t defaultValue=0) const {
+    std::string name = ply_alias2base(name0);
     std::vector<uint8_t> out;
     const PlyElementSet* s = get_element_set(name);
     if (s == NULL) return out;
-    out = s->get_colors_array();
+    out = s->get_colors_array(defaultValue);
     N = s->elements.size();
     M = out.size() / N;
     return out;

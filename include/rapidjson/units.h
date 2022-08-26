@@ -45,80 +45,6 @@ RAPIDJSON_NAMESPACE_BEGIN
 
 namespace units {
 
-  template<typename T>
-  inline T value_floor(const T& x) {
-    return static_cast<T>(std::floor(static_cast<double>(x)));
-  }
-  template<typename T>
-  inline std::complex<T> value_floor(const std::complex<T>& x) {
-    return std::complex<T>(value_floor(x.real()), value_floor(x.imag()));
-  }
-  
-  template<typename Ta, typename Tb>
-  inline bool values_eq(const Ta& a, const Tb& b) {
-    return values_eq(static_cast<double>(a), static_cast<double>(b));
-  }
-  template<typename Ta, typename Tb>
-  inline bool values_lt(const Ta& a, const Tb& b) {
-    return values_lt(static_cast<double>(a), static_cast<double>(b));
-  }
-  template<typename Ta, typename Tb>
-  inline bool values_gt(const Ta& a, const Tb& b) {
-    return values_gt(static_cast<double>(a), static_cast<double>(b));
-  }
-  template<>
-  inline bool values_eq(const double &a, const double &b) {    
-    // double abs_precision = 1.0e-13; // std::numeric_limits<double>::epsilon();
-    double abs_precision = std::numeric_limits<double>::epsilon();
-    double rel_precision = std::numeric_limits<double>::epsilon();
-    if ((std::abs(a) < abs_precision) || (std::abs(b) < abs_precision))
-      return (std::abs((a - b)*(b - a)) <= abs_precision);
-    return (std::abs(((a - b)*(b - a)) / (a * b)) <= rel_precision);
-  }
-  template<>
-  inline bool values_lt(const double &a, const double &b) { return (a < b); }
-  template<>
-  inline bool values_gt(const double &a, const double &b) { return (a > b); }
-  template<typename Ta, typename Tb>
-  inline bool values_eq_complex(const std::complex<Ta>& a,
-				const std::complex<Tb>& b) {
-    if (!values_eq(a.real(), b.real())) return false;
-    return values_eq(a.imag(), b.imag());
-  }
-  template<typename Ta, typename Tb>
-  inline bool values_lt_complex(const std::complex<Ta>& a,
-				const std::complex<Tb>& b)
-  { return values_lt(std::abs(a), std::abs(b)); }
-  template<typename Ta, typename Tb>
-  inline bool values_gt_complex(const std::complex<Ta>& a,
-				const std::complex<Tb>& b)
-  { return values_gt(std::abs(a), std::abs(b)); }
-#define COMPLEX_COMPARE(op, type1, type2)			\
-  template<>							\
-  inline bool values_ ## op(const std::complex<type1>& a,	\
-			    const std::complex<type2>& b)	\
-  { return values_ ## op ## _complex<type1, type2>(a, b); }
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-#define COMPLEX_COMPARE_ITER(op, type)		\
-  COMPLEX_COMPARE(op, type, float)		\
-  COMPLEX_COMPARE(op, type, double)		\
-  COMPLEX_COMPARE(op, type, long double)
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-#define COMPLEX_COMPARE_ITER(op, type)		\
-  COMPLEX_COMPARE(op, type, float)		\
-  COMPLEX_COMPARE(op, type, double)
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-#define COMPLEX_COMPARE_ALL(type)			\
-  COMPLEX_COMPARE_ITER(eq, type)			\
-  COMPLEX_COMPARE_ITER(lt, type)			\
-  COMPLEX_COMPARE_ITER(gt, type)
-
-  COMPLEX_COMPARE_ALL(float)
-  COMPLEX_COMPARE_ALL(double)
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-  COMPLEX_COMPARE_ALL(long double)
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-
   namespace constants {
     
     // Elementary masses
@@ -445,7 +371,7 @@ public:
   }
   bool operator==(const Dimension& x) const {
     for (size_t i = 0; i < 8; i++)
-      if (!(values_eq(powers_.values[i], x.powers_.values[i])))
+      if (!(internal::values_eq(powers_.values[i], x.powers_.values[i])))
 	return false;
     return true;
   }
@@ -453,7 +379,7 @@ public:
   int ndim() const {
     int ndim = 0;
     for (size_t i = 0; i < 8; i++)
-      if (!(values_eq(powers_.values[i], 0.0)))
+      if (!(internal::values_eq(powers_.values[i], 0.0)))
 	ndim++;
     return ndim;
   }
@@ -462,7 +388,7 @@ public:
   std::vector<Dimension> reduced() const {
     std::vector<Dimension> out;
     for (size_t i = 0; i < 8; i++)
-      if (!(values_eq(powers_.values[i], 0.0)))
+      if (!(internal::values_eq(powers_.values[i], 0.0)))
 	out.push_back(Dimension((BaseDimension)i, powers_.values[i]));
     return out;
   }
@@ -591,7 +517,7 @@ public:
   //! \return true if the unit prefixes are identical.
   bool operator==(const GenericUnitPrefix& x) const {
     if (abbr != x.abbr) return false;
-    return values_eq(factor, x.factor);
+    return internal::values_eq(factor, x.factor);
   }
   //! \brief Determine if this unit prefix is not identical to another.
   //! \param x Unit prefix for comparison.
@@ -784,9 +710,9 @@ public:
     if (names_ != x.names_) return false;
     if (abbrs_ != x.abbrs_) return false;
     if (dim_ != x.dim_) return false;
-    if (!(values_eq(factor_, x.factor_))) return false;
-    if (!(values_eq(offset_, x.offset_))) return false;
-    if (!(values_eq(power_, x.power_))) return false;
+    if (!(internal::values_eq(factor_, x.factor_))) return false;
+    if (!(internal::values_eq(offset_, x.offset_))) return false;
+    if (!(internal::values_eq(power_, x.power_))) return false;
     if (prefix_ != x.prefix_) return false;
     return true;
   }
@@ -811,7 +737,7 @@ public:
   //! \param x Power to raise this unit to.
   template<typename T>
   void inplace_pow(const T x) {
-    RAPIDJSON_ASSERT(!(has_offset() && (!(values_eq(x, 1.0)))));
+    RAPIDJSON_ASSERT(!(has_offset() && (!(internal::values_eq(x, 1.0)))));
     if (is_null())
       factor_ = std::pow(factor_, x);
     else
@@ -888,13 +814,13 @@ public:
   }
   //! \brief Check if this unit has a non-zero offset.
   //! \return true if this unit has a non-zero offset.
-  bool has_offset() const { return (!(values_eq(offset_, 0.0))); }
+  bool has_offset() const { return (!(internal::values_eq(offset_, 0.0))); }
   //! \brief Check if this unit has a power other than 1.
   //! \return true if this unit has a power other than 1.
-  bool has_power() const { return (!(values_eq(power_, 1.0))); }
+  bool has_power() const { return (!(internal::values_eq(power_, 1.0))); }
   //! \brief Check if this unit has a factor other than 1.
   //! \return true if this unit has a factor other than 1.
-  bool has_factor() const { return (!(values_eq(factor_, 1.0))); }
+  bool has_factor() const { return (!(internal::values_eq(factor_, 1.0))); }
   //! \brief Check if this unit is irreducible or a product of more than
   //!   one irreducible unit.
   //! \return true if the unit is irreducible.
@@ -1144,7 +1070,7 @@ public:
 	  factor *= std::pow((it2->factor_ * it2->prefix_.factor) /
 			     (units_[i].factor_ * units_[i].prefix_.factor),
 			     it2->power_);
-	  if (values_eq(new_power, 0))
+	  if (internal::values_eq(new_power, 0))
 	    idx_remove.insert(i);
 	//   double factor = std::pow(units_[i].factor_ * units_[i].prefix_.factor, units_[i].power_) * std::pow(it2->factor_ * it2->prefix_.factor, it2->power_);
 	//   std::basic_string<Ch> empty;
@@ -1170,7 +1096,7 @@ public:
     }
     for (typename std::set<size_t>::reverse_iterator it = idx_remove.rbegin(); it != idx_remove.rend(); it++)
       units_.erase(units_.begin() + (int)(*it));
-    if (!values_eq(factor, 1.0)) {
+    if (!internal::values_eq(factor, 1.0)) {
       typename std::vector<GenericUnit<Encoding> >::iterator nodim = units_.end();
       for (typename std::vector<GenericUnit<Encoding> >::iterator it = units_.begin(); it != units_.end(); it++) {
 	if (it->is_null()) {
@@ -1187,7 +1113,7 @@ public:
 #endif // RAPIDJSON_HAS_CXX11
 	nodim = (units_.end() - 1);
       }
-      RAPIDJSON_ASSERT(values_eq(nodim->power_, 1.0));
+      RAPIDJSON_ASSERT(internal::values_eq(nodim->power_, 1.0));
       nodim->factor_ *= factor;
       if (!nodim->has_factor() && (units_.size() > 1))
 	units_.erase(nodim);
@@ -2089,7 +2015,7 @@ public:
   bool operator==(const GenericQuantity<T2, Encoding>& x) const {
     if (units_ != x.units())
       return false;
-    return values_eq(value_, x.value());
+    return internal::values_eq(value_, x.value());
   }
   //! \brief Check if two quantities are not identical.
   //! \param x Quantity for comparison.
@@ -2103,7 +2029,7 @@ public:
   bool operator<(const GenericQuantity<T2, Encoding>& x) const {
     if (units_ != x.units())
       return false;
-    return values_lt(value_, x.value());
+    return internal::values_lt(value_, x.value());
   }
   //! \brief Greater than comparison operator.
   //! \param x Quantity for comparison.
@@ -2112,7 +2038,7 @@ public:
   bool operator>(const GenericQuantity<T2, Encoding>& x) const {
     if (units_ != x.units())
       return false;
-    return values_gt(value_, x.value());
+    return internal::values_gt(value_, x.value());
   }
   //! \brief Less than or equal to comparison operator.
   //! \param x Quantity for comparison.
@@ -2199,7 +2125,7 @@ public:
   //! \return Resulut of floor.
   GenericQuantity& floor_inplace() {
     if (YGGDRASIL_IS_FLOAT_TYPE(T)::Value)
-      value_ = value_floor(value_);
+      value_ = internal::value_floor(value_);
     return *this;
   }
   //! \brief Perform floor operation in place.
@@ -2713,7 +2639,7 @@ public:
     if (units_ != x.units()) return false;
     if (!is_same_shape(x)) return false;
     for (SizeType i = 0; i < nelements(); i++)
-      if (!(values_eq(value_[i], x.value()[i]))) return false;
+      if (!(internal::values_eq(value_[i], x.value()[i]))) return false;
     return true;
   }
   //! \brief Check if two quantities are not identical.
@@ -2729,7 +2655,7 @@ public:
     if (units_ != x.units()) return false;
     if (!is_same_shape(x)) return false;
     for (SizeType i = 0; i < nelements(); i++)
-      if (!(values_lt(value_[i], x.value()[i]))) return false;
+      if (!(internal::values_lt(value_[i], x.value()[i]))) return false;
     return true;
   }
   //! \brief Greater than comparison operator.
@@ -2740,7 +2666,7 @@ public:
     if (units_ != x.units()) return false;
     if (!is_same_shape(x)) return false;
     for (SizeType i = 0; i < nelements(); i++)
-      if (!(values_gt(value_[i], x.value()[i]))) return false;
+      if (!(internal::values_gt(value_[i], x.value()[i]))) return false;
     return true;
   }
   //! \brief Less than or equal to comparison operator.
@@ -2822,7 +2748,7 @@ public:
     if (YGGDRASIL_IS_FLOAT_TYPE(T)::Value) {
       SizeType N = nelements();
       for (SizeType i = 0; i < N; i++) {
-	value_[i] = value_floor(value_[i]);
+	value_[i] = internal::value_floor(value_[i]);
       }
     }
     return *this;

@@ -232,10 +232,6 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
 #define PACK_MACRO(...) PACK_MACRO_((__VA_ARGS__))
 #define UNPACK_MACRO(...) __VA_ARGS__
 
-#endif // RAPIDJSON_YGGDRASIL
-  
-} // namespace internal
-
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #define YGGDRASIL_IS_COMPLEX_TYPE(T)				\
     internal::OrExpr<internal::IsSame<T,std::complex<float> >,	\
@@ -287,6 +283,80 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
 #define YGGDRASIL_IS_CHAR(T)			\
   internal::OrExpr<internal::IsSame<T,char>,	\
 		   internal::IsSame<T,wchar_t> >
+
+template<typename Ta, typename Tb>
+inline bool values_eq(const Ta& a, const Tb& b,
+		      RAPIDJSON_DISABLEIF((internal::OrExpr<
+					   YGGDRASIL_IS_FLOAT_TYPE(Ta),
+					   internal::OrExpr<
+					   YGGDRASIL_IS_FLOAT_TYPE(Tb),
+					   internal::OrExpr<
+					   YGGDRASIL_IS_COMPLEX_TYPE(Ta),
+					   YGGDRASIL_IS_COMPLEX_TYPE(Tb)>>>))) {
+  return a == static_cast<Ta>(b);
+}
+  
+template<typename Ta, typename Tb>
+inline bool values_eq(const Ta& a0, const Tb& b0,
+		      RAPIDJSON_ENABLEIF((internal::OrExpr<
+			         	  YGGDRASIL_IS_FLOAT_TYPE(Ta),
+					  YGGDRASIL_IS_FLOAT_TYPE(Tb)>))) {
+  double a = static_cast<double>(a0);
+  double b = static_cast<double>(b0);
+  // double abs_precision = 1.0e-13; // std::numeric_limits<double>::epsilon();
+  double abs_precision = std::numeric_limits<double>::epsilon();
+  double rel_precision = std::numeric_limits<double>::epsilon();
+  if ((std::abs(a) < abs_precision) || (std::abs(b) < abs_precision))
+    return (std::abs((a - b)*(b - a)) <= abs_precision);
+  return (std::abs(((a - b)*(b - a)) / (a * b)) <= rel_precision);
+}
+
+template<typename Ta, typename Tb>
+inline bool values_eq(const Ta& a, const Tb& b,
+		      RAPIDJSON_ENABLEIF((internal::AndExpr<
+			         	  YGGDRASIL_IS_COMPLEX_TYPE(Ta),
+					  YGGDRASIL_IS_COMPLEX_TYPE(Tb)>))) {
+  return (values_eq(a.real(), b.real()) && values_eq(a.imag(), b.imag()));
+}
+  
+template<typename Ta, typename Tb>
+inline bool values_lt(const Ta& a, const Tb& b,
+		      RAPIDJSON_DISABLEIF((internal::OrExpr<
+			          	   YGGDRASIL_IS_COMPLEX_TYPE(Ta),
+					   YGGDRASIL_IS_COMPLEX_TYPE(Tb)>)))
+{ return a < static_cast<Ta>(b); }
+template<typename Ta, typename Tb>
+inline bool values_lt(const Ta& a, const Tb& b,
+		      RAPIDJSON_ENABLEIF((internal::AndExpr<
+					  YGGDRASIL_IS_COMPLEX_TYPE(Ta),
+					  YGGDRASIL_IS_COMPLEX_TYPE(Tb)>)))
+{ return values_lt(std::abs(a), std::abs(b)); }
+
+template<typename Ta, typename Tb>
+inline bool values_gt(const Ta& a, const Tb& b,
+		      RAPIDJSON_DISABLEIF((internal::OrExpr<
+			          	   YGGDRASIL_IS_COMPLEX_TYPE(Ta),
+					   YGGDRASIL_IS_COMPLEX_TYPE(Tb)>)))
+{ return a > static_cast<Ta>(b); }
+template<typename Ta, typename Tb>
+inline bool values_gt(const Ta& a, const Tb& b,
+		      RAPIDJSON_ENABLEIF((internal::AndExpr<
+					  YGGDRASIL_IS_COMPLEX_TYPE(Ta),
+					  YGGDRASIL_IS_COMPLEX_TYPE(Tb)>)))
+{ return values_gt(std::abs(a), std::abs(b)); }
+  
+template<typename T>
+inline T value_floor(const T& x) {
+  return static_cast<T>(std::floor(static_cast<double>(x)));
+}
+template<typename T>
+inline std::complex<T> value_floor(const std::complex<T>& x) {
+  return std::complex<T>(value_floor(x.real()), value_floor(x.imag()));
+}
+  
+#endif // RAPIDJSON_YGGDRASIL
+  
+} // namespace internal
 
 RAPIDJSON_NAMESPACE_END
 //@endcond

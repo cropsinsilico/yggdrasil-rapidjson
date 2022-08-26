@@ -37,7 +37,7 @@ using namespace rapidjson;
     if (a.equivalent_to(b) != expected) {				\
       std::cerr << "a = " << a << ", b = " << b;			\
       if (a.is_compatible(b)) {						\
-	std::cerr << ", b.as(a.units) = " << b.as(a.units()) << ", a.value - b.value = " << std::abs(b.value() - a.as(b.units()).value()) << ", b.value - a.value = " << std::abs(a.value() - b.as(a.units()).value()) << ", " << units::values_eq(b.value(), a.as(b.units()).value()) << ", " << units::values_eq(a.value(), b.as(a.units()).value()); \
+	std::cerr << ", b.as(a.units) = " << b.as(a.units()) << ", a.value - b.value = " << std::abs(b.value() - a.as(b.units()).value()) << ", b.value - a.value = " << std::abs(a.value() - b.as(a.units()).value()) << ", " << internal::values_eq(b.value(), a.as(b.units()).value()) << ", " << internal::values_eq(a.value(), b.as(a.units()).value()); \
       }	else if (expected) {						\
 	std::cerr << ", not compat, adim = " << a.dimension() << ", bdim = " << b.dimension(); \
       }									\
@@ -64,8 +64,8 @@ using namespace rapidjson;
     CHECK_QUANTITY_DIRECT_EQUALITY(a, b, direct);			\
     CHECK_QUANTITY_DIRECT_EQUALITY(b, a, direct);			\
     if (expected) {							\
-      EXPECT_TRUE(units::values_eq(a.value(), b.as(a.units()).value())); \
-      EXPECT_TRUE(units::values_eq(b.value(), a.as(b.units()).value())); \
+      EXPECT_TRUE(internal::values_eq(a.value(), b.as(a.units()).value())); \
+      EXPECT_TRUE(internal::values_eq(b.value(), a.as(b.units()).value())); \
     }									\
   }
 

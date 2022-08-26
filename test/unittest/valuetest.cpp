@@ -1332,10 +1332,10 @@ TEST(Value, ScalarComplex) {
   Value zq1(std::complex<double>(2.2, 3.4), "g");
   Value zq2(q2);
   // EXPECT_EQ failes for complex values
-  EXPECT_TRUE(units::values_eq(std::complex<double>(2.2e6, 3.4e6),
-			       zq1.TEMPLATE_CXX11 GetScalar<std::complex<double> >("ug")));
-  EXPECT_TRUE(units::values_eq(std::complex<double>(2.2, 3.4),
-			       zq2.TEMPLATE_CXX11 GetScalar<std::complex<double> >("g")));
+  EXPECT_TRUE(internal::values_eq(std::complex<double>(2.2e6, 3.4e6),
+				  zq1.TEMPLATE_CXX11 GetScalar<std::complex<double> >("ug")));
+  EXPECT_TRUE(internal::values_eq(std::complex<double>(2.2, 3.4),
+				  zq2.TEMPLATE_CXX11 GetScalar<std::complex<double> >("g")));
   EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >("g"));
   EXPECT_EQ(q1, zq2.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >("g"));
   EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >());
