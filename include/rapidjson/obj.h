@@ -22,6 +22,17 @@ std::string obj_alias2base(const std::string& alias) {
   return std::string(alias);
 }
 
+//! \brief Convert from a code string to the long element name.
+//! \param code Name to check.
+//! \return Long name associated with the provided element.
+static inline
+std::string obj_code2long(const std::string& code) {
+  if      (code == "v" ) return std::string("vertex");
+  else if (code == "f" ) return std::string("face");
+  else if (code == "l" ) return std::string("edge");
+  return std::string(code);
+}
+
 enum ObjTypeFlag {
   ObjTypeNull     = 0x0000,
   ObjTypeInt      = 0x0008,
@@ -875,14 +886,14 @@ public:
   //! \brief Copy constructor.
   //! \param rhs Element to copy.
   ObjElement(const ObjElement& rhs) :
-    code(rhs.code), parent(rhs.parent) {}
+    code(rhs.code), parent(rhs.parent), properties(rhs.properties) {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //! \param parent0 The element's parent group.
   template <typename T, size_t N>
   ObjElement(const std::string& code0, const T (&)[N],
 	     const ObjGroupBase* parent0 = nullptr) :
-    code(code0), parent(parent0) {
+    code(code0), parent(parent0), properties() {
     RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
   }
   //! \brief Initialize and element from a C++ vector of values.
@@ -891,7 +902,7 @@ public:
   template <typename T>
   ObjElement(const std::string& code0, const std::vector<T> &,
 	     const ObjGroupBase* parent0 = nullptr) :
-    code(code0), parent(parent0) {
+    code(code0), parent(parent0), properties() {
     RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
   }
   
@@ -1148,7 +1159,7 @@ public:
   //! \brief Get the number of properties in the element.
   //! \param skipColors If true, the size will not include colors.
   //! \return Number of properties in the element.
-  virtual size_t size(bool skipColors=false) const { return property_order().size(); }
+  virtual size_t size(bool=false) const { return property_order().size(); }
   //! \brief Determine if a structure is valid and there are vertexes for
   //!   all those referenced in faces and edges.
   //! \param idx Map containing the number of preceeding elements of each
@@ -1391,12 +1402,11 @@ public:
     std::string name2 = obj_alias2base(name);
     size_t maxSize = 0;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
-      if ((*it)->code != name2) continue; {
-	if ((*it)->is_group())
-	  maxSize = (std::max)(maxSize, (dynamic_cast<ObjGroupBase*>(*it))->max_size(name2));
-	else
-	  maxSize = (std::max)(maxSize, (*it)->size());
-      }
+      if ((*it)->code != name2) continue;
+      if ((*it)->is_group())
+	maxSize = (std::max)(maxSize, (dynamic_cast<ObjGroupBase*>(*it))->max_size(name2));
+      else
+	maxSize = (std::max)(maxSize, (*it)->size());
     }
     return maxSize;
   }
@@ -2165,7 +2175,7 @@ public:
 class ObjSurface : public ObjFreeFormElement {
 public:
   GENERIC_ELEMENT_CONSTRUCTOR(ObjSurface, ObjFreeFormElement, surf, SINGLE_ARG(, values(), s0(0), s1(0), t0(0), t1(0)), SINGLE_ARG(OBJ_P_("s0", ObjTypeFloat), OBJ_P_("s1", ObjTypeFloat), OBJ_P_("t0", ObjTypeFloat), OBJ_P_("t1", ObjTypeFloat), OBJ_P_("vertex_index", ObjTypeInt | ObjTypeList)))
-  GENERIC_CLASS_VECTOR_TYPE_IS_VALID_VERTREF(0);
+  GENERIC_CLASS_VECTOR_TYPE_IS_VALID_VERTREF(1);
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer.
   //! \param s00 Starting curve parameter value in 1st dimension.
@@ -2671,7 +2681,7 @@ GENERIC_CLASS_SCALAR_TYPE_STRING(ObjObjectName, o, std::string, "", SINGLE_ARG(O
     RAPIDJSON_ASSERT(((value == "on") || (value == "off")));		\
   }									\
   /*! \copydoc ObjElement::is_valid */					\
-  bool is_valid(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 { \
+  bool is_valid(std::map<std::string,size_t>&) const OVERRIDE_CXX11 {	\
     return ((value == "on") || (value == "off"));			\
   }									\
   }
@@ -2780,7 +2790,7 @@ public:
     return true;
   }
   //! \copydoc ObjElement::is_valid
-  bool is_valid(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 {
+  bool is_valid(std::map<std::string,size_t>&) const OVERRIDE_CXX11 {
     return (((technique == "cparm" ||
 	      technique == "cspace") && values.size() == 1) ||
 	    (technique == "curv" && values.size() == 2));
@@ -2868,7 +2878,7 @@ public:
     return true;
   }
   //! \copydoc ObjElement::is_valid
-  bool is_valid(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 {
+  bool is_valid(std::map<std::string,size_t>&) const OVERRIDE_CXX11 {
     return (((technique == "cparmb" || technique == "cspace") &&
 	     values.size() == 1) ||
 	    ((technique == "cparma" || technique == "curv") &&
@@ -3040,8 +3050,8 @@ public:
 	const std::vector<int> idx = (*it)->get_int_array();
 	out.push_back(std::vector<double>());
 	for (std::vector<int>::const_iterator f = idx.begin(); f != idx.end(); f++) {
-	  RAPIDJSON_ASSERT((*f >= 0 && *f < vert_idx.size()) ||
-			   (*f < 0 && -(*f) < vert_idx.size()));
+	  RAPIDJSON_ASSERT((*f >= 0 && (size_t)(*f) < vert_idx.size()) ||
+			   (*f < 0 && (size_t)(-(*f)) < vert_idx.size()));
 	  if (*f >= 0 && (size_t)(*f) < vert_idx.size()) {
 	    elements[vert_idx[(size_t)(*f)]]->get_double_array(out[iFace], true);
 	  } else if (*f < 0 && (size_t)(-(*f)) < vert_idx.size()) {
