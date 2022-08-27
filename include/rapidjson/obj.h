@@ -357,10 +357,7 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
     size_t out = 0;							\
     for (PropertiesMap::const_iterator it = properties.begin();		\
 	 it != properties.end(); it++) {				\
-      if (!this->has_property(it->first, true)) continue;		\
-      if (skipColors && (it->first == "red" ||				\
-			 it->first == "green" ||			\
-			 it->first == "blue")) continue;		\
+      if (!this->has_property(it->first, true, skipColors)) continue;	\
       if (it->second & ObjTypeList)					\
 	out += values.size();						\
       else								\
@@ -372,11 +369,12 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
 #define GET_PROPERTY_ARRAY_VECTOR_(valueType, outType, typeFlag)	\
   /*! \copydoc ObjElement::get_property_array */			\
   void get_property_array(const std::string name,			\
-			  std::vector<outType>& out) const OVERRIDE_CXX11 { \
+			  std::vector<outType>& out,			\
+			  bool skipColors=false) const OVERRIDE_CXX11 {	\
     PropertiesMap::const_iterator it = properties.find(name);		\
     if (it == properties.end()) return;					\
     if (typeFlag != ObjTypeNull && !(it->second & typeFlag))		\
-      return ObjElement::get_property_array(name, out);			\
+      return ObjElement::get_property_array(name, out, skipColors);	\
     if (it->second & ObjTypeList) {					\
       for (std::vector<valueType>::const_iterator v = values.begin(); v != values.end(); v++) \
 	out.push_back((outType)(*v));					\
@@ -388,11 +386,12 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
 #define GET_PROPERTY_ARRAY_SCALAR_(outType, typeFlag)			\
   /*! \copydoc ObjElement::get_property_array */			\
   void get_property_array(const std::string name,			\
-			  std::vector<outType>& out) const OVERRIDE_CXX11 { \
+			  std::vector<outType>& out,			\
+			  bool skipColors=false) const OVERRIDE_CXX11 {	\
     PropertiesMap::const_iterator it = properties.find(name);		\
     if (it == properties.end()) return;					\
     if (typeFlag != ObjTypeNull && !(it->second & typeFlag))		\
-      return ObjElement::get_property_array(name, out);			\
+      return ObjElement::get_property_array(name, out, skipColors);	\
     out.push_back((outType)(value));					\
   }
 #define GENERIC_CLASS_SCALAR_TYPE_STRING(cls, code, type, def, props)	\
@@ -490,9 +489,9 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
     if (vn != idx.end()) nvn = vn->second;				\
     for (std::vector<ObjRefVertex>::const_iterator it = values.begin();	\
 	 it != values.end(); it++) {					\
-      if (COMPARE_IDX((it->v), nv)) return false;			\
-      if (COMPARE_IDX((it->vt), nvt)) return false;			\
-      if (COMPARE_IDX((it->vn), nvn)) return false;			\
+      if (!COMPARE_IDX((it->v), nv)) return false;			\
+      if (!COMPARE_IDX((it->vt), nvt)) return false;			\
+      if (!COMPARE_IDX((it->vn), nvn)) return false;			\
     }									\
     return true;							\
   }
@@ -1012,8 +1011,6 @@ public:
       if (!has_property(it->first, true)) continue;
       get_property_array(it->first, out);
     }
-    // std::cerr << "get_string_array not implemented" << std::endl;
-    // RAPIDJSON_ASSERT(out.size() > 0);
   }
   //! \brief Get element values as an array of ints.
   //! \param nvert Number of vertices previously added to a Ply object
@@ -1031,11 +1028,10 @@ public:
   void get_int_array(std::vector<int>& out,
 		     const size_t nvert=0) const {
     RAPIDJSON_ASSERT(!requires_double());
-    for (PropertiesMap::const_iterator it = properties.begin();
-	 it != properties.end(); it++) {
-      if (!has_property(it->first, true)) continue;
-      get_property_array(it->first, out);
-    }
+    const std::vector<std::string> order = property_order();
+    for (std::vector<std::string>::const_iterator it = order.begin();
+	 it != order.end(); it++)
+      get_property_array(*it, out);
     if (nvert > 0) {
       for (size_t i = 0; i < out.size(); i++) {
 	if (out[i] < 0)
@@ -1043,8 +1039,6 @@ public:
 	out[i]--;
       }
     }
-    // std::cerr << "get_int_array not implemented" << std::endl;
-    // RAPIDJSON_ASSERT(out.size() > 0);
   }
   //! \brief Get element values as an array of doubles.
   //! \param skipColors If true, color data will not be included.
@@ -1060,34 +1054,19 @@ public:
   void get_double_array(std::vector<double>& out,
 			bool skipColors=false) const {
     RAPIDJSON_ASSERT(requires_double());
-    for (PropertiesMap::const_iterator it = properties.begin();
-	 it != properties.end(); it++) {
-      if (!has_property(it->first, true) ||
-	  (skipColors && (it->first == "red" ||
-			  it->first == "green" ||
-			  it->first == "blue")))
-	continue;
-      get_property_array(it->first, out);
-    }
-    // std::cerr << "get_double_array not implemented" << std::endl;
-    // RAPIDJSON_ASSERT(out.size() > 0);
-  }
-  //! \brief Get element values for one property as an array of the
-  //!   requested type.
-  //! \param name Property to get values for.
-  //! \return Array of values.
-  template<typename T>
-  std::vector<T> get_property_array(const std::string name) const {
-    std::vector<T> out;
-    get_property_array(name, out);
-    return out;
+    const std::vector<std::string> order = property_order(skipColors);
+    for (std::vector<std::string>::const_iterator it = order.begin();
+	 it != order.end(); it++)
+      get_property_array(*it, out, skipColors);
   }
   //! \brief Get element values for one property as an array of the
   //!   requested type.
   //! \param name Property to get values for.
   //! \param[out] out Array to add values to.
+  //! \param skipColors If true, color data will not be included.
   virtual void get_property_array(const std::string name,
-				  std::vector<double>& out) const {
+				  std::vector<double>& out,
+				  bool=false) const {
     std::cerr << "get_property_array not implemented for doubles (name = " << name << ")" << std::endl;
     RAPIDJSON_ASSERT(out.size() > 0);
   }
@@ -1095,8 +1074,10 @@ public:
   //!   requested type.
   //! \param name Property to get values for.
   //! \param[out] out Array to add values to.
+  //! \param skipColors If true, color data will not be included.
   virtual void get_property_array(const std::string name,
-				  std::vector<int>& out) const {
+				  std::vector<int>& out,
+				  bool=false) const {
     std::cerr << "get_property_array not implemented for integers (name = " << name << ")" << std::endl;
     RAPIDJSON_ASSERT(out.size() > 0);
   }
@@ -1104,18 +1085,21 @@ public:
   //!   requested type.
   //! \param name Property to get values for.
   //! \param[out] out Array to add values to.
+  //! \param skipColors If true, color data will not be included.
   virtual void get_property_array(const std::string name,
-				  std::vector<std::string>& out) const {
+				  std::vector<std::string>& out,
+				  bool=false) const {
     std::cerr << "get_property_array not implemented for strings (name = " << name << ")" << std::endl;
     RAPIDJSON_ASSERT(out.size() > 0);
   }
   //! \brief Get the properties associated with this element.
+  //! \param skipColors If true, color data will not be included.
   //! \return Property names.
-  std::vector<std::string> property_order() const {
+  std::vector<std::string> property_order(bool skipColors=false) const {
     std::vector<std::string> out;
     for (PropertiesMap::const_iterator it = properties.begin();
 	 it != properties.end(); it++) {
-      if (has_property(it->first, true))
+      if (has_property(it->first, true, skipColors))
 	out.push_back(it->first);
     }
     return out;
@@ -1124,10 +1108,16 @@ public:
   //! \param name Property name.
   //! \param dontCheckOrder If true, it is assumed that the property is in
   //!    the list of possible properties for this element.
+  //! \param skipColors If true, color data will not be included.
   virtual bool has_property(const std::string name,
-			    bool dontCheckOrder=false) const {
+			    bool dontCheckOrder=false,
+			    bool skipColors=false) const {
     if (dontCheckOrder)
       return true;
+    if (skipColors && (name == "red" ||
+		       name == "green" ||
+		       name == "blue"))
+      return false;
     PropertiesMap::const_iterator it = properties.find(name);
     return (it != properties.end());
   }
@@ -1138,12 +1128,13 @@ public:
     PropertiesMap::const_iterator it = properties.find(name);
     return (it != properties.end() && it->second & ObjTypeList);
   }
-  //! \brief Determine if the specified property requires doubles.
+  //! \brief Determine if any of the elements properties require doubles.
   //! \return true if it requires doubles, false otherwise.
   bool requires_double() const {
     for (PropertiesMap::const_iterator it = properties.begin();
 	 it != properties.end(); it++)
-      if (it->second & (ObjTypeFloat | ObjTypeCurve | ObjTypeSurface))
+      if ((it->second & (ObjTypeFloat | ObjTypeCurve | ObjTypeSurface))
+	  && has_property(it->first, true))
 	return true;
     return false;
   }
@@ -1153,13 +1144,13 @@ public:
   bool requires_double(const std::string name) const {
     PropertiesMap::const_iterator it = properties.find(name);
     return (it != properties.end() &&
-	    it->second & (ObjTypeFloat | ObjTypeCurve | ObjTypeSurface) &&
-	    it->first == name);
+	    it->second & (ObjTypeFloat | ObjTypeCurve | ObjTypeSurface));
   }
   //! \brief Get the number of properties in the element.
   //! \param skipColors If true, the size will not include colors.
   //! \return Number of properties in the element.
-  virtual size_t size(bool=false) const { return property_order().size(); }
+  virtual size_t size(bool skipColors=false) const
+  { return property_order(skipColors).size(); }
   //! \brief Determine if a structure is valid and there are vertexes for
   //!   all those referenced in faces and edges.
   //! \param idx Map containing the number of preceeding elements of each
@@ -1351,7 +1342,7 @@ public:
     std::string name2 = obj_alias2base(name);
     size_t out = 0;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
-      if ((*it)->code == name)
+      if ((*it)->code == name2)
 	out++;
     }
     return out;
@@ -1395,18 +1386,35 @@ public:
 	 rit != rhs->elements.end(); rit++)
       add_element(*rit);
   }
+  //! \brief Determine if the specified element type requires doubles.
+  //! \param name Element type to check.
+  //! \return true if it requires doubles, false otherwise.
+  bool requires_double(const std::string name) const {
+    for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
+      if ((*it)->code != name) continue;
+      if ((*it)->is_group()) {
+	if ((dynamic_cast<ObjGroupBase*>(*it))->requires_double(name))
+	  return true;
+      } else {
+	if ((*it)->requires_double()) return true;
+      }
+    }
+    return false;
+  }
   //! \brief Determine the maximum size of elements of a certain type.
   //! \param name Name of the element set to get the size of.
+  //! \param skipColors If true, the parameters containing colors will not be
+  //!   included.
   //! \return Maximum element size.
-  size_t max_size(const std::string& name) const {
+  size_t max_size(const std::string& name, bool skipColors=false) const {
     std::string name2 = obj_alias2base(name);
     size_t maxSize = 0;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
       if ((*it)->code != name2) continue;
       if ((*it)->is_group())
-	maxSize = (std::max)(maxSize, (dynamic_cast<ObjGroupBase*>(*it))->max_size(name2));
+	maxSize = (std::max)(maxSize, (dynamic_cast<ObjGroupBase*>(*it))->max_size(name2, skipColors));
       else
-	maxSize = (std::max)(maxSize, (*it)->size());
+	maxSize = (std::max)(maxSize, (*it)->size(skipColors));
     }
     return maxSize;
   }
@@ -1422,9 +1430,9 @@ public:
 		     int defaultValue=-1) const {
     std::string name2 = obj_alias2base(name);
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
-      if ((*it)->code != name) continue;
+      if ((*it)->code != name2) continue;
       if ((*it)->is_group()) {
-	dynamic_cast<ObjGroupBase*>(*it)->get_int_array(name, out, minSize,
+	dynamic_cast<ObjGroupBase*>(*it)->get_int_array(name2, out, minSize,
 							defaultValue);
       } else {
 	size_t before = out.size();
@@ -1449,9 +1457,9 @@ public:
 			bool skipColors=false) const {
     std::string name2 = obj_alias2base(name);
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
-      if ((*it)->code != name) continue;
+      if ((*it)->code != name2) continue;
       if ((*it)->is_group()) {
-	dynamic_cast<ObjGroupBase*>(*it)->get_double_array(name, out, minSize,
+	dynamic_cast<ObjGroupBase*>(*it)->get_double_array(name2, out, minSize,
 							   defaultValue,
 							   skipColors);
       } else {
@@ -1687,10 +1695,10 @@ public:
 				   SINGLE_ARG(, values(), x(0), y(0), z(0), w(-1), color()),
 				   SINGLE_ARG(OBJ_P_("x", ObjTypeFloat), OBJ_P_("y", ObjTypeFloat), OBJ_P_("z", ObjTypeFloat), OBJ_P_("red", ObjTypeInt), OBJ_P_("green", ObjTypeInt), OBJ_P_("blue", ObjTypeInt), OBJ_P_("w", ObjTypeFloat)))
   //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder) &&
-	    !((!color.is_set && (name == "red" || name == "green" ||
-				 name == "blue")) ||
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
+	    !(((skipColors || !color.is_set)
+	       && (name == "red" || name == "green" || name == "blue")) ||
 	      (w < 0 && name == "w")));
   }
   //! \brief Copy element specific members from another instance.
@@ -1744,35 +1752,43 @@ public:
   }
   //! \copydoc ObjElement::get_property_array
   void get_property_array(const std::string name,
-			  std::vector<double>& out) const OVERRIDE_CXX11{
+			  std::vector<double>& out,
+			  bool skipColors=false) const OVERRIDE_CXX11{
     if (name == "x")
       out.push_back((double)x);
     else if (name == "y")
       out.push_back((double)y);
     else if (name == "z")
       out.push_back((double)z);
-    else if (name == "red")
-      out.push_back((double)color.r);
-    else if (name == "green")
-      out.push_back((double)color.g);
-    else if (name == "blue")
-      out.push_back((double)color.b);
-    else if (name == "w")
+    else if (name == "red") {
+      if (!skipColors)
+	out.push_back((double)color.r);
+    } else if (name == "green") {
+      if (!skipColors)
+	out.push_back((double)color.g);
+    } else if (name == "blue") {
+      if (!skipColors)
+	out.push_back((double)color.b);
+    } else if (name == "w")
       out.push_back((double)w);
     else
-      ObjElement::get_property_array(name, out);
+      ObjElement::get_property_array(name, out, skipColors);
   }
   //! \copydoc ObjElement::get_property_array
   void get_property_array(const std::string name,
-			  std::vector<int>& out) const OVERRIDE_CXX11{
-    if (name == "red")
-      out.push_back((int)color.r);
-    else if (name == "green")
-      out.push_back((int)color.g);
-    else if (name == "blue")
-      out.push_back((int)color.b);
-    else
-      ObjElement::get_property_array(name, out);
+			  std::vector<int>& out,
+			  bool skipColors=false) const OVERRIDE_CXX11{
+    if (name == "red") {
+      if (!skipColors)
+	out.push_back((int)color.r);
+    } else if (name == "green") {
+      if (!skipColors)
+	out.push_back((int)color.g);
+    } else if (name == "blue") {
+      if (!skipColors)
+	out.push_back((int)color.b);
+    } else
+      ObjElement::get_property_array(name, out, skipColors);
   }
   //! \copydoc ObjElement::get_colors_array
   void get_colors_array(std::vector<uint8_t>& out,
@@ -1824,8 +1840,8 @@ class ObjVParameter : public ObjElement {
 public:
   GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVParameter, ObjElement, vp, SINGLE_ARG(, values(), u(0), v(0), w(-1)), SINGLE_ARG(OBJ_P_("u", ObjTypeFloat), OBJ_P_("v", ObjTypeFloat), OBJ_P_("w", ObjTypeFloat)))
   //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder) &&
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
 	    (w >= 0 || name != "w"));
   }
   //! \brief Copy element specific members from another instance.
@@ -1865,7 +1881,8 @@ public:
   }
   //! \copydoc ObjElement::get_property_array
   void get_property_array(const std::string name,
-			  std::vector<double>& out) const OVERRIDE_CXX11{
+			  std::vector<double>& out,
+			  bool skipColors=false) const OVERRIDE_CXX11{
     if (name == "u")
       out.push_back((double)u);
     else if (name == "v")
@@ -1873,7 +1890,7 @@ public:
     else if (name == "w")
       out.push_back((double)w);
     else
-      ObjElement::get_property_array(name, out);
+      ObjElement::get_property_array(name, out, skipColors);
   }
   //! Array of values.
   std::vector<double> values;
@@ -1920,7 +1937,8 @@ public:
   }
   //! \copydoc ObjElement::get_property_array
   void get_property_array(const std::string name,
-			  std::vector<double>& out) const OVERRIDE_CXX11{
+			  std::vector<double>& out,
+			  bool skipColors=false) const OVERRIDE_CXX11{
     if (name == "i")
       out.push_back((double)i);
     else if (name == "j")
@@ -1928,7 +1946,7 @@ public:
     else if (name == "k")
       out.push_back((double)k);
     else
-      ObjElement::get_property_array(name, out);
+      ObjElement::get_property_array(name, out, skipColors);
   }
   //! Vector of normal values.
   std::vector<double> values;
@@ -1945,8 +1963,8 @@ class ObjVTexture : public ObjElement {
 public:
   GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVTexture, ObjElement, vt, SINGLE_ARG(, values(), u(0), v(0), w(0)), SINGLE_ARG(OBJ_P_("u", ObjTypeFloat), OBJ_P_("v", ObjTypeFloat), OBJ_P_("w", ObjTypeFloat)))
   //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder) &&
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
 	    !((v < 0 && name == "v") || (w < 0 && name == "w")));
   }
   //! \brief Copy element specific members from another instance.
@@ -1990,7 +2008,8 @@ public:
   }
   //! \copydoc ObjElement::get_property_array
   void get_property_array(const std::string name,
-			  std::vector<double>& out) const OVERRIDE_CXX11{
+			  std::vector<double>& out,
+			  bool skipColors=false) const OVERRIDE_CXX11{
     if (name == "u")
       out.push_back((double)u);
     else if (name == "v")
@@ -1998,7 +2017,7 @@ public:
     else if (name == "w")
       out.push_back((double)w);
     else
-      ObjElement::get_property_array(name, out);
+      ObjElement::get_property_array(name, out, skipColors);
   }
   //! Vector of texture values.
   std::vector<double> values;
@@ -2105,7 +2124,8 @@ public:
   }
   //! \copydoc ObjElement::get_property_array
   void get_property_array(const std::string name,
-			  std::vector<double>& out) const OVERRIDE_CXX11 {
+			  std::vector<double>& out,
+			  bool skipColors=false) const OVERRIDE_CXX11 {
     if (name == "u0")
       out.push_back((double)u0);
     else if (name == "u1")
@@ -2114,16 +2134,17 @@ public:
       for (std::vector<ObjRef>::const_iterator it = values.begin(); it != values.end(); it++)
 	out.push_back((double)(*it));
     } else
-      ObjElement::get_property_array(name, out);
+      ObjElement::get_property_array(name, out, skipColors);
   }
   //! \copydoc ObjElement::get_property_array
   void get_property_array(const std::string name,
-			  std::vector<int>& out) const OVERRIDE_CXX11 {
+			  std::vector<int>& out,
+			  bool skipColors=false) const OVERRIDE_CXX11 {
     if (name == "vertex_index") {
       for (std::vector<ObjRef>::const_iterator it = values.begin(); it != values.end(); it++)
 	out.push_back((int)(*it));
     } else
-      ObjElement::get_property_array(name, out);
+      ObjElement::get_property_array(name, out, skipColors);
   }
   //! \copydoc ObjElement::size
   size_t size(bool=false) const OVERRIDE_CXX11 { return values.size() + 2; }
@@ -2233,7 +2254,8 @@ public:
   }
   //! \copydoc ObjElement::get_property_array
   void get_property_array(const std::string name,
-			  std::vector<double>& out) const OVERRIDE_CXX11 {
+			  std::vector<double>& out,
+			  bool skipColors=false) const OVERRIDE_CXX11 {
     if (name == "s0")
       out.push_back((double)s0);
     else if (name == "s1")
@@ -2246,16 +2268,17 @@ public:
       for (std::vector<ObjRefVertex>::const_iterator it = values.begin(); it != values.end(); it++)
 	out.push_back((double)(*it));
     } else
-      ObjElement::get_property_array(name, out);
+      ObjElement::get_property_array(name, out, skipColors);
   }
   //! \copydoc ObjElement::get_property_array
   void get_property_array(const std::string name,
-			  std::vector<int>& out) const OVERRIDE_CXX11 {
+			  std::vector<int>& out,
+			  bool skipColors=false) const OVERRIDE_CXX11 {
     if (name == "vertex_index") {
       for (std::vector<ObjRefVertex>::const_iterator it = values.begin(); it != values.end(); it++)
 	out.push_back((int)(*it));
     } else
-      ObjElement::get_property_array(name, out);
+      ObjElement::get_property_array(name, out, skipColors);
   }
   //! \copydoc ObjElement::size
   size_t size(bool=false) const OVERRIDE_CXX11 { return values.size() + 4; }
@@ -2741,8 +2764,8 @@ public:
     RAPIDJSON_ASSERT(sizeof("ObjCTech type is double"));
   }
   //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder) &&
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
 	    ((technique == "cparm" && (name == "technique" ||
 				       name == "resolution")) ||
 	     (technique == "cspace" && (name == "technique" ||
@@ -2824,8 +2847,8 @@ public:
     RAPIDJSON_ASSERT(!sizeof("ObjSTech type is double"));
   }
   //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder) &&
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
 	    ((technique == "cparma" && (name == "technique" ||
 					name == "ures" ||
 					name == "vres")) ||
@@ -2994,7 +3017,7 @@ public:
     std::string name2 = obj_alias2base(name);
     const T* p = arr;
     for (SizeType i = 0; i < M; i++, p += N)
-      this->add_element(name2, arr, N, ignore);
+      this->add_element(name2, p, N, ignore);
   }
   //! \brief Get the minimum bounds of the structure in 3D.
   //! \return Minimum extend of structure in x, y, z.
@@ -3050,12 +3073,12 @@ public:
 	const std::vector<int> idx = (*it)->get_int_array();
 	out.push_back(std::vector<double>());
 	for (std::vector<int>::const_iterator f = idx.begin(); f != idx.end(); f++) {
-	  RAPIDJSON_ASSERT((*f >= 0 && (size_t)(*f) < vert_idx.size()) ||
-			   (*f < 0 && (size_t)(-(*f)) < vert_idx.size()));
-	  if (*f >= 0 && (size_t)(*f) < vert_idx.size()) {
-	    elements[vert_idx[(size_t)(*f)]]->get_double_array(out[iFace], true);
-	  } else if (*f < 0 && (size_t)(-(*f)) < vert_idx.size()) {
-	    elements[vert_idx[vert_idx.size() - (size_t)(*f)]]->get_double_array(out[iFace], true);
+	  RAPIDJSON_ASSERT((*f >= 0 && (size_t)(*f) <= vert_idx.size()) ||
+			   (*f < 0 && (size_t)(-(*f)) <= vert_idx.size()));
+	  if (*f > 0 && (size_t)(*f) <= vert_idx.size()) {
+	    elements[vert_idx[(size_t)(*f - 1)]]->get_double_array(out[iFace], true);
+	  } else if (*f < 0 && (size_t)(-(*f)) <= vert_idx.size()) {
+	    elements[vert_idx[(size_t)((int)vert_idx.size() + (*f))]]->get_double_array(out[iFace], true);
 	  } else {
 	    out.clear();
 	    return out;
@@ -3098,7 +3121,7 @@ public:
     std::string name = obj_alias2base(name0);
     std::vector<int> out;
     size_t minSize = this->max_size(name);
-    ObjGroupBase::get_int_array(name, out, minSize, -1);
+    ObjGroupBase::get_int_array(name, out, minSize, 0);
     M = minSize;
     N = out.size() / M;
     return out;
@@ -3115,7 +3138,7 @@ public:
 				       bool skipColors=false) const {
     std::string name = obj_alias2base(name0);
     std::vector<double> out;
-    size_t minSize = this->max_size(name);
+    size_t minSize = this->max_size(name, skipColors);
     ObjGroupBase::get_double_array(name, out, minSize, NAN, skipColors);
     M = minSize;
     N = out.size() / M;
@@ -3139,10 +3162,10 @@ public:
 					uint8_t defaultValue=0) const {
     std::string name2 = obj_alias2base(name);
     std::vector<uint8_t> out;
-    if (!has_colors(name)) return out;
+    if (!has_colors(name2)) return out;
     N = 0;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
-      if ((*it)->code != name) continue;
+      if ((*it)->code != name2) continue;
       (*it)->get_colors_array(out, defaultValue);
       N++;
     }
