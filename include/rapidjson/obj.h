@@ -450,7 +450,7 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
     if (x != idx.end()) ncurv = x->second;				\
     for (std::vector<ObjRefCurve>::iterator it = values.begin();	\
 	 it != values.end(); it++) {					\
-      it->curv2d += ncurv;						\
+      it->curv2d += static_cast<ObjRef>(ncurv);				\
     }									\
   }									\
   }
@@ -482,8 +482,8 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
     if (surf != idx.end()) nsurf = surf->second;			\
     for (std::vector<ObjRefSurface>::iterator it = values.begin();	\
 	 it != values.end(); it++) {					\
-      it->curv2d += ncurv;						\
-      it->surf += nsurf;						\
+      it->curv2d += static_cast<ObjRef>(ncurv);				\
+      it->surf += static_cast<ObjRef>(nsurf);				\
     }									\
   }									\
   }
@@ -506,7 +506,7 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
     if (x != idx.end()) nprev = x->second;				\
     for (std::vector<type>::iterator it = values.begin();		\
 	 it != values.end(); it++) {					\
-      *it += nprev;							\
+      *it += static_cast<type>(nprev);					\
     }									\
   }
 #define GENERIC_CLASS_VECTOR_TYPE_IS_VALID_VERTREF(min)			\
@@ -539,9 +539,9 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
     if (vn != idx.end()) nvn = vn->second;				\
     for (std::vector<ObjRefVertex>::iterator it = values.begin();	\
 	 it != values.end(); it++) {					\
-      it->v += nv;							\
-      it->vt += nvt;							\
-      it->vn += nvn;							\
+      it->v += static_cast<ObjRef>(nv);					\
+      it->vt += static_cast<ObjRef>(nvt);				\
+      it->vn += static_cast<ObjRef>(nvn);				\
     }									\
   }
   
@@ -3145,7 +3145,7 @@ public:
 	    iv = *f - 1;
 	  else
 	    iv = (int)(vert_idx.size()) + *f;
-	  RAPIDJSON_ASSERT(iv >= 0 && iv < vert_idx.size());
+	  RAPIDJSON_ASSERT(iv >= 0 && iv < (int)(vert_idx.size()));
 	  if (iv < 0 || iv >= (int)(vert_idx.size())) {
 	    out.clear();
 	    return out;
