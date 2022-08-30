@@ -118,7 +118,6 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
 #define COMPARE_IDX(x, nprev)						\
   (((int)x >= 0 && (size_t)x <= nprev) ||				\
    ((int)x < 0 && (int)x < -(int)nprev))
-
 #define GENERIC_CONSTRUCTOR_READ(cls, base, codeS, init, props)		\
   /*! \brief Initialize an element by reading from an input stream. */	\
   /*! \param in Input stream to read from. */				\
@@ -444,7 +443,18 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
     }									\
     return true;							\
   }									\
+  /* \copydoc ObjElement::append_indexes */				\
+  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
+    std::map<std::string,size_t>::const_iterator x = idx.find("curv2d"); \
+    size_t ncurv = 0;							\
+    if (x != idx.end()) ncurv = x->second;				\
+    for (std::vector<ObjRefCurve>::iterator it = values.begin();	\
+	 it != values.end(); it++) {					\
+      it->curv2d += ncurv;						\
+    }									\
+  }									\
   }
+    
 #define GENERIC_CLASS_VECTOR_OBJREFSURFACE(cls, code)			\
   class cls : public ObjElement {					\
   public:								\
@@ -463,6 +473,19 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
     }									\
     return true;							\
   }									\
+  /* \copydoc ObjElement::append_indexes */				\
+  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
+    std::map<std::string,size_t>::const_iterator curv = idx.find("curv2d"); \
+    std::map<std::string,size_t>::const_iterator surf = idx.find("surf"); \
+    size_t ncurv = 0, nsurf = 0;					\
+    if (curv != idx.end()) ncurv = curv->second;			\
+    if (surf != idx.end()) nsurf = surf->second;			\
+    for (std::vector<ObjRefSurface>::iterator it = values.begin();	\
+	 it != values.end(); it++) {					\
+      it->curv2d += ncurv;						\
+      it->surf += nsurf;						\
+    }									\
+  }									\
   }
 #define GENERIC_CLASS_VECTOR_TYPE_IS_VALID(code, type)			\
   /*! \copydoc ObjElement::is_valid */					\
@@ -475,6 +498,16 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
       if (!COMPARE_IDX((*it), nprev)) return false;			\
     }									\
     return true;							\
+  }									\
+  /* \copydoc ObjElement::append_indexes */				\
+  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
+    std::map<std::string,size_t>::const_iterator x = idx.find(code);	\
+    size_t nprev = 0;							\
+    if (x != idx.end()) nprev = x->second;				\
+    for (std::vector<type>::iterator it = values.begin();		\
+	 it != values.end(); it++) {					\
+      *it += nprev;							\
+    }									\
   }
 #define GENERIC_CLASS_VECTOR_TYPE_IS_VALID_VERTREF(min)			\
   /*! \copydoc ObjElement::is_valid */					\
@@ -494,6 +527,22 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
       if (!COMPARE_IDX((it->vn), nvn)) return false;			\
     }									\
     return true;							\
+  }									\
+  /* \copydoc ObjElement::append_indexes */				\
+  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
+    std::map<std::string,size_t>::const_iterator v = idx.find("v");	\
+    std::map<std::string,size_t>::const_iterator vt = idx.find("vt");	\
+    std::map<std::string,size_t>::const_iterator vn = idx.find("vn");	\
+    size_t nv = 0, nvt = 0, nvn = 0;					\
+    if (v != idx.end()) nv = v->second;					\
+    if (vt != idx.end()) nvt = vt->second;				\
+    if (vn != idx.end()) nvn = vn->second;				\
+    for (std::vector<ObjRefVertex>::iterator it = values.begin();	\
+	 it != values.end(); it++) {					\
+      it->v += nv;							\
+      it->vt += nvt;							\
+      it->vn += nvn;							\
+    }									\
   }
   
   
@@ -640,7 +689,9 @@ public:
     vn = 0;
     Nparam = 0;
     // v
-    RAPIDJSON_ASSERT(std::getline(ss_word, token, '/'));
+    if (!std::getline(ss_word, token, '/')) {
+      return in;
+    }
     {
       std::istringstream ss_token(token);
       ss_token >> v;
@@ -1237,6 +1288,11 @@ public:
   virtual bool add_colors(const uint8_t*, SizeType) {
     return false;
   }
+  //! \brief Increase indexes to account for previous elements when appending
+  //!   and element to another group.
+  //! \param idx Mapping of element types and counts for those types.
+  virtual void append_indexes(const std::map<std::string,size_t> idx)
+  { (void)idx; }
   //! Disable copy assignment for elements.
   ObjElement& operator=(const ObjElement& other);
   //! Code indicating the type of element.
@@ -1381,10 +1437,21 @@ public:
   //! \brief Append elements from another group to this one.
   //! \param rhs Group to append elements from.
   void append(const ObjGroupBase* rhs) {
-    // TODO: Increment indexes
+    std::map<std::string,size_t> idx;
+    std::vector<std::string> types = element_types();
+    for (std::vector<std::string>::iterator it = types.begin();
+	 it != types.end(); it++)
+      idx.insert({*it, count_elements(*it)});
     for (std::vector<ObjElement*>::const_iterator rit = rhs->elements.begin();
-	 rit != rhs->elements.end(); rit++)
-      add_element(*rit);
+	 rit != rhs->elements.end(); rit++) {
+      ObjElement* cpy = copy_element(*rit);
+      cpy->append_indexes(idx);
+    }
+  }
+  //! \copydoc ObjElement::append_indexes
+  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 {
+    for (std::vector<ObjElement*>::iterator it = elements.begin(); it != elements.end(); it++)
+      (*it)->append_indexes(idx);
   }
   //! \brief Determine if the specified element type requires doubles.
   //! \param name Element type to check.
@@ -1524,10 +1591,10 @@ public:
     }
     return x;
   }
-  //! \brief Add an element to the geometry.
+  //! \brief Add an element to the geometry by copying an existing element.
   //! \param x New element.
   //! \return New element.
-  ObjElement* add_element(const ObjElement& x);
+  ObjElement* copy_element(const ObjElement* x);
   //! \brief Add an element to the geometry from a C++ vector of values.
   //! \tparam T Type of value in the values vector.
   //! \param name Name of the type of element being added.
@@ -3073,16 +3140,17 @@ public:
 	const std::vector<int> idx = (*it)->get_int_array();
 	out.push_back(std::vector<double>());
 	for (std::vector<int>::const_iterator f = idx.begin(); f != idx.end(); f++) {
-	  RAPIDJSON_ASSERT((*f >= 0 && (size_t)(*f) <= vert_idx.size()) ||
-			   (*f < 0 && (size_t)(-(*f)) <= vert_idx.size()));
-	  if (*f > 0 && (size_t)(*f) <= vert_idx.size()) {
-	    elements[vert_idx[(size_t)(*f - 1)]]->get_double_array(out[iFace], true);
-	  } else if (*f < 0 && (size_t)(-(*f)) <= vert_idx.size()) {
-	    elements[vert_idx[(size_t)((int)vert_idx.size() + (*f))]]->get_double_array(out[iFace], true);
-	  } else {
+	  int iv = 0;
+	  if (*f > 0)
+	    iv = *f - 1;
+	  else
+	    iv = (int)(vert_idx.size()) + *f;
+	  RAPIDJSON_ASSERT(iv >= 0 && iv < vert_idx.size());
+	  if (iv < 0 || iv >= (int)(vert_idx.size())) {
 	    out.clear();
 	    return out;
 	  }
+	  elements[vert_idx[(size_t)(iv)]]->get_double_array(out[iFace], true);
 	}
 	iFace++;
       }
@@ -3232,10 +3300,10 @@ std::istream & operator >> (std::istream &in, ObjWavefront &p)
 { return p.read(in); }
 
 inline
-ObjElement* ObjGroupBase::add_element(const ObjElement& x) {
+ObjElement* ObjGroupBase::copy_element(const ObjElement* x) {
   ObjElement* x_cpy = nullptr;
-  std::string name_copy = x.code;
-  OBJ_ELEMENT_INIT(name_copy, x_cpy, (&x));
+  std::string name_copy = x->code;
+  OBJ_ELEMENT_INIT(name_copy, x_cpy, (x));
   return ObjGroupBase::add_element(x_cpy);
 }
 template <typename T>
