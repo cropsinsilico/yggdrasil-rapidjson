@@ -543,7 +543,7 @@ public:
   /*! \param[out] out Vector to copy values to. */			\
   /*! \return true if successful, false otherwise. */			\
   bool get(std::vector<T>& out) const {					\
-    if ((!mem) || !(second & ObjTypeList) | (second & ObjTypeIdx)) return false; \
+    if ((!mem) || (!(second & ObjTypeList)) | (second & ObjTypeIdx)) return false; \
     if (second & flag) {						\
       HANDLE_VECTOR_(T, T);						\
     }									\
@@ -744,7 +744,7 @@ public:
   //! \return true if successful, false otherwise.
   bool write(std::ostream& out, bool pad) const {
 #define RECORD_FORMAT_(prec)				\
-    long out_prec = 0;					\
+    std::streamsize out_prec = 0;			\
     std::ios_base::fmtflags out_flags = out.flags();	\
     out_prec = out.precision();				\
     out.precision(prec);				\
@@ -954,42 +954,13 @@ typedef std::vector<ObjPropertyType> ObjPropertiesMap;
   /*! \param[in] rhs Element to copy members from. */			\
   /*! \return true if successful, false otherwise. */			\
   bool copy_members(const cls* rhs) {					\
-    size_t i = 0;							\
     if (!set_meta_properties(rhs->size())) return false;		\
-    for (ObjPropertiesMap::const_iterator it = properties.begin();		\
-	 it != properties.end(); it++, i++) {				\
-      if (!this->has_property(it->first, true)) continue;		\
-      if (it->second & ObjTypeList) {					\
-	if (it->second & ObjTypeInt) {					\
-	  std::vector<int> out;						\
-	  if (!rhs->get_property_array_int(i, out)) return false;	\
-	  if (!this->set_property_array_int(i, out)) return false;	\
-	} else if (it->second & ObjTypeFloat) {				\
-	  std::vector<double> out;					\
-	  if (!rhs->get_property_array_double(i, out)) return false;	\
-	  if (!this->set_property_array_double(i, out)) return false;	\
-	} else if (it->second & ObjTypeString) {			\
-	  std::vector<std::string> out;					\
-	  if (!rhs->get_property_array_string(i, out)) return false;	\
-	  if (!this->set_property_array_string(i, out)) return false;	\
-	} else {							\
-	  return false;							\
-	}								\
-      } else if (it->second & ObjTypeInt) {				\
-	int out;							\
-	if (!rhs->get_property_int(i, out)) return false;		\
-	if (!this->set_property_int(i, out)) return false;		\
-      } else if (it->second & ObjTypeFloat) {				\
-	double out;							\
-	if (!rhs->get_property_double(i, out)) return false;		\
-	if (!this->set_property_double(i, out)) return false;		\
-      } else if (it->second & ObjTypeString) {				\
-	std::string out;						\
-	if (!rhs->get_property_string(i, out)) return false;		\
-	if (!this->set_property_string(i, out)) return false;		\
-      } else {								\
-	return false;							\
-      }									\
+    if (rhs->properties.size() != properties.size()) return false;	\
+    ObjPropertiesMap::const_iterator rit = rhs->properties.begin();	\
+    for (ObjPropertiesMap::iterator lit = properties.begin();		\
+	 lit != properties.end(); lit++, rit++) {			\
+      if (!this->has_property(lit->first, true)) continue;		\
+      if (!lit->copy(*rit)) return false;				\
     }									\
     return true;							\
   }
@@ -1005,74 +976,6 @@ typedef std::vector<ObjPropertyType> ObjPropertiesMap;
   cls(const T (&)[N],							\
       const ObjGroupBase* parent0 = nullptr) : base(#code, parent0) UNPACK_MACRO init { \
     RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from an array")); \
-  }
-
-#define MANAGE_PROPERTIES_VECTOR_(valueType, outType, outTypeName)	\
-  /*! \copydoc ObjElement::get_property */				\
-  bool get_property_ ## outTypeName(size_t i, outType& out) const OVERRIDE_CXX11 {	\
-    if (i >= properties.size() || i >= values.size()) return false;	\
-    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
-    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
-	(it->second & ObjTypeList))					\
-      return ObjElement::get_property_ ## outTypeName(i, out);		\
-    out = (outType)(values[i]);						\
-    return true;							\
-  }									\
-  /*! \copydoc ObjElement::get_property */				\
-  bool get_property_array_ ## outTypeName(size_t i, std::vector<outType>& out) const OVERRIDE_CXX11 {	\
-    if (i >= properties.size()) return false;				\
-    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
-    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
-	!(it->second & ObjTypeList))					\
-      return ObjElement::get_property_array_ ## outTypeName(i, out);	\
-    for (std::vector<valueType>::const_iterator v = values.begin(); v != values.end(); v++) \
-      out.push_back((outType)(*v));					\
-    return true;							\
-  }									\
-  /*! \copydoc ObjElement::set_property */				\
-  bool set_property_ ## outTypeName(size_t i, const outType new_value) OVERRIDE_CXX11 {	\
-    if (i >= properties.size()) return false;				\
-    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
-    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
-	(it->second & ObjTypeList))					\
-      return ObjElement::set_property_ ## outTypeName(i, new_value);	\
-    values.push_back(static_cast<valueType>(new_value));		\
-    return true;							\
-  }									\
-  /*! \copydoc ObjElement::set_property */				\
-  bool set_property_array_ ## outTypeName(size_t i,			\
-					  const std::vector<outType> new_values) OVERRIDE_CXX11 { \
-    if (i >= properties.size()) return false;				\
-    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
-    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
-	!(it->second & ObjTypeList))					\
-      return ObjElement::set_property_array_ ## outTypeName(i, new_values); \
-    values.clear();							\
-    for (std::vector<outType>::const_iterator v = new_values.begin(); v != new_values.end(); v++) { \
-      values.push_back(static_cast<valueType>(*v));			\
-    }									\
-    return true;							\
-  }
-#define MANAGE_PROPERTIES_SCALAR_(valueType, outType, outTypeName)	\
-  /*! \copydoc ObjElement::get_property */				\
-  bool get_property_ ## outTypeName(size_t i, outType& out) const OVERRIDE_CXX11 { \
-    if (i >= properties.size()) return false;				\
-    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
-    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
-	(it->second & ObjTypeList))					\
-      return ObjElement::get_property_ ## outTypeName(i, out);		\
-    out = static_cast<outType>(value);					\
-    return true;							\
-  }									\
-  /*! \copydoc ObjElement::set_property */				\
-  bool set_property_ ## outTypeName(size_t i, const outType new_value) OVERRIDE_CXX11 {	\
-    if (i >= properties.size()) return false;				\
-    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
-    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
-	(it->second & ObjTypeList))					\
-      return ObjElement::set_property_ ## outTypeName(i, new_value);	\
-    value = static_cast<valueType>(new_value);				\
-    return true;							\
   }
 
 #define GENERIC_SCALAR_CONSTRUCTOR(cls, base, code, type, def, props)	\
@@ -1105,7 +1008,6 @@ typedef std::vector<ObjPropertyType> ObjPropertiesMap;
   type value;
 #define GENERIC_SCALAR_BODY(cls, base, codeS, def, props, valType, outType, outTypeName) \
   GENERIC_SCALAR_CONSTRUCTOR(cls, base, codeS, valType, def, props)	\
-  MANAGE_PROPERTIES_SCALAR_(valType, outType, outTypeName)		\
   GENERIC_SCALAR_BODY_BASE(cls, valType)
 
 #define GENERIC_VECTOR_CONSTRUCTOR(cls, base, code, init, props, val_props, compat, T2) \
@@ -1160,7 +1062,7 @@ typedef std::vector<ObjPropertyType> ObjPropertiesMap;
   /*! \copydoc ObjElement::size */					\
   size_t size(bool skipColors=false) const OVERRIDE_CXX11 {		\
     size_t out = 0;							\
-    for (ObjPropertiesMap::const_iterator it = properties.begin();		\
+    for (ObjPropertiesMap::const_iterator it = properties.begin();	\
 	 it != properties.end(); it++) {				\
       if (!this->has_property(it->first, true, skipColors)) continue;	\
       if (it->second & ObjTypeList)					\
@@ -1173,7 +1075,6 @@ typedef std::vector<ObjPropertyType> ObjPropertiesMap;
   std::vector<type> values;
 #define GENERIC_VECTOR_BODY_STORED(cls, base, code, props, val_props, compat, valType, outType, outTypeName) \
   GENERIC_VECTOR_CONSTRUCTOR(cls, base, code, SINGLE_ARG(, values()), props, val_props, UNPACK_MACRO compat, valType) \
-  MANAGE_PROPERTIES_VECTOR_(valType, outType, outTypeName)		\
   GENERIC_VECTOR_BODY_BASE(cls, valType)				\
   /*! \copydoc ObjElement::from_values() */				\
   bool from_values() OVERRIDE_CXX11 {					\
@@ -1814,14 +1715,7 @@ public:
 		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
-    if (it->second & ObjTypeList) {
-      return false;
-    } else if (_type_compatible_int(it->second)) {
-      return set_property_int(i, static_cast<int>(new_value));
-    } else if (_type_compatible_double(it->second)) {
-      return set_property_double(i, static_cast<double>(new_value));
-    }
-    return false;
+    return it->set(new_value);
   }
   //! \brief Set an element property.
   //! \tparam T Type of new value.
@@ -1833,11 +1727,7 @@ public:
 		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
-    if (it->second & ObjTypeList)
-      return false;
-    else if (_type_compatible_string(it->second))
-      return set_property_string(i, new_value);
-    return false;
+    return it->set(new_value);
   }
   //! \brief Set an element property.
   //! \tparam T Type of new value.
@@ -1849,22 +1739,7 @@ public:
 		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
-    if (!(it->second & ObjTypeList)) {
-      return false;
-    } else if (_type_compatible_int(it->second)) {
-      std::vector<int> tmp;
-      for (typename std::vector<T>::const_iterator v = new_value.begin();
-	   v != new_value.end(); v++)
-	tmp.push_back(static_cast<int>(*v));
-      return set_property_array_int(i, tmp);
-    } else if (_type_compatible_double(it->second)) {
-      std::vector<double> tmp;
-      for (typename std::vector<T>::const_iterator v = new_value.begin();
-	   v != new_value.end(); v++)
-	tmp.push_back(static_cast<double>(*v));
-      return set_property_array_double(i, tmp);
-    }
-    return false;
+    return it->set(new_value);
   }
   //! \brief Set an element property.
   //! \tparam T Type of new value.
@@ -1876,12 +1751,7 @@ public:
 		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
-    if (!(it->second & ObjTypeList)) {
-      return false;
-    } else if (_type_compatible_string(it->second)) {
-      return set_property_array_string(i, new_value);
-    }
-    return false;
+    return it->set(new_value);
   }
   //! \brief Set an element property.
   //! \tparam T Type of new value.
@@ -1922,7 +1792,7 @@ public:
   /*! \param i index of the property to set. */				\
   /*! \param new_value Value to assign to the property. */		\
   /*! \return true if successful, false otherwise. */			\
-  virtual bool set_property_ ## typeName(size_t i, const type new_value) { \
+  bool set_property_ ## typeName(size_t i, const type new_value) {	\
     if (i >= properties.size()) return false;				\
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;	\
     if (_type_compatible_ ## typeName(it->second, true) &&		\
@@ -1934,7 +1804,7 @@ public:
   /*! \param i index of the property to set. */				\
   /*! \param new_values Array of values to assign to the property. */	\
   /*! \return true if successful, false otherwise. */			\
-  virtual bool set_property_array_ ## typeName(size_t i, const std::vector<type> new_values) { \
+  bool set_property_array_ ## typeName(size_t i, const std::vector<type> new_values) { \
     if (i >= properties.size()) return false;				\
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;	\
     if (_type_compatible_ ## typeName(it->second, true) &&		\
@@ -1946,7 +1816,7 @@ public:
   /*! \param i index of the property to get. */				\
   /*! \param out Existing memory to copy property to. */		\
   /*! \return true if successful, false otherwise. */			\
-  virtual bool get_property_ ## typeName(size_t i, type& out) const {	\
+  bool get_property_ ## typeName(size_t i, type& out) const {		\
     if (i >= properties.size()) return false;				\
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
     if (_type_compatible_ ## typeName(it->second, true) &&		\
@@ -1958,7 +1828,7 @@ public:
   /*! \param i index of the property to get. */				\
   /*! \param out Existing array to add property values to. */		\
   /*! \return true if successful, false otherwise. */			\
-  virtual bool get_property_array_ ## typeName(size_t i, std::vector<type>& out) const {	\
+  bool get_property_array_ ## typeName(size_t i, std::vector<type>& out) const { \
     if (i >= properties.size()) return false;				\
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
     if (_type_compatible_ ## typeName(it->second, true) &&		\
@@ -2009,20 +1879,7 @@ public:
 		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
-    if (it->second & ObjTypeList) {
-      return false;
-    } else if (_type_compatible_int(it->second)) {
-      int tmp = 0;
-      bool flag = get_property_int(i, tmp);
-      out = static_cast<T>(tmp);
-      return flag;
-    } else if (_type_compatible_double(it->second)) {
-      double tmp = 0;
-      bool flag = get_property_double(i, tmp);
-      out = static_cast<T>(tmp);
-      return flag;
-    }
-    return false;
+    return it->get(out);
   }
   //! \brief Get an element property.
   //! \tparam Type of output.
@@ -2034,12 +1891,7 @@ public:
 		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
-    if (it->second & ObjTypeList) {
-      return false;
-    } else if (_type_compatible_string(it->second)) {
-      return get_property_string(i, out);
-    }
-    return false;
+    return it->get(out);
   }
   //! \brief Get an element property.
   //! \tparam Type of output.
@@ -2051,22 +1903,7 @@ public:
 		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
-    if (!(it->second & ObjTypeList)) {
-      return false;
-    } else if (_type_compatible_int(it->second)) {
-      std::vector<int> tmp;
-      bool flag = get_property_array_int(i, tmp);
-      for (std::vector<int>::iterator v = tmp.begin(); v != tmp.end(); v++)
-	out.push_back(static_cast<T>(*v));
-      return flag;
-    } else if (_type_compatible_double(it->second)) {
-      std::vector<double> tmp;
-      bool flag = get_property_array_double(i, tmp);
-      for (std::vector<double>::iterator v = tmp.begin(); v != tmp.end(); v++)
-	out.push_back(static_cast<T>(*v));
-      return flag;
-    }
-    return false;
+    return it->get(out);
   }
   //! \brief Get an element property.
   //! \tparam Type of output.
@@ -2078,12 +1915,7 @@ public:
 		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
-    if (!(it->second & ObjTypeList)) {
-      return false;
-    } else if (_type_compatible_string(it->second)) {
-      return get_property_array_string(i, out);
-    }
-    return false;
+    return it->get(out);
   }
   //! \brief Get an element property.
   //! \tparam Type of output.
@@ -3353,7 +3185,6 @@ public:
 			     ObjRef, int, int,
 			     1, -1);
   GENERIC_CLASS_VECTOR_TYPE_IS_VALID("vp", ObjRef)
-  MANAGE_PROPERTIES_VECTOR_(ObjRef, double, double)
 };
 
 //! Connection element.
@@ -3368,7 +3199,6 @@ public:
 			     SINGLE_ARG("labels"),
 			     COMPATIBLE_WITH_TYPE(T, std::string),
 			     std::string)
-  MANAGE_PROPERTIES_VECTOR_(std::string, std::string, string);
   GENERIC_COPY_MEMBERS(ObjGroup)
   //! \brief Initialize and element from a scalar.
   //! \tparam T Type of value.
@@ -3457,7 +3287,6 @@ public:
 					 OBJ_P_(&resolution, "resolution", ObjTypeFloat)),
 			      SINGLE_ARG());
   DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value(0), resolution(0)));
-  MANAGE_PROPERTIES_SCALAR_(int, int, int)
   GENERIC_SCALAR_BODY_BASE(ObjMergingGroup, int)
   //! Group resolution.
   double resolution;
@@ -3494,29 +3323,6 @@ public:
   //! \copydoc ObjElement::is_valid
   bool is_valid() const OVERRIDE_CXX11 {
     return value >= 0;
-  }
-  //! \copydoc ObjElement::set_property_double
-  bool set_property_double(size_t i, const double new_value) OVERRIDE_CXX11 {
-    switch (i) {
-    case (1):
-      resolution = new_value;
-      break;
-    default:
-      return false;
-    }
-    return true;
-  }
-  //! \copydoc ObjElement::get_property_double
-  bool get_property_double(size_t i, double& out) const OVERRIDE_CXX11 {
-    switch (i) {
-    case (1): {
-      out = resolution;
-      break;
-    }
-    default:
-      return false;
-    }
-    return true;
   }
 };
 
@@ -3612,88 +3418,6 @@ public:
 	     (technique == "curv" && (name == "maxdist" ||
 				      name == "maxangle"))));
   }
-  //! \copydoc ObjElement::set_property_string
-  bool set_property_string(size_t i, const std::string new_value) OVERRIDE_CXX11 {
-    switch (i) {
-    case (0):
-      technique = new_value;
-      break;
-    default:
-      return false;
-    }
-    return true;
-  }
-  //! \copydoc ObjElement::set_property_double
-  bool set_property_double(size_t i, const double new_value) OVERRIDE_CXX11 {
-    switch (i) {
-    case (1): {
-      if (technique != "cparm") return false;
-      if (values.size() < 1) values.resize(1);
-      values[0] = new_value;
-      break;
-    }
-    case (2): {
-      if (technique != "cspace") return false;
-      if (values.size() < 1) values.resize(1);
-      values[0] = new_value;
-      break;
-    }
-    case (3): {
-      if (technique != "curv") return false;
-      if (values.size() < 2) values.resize(2);
-      values[0] = new_value;
-      break;
-    }
-    case (4): {
-      if (technique != "curv") return false;
-      if (values.size() < 2) values.resize(2);
-      values[1] = new_value;
-      break;
-    }
-    default:
-      return false;
-    }
-    return true;
-  }
-  //! \copydoc ObjElement::get_property_string
-  bool get_property_string(size_t i, std::string& out) const OVERRIDE_CXX11 {
-    switch (i) {
-    case (0):
-      out = technique;
-      break;
-    default:
-      return false;
-    }
-    return true;
-  }
-  //! \copydoc ObjElement::get_property_double
-  bool get_property_double(size_t i, double& out) const OVERRIDE_CXX11 {
-    switch (i) {
-    case (1): {
-      if (technique != "cparm" || values.empty()) return false;
-      out = values[0];
-      break;
-    }
-    case (2): {
-      if (technique != "cspace" || values.empty()) return false;
-      out = values[0];
-      break;
-    }
-    case (3): {
-      if (technique != "curv" || values.size() != 2) return false;
-      out = values[0];
-      break;
-    }
-    case (4): {
-      if (technique != "curv" || values.size() != 2) return false;
-      out = values[1];
-      break;
-    }
-    default:
-      return false;
-    }
-    return true;
-  }
   //! \copydoc ObjElement::is_valid
   bool is_valid() const OVERRIDE_CXX11 {
     return (((technique == "cparm" ||
@@ -3747,110 +3471,6 @@ public:
 	     (technique == "cspace" && name == "maxlength") ||
 	     (technique == "curv" && (name == "maxdist" ||
 				      name == "maxangle"))));
-  }
-  //! \copydoc ObjElement::set_property_string
-  bool set_property_string(size_t i, const std::string new_value) OVERRIDE_CXX11 {
-    switch (i) {
-    case (0):
-      technique = new_value;
-      break;
-    default:
-      return false;
-    }
-    return true;
-  }
-  //! \copydoc ObjElement::set_property_double
-  bool set_property_double(size_t i, const double new_value) OVERRIDE_CXX11 {
-    switch (i) {
-    case (1): {
-      if (technique != "cparma") return false;
-      if (values.size() < 2) values.resize(2);
-      values[0] = new_value;
-      break;
-    }
-    case (2): {
-      if (technique != "cparma") return false;
-      if (values.size() < 2) values.resize(2);
-      values[1] = new_value;
-      break;
-    }
-    case (3): {
-      if (technique != "cparmb") return false;
-      if (values.size() < 1) values.resize(1);
-      values[0] = new_value;
-      break;
-    }
-    case (4): {
-      if (technique != "cspace") return false;
-      if (values.size() < 1) values.resize(1);
-      values[0] = new_value;
-      break;
-    }
-    case (5): {
-      if (technique != "curv") return false;
-      if (values.size() < 2) values.resize(2);
-      values[0] = new_value;
-      break;
-    }
-    case (6): {
-      if (technique != "curv") return false;
-      if (values.size() < 2) values.resize(2);
-      values[1] = new_value;
-      break;
-    }
-    default:
-      return false;
-    }
-    return true;
-  }
-  //! \copydoc ObjElement::get_property_string
-  bool get_property_string(size_t i, std::string& out) const OVERRIDE_CXX11 {
-    switch (i) {
-    case (0):
-      out = technique;
-      break;
-    default:
-      return false;
-    }
-    return true;
-  }
-  //! \copydoc ObjElement::get_property_double
-  bool get_property_double(size_t i, double& out) const OVERRIDE_CXX11 {
-    switch (i) {
-    case (1): {
-      if (technique != "cparma" || values.size() != 2) return false;
-      out = values[0];
-      break;
-    }
-    case (2): {
-      if (technique != "cparma" || values.size() != 2) return false;
-      out = values[1];
-      break;
-    }
-    case (3): {
-      if (technique != "cparmb" || values.empty()) return false;
-      out = values[0];
-      break;
-    }
-    case (4): {
-      if (technique != "cspace" || values.empty()) return false;
-      out = values[0];
-      break;
-    }
-    case (5): {
-      if (technique != "curv" || values.size() != 2) return false;
-      out = values[0];
-      break;
-    }
-    case (6): {
-      if (technique != "curv" || values.size() != 2) return false;
-      out = values[1];
-      break;
-    }
-    default:
-      return false;
-    }
-    return true;
   }
   //! \copydoc ObjElement::is_valid
   bool is_valid() const OVERRIDE_CXX11 {
@@ -4340,8 +3960,6 @@ ObjElement* ObjGroupBase::add_element(std::string name,
 #undef GENERIC_VECTOR_OBJREFVERTEX
 #undef GENERIC_VECTOR_STRING
 #undef GENERIC_SCALAR_STRING
-#undef MANAGE_PROPERTIES_SCALAR_
-#undef MANAGE_PROPERTIES_VECTOR_
 #undef GENERIC_CLASS_SCALAR_TYPE
 #undef GENERIC_SCALAR_BODY
 #undef GENERIC_SCALAR_BODY_BASE
