@@ -1729,6 +1729,7 @@ TEST(Value, ObjWavefront) {
   obj.end_group();
   // Case with singular values
   ADD_ELEMENT_STR1("cstype", "taylor");
+  obj.add_element("surf", -1.0, 2.5, -2.0, 2.0, C_ARR(-9, -8, -7, -6, -5, -4, -3, -2, -1));
   obj.add_element("parm", "u", C_ARR1(0.000));
   obj.add_element("stech", "cparmb", C_ARR1(1.000000));
   obj.end_group();
@@ -1849,7 +1850,7 @@ TEST(Value, ObjWavefront) {
   obj.add_element("g", "bottom");
   obj.add_element("usemtl", "purple");
   obj.add_element("f", C_ARR(2, 6, 7, 3));
-  // Texture-mapped square
+  // // Texture-mapped square
   // obj.add_element("mtllib", "master.mtl");
   // obj.add_element("usemtl", "wood");
   // obj.add_element("f", C_ARR(ObjRefVertex(1, 2, 0), ObjRefVertex(2, 2, 0),

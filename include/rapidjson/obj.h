@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <set>
+#include <iterator>
 #include "internal/meta.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
@@ -33,129 +34,6 @@ std::string obj_code2long(const std::string& code) {
   return std::string(code);
 }
 
-enum ObjTypeFlag {
-  ObjTypeNull     = 0x0000,
-  ObjTypeInt      = 0x0008,
-  ObjTypeString   = 0x0010,
-  ObjTypeFloat    = 0x0020,
-  ObjTypeVertex   = 0x0040,
-  ObjTypeCurve    = 0x0080,
-  ObjTypeSurface  = 0x0100,
-  ObjTypeList     = 0x0800
-};
-
-typedef std::map<std::string, uint16_t> PropertiesMap;
-
-#define REPORT_UNSUPPORTED_ELEMENT(src, name)	\
-  {									\
-    std::cerr << "Unsupported element signifier for " #src ": " << name << std::endl; \
-    RAPIDJSON_ASSERT(!sizeof("Unsupported element signifier"));		\
-  }
-#define OBJ_ELEMENT_INIT(word, lhs, args) {				\
-    bool first = true;							\
-    while (true) {							\
-      if      (word == "v"         ) lhs = new ObjVertex args;		\
-      else if (word == "vp"        ) lhs = new ObjVParameter args;	\
-      else if (word == "vn"        ) lhs = new ObjVNormal args;		\
-      else if (word == "vt"        ) lhs = new ObjVTexture args;	\
-      else if (word == "p"         ) lhs = new ObjPoint args;		\
-      else if (word == "l"         ) lhs = new ObjLine args;		\
-      else if (word == "f"         ) lhs = new ObjFace args;		\
-      else if (word == "curv"      ) lhs = new ObjCurve args;		\
-      else if (word == "curv2"     ) lhs = new ObjCurve2D args;		\
-      else if (word == "surf"      ) lhs = new ObjSurface args;		\
-      else if (word == "cstype"    ) lhs = new ObjFreeFormType args;	\
-      else if (word == "deg"       ) lhs = new ObjDegree args;		\
-      else if (word == "bmat"      ) lhs = new ObjBasisMatrix args;	\
-      else if (word == "step"      ) lhs = new ObjStep args;		\
-      else if (word == "parm"      ) lhs = new ObjParameter args;	\
-      else if (word == "trim"      ) lhs = new ObjTrim args;		\
-      else if (word == "hole"      ) lhs = new ObjHole args;		\
-      else if (word == "scrv"      ) lhs = new ObjScrv args;		\
-      else if (word == "sp"        ) lhs = new ObjSpecialPoints args;	\
-      else if (word == "con"       ) lhs = new ObjConnect args;		\
-      else if (word == "g"         ) lhs = new ObjGroup args;		\
-      else if (word == "s"         ) lhs = new ObjSmoothingGroup args;	\
-      else if (word == "mg"        ) lhs = new ObjMergingGroup args;	\
-      else if (word == "o"         ) lhs = new ObjObjectName args;	\
-      else if (word == "bevel"     ) lhs = new ObjBevel args;		\
-      else if (word == "c_interp"  ) lhs = new ObjCInterp args;		\
-      else if (word == "d_interp"  ) lhs = new ObjDInterp args;		\
-      else if (word == "lod"       ) lhs = new ObjLOD args;		\
-      else if (word == "maplib"    ) lhs = new ObjTextureMapLib args;	\
-      else if (word == "usemap"    ) lhs = new ObjTextureMap args;	\
-      else if (word == "usemtl"    ) lhs = new ObjMaterial args;	\
-      else if (word == "mtllib"    ) lhs = new ObjMaterialLib args;	\
-      else if (word == "shadow_obj") lhs = new ObjShadowFile args;	\
-      else if (word == "trace_obj" ) lhs = new ObjTraceFile args;	\
-      else if (word == "ctech"     ) lhs = new ObjCTech args;		\
-      else if (word == "stech"     ) lhs = new ObjSTech args;		\
-      else if (word == "end"       ) lhs = nullptr;			\
-      else if (first) {							\
-	first = false;							\
-	word = obj_alias2base(word);					\
-	continue;							\
-      } else {								\
-	REPORT_UNSUPPORTED_ELEMENT(init, word);				\
-      }									\
-      break;								\
-    }									\
-    }
-#if RAPIDJSON_HAS_CXX11
-#define OVERRIDE_CXX11 override
-#else // RAPIDJSON_HAS_CXX11
-#define OVERRIDE_CXX11
-#endif // RAPIDJSON_HAS_CXX11
-#define SINGLE_ARG(...) (__VA_ARGS__)
-
-#define OBJ_P_(name, flag) PropertiesMap::value_type(name, uint16_t(flag))
-#define SET_PROPS(props)					\
-    const PropertiesMap::value_type pairs[] = {			\
-      UNPACK_MACRO props						\
-    };								\
-    const int Npair = sizeof(pairs) / sizeof(pairs[0]);		\
-    this->properties.insert(pairs, pairs + Npair)
-#define COMPARE_IDX(x, nprev)						\
-  (((int)x >= 0 && (size_t)x <= nprev) ||				\
-   ((int)x < 0 && (int)x < -(int)nprev))
-#define GENERIC_CONSTRUCTOR_READ(cls, base, codeS, init, props)		\
-  /*! \brief Initialize an element by reading from an input stream. */	\
-  /*! \param in Input stream to read from. */				\
-  /*! \param parent0 The element's parent group. */			\
-  /*! \param dont_descend If true, subelements will not be read from */ \
-  /*!   the input stream. */						\
-  cls(std::istream &in, const ObjGroupBase* parent0 = nullptr,		\
-      const bool& dont_descend = false) : base(#codeS, parent0) UNPACK_MACRO init { \
-    SET_PROPS(props);							\
-    read_values(in, dont_descend);					\
-    from_values();							\
-  }
-#define GENERIC_CONSTRUCTOR_COPY(cls, base, init)			\
-  /*! \copydoc ObjElement::ObjElement(const ObjElement&) */		\
-  cls(const cls& rhs) :							\
-    base(rhs.code, rhs.parent) UNPACK_MACRO init {				\
-    base::copy_members(*dynamic_cast<const base*>(&rhs));		\
-    this->copy_members(rhs);						\
-    this->properties = rhs.properties;					\
-  }									\
-  /*! \copydoc ObjElement::ObjElement(const ObjElement*) */		\
-  cls(const ObjElement* rhs) :						\
-    base(rhs->code, rhs->parent) UNPACK_MACRO init {				\
-    base::copy_members(*dynamic_cast<const base*>(rhs));		\
-    this->copy_members(*dynamic_cast<const cls*>(rhs));			\
-    this->properties = rhs->properties;					\
-  }									\
-  /*! \copydoc ObjElement::copy() */					\
-  cls* copy() const OVERRIDE_CXX11 { return new cls(*this); }
-#define GENERIC_ELEMENT_CONSTRUCTOR(cls, base, code, init, props)	\
-  /*! \brief Empty constructor. */					\
-  /*! \param parent0 The element's parent group. */			\
-  cls(const ObjGroupBase* parent0 = nullptr) :				\
-    base(#code, parent0) UNPACK_MACRO init {					\
-    SET_PROPS(props);							\
-  }									\
-  GENERIC_CONSTRUCTOR_COPY(cls, base, init);				\
-  GENERIC_CONSTRUCTOR_READ(cls, base, code, init, props);
 #define COMPATIBLE_WITH_INT(T)				       \
   internal::OrExpr<internal::IsSame<T,int>,	               \
     internal::OrExpr<internal::IsSame<T,int8_t>,               \
@@ -185,6 +63,8 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
 		  internal::OrExpr<internal::IsSame<T,float>, \
   		    internal::OrExpr<internal::IsSame<T,double>, \
 		      internal::IsSame<T,uint64_t> > > > > > > > > > >
+#define COMPATIBLE_WITH_STRING(T)					\
+  internal::IsSame<T,std::string>
 #define COMPATIBLE_WITH_VERT(T)						\
   internal::OrExpr<internal::IsSame<T,ObjRefVertex>, COMPATIBLE_WITH_INT(T)>
 #define COMPATIBLE_WITH_CURV(T)					\
@@ -203,428 +83,6 @@ typedef std::map<std::string, uint16_t> PropertiesMap;
 #define ASSERT_COMPATIBLE(T1, T2)					\
   std::cerr << typeid(T1).name() << " and " << typeid(T2).name() << " types are not compatible." << std::endl; \
   RAPIDJSON_ASSERT(!sizeof("T1 and T2 types are not compatible."))
-#define GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, base, code, init, props, compat, T2) \
-  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, code, init, props)		\
-  /*! \brief Initialize and element from a C++ vector of values. */	\
-  /*! \tparam T Vector element type. Must be castable to the type. */	\
-  /*! \param values0 Vector of values. */				\
-  /*! \param parent0 The element's parent group. */			\
-  template <typename T>							\
-  cls(const std::vector<T> &values0,					\
-      const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_ENABLEIF((compat))) :					\
-  base(#code, parent0) UNPACK_MACRO init {					\
-    SET_PROPS(props);							\
-    assign_values(values, values0);					\
-    from_values();							\
-  }									\
-  /*! \brief Raise an error if non-compatible vector is provided. */	\
-  /*! \tparam T Type of vector elements. */				\
-  template <typename T>							\
-  cls(const std::vector<T>&,						\
-      const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_DISABLEIF((compat))) :					\
-    base(#code, parent0) UNPACK_MACRO init {					\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
-  }									\
-  /*! \brief Initialize an element from a C array of values. */		\
-  /*! \tparam T Array element type. */					\
-  /*! \tparam N Array size. */						\
-  /*! \param src Array of values. */					\
-  template <typename T, size_t N>					\
-  cls(const T (&values0)[N],						\
-      const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_ENABLEIF((compat))) :					\
-    base(#code, parent0) UNPACK_MACRO init {					\
-    SET_PROPS(props);							\
-    assign_values(values, std::vector<T>(values0, values0+N));		\
-    from_values();							\
-  }									\
-  /*! \brief Raise an error if non-compatible vector is provided. */	\
-  /*! \tparam T Type of vector elements. */				\
-  /*! \tparam N Array size. */						\
-  template <typename T, size_t N>					\
-  cls(const T (&)[N],							\
-      const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_DISABLEIF((compat))) :					\
-    base(#code, parent0) UNPACK_MACRO init {					\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
-  }
-#define GENERIC_CONSTRUCTOR_VECTOR_FLOAT(cls, base, code, init, props)	\
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, base, code, init, props, COMPATIBLE_WITH_FLOAT(T), float)
-#define DUMMY_ARRAY_CONSTRUCTOR(cls, base, code, init)			\
-  /*! \brief Raise an error. */						\
-  template <typename T>							\
-  cls(const std::vector<T> &,						\
-      const ObjGroupBase* parent0 = nullptr) : base(#code, parent0) UNPACK_MACRO init { \
-    RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from a vector")); \
-  }									\
-  /*! \brief Raise an error. */						\
-  template <typename T, size_t N>					\
-  cls(const T (&)[N],							\
-      const ObjGroupBase* parent0 = nullptr) : base(#code, parent0) UNPACK_MACRO init { \
-    RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from an array")); \
-  }
-#define GENERIC_READ_VALUES						\
-  /*! \copydoc ObjElement::read_values */				\
-  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 { ObjElement::read_values(in, values); }
-#define GENERIC_WRITE_VALUES						\
-  /*! \copydoc ObjElement::write_values */				\
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 { ObjElement::write_values(out, values); }
-#define GENERIC_FROM_VALUES(min, max)					\
-  /*! \copydoc ObjElement::from_values() */				\
-  void from_values() OVERRIDE_CXX11 {					\
-    RAPIDJSON_ASSERT((values.size() >= min) && (values.size() <= max)); \
-  }									\
-  /*! \copydoc ObjElement::is_valid */					\
-  bool is_valid(std::map<std::string,size_t>&) const OVERRIDE_CXX11 {	\
-    return (values.size() >= min && values.size() <= max);		\
-  }
-#define GENERIC_IS_EQUAL(cls)						\
-  /*! \copydoc ObjElement::is_equal */					\
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {		\
-    if (rhs0->code != this->code) return false;				\
-    const cls* lhs = this;						\
-    const cls* rhs = dynamic_cast<const cls*>(rhs0);			\
-    if (!(is_equal_vectors(lhs->values, rhs->values))) return false;	\
-    return true;							\
-  }
-#define GENERIC_CLASS_SCALAR_TYPE_ISEQUAL(cls)				\
-  /*! \copydoc ObjElement::is_equal */					\
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {		\
-    if (rhs0->code != this->code) return false;				\
-    const cls* lhs = this;						\
-    const cls* rhs = dynamic_cast<const cls*>(rhs0);			\
-    if (lhs->value != rhs->value) return false;				\
-    return true;							\
-  }
-#define GENERIC_CLASS_SCALAR_TYPE_BASE(cls, base, codeS, type, def, props) \
-  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, SINGLE_ARG(, value(def)), props) \
-  DUMMY_ARRAY_CONSTRUCTOR(cls, base, code, SINGLE_ARG(, value(def)))	\
-  GENERIC_CLASS_SCALAR_TYPE_ISEQUAL(cls)				\
-  /*! \brief Copy element specific members from another instance. */	\
-  /*! \param[in] rhs Element to copy members from. */			\
-  void copy_members(const cls& rhs) {					\
-    value = rhs.value;							\
-  }									\
-  /*! \copydoc ObjElement::read_values */				\
-  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {	\
-    in >> value;							\
-  }									\
-  /*! \copydoc ObjElement::write_values */				\
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {		\
-    out << value;							\
-  }									\
-  type value;
-#define GENERIC_CLASS_SCALAR_TYPE_BODY(cls, base, codeS, type, def, props) \
-  GENERIC_CLASS_SCALAR_TYPE_BASE(cls, base, codeS, type, def, props)	\
-  /*! \brief Initialize an element from a scalar. */			\
-  /*! \param value0 Scalar value. */					\
-  /*! \param parent0 Parent group. */					\
-  template <typename T>							\
-  cls(const T& value0,							\
-      const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, type)))) :		\
-    base(#codeS, parent0), value(value0) {}				\
-  /*! \brief Initialize an element from a scalar. */			\
-  /*! \param value0 Scalar value. */					\
-  /*! \param parent0 Parent group. */					\
-  template <typename T>							\
-  cls(const T&,								\
-      const ObjGroupBase* parent0 = nullptr,				\
-      RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, type)))) :		\
-    base(#codeS, parent0), value(def) {					\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from" #type ".")); \
-  }
-#define GENERIC_CLASS_SCALAR_TYPE(cls, code, type, def, props)		\
-  class cls : public ObjElement {					\
-  public:								\
-  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, type, def, props) \
-  }
-#define GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, type, compat, props) \
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(cls, ObjElement, code, SINGLE_ARG(, values()), props, UNPACK_MACRO compat, type) \
-  GENERIC_READ_VALUES;							\
-  GENERIC_WRITE_VALUES;							\
-  GENERIC_IS_EQUAL(cls);						\
-  /*! \brief Copy element specific members from another instance. */	\
-  /*! \param[in] rhs Element to copy members from. */			\
-  void copy_members(const cls& rhs) {					\
-    values.insert(values.begin(), rhs.values.begin(), rhs.values.end()); \
-  }									\
-  /*! \copydoc ObjElement::size */					\
-  size_t size(bool skipColors=false) const OVERRIDE_CXX11 {		\
-    size_t out = 0;							\
-    for (PropertiesMap::const_iterator it = properties.begin();		\
-	 it != properties.end(); it++) {				\
-      if (!this->has_property(it->first, true, skipColors)) continue;	\
-      if (it->second & ObjTypeList)					\
-	out += values.size();						\
-      else								\
-	out++;								\
-    }									\
-    return out;								\
-  }									\
-  std::vector<type> values;
-#define GET_PROPERTY_ARRAY_VECTOR_(valueType, outType, typeFlag)	\
-  /*! \copydoc ObjElement::get_property_array */			\
-  void get_property_array(const std::string name,			\
-			  std::vector<outType>& out,			\
-			  bool skipColors=false) const OVERRIDE_CXX11 {	\
-    PropertiesMap::const_iterator it = properties.find(name);		\
-    if (it == properties.end()) return;					\
-    if (typeFlag != ObjTypeNull && !(it->second & typeFlag))		\
-      return ObjElement::get_property_array(name, out, skipColors);	\
-    if (it->second & ObjTypeList) {					\
-      for (std::vector<valueType>::const_iterator v = values.begin(); v != values.end(); v++) \
-	out.push_back((outType)(*v));					\
-    } else {								\
-      size_t i = (size_t)std::abs(std::distance(it, properties.begin())); \
-      out.push_back((outType)(values[i]));				\
-    }									\
-  }
-#define GET_PROPERTY_ARRAY_SCALAR_(outType, typeFlag)			\
-  /*! \copydoc ObjElement::get_property_array */			\
-  void get_property_array(const std::string name,			\
-			  std::vector<outType>& out,			\
-			  bool skipColors=false) const OVERRIDE_CXX11 {	\
-    PropertiesMap::const_iterator it = properties.find(name);		\
-    if (it == properties.end()) return;					\
-    if (typeFlag != ObjTypeNull && !(it->second & typeFlag))		\
-      return ObjElement::get_property_array(name, out, skipColors);	\
-    out.push_back((outType)(value));					\
-  }
-#define GENERIC_CLASS_SCALAR_TYPE_STRING(cls, code, type, def, props)	\
-  class cls : public ObjElement {					\
-  public:								\
-  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, type, def, props) \
-  GET_PROPERTY_ARRAY_SCALAR_(std::string, ObjTypeString)		\
-  }
-#define GENERIC_CLASS_VECTOR_TYPE_COMPARE(cls, code, type, compat, props) \
-  class cls : public ObjElement {					\
-  public:								\
-  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, type, compat, props) \
-  }
-#define GENERIC_CLASS_VECTOR_TYPE_COMPARE_INDEX(cls, code, type, compat, props) \
-  class cls : public ObjElement {					\
-  public:								\
-  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, type, compat, props) \
-  GENERIC_CLASS_VECTOR_TYPE_IS_VALID("vp", type);			\
-  GET_PROPERTY_ARRAY_VECTOR_(type, double, ObjTypeNull)			\
-  GET_PROPERTY_ARRAY_VECTOR_(type, int, (ObjTypeInt | ObjTypeVertex))	\
-  }
-#define GENERIC_CLASS_VECTOR_TYPE_STRING(cls, code, type, props)	\
-  class cls : public ObjElement {					\
-  public:								\
-  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, std::string, SINGLE_ARG(COMPATIBLE_WITH_TYPE(T, std::string)), props) \
-  GET_PROPERTY_ARRAY_VECTOR_(std::string, std::string, ObjTypeString);					\
-  }
-#define GENERIC_CLASS_VECTOR_OBJREFVERTEX(cls, code, min)		\
-  class cls : public ObjElement {					\
-  public:								\
-  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, ObjRefVertex, SINGLE_ARG(COMPATIBLE_WITH_VERT(T)), SINGLE_ARG(OBJ_P_("vertex_index", ObjTypeInt | ObjTypeList))) \
-  GENERIC_CLASS_VECTOR_TYPE_IS_VALID_VERTREF(min)			\
-  GET_PROPERTY_ARRAY_VECTOR_(ObjRefVertex, int, (ObjTypeInt | ObjTypeVertex)) \
-  /*! \copydoc ObjElement::from_values() */				\
-  void from_values() OVERRIDE_CXX11					\
-    { RAPIDJSON_ASSERT(values.size() >= min); }				\
-  }
-#define GENERIC_CLASS_VECTOR_OBJREFCURVE(cls, code)			\
-  class cls : public ObjElement {					\
-  public:								\
-  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, ObjRefCurve, SINGLE_ARG(COMPATIBLE_WITH_TYPE(T, ObjRefCurve)), SINGLE_ARG(OBJ_P_("curves", ObjTypeCurve | ObjTypeList))) \
-  /*! \copydoc ObjElement::is_valid */					\
-  bool is_valid(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 { \
-    std::map<std::string,size_t>::iterator x = idx.find("curv2d");	\
-    size_t ncurv = 0;							\
-    if (x != idx.end()) ncurv = x->second;				\
-    for (std::vector<ObjRefCurve>::const_iterator it = values.begin();	\
-	 it != values.end(); it++) {					\
-      if (!COMPARE_IDX((it->curv2d), ncurv)) return false;		\
-    }									\
-    return true;							\
-  }									\
-  /* \copydoc ObjElement::append_indexes */				\
-  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
-    std::map<std::string,size_t>::const_iterator x = idx.find("curv2d"); \
-    size_t ncurv = 0;							\
-    if (x != idx.end()) ncurv = x->second;				\
-    for (std::vector<ObjRefCurve>::iterator it = values.begin();	\
-	 it != values.end(); it++) {					\
-      it->curv2d += static_cast<ObjRef>(ncurv);				\
-    }									\
-  }									\
-  }
-    
-#define GENERIC_CLASS_VECTOR_OBJREFSURFACE(cls, code)			\
-  class cls : public ObjElement {					\
-  public:								\
-  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(cls, code, ObjRefSurface, SINGLE_ARG(COMPATIBLE_WITH_TYPE(T, ObjRefSurface)), SINGLE_ARG(OBJ_P_("surfaces", ObjTypeSurface | ObjTypeList))) \
-  /*! \copydoc ObjElement::is_valid */					\
-  bool is_valid(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 { \
-    std::map<std::string,size_t>::iterator curv = idx.find("curv2d");	\
-    std::map<std::string,size_t>::iterator surf = idx.find("surf");	\
-    size_t ncurv = 0, nsurf = 0;					\
-    if (curv != idx.end()) ncurv = curv->second;			\
-    if (surf != idx.end()) nsurf = surf->second;			\
-    for (std::vector<ObjRefSurface>::const_iterator it = values.begin(); \
-	 it != values.end(); it++) {					\
-      if (!COMPARE_IDX((it->curv2d), ncurv)) return false;		\
-      if (!COMPARE_IDX((it->surf), nsurf)) return false;		\
-    }									\
-    return true;							\
-  }									\
-  /* \copydoc ObjElement::append_indexes */				\
-  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
-    std::map<std::string,size_t>::const_iterator curv = idx.find("curv2d"); \
-    std::map<std::string,size_t>::const_iterator surf = idx.find("surf"); \
-    size_t ncurv = 0, nsurf = 0;					\
-    if (curv != idx.end()) ncurv = curv->second;			\
-    if (surf != idx.end()) nsurf = surf->second;			\
-    for (std::vector<ObjRefSurface>::iterator it = values.begin();	\
-	 it != values.end(); it++) {					\
-      it->curv2d += static_cast<ObjRef>(ncurv);				\
-      it->surf += static_cast<ObjRef>(nsurf);				\
-    }									\
-  }									\
-  }
-#define GENERIC_CLASS_VECTOR_TYPE_IS_VALID(code, type)			\
-  /*! \copydoc ObjElement::is_valid */					\
-  bool is_valid(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 { \
-    std::map<std::string,size_t>::iterator x = idx.find(code);		\
-    size_t nprev = 0;							\
-    if (x != idx.end()) nprev = x->second;				\
-    for (std::vector<type>::const_iterator it = values.begin();		\
-	 it != values.end(); it++) {					\
-      if (!COMPARE_IDX((*it), nprev)) return false;			\
-    }									\
-    return true;							\
-  }									\
-  /* \copydoc ObjElement::append_indexes */				\
-  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
-    std::map<std::string,size_t>::const_iterator x = idx.find(code);	\
-    size_t nprev = 0;							\
-    if (x != idx.end()) nprev = x->second;				\
-    for (std::vector<type>::iterator it = values.begin();		\
-	 it != values.end(); it++) {					\
-      *it += static_cast<type>(nprev);					\
-    }									\
-  }
-#define GENERIC_CLASS_VECTOR_TYPE_IS_VALID_VERTREF(min)			\
-  /*! \copydoc ObjElement::is_valid */					\
-  bool is_valid(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 { \
-    if (values.size() < min) return false;				\
-    std::map<std::string,size_t>::iterator v = idx.find("v");		\
-    std::map<std::string,size_t>::iterator vt = idx.find("vt");		\
-    std::map<std::string,size_t>::iterator vn = idx.find("vn");		\
-    size_t nv = 0, nvt = 0, nvn = 0;					\
-    if (v != idx.end()) nv = v->second;					\
-    if (vt != idx.end()) nvt = vt->second;				\
-    if (vn != idx.end()) nvn = vn->second;				\
-    for (std::vector<ObjRefVertex>::const_iterator it = values.begin();	\
-	 it != values.end(); it++) {					\
-      if (!COMPARE_IDX((it->v), nv)) return false;			\
-      if (!COMPARE_IDX((it->vt), nvt)) return false;			\
-      if (!COMPARE_IDX((it->vn), nvn)) return false;			\
-    }									\
-    return true;							\
-  }									\
-  /* \copydoc ObjElement::append_indexes */				\
-  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
-    std::map<std::string,size_t>::const_iterator v = idx.find("v");	\
-    std::map<std::string,size_t>::const_iterator vt = idx.find("vt");	\
-    std::map<std::string,size_t>::const_iterator vn = idx.find("vn");	\
-    size_t nv = 0, nvt = 0, nvn = 0;					\
-    if (v != idx.end()) nv = v->second;					\
-    if (vt != idx.end()) nvt = vt->second;				\
-    if (vn != idx.end()) nvn = vn->second;				\
-    for (std::vector<ObjRefVertex>::iterator it = values.begin();	\
-	 it != values.end(); it++) {					\
-      it->v += static_cast<ObjRef>(nv);					\
-      it->vt += static_cast<ObjRef>(nvt);				\
-      it->vn += static_cast<ObjRef>(nvn);				\
-    }									\
-  }
-  
-  
-//! Test if two vectors are equal element-by-element using is_equal
-template <typename T>
-inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
-  if (a.size() != b.size()) return false;
-  for (typename std::vector<T>::const_iterator ait = a.begin(), bit = b.begin(); ait != a.end(); ait++, bit++)
-    if (!internal::values_eq(*ait, *bit)) return false;
-  return true;
-}
-
-// Forward declaration
-class ObjElement;
-class ObjVParameter;
-class ObjVNormal;
-class ObjVTexture;
-class ObjPoint;
-class ObjLine;
-class ObjFace;
-class ObjCurve;
-class ObjCurve2D;
-class ObjSurface;
-class ObjFreeFormType;
-class ObjDegree;
-class ObjBasisMatrix;
-class ObjStep;
-class ObjParameter;
-class ObjTrim;
-class ObjHole;
-class ObjScrv;
-class ObjSpecialPoints;
-class ObjConnect;
-class ObjGroupBase;
-class ObjGroup;
-class ObjSmoothingGroup;
-class ObjMergingGroup;
-class ObjObjectName;
-inline ObjElement* read_obj_element(std::istream &in,
-				    const ObjGroupBase* parent,
-				    const bool& dont_descend=false);
-
-//! ObjWavefront color.
-class ObjColor {
-public:
-  //! Empty initializer with (r,g,b) = (0,0,0)
-  ObjColor() :
-    r(0), g(0), b(0), is_set(false) {}
-  //! \brief Create a RGB color element.
-  //! \param red Color index in red.
-  //! \param green Color index in green.
-  //! \param blue Color index in blue.
-  ObjColor(uint8_t red, uint8_t green, uint8_t blue) :
-    r(red), g(green), b(blue), is_set(true) {}
-  //! Red color index.
-  uint8_t r;
-  //! Blue color index.
-  uint8_t g;
-  //! Green color index.
-  uint8_t b;
-  //! true if the color was set.
-  bool is_set;
-  //! \brief Check if another ObjColor object is equivalent.
-  //! \param rhs Object for comparison.
-  bool is_equal(const ObjColor& rhs) const {
-    const ObjColor& lhs = *this;
-    if (lhs.is_set != rhs.is_set) return false;
-    if (lhs.r != rhs.r) return false;
-    if (lhs.g != rhs.g) return false;
-    if (lhs.b != rhs.b) return false;
-    return true;
-  }
-  friend bool operator == (const ObjColor& lhs, const ObjColor& rhs);
-};
-
-//! \brief Check if two ObjColor instances are equivalent.
-//! \param lhs First instance for comparison.
-//! \param rhs Second instance for comparison.
-//! \return true if the two instances are equivalent.
-inline
-bool operator == (const ObjColor& lhs, const ObjColor& rhs)
-{ return lhs.is_equal(rhs); }
 
 //! Object reference index.
 typedef int64_t ObjRef;
@@ -649,6 +107,10 @@ public:
   ObjRefVertex(const T& v0,
 	       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     v(v0), vt(0), vn(0), Nparam(1) {}
+  //! \brief Constructor
+  //! \param v0 Index of the vertex's coordinates
+  ObjRefVertex(const double& v0) :
+    v(static_cast<ObjRef>(v0)), vt(0), vn(0), Nparam(1) {}
   //! \brief Write the vertex to an output stream.
   //! \param out Output stream.
   //! \return Output stream.
@@ -795,6 +257,8 @@ public:
     in >> curv2d;
     return in;
   }
+  //! Allow casting to integer.
+  operator int() const { return (int)curv2d; }
   //! Curve parameter starting value.
   double u0;
   //! Curve parameter ending value.
@@ -844,16 +308,24 @@ std::istream & operator >> (std::istream &in, ObjRefCurve &p)
 //! ObjWavefront surface reference.
 class ObjRefSurface {
 public:
-  //! \brief Empty constructor.
-  ObjRefSurface() :
-    surf(-1), q0(0), q1(0), curv2d(-1) {}
   //! \brief Constructor.
   //! \brief surf0 Index of surface definition.
   //! \brief q00 Starting parameter value.
   //! \brief q10 Ending parameter value.
   //! \brief curv2d0 Index of curve definition.
-  ObjRefSurface(ObjRef surf0, double q00=0.0, double q10=0.0, ObjRef curv2d0=-1) :
+  ObjRefSurface(ObjRef surf0=-1, double q00=0.0, double q10=0.0, ObjRef curv2d0=-1) :
     surf(surf0), q0(q00), q1(q10), curv2d(curv2d0) {}
+  //! \brief Constructor.
+  //! \tparam T Surface index type.
+  //! \brief surf0 Index of surface definition.
+  template <typename T>
+  ObjRefSurface(const T& surf0,
+		RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
+    surf(surf0), q0(0), q1(0), curv2d(-1) {}
+  //! \brief Constructor.
+  //! \brief surf0 Index of surface definition.
+  ObjRefSurface(const double& surf0) :
+    surf(static_cast<ObjRef>(surf0)), q0(0), q1(0), curv2d(-1) {}
   //! \brief Write the surface to an output stream.
   //! \param out Output stream.
   //! \return Output stream.
@@ -871,6 +343,8 @@ public:
     in >> curv2d;
     return in;
   }
+  //! Allow casting to integer.
+  operator int() const { return (int)surf; }
   //! Index of surface definition.
   ObjRef surf;
   //! Starting parameter value.
@@ -919,31 +393,1060 @@ inline
 std::istream & operator >> (std::istream &in, ObjRefSurface &p)
 { return p.read(in); }
 
+enum ObjTypeFlag {
+  ObjTypeNull     = 0x0000,
+  ObjTypeInt      = 0x0002,
+  ObjTypeUint8    = 0x0004,
+  ObjTypeUint16   = 0x0008,
+  ObjTypeString   = 0x0010,
+  ObjTypeFloat    = 0x0020,
+  ObjTypeRef      = 0x0040,
+  ObjTypeVertex   = 0x0080,
+  ObjTypeCurve    = 0x0100,
+  ObjTypeSurface  = 0x0200,
+  ObjTypeList     = 0x0400,
+  ObjTypeOpt      = 0x0800,
+  ObjTypeOff      = 0x1000
+};
+
+static inline
+bool _types_compatible(const uint16_t a, const uint16_t b) {
+  if (a & b) return true;
+  uint16_t is_int = (ObjTypeInt | ObjTypeUint8 | ObjTypeUint16 | ObjTypeRef |
+		     ObjTypeVertex | ObjTypeCurve | ObjTypeSurface);
+  if (((a & is_int) && (b & is_int)) ||
+      ((a & ObjTypeFloat) && (b & ObjTypeFloat)) ||
+      ((a & ObjTypeString) && (b & ObjTypeString)))
+    return true;
+  return false;
+}
+static inline
+bool _type_compatible_int(const uint16_t x, bool=false) {
+  return _types_compatible(x, ObjTypeInt);
+}
+static inline
+bool _type_compatible_double(const uint16_t x, bool allow_int=false) {
+  if (allow_int && _types_compatible(x, ObjTypeInt))
+    return true;
+  return _types_compatible(x, ObjTypeFloat);
+}
+static inline
+bool _type_compatible_string(const uint16_t x, bool=false) {
+  return _types_compatible(x, ObjTypeString);
+}
+
+//! Test if two vectors are equal element-by-element using is_equal
+template <typename T>
+inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
+  if (a.size() != b.size()) return false;
+  for (typename std::vector<T>::const_iterator ait = a.begin(), bit = b.begin(); ait != a.end(); ait++, bit++)
+    if (!internal::values_eq(*ait, *bit)) return false;
+  return true;
+}
+
+#define RAPIDJSON_HANDLE_PROPERTY_TYPES_(method, rem)	\
+  if (second & ObjTypeVertex) {				\
+    method(ObjRefVertex);				\
+  } else if (second & ObjTypeCurve) {			\
+    method(ObjRefCurve);				\
+  } else if (second & ObjTypeSurface) {			\
+    method(ObjRefSurface);				\
+  } else if (second & ObjTypeRef) {			\
+    method(ObjRef);					\
+  } else if (second & ObjTypeUint8) {			\
+    method(uint8_t);					\
+  } else if (second & ObjTypeUint16) {			\
+    method(uint16_t);					\
+  } else if (second & ObjTypeInt) {			\
+    method(int);					\
+  } else if (second & ObjTypeFloat) {			\
+    method(double);					\
+  } else {						\
+    rem;						\
+  }
+
+struct ObjPropertyType {
+public:
+  ObjPropertyType(void* mem0, std::string name0, uint16_t flag0) :
+    mem(mem0), first(name0), second(flag0) {}
+  void* mem;
+  std::string first;
+  uint16_t second;
+  template<typename T>
+  bool get(std::vector<T>& out, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
+    if ((!mem) || !(second & ObjTypeList)) return false;
+#define HANDLE_VECTOR_(type)						\
+    const std::vector<type>* mem_cast = (std::vector<type>*)mem;	\
+    for (std::vector<type>::const_iterator v = mem_cast->begin();	\
+	 v != mem_cast->end(); v++) {					\
+      out.push_back(static_cast<T>(*v));				\
+    }
+    RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_, return false)
+#undef HANDLE_VECTOR_
+    return true;
+  }
+  template<typename T>
+  bool get(T& out, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
+    if ((!mem) || second & ObjTypeList) return false;
+#define HANDLE_SCALAR_(type)			\
+    const type* mem_cast = (type*)mem;		\
+    out = static_cast<T>(*mem_cast)
+    RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_, return false)
+#undef HANDLE_SCALAR_
+    return true;
+  }
+  template<typename T>
+  bool set(const std::vector<T>& val, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
+    if ((!mem) || !(second & ObjTypeList)) return false;
+#define HANDLE_VECTOR_(type)						\
+    std::vector<type>* mem_cast = (std::vector<type>*)mem;		\
+    for (typename std::vector<T>::const_iterator v = val.begin();	\
+	 v != val.end(); v++) {						\
+      mem_cast->push_back(static_cast<type>(*v));			\
+    }
+    RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_, return false)
+#undef HANDLE_VECTOR_
+    return true;
+  }
+  template<typename T>
+  bool set(const T& val, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
+    if ((!mem) || second & ObjTypeList) return false;
+#define HANDLE_SCALAR_(type)			\
+    type* mem_cast = (type*)mem;		\
+    mem_cast[0] = static_cast<type>(val)
+    RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_, return false)
+#undef HANDLE_SCALAR_
+    return true;
+  }
+  bool get(std::vector<std::string>& out) const {
+    if ((!mem) || !(second & ObjTypeList)) return false;
+    if (second & ObjTypeString) {
+      const std::vector<std::string>* mem_cast = (std::vector<std::string>*)mem;
+      for (std::vector<std::string>::const_iterator v = mem_cast->begin();
+	   v != mem_cast->end(); v++)
+	out.push_back(*v);
+      return true;
+    }
+    return false;
+  }
+  bool get(std::string& out) const {
+    if ((!mem) || second & ObjTypeList) return false;
+    if (second & ObjTypeString) {
+      out = ((std::string*)mem)[0];
+      return true;
+    }
+    return false;
+  }
+  bool set(const std::vector<std::string>& val) {
+    if ((!mem) || !(second & ObjTypeList)) return false;
+    if (second & ObjTypeString) {
+      std::vector<std::string>* mem_cast = (std::vector<std::string>*)mem;
+      for (typename std::vector<std::string>::const_iterator v = val.begin();
+	   v != val.end(); v++) {
+	mem_cast->push_back(*v);
+      }
+      return true;
+    }
+    return false;
+  }
+  bool set(const std::string& val) {
+    if ((!mem) || second & ObjTypeList) return false;
+    if (second & ObjTypeString) {
+      ((std::string*)mem)[0] = val;
+      return true;
+    }
+    return false;
+  }
+  bool read(std::istream& in) {
+#define HANDLE_SCALAR_(T)			\
+    T* val = (T*)mem;				\
+    in >> *val;					\
+    return true
+#define HANDLE_VECTOR_(T)			\
+    std::vector<T>* val = (std::vector<T>*)mem;	\
+    T x = 0;					\
+    while ((in.peek() != '\n') && (in >> x))	\
+      val->push_back(x);			\
+    return true
+    if (!mem) return false;
+    if (second & ObjTypeOff) {
+      if (!(second & ObjTypeInt) || (second & ObjTypeList)) return false;
+      std::string valS;
+      in >> valS;
+      ((int*)mem)[0] = (valS == "off") ? 0 : stoi(valS);
+      return true;
+    } else if (second & ObjTypeList) {
+      if (second & ObjTypeString) {
+	std::string x = "";
+	std::vector<std::string>* val = (std::vector<std::string>*)mem;
+	while ((in.peek() != '\n') && (in >> x))
+	  val->push_back(x);
+	in >> std::skipws;
+	return true;
+      } else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_, return false)
+    } else if (second & ObjTypeString) {
+      std::string* val = (std::string*)mem;
+      in >> *val;
+      return true;
+    } else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_, return false)
+#undef HANDLE_SCALAR_
+#undef HANDLE_VECTOR_
+    return false;
+  }
+  static int count_decimals(double x) {
+    int count = 0;
+    while (!internal::values_eq((int)x, x)) {
+      x *= 10;
+      count++;
+    }
+    return count;
+  }
+  bool write(std::ostream& out) const {
+#define RECORD_FORMAT_(prec)				\
+    long out_prec = 0;					\
+    std::ios_base::fmtflags out_flags = out.flags();	\
+    out_prec = out.precision();				\
+    out.precision(prec);				\
+    out << std::fixed
+#define RESTORE_FORMAT_				\
+    out.precision(out_prec);			\
+    out.flags(out_flags)
+#define HANDLE_SCALAR_(T)				\
+    T* val = (T*)mem;					\
+    out << *val;					\
+    return true
+#define HANDLE_VECTOR_(T)						\
+    std::vector<T>* val = (std::vector<T>*)mem;				\
+    for (std::vector<T>::iterator v = val->begin(); v != val->end(); v++) { \
+      if (v != val->begin())						\
+	out << " ";							\
+      out << *v;							\
+    }									\
+    return true
+    if (!mem) return false;
+    if (second & ObjTypeOff) {
+      if (!(second & ObjTypeInt) || (second & ObjTypeList)) return false;
+      int* val = (int*)mem;
+      if (*val == 0)
+	out << "off";
+      else
+	out << *val;
+      return true;
+    } else if (second & ObjTypeList) {
+      if (second & ObjTypeString) {
+	HANDLE_VECTOR_(std::string);
+      } else if (second & ObjTypeFloat) {
+	int prec = 1;
+	{
+	  std::vector<double>* val = (std::vector<double>*)mem;
+	  for (std::vector<double>::iterator v = val->begin(); v != val->end(); v++)
+	    prec = std::max(prec, count_decimals(*v));
+	}
+	RECORD_FORMAT_(prec);
+	HANDLE_VECTOR_(double);
+	RESTORE_FORMAT_;
+      } else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_, return false)
+    } else if (second & ObjTypeString) {
+      HANDLE_SCALAR_(std::string);
+    } else if (second & ObjTypeFloat) {
+      int prec = std::max(1, count_decimals(*((double*)mem)));
+      RECORD_FORMAT_(prec);
+      HANDLE_SCALAR_(double);
+      RESTORE_FORMAT_;
+    } else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_, return false)
+#undef HANDLE_SCALAR_
+#undef HANDLE_VECTOR_
+#undef RECORD_FORMAT_
+#undef RESTORE_FORMAT_
+    return false;
+  }
+  bool is_equal(const ObjPropertyType& rhs) const {
+    if (first != rhs.first || second != rhs.second) return false;
+    if ((!mem) || (!rhs.mem)) return false;
+#define HANDLE_SCALAR_(T)				\
+    const T* val_lhs = (T*)mem;				\
+    const T* val_rhs = (T*)(rhs.mem);			\
+    return internal::values_eq(*val_lhs, *val_rhs)
+#define HANDLE_VECTOR_(T)						\
+    const std::vector<T>* val_lhs = (std::vector<T>*)mem;		\
+    const std::vector<T>* val_rhs = (std::vector<T>*)(rhs.mem);		\
+    return is_equal_vectors(*val_lhs, *val_rhs)
+    if (second & ObjTypeList) {
+      if (second & ObjTypeString) {
+	HANDLE_VECTOR_(std::string);
+      } else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_, return false)
+    } else if (second & ObjTypeString) {
+      HANDLE_SCALAR_(std::string);
+    } else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_, return false)
+#undef HANDLE_SCALAR_
+#undef HANDLE_VECTOR_
+    return false;
+  }
+  friend bool operator == (const ObjPropertyType& lhs, const ObjPropertyType& rhs);
+  friend bool operator != (const ObjPropertyType& lhs, const ObjPropertyType& rhs);
+};
+inline
+bool operator == (const ObjPropertyType& lhs, const ObjPropertyType& rhs)
+{ return lhs.is_equal(rhs); }
+inline
+bool operator != (const ObjPropertyType& lhs, const ObjPropertyType& rhs)
+{ return (!lhs.is_equal(rhs)); }
+
+typedef std::vector<ObjPropertyType> ObjPropertiesMap;
+
+#define REPORT_UNSUPPORTED_ELEMENT(src, name)	\
+  {									\
+    std::cerr << "Unsupported element signifier for " #src ": " << name << std::endl; \
+    RAPIDJSON_ASSERT(!sizeof("Unsupported element signifier"));		\
+  }
+#define OBJ_ELEMENT_INIT(word, lhs, args) {				\
+    bool first = true;							\
+    while (true) {							\
+      if      (word == "v"         ) lhs = new ObjVertex args;		\
+      else if (word == "vp"        ) lhs = new ObjVParameter args;	\
+      else if (word == "vn"        ) lhs = new ObjVNormal args;		\
+      else if (word == "vt"        ) lhs = new ObjVTexture args;	\
+      else if (word == "p"         ) lhs = new ObjPoint args;		\
+      else if (word == "l"         ) lhs = new ObjLine args;		\
+      else if (word == "f"         ) lhs = new ObjFace args;		\
+      else if (word == "curv"      ) lhs = new ObjCurve args;		\
+      else if (word == "curv2"     ) lhs = new ObjCurve2D args;		\
+      else if (word == "surf"      ) lhs = new ObjSurface args;		\
+      else if (word == "cstype"    ) lhs = new ObjFreeFormType args;	\
+      else if (word == "deg"       ) lhs = new ObjDegree args;		\
+      else if (word == "bmat"      ) lhs = new ObjBasisMatrix args;	\
+      else if (word == "step"      ) lhs = new ObjStep args;		\
+      else if (word == "parm"      ) lhs = new ObjParameter args;	\
+      else if (word == "trim"      ) lhs = new ObjTrim args;		\
+      else if (word == "hole"      ) lhs = new ObjHole args;		\
+      else if (word == "scrv"      ) lhs = new ObjScrv args;		\
+      else if (word == "sp"        ) lhs = new ObjSpecialPoints args;	\
+      else if (word == "con"       ) lhs = new ObjConnect args;		\
+      else if (word == "g"         ) lhs = new ObjGroup args;		\
+      else if (word == "s"         ) lhs = new ObjSmoothingGroup args;	\
+      else if (word == "mg"        ) lhs = new ObjMergingGroup args;	\
+      else if (word == "o"         ) lhs = new ObjObjectName args;	\
+      else if (word == "bevel"     ) lhs = new ObjBevel args;		\
+      else if (word == "c_interp"  ) lhs = new ObjCInterp args;		\
+      else if (word == "d_interp"  ) lhs = new ObjDInterp args;		\
+      else if (word == "lod"       ) lhs = new ObjLOD args;		\
+      else if (word == "maplib"    ) lhs = new ObjTextureMapLib args;	\
+      else if (word == "usemap"    ) lhs = new ObjTextureMap args;	\
+      else if (word == "usemtl"    ) lhs = new ObjMaterial args;	\
+      else if (word == "mtllib"    ) lhs = new ObjMaterialLib args;	\
+      else if (word == "shadow_obj") lhs = new ObjShadowFile args;	\
+      else if (word == "trace_obj" ) lhs = new ObjTraceFile args;	\
+      else if (word == "ctech"     ) lhs = new ObjCTech args;		\
+      else if (word == "stech"     ) lhs = new ObjSTech args;		\
+      else if (word == "end"       ) lhs = nullptr;			\
+      else if (first) {							\
+	first = false;							\
+	word = obj_alias2base(word);					\
+	continue;							\
+      } else {								\
+	REPORT_UNSUPPORTED_ELEMENT(init, word);				\
+      }									\
+      break;								\
+    }									\
+    }
+#if RAPIDJSON_HAS_CXX11
+#define OVERRIDE_CXX11 override
+#else // RAPIDJSON_HAS_CXX11
+#define OVERRIDE_CXX11
+#endif // RAPIDJSON_HAS_CXX11
+#define SINGLE_ARG(...) (__VA_ARGS__)
+
+#define OBJ_P_(...) ObjPropertyType(__VA_ARGS__)
+#define COMPARE_IDX(x, nprev)						\
+  (((int)x >= 0 && (size_t)x <= nprev) ||				\
+   ((int)x < 0 && (int)x < -(int)nprev))
+#define GENERIC_CONSTRUCTOR_COPY(cls, base, init, props, val_props)	\
+  /*! \copydoc ObjElement::ObjElement(const ObjElement&) */		\
+  cls(const cls& rhs) :							\
+    base(rhs.code, rhs.parent) UNPACK_MACRO init {			\
+    this->_init_properties();						\
+    base::copy_members(dynamic_cast<const base*>(&rhs));		\
+    this->copy_members(&rhs);						\
+  }									\
+  /*! \copydoc ObjElement::ObjElement(const ObjElement*) */		\
+  cls(const ObjElement* rhs) :						\
+    base(rhs->code, rhs->parent) UNPACK_MACRO init {			\
+    this->_init_properties();						\
+    base::copy_members(dynamic_cast<const base*>(rhs));			\
+    this->copy_members(dynamic_cast<const cls*>(rhs));			\
+  }									\
+  /*! \copydoc ObjElement::copy() */					\
+  cls* copy() const OVERRIDE_CXX11 { return new cls(*this); }
+#define GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, init, props, val_props) \
+  /*! \brief Empty constructor. */					\
+  /*! \param parent0 The element's parent group. */			\
+  cls(const ObjGroupBase* parent0 = nullptr) :				\
+    base(#codeS, parent0) UNPACK_MACRO init {				\
+    this->_init_properties();						\
+  }									\
+  GENERIC_CONSTRUCTOR_COPY(cls, base, init, props, val_props);		\
+  void _init_properties() OVERRIDE_CXX11 {				\
+    const ObjPropertiesMap pairs = {					\
+      UNPACK_MACRO props						\
+    };									\
+    this->properties = pairs;						\
+    const std::vector<std::string> names = {				\
+      UNPACK_MACRO val_props						\
+    };									\
+    this->value_properties = names;					\
+  }
+
+#define GENERIC_COPY_MEMBERS(cls)					\
+  /*! \brief Copy element specific members from another instance. */	\
+  /*! \param[in] rhs Element to copy members from. */			\
+  /*! \return true if successful, false otherwise. */			\
+  bool copy_members(const cls* rhs) {					\
+    size_t i = 0;							\
+    if (!set_meta_properties(rhs->size())) return false;		\
+    for (ObjPropertiesMap::const_iterator it = properties.begin();		\
+	 it != properties.end(); it++, i++) {				\
+      if (!this->has_property(it->first, true)) continue;		\
+      if (it->second & ObjTypeList) {					\
+	if (it->second & ObjTypeInt) {					\
+	  std::vector<int> out;						\
+	  if (!rhs->get_property_array_int(i, out)) return false;	\
+	  if (!this->set_property_array_int(i, out)) return false;	\
+	} else if (it->second & ObjTypeFloat) {				\
+	  std::vector<double> out;					\
+	  if (!rhs->get_property_array_double(i, out)) return false;	\
+	  if (!this->set_property_array_double(i, out)) return false;	\
+	} else if (it->second & ObjTypeString) {			\
+	  std::vector<std::string> out;					\
+	  if (!rhs->get_property_array_string(i, out)) return false;	\
+	  if (!this->set_property_array_string(i, out)) return false;	\
+	} else {							\
+	  return false;							\
+	}								\
+      } else if (it->second & ObjTypeInt) {				\
+	int out;							\
+	if (!rhs->get_property_int(i, out)) return false;		\
+	if (!this->set_property_int(i, out)) return false;		\
+      } else if (it->second & ObjTypeFloat) {				\
+	double out;							\
+	if (!rhs->get_property_double(i, out)) return false;		\
+	if (!this->set_property_double(i, out)) return false;		\
+      } else if (it->second & ObjTypeString) {				\
+	std::string out;						\
+	if (!rhs->get_property_string(i, out)) return false;		\
+	if (!this->set_property_string(i, out)) return false;		\
+      } else {								\
+	return false;							\
+      }									\
+    }									\
+    return true;							\
+  }
+#define DUMMY_ARRAY_CONSTRUCTOR(cls, base, code, init)			\
+  /*! \brief Raise an error. */						\
+  template <typename T>							\
+  cls(const std::vector<T> &,						\
+      const ObjGroupBase* parent0 = nullptr) : base(#code, parent0) UNPACK_MACRO init { \
+    RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from a vector")); \
+  }									\
+  /*! \brief Raise an error. */						\
+  template <typename T, size_t N>					\
+  cls(const T (&)[N],							\
+      const ObjGroupBase* parent0 = nullptr) : base(#code, parent0) UNPACK_MACRO init { \
+    RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from an array")); \
+  }
+
+#define MANAGE_PROPERTIES_VECTOR_(valueType, outType, outTypeName)	\
+  /*! \copydoc ObjElement::get_property */				\
+  bool get_property_ ## outTypeName(size_t i, outType& out) const OVERRIDE_CXX11 {	\
+    if (i >= properties.size() || i >= values.size()) return false;	\
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
+    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
+	(it->second & ObjTypeList))					\
+      return ObjElement::get_property_ ## outTypeName(i, out);		\
+    out = (outType)(values[i]);						\
+    return true;							\
+  }									\
+  /*! \copydoc ObjElement::get_property */				\
+  bool get_property_array_ ## outTypeName(size_t i, std::vector<outType>& out) const OVERRIDE_CXX11 {	\
+    if (i >= properties.size()) return false;				\
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
+    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
+	!(it->second & ObjTypeList))					\
+      return ObjElement::get_property_array_ ## outTypeName(i, out);	\
+    for (std::vector<valueType>::const_iterator v = values.begin(); v != values.end(); v++) \
+      out.push_back((outType)(*v));					\
+    return true;							\
+  }									\
+  /*! \copydoc ObjElement::set_property */				\
+  bool set_property_ ## outTypeName(size_t i, const outType new_value) OVERRIDE_CXX11 {	\
+    if (i >= properties.size()) return false;				\
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
+    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
+	(it->second & ObjTypeList))					\
+      return ObjElement::set_property_ ## outTypeName(i, new_value);	\
+    values.push_back(static_cast<valueType>(new_value));		\
+    return true;							\
+  }									\
+  /*! \copydoc ObjElement::set_property */				\
+  bool set_property_array_ ## outTypeName(size_t i,			\
+					  const std::vector<outType> new_values) OVERRIDE_CXX11 { \
+    if (i >= properties.size()) return false;				\
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
+    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
+	!(it->second & ObjTypeList))					\
+      return ObjElement::set_property_array_ ## outTypeName(i, new_values); \
+    values.clear();							\
+    for (std::vector<outType>::const_iterator v = new_values.begin(); v != new_values.end(); v++) { \
+      values.push_back(static_cast<valueType>(*v));			\
+    }									\
+    return true;							\
+  }
+#define MANAGE_PROPERTIES_SCALAR_(valueType, outType, outTypeName)	\
+  /*! \copydoc ObjElement::get_property */				\
+  bool get_property_ ## outTypeName(size_t i, outType& out) const OVERRIDE_CXX11 { \
+    if (i >= properties.size() || i >= 0) return false;			\
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
+    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
+	(it->second & ObjTypeList))					\
+      return ObjElement::get_property_ ## outTypeName(i, out);		\
+    out = static_cast<outType>(value);					\
+    return true;							\
+  }									\
+  /*! \copydoc ObjElement::set_property */				\
+  bool set_property_ ## outTypeName(size_t i, const outType new_value) OVERRIDE_CXX11 {	\
+    if (i >= properties.size()) return false;				\
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
+    if ((!_type_compatible_ ## outTypeName(it->second)) ||		\
+	(it->second & ObjTypeList))					\
+      return ObjElement::set_property_ ## outTypeName(i, new_value);	\
+    value = static_cast<valueType>(new_value);				\
+    return true;							\
+  }
+
+#define GENERIC_SCALAR_CONSTRUCTOR(cls, base, code, type, def, props)	\
+  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, code, SINGLE_ARG(, value(def)), props, SINGLE_ARG()); \
+  DUMMY_ARRAY_CONSTRUCTOR(cls, base, code, SINGLE_ARG(, value(def)))	\
+  /*! \brief Initialize an element from a scalar. */			\
+  /*! \param value0 Scalar value. */					\
+  /*! \param parent0 Parent group. */					\
+  template <typename T>							\
+  cls(const T& value0,							\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, type)))) :		\
+  base(#code, parent0), value(value0) {					\
+    this->_init_properties();						\
+  }									\
+  /*! \brief Initialize an element from a scalar. */			\
+  /*! \param value0 Scalar value. */					\
+  /*! \param parent0 Parent group. */					\
+  template <typename T>							\
+  cls(const T&,								\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_DISABLEIF((internal::OrExpr<COMPATIBLE_WITH_TYPE(T, type),\
+			   internal::IsPointer<T>>))) :			\
+    base(#code, parent0), value(def) {					\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from" #type ".")); \
+  }
+
+#define GENERIC_SCALAR_BODY_BASE(cls, type)				\
+  GENERIC_COPY_MEMBERS(cls)						\
+  type value;
+#define GENERIC_SCALAR_BODY(cls, base, codeS, def, props, valType, outType, outTypeName) \
+  GENERIC_SCALAR_CONSTRUCTOR(cls, base, codeS, valType, def, props)	\
+  MANAGE_PROPERTIES_SCALAR_(valType, outType, outTypeName)		\
+  GENERIC_SCALAR_BODY_BASE(cls, valType)
+
+#define GENERIC_VECTOR_CONSTRUCTOR(cls, base, code, init, props, val_props, compat, T2) \
+  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, code, init, props, val_props)	\
+  /*! \brief Initialize and element from a C++ vector of values. */	\
+  /*! \tparam T Vector element type. Must be castable to the type. */	\
+  /*! \param values0 Vector of values. */				\
+  /*! \param parent0 The element's parent group. */			\
+  template <typename T>							\
+  cls(const std::vector<T> &values0,					\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_ENABLEIF((compat))) :					\
+  base(#code, parent0) UNPACK_MACRO init {				\
+    this->_init_properties();						\
+    assign_values(values, values0);					\
+    from_values();							\
+  }									\
+  /*! \brief Raise an error if non-compatible vector is provided. */	\
+  /*! \tparam T Type of vector elements. */				\
+  template <typename T>							\
+  cls(const std::vector<T>&,						\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_DISABLEIF((compat))) :					\
+    base(#code, parent0) UNPACK_MACRO init {				\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
+  }									\
+  /*! \brief Initialize an element from a C array of values. */		\
+  /*! \tparam T Array element type. */					\
+  /*! \tparam N Array size. */						\
+  /*! \param src Array of values. */					\
+  template <typename T, size_t N>					\
+  cls(const T (&values0)[N],						\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_ENABLEIF((compat))) :					\
+    base(#code, parent0) UNPACK_MACRO init {				\
+    this->_init_properties();						\
+    assign_values(values, std::vector<T>(values0, values0+N));		\
+    from_values();							\
+  }									\
+  /*! \brief Raise an error if non-compatible vector is provided. */	\
+  /*! \tparam T Type of vector elements. */				\
+  /*! \tparam N Array size. */						\
+  template <typename T, size_t N>					\
+  cls(const T (&)[N],							\
+      const ObjGroupBase* parent0 = nullptr,				\
+      RAPIDJSON_DISABLEIF((compat))) :					\
+    base(#code, parent0) UNPACK_MACRO init {				\
+    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
+  }
+#define GENERIC_VECTOR_BODY_BASE(cls, type)				\
+  GENERIC_COPY_MEMBERS(cls)						\
+  /*! \copydoc ObjElement::size */					\
+  size_t size(bool skipColors=false) const OVERRIDE_CXX11 {		\
+    size_t out = 0;							\
+    for (ObjPropertiesMap::const_iterator it = properties.begin();		\
+	 it != properties.end(); it++) {				\
+      if (!this->has_property(it->first, true, skipColors)) continue;	\
+      if (it->second & ObjTypeList)					\
+	out += values.size();						\
+      else								\
+	out++;								\
+    }									\
+    return out;								\
+  }									\
+  std::vector<type> values;
+#define GENERIC_VECTOR_BODY_STORED_(cls, base, code, props, val_props, compat, valType, outType, outTypeName) \
+  GENERIC_VECTOR_CONSTRUCTOR(cls, base, code, SINGLE_ARG(, values()), props, val_props, UNPACK_MACRO compat, valType) \
+  MANAGE_PROPERTIES_VECTOR_(valType, outType, outTypeName)		\
+  GENERIC_VECTOR_BODY_BASE(cls, valType)				\
+  /*! \copydoc ObjElement::from_values() */				\
+  bool from_values() OVERRIDE_CXX11 {					\
+    int min = min_values(true);						\
+    int max = max_values(true);						\
+    RAPIDJSON_ASSERT((min < 0 || values.size() >= (size_t)min) &&	\
+		     (max < 0 || values.size() <= (size_t)max));	\
+    return ((min < 0 || values.size() >= (size_t)min) &&		\
+	    (max < 0 || values.size() <= (size_t)max));			\
+  }
+#define GENERIC_VECTOR_BODY_STORED(cls, base, code, props, val_props, compat, valType, outType, outTypeName) \
+  GENERIC_VECTOR_BODY_STORED_(cls, base, code, props, val_props, compat, valType, outType, outTypeName)	\
+  /*! \copydoc ObjElement::read_values */				\
+  bool read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 { \
+    return ObjElement::read_values(in, this->values);			\
+  }									\
+  /*! \copydoc ObjElement::write_values */				\
+  bool write_values(std::ostream& out) const OVERRIDE_CXX11 {		\
+    return ObjElement::write_values(out, this->values);			\
+  }									\
+  /*! \copydoc ObjElement::is_equal_null_property */			\
+  bool is_equal_null_property(const ObjElement* rhs) const OVERRIDE_CXX11 { \
+    const cls* rhs_cast = dynamic_cast<const cls*>(rhs);		\
+    return is_equal_vectors(this->values, rhs_cast->values);		\
+  }
+#define GENERIC_VECTOR_BODY_STRICT(cls, base, code, props, val_props, compat, valType, outType, outTypeName, min, max) \
+  GENERIC_VECTOR_BODY_STORED_(cls, base, code, props, val_props, compat, valType, outType, outTypeName); \
+  /*! \brief Get the minimum number of values required for this element to be valid. */	\
+  int min_values(bool=false) const OVERRIDE_CXX11 { return min; }	\
+  /*! \brief Get the maximum number of values allowed for this element to be valid. */	\
+  int max_values(bool=false) const OVERRIDE_CXX11 { return max; }
+#define GENERIC_VECTOR_BODY_MIXED(cls, base, code, init, props, val_props, valType, minB, maxB) \
+  GENERIC_ELEMENT_CONSTRUCTOR(cls, base, code, init, props, val_props)	\
+  DUMMY_ARRAY_CONSTRUCTOR(cls, base, code, init)			\
+  /*! \brief Get the minimum number of values required for this element to be valid. */	\
+  /*! \param valuesOnly If true, the minimum for the values vector is returned. */ \
+  int min_values(bool valuesOnly=false) const OVERRIDE_CXX11 {		\
+    int minV = minB;							\
+    if (valuesOnly) return minV;					\
+    int out = std::max(minV, 0);					\
+    for (ObjPropertiesMap::const_iterator it = properties.begin();		\
+	 it != properties.end(); it++) {				\
+      if (it->second & ObjTypeList) continue;				\
+      if (!(it->second & ObjTypeOpt)) out++;				\
+    }									\
+    return out;								\
+  }									\
+  /*! \brief Get the maximum number of values allowed for this element to be valid. */	\
+  /*! \param valuesOnly If true, the maximum for the values vector is returned. */ \
+  int max_values(bool valuesOnly=false) const OVERRIDE_CXX11 {		\
+    int maxV = maxB;							\
+    if (valuesOnly || maxV < 0) return maxV;				\
+    int out = std::max(maxV, 0);					\
+    for (ObjPropertiesMap::const_iterator it = properties.begin();		\
+	 it != properties.end(); it++) {				\
+      if (it->second & ObjTypeList) continue;				\
+      out++;								\
+    }									\
+    return out;								\
+  }									\
+  /*! \copydoc ObjElement::read_values */				\
+  bool read_null_property(std::istream &in) OVERRIDE_CXX11 {		\
+    return ObjElement::read_values(in, this->values);			\
+  }									\
+  /*! \copydoc ObjElement::write_values */				\
+  bool write_null_property(std::ostream& out) const OVERRIDE_CXX11 {	\
+    return ObjElement::write_values(out, this->values);			\
+  }									\
+  /*! \copydoc ObjElement::is_equal_null_property */			\
+  bool is_equal_null_property(const ObjElement* rhs) const OVERRIDE_CXX11 { \
+    const cls* rhs_cast = dynamic_cast<const cls*>(rhs);		\
+    return is_equal_vectors(this->values, rhs_cast->values);		\
+  }									\
+  GENERIC_VECTOR_BODY_BASE(cls, valType)
+#define GENERIC_VECTOR_BODY_TEMP(cls, base, code, init, props, val_props, compat, valType) \
+  GENERIC_VECTOR_CONSTRUCTOR(cls, base, code, init, props, val_props, UNPACK_MACRO compat, valType) \
+  /*! \copydoc ObjElement::from_values() */				\
+  bool from_values() OVERRIDE_CXX11 {					\
+    return this->set_properties(values);				\
+  }									\
+  /*! \copydoc ObjElement::read_values */				\
+  bool read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 { \
+    if (!ObjElement::read_values(in, values)) return false;		\
+    return this->set_properties(values);				\
+  }									\
+  GENERIC_VECTOR_BODY_BASE(cls, valType)
+
+// SCALAR CLASS MACROS
+#define GENERIC_SCALAR_STRING(cls, code, def, props)			\
+  class cls : public ObjElement {					\
+  public:								\
+  GENERIC_SCALAR_BODY(cls, ObjElement, code, def, props, std::string, std::string, string) \
+  }
+
+// VECTOR CLASS MACROS
+#define GENERIC_VECTOR_STRING(cls, code, type, props, val_props)	\
+  class cls : public ObjElement {					\
+  public:								\
+  GENERIC_VECTOR_BODY_STRICT(cls, ObjElement, code, props, val_props,	\
+			     SINGLE_ARG(COMPATIBLE_WITH_TYPE(T, std::string)), \
+			     std::string, std::string, string,		\
+			     -1, -1)					\
+  }
+#define GENERIC_VECTOR_OBJREFVERTEX(cls, code, min)			\
+  class cls : public ObjElement {					\
+  public:								\
+  GENERIC_VECTOR_BODY_STRICT(cls, ObjElement, code,			\
+			     SINGLE_ARG(OBJ_P_(&values, "vertex_index", ObjTypeVertex | ObjTypeInt | ObjTypeList)), \
+			     SINGLE_ARG("vertex_index", "texture_index", "normal_index"), \
+			     SINGLE_ARG(COMPATIBLE_WITH_VERT(T)),	\
+			     ObjRefVertex, int, int,			\
+			     min, -1)					\
+  GENERIC_CLASS_VECTOR_TYPE_IS_VALID_VERTREF(min)			\
+  }
+#define GENERIC_VECTOR_OBJREFCURVE(cls, code)				\
+  class cls : public ObjElement {					\
+  public:								\
+  GENERIC_VECTOR_BODY_STRICT(cls, ObjElement, code,			\
+			     SINGLE_ARG(OBJ_P_(&values, "curve_index", ObjTypeCurve | ObjTypeList)), \
+			     SINGLE_ARG("u0", "u1", "curve_index"),	\
+			     SINGLE_ARG(COMPATIBLE_WITH_TYPE(T, ObjRefCurve)), \
+			     ObjRefCurve, int, int,			\
+			     -1, -1)					\
+  /*! \copydoc ObjElement::is_valid_idx */				\
+  bool is_valid_idx(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 { \
+    if (!ObjElement::is_valid_idx(idx)) return false;			\
+    std::map<std::string,size_t>::iterator x = idx.find("curv2");	\
+    size_t ncurv = 0;							\
+    if (x != idx.end()) ncurv = x->second;				\
+    for (std::vector<ObjRefCurve>::const_iterator it = values.begin();	\
+	 it != values.end(); it++) {					\
+      if (!COMPARE_IDX((it->curv2d), ncurv)) return false;		\
+    }									\
+    return true;							\
+  }									\
+  /* \copydoc ObjElement::append_indexes */				\
+  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
+    std::map<std::string,size_t>::const_iterator x = idx.find("curv2"); \
+    size_t ncurv = 0;							\
+    if (x != idx.end()) ncurv = x->second;				\
+    for (std::vector<ObjRefCurve>::iterator it = values.begin();	\
+	 it != values.end(); it++) {					\
+      it->curv2d += static_cast<ObjRef>(ncurv);				\
+    }									\
+  }									\
+  /*! \copydoc ObjElement::add_value */					\
+  bool add_value(const std::map<std::string, std::vector<double>>& props) OVERRIDE_CXX11 {	\
+    for (std::vector<std::string>::const_iterator it = value_properties.begin(); \
+	 it != value_properties.end(); it++) {				\
+      if (props.find(*it) == props.end()) {				\
+	std::cerr << "add_value: missing required curve reference property: " << *it << std::endl; \
+	return false;							\
+      }									\
+    }									\
+    values.push_back(ObjRefCurve());					\
+    std::vector<ObjRefCurve>::iterator last = values.end() - 1;		\
+    for (std::map<std::string, std::vector<double>>::const_iterator it = props.begin(); it != props.end(); it++) { \
+      if (it->first == "u0") {						\
+	last->u0 = static_cast<double>(it->second[0]);			\
+      } else if (it->first == "u1") {					\
+	last->u1 = static_cast<double>(it->second[0]);			\
+      } else if (it->first == "curve_index") {				\
+	last->curv2d = static_cast<ObjRef>(it->second[0]);			\
+      } else {								\
+	std::cerr << "Invalid curve reference field: " << it->first << std::endl; \
+	return false;							\
+      }									\
+    }									\
+    return true;							\
+  }									\
+  }
+    
+#define GENERIC_VECTOR_OBJREFSURFACE(cls, code)				\
+  class cls : public ObjElement {					\
+  public:								\
+  GENERIC_VECTOR_BODY_STRICT(cls, ObjElement, code,			\
+			     SINGLE_ARG(OBJ_P_(&values, "surface_index", ObjTypeSurface | ObjTypeList)), \
+			     SINGLE_ARG("surface_index", "q0", "q1", "curve_index"), \
+			     SINGLE_ARG(COMPATIBLE_WITH_TYPE(T, ObjRefSurface)), \
+			     ObjRefSurface, int, int,			\
+    1, -1)								\
+  /*! \copydoc ObjElement::is_valid_idx */				\
+  bool is_valid_idx(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 { \
+    if (!ObjElement::is_valid_idx(idx)) return false;			\
+    std::map<std::string,size_t>::iterator curv = idx.find("curv2");	\
+    std::map<std::string,size_t>::iterator surf = idx.find("surf");	\
+    size_t ncurv = 0, nsurf = 0;					\
+    if (curv != idx.end()) ncurv = curv->second;			\
+    if (surf != idx.end()) nsurf = surf->second;			\
+    for (std::vector<ObjRefSurface>::const_iterator it = values.begin(); \
+	 it != values.end(); it++) {					\
+      if (!COMPARE_IDX((it->curv2d), ncurv)) return false;		\
+      if (!COMPARE_IDX((it->surf), nsurf)) return false;		\
+    }									\
+    return true;							\
+  }									\
+  /* \copydoc ObjElement::append_indexes */				\
+  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
+    std::map<std::string,size_t>::const_iterator curv = idx.find("curv2"); \
+    std::map<std::string,size_t>::const_iterator surf = idx.find("surf"); \
+    size_t ncurv = 0, nsurf = 0;					\
+    if (curv != idx.end()) ncurv = curv->second;			\
+    if (surf != idx.end()) nsurf = surf->second;			\
+    for (std::vector<ObjRefSurface>::iterator it = values.begin();	\
+	 it != values.end(); it++) {					\
+      it->curv2d += static_cast<ObjRef>(ncurv);				\
+      it->surf += static_cast<ObjRef>(nsurf);				\
+    }									\
+  }									\
+  /*! \copydoc ObjElement::add_value */					\
+  bool add_value(const std::map<std::string, std::vector<double>>& props) OVERRIDE_CXX11 {	\
+    for (std::vector<std::string>::const_iterator it = value_properties.begin(); \
+	 it != value_properties.end(); it++) {				\
+      if (props.find(*it) == props.end()) {				\
+	std::cerr << "add_value: missing required surface reference property: " << *it << std::endl; \
+	return false;							\
+      }									\
+    }									\
+    values.push_back(ObjRefSurface());					\
+    std::vector<ObjRefSurface>::iterator last = values.end() - 1;	\
+    for (std::map<std::string, std::vector<double>>::const_iterator it = props.begin(); it != props.end(); it++) { \
+      if (it->first == "surface_index") {				\
+	last->surf = static_cast<ObjRef>(it->second[0]);		\
+      } else if (it->first == "q0") {					\
+	last->q0 = static_cast<double>(it->second[0]);			\
+      } else if (it->first == "q1") {					\
+	last->q1 = static_cast<double>(it->second[0]);			\
+      } else if (it->first == "curve_index") {				\
+	last->curv2d = static_cast<ObjRef>(it->second[0]);		\
+      } else {								\
+	std::cerr << "Invalid curve reference field: " << it->first << std::endl; \
+	return false;							\
+      }									\
+    }									\
+    return true;							\
+  }									\
+  }
+#define GENERIC_CLASS_VECTOR_TYPE_IS_VALID(code, type)			\
+  /*! \copydoc ObjElement::is_valid_idx */				\
+  bool is_valid_idx(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 { \
+    if (!ObjElement::is_valid_idx(idx)) return false;			\
+    std::map<std::string,size_t>::iterator x = idx.find(code);		\
+    size_t nprev = 0;							\
+    if (x != idx.end()) nprev = x->second;				\
+    for (std::vector<type>::const_iterator it = values.begin();		\
+	 it != values.end(); it++) {					\
+      if (!COMPARE_IDX((*it), nprev)) return false;			\
+    }									\
+    return true;							\
+  }									\
+  /* \copydoc ObjElement::append_indexes */				\
+  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
+    std::map<std::string,size_t>::const_iterator x = idx.find(code);	\
+    size_t nprev = 0;							\
+    if (x != idx.end()) nprev = x->second;				\
+    for (std::vector<type>::iterator it = values.begin();		\
+	 it != values.end(); it++) {					\
+      *it += static_cast<type>(nprev);					\
+    }									\
+  }									\
+  /*! \copydoc ObjElement::add_value */					\
+  bool add_value(const std::map<std::string, std::vector<int>>& props) OVERRIDE_CXX11 {	\
+    if (value_properties.size() != 1)					\
+      return ObjElement::add_value(props);				\
+    std::map<std::string, std::vector<int>>::const_iterator it = props.begin();	\
+    if (it->first != value_properties[0])				\
+      return ObjElement::add_value(props);				\
+    values.push_back(static_cast<type>(it->second[0]));			\
+    return true;							\
+  }
+#define GENERIC_CLASS_VECTOR_TYPE_IS_VALID_VERTREF(min)			\
+  /*! \copydoc ObjElement::is_valid_idx */				\
+  bool is_valid_idx(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 { \
+    if (!ObjElement::is_valid_idx(idx)) return false;			\
+    if (values.size() < min) return false;				\
+    std::map<std::string,size_t>::iterator v = idx.find("v");		\
+    std::map<std::string,size_t>::iterator vt = idx.find("vt");		\
+    std::map<std::string,size_t>::iterator vn = idx.find("vn");		\
+    size_t nv = 0, nvt = 0, nvn = 0;					\
+    if (v != idx.end()) nv = v->second;					\
+    if (vt != idx.end()) nvt = vt->second;				\
+    if (vn != idx.end()) nvn = vn->second;				\
+    for (std::vector<ObjRefVertex>::const_iterator it = values.begin();	\
+	 it != values.end(); it++) {					\
+      if (!COMPARE_IDX((it->v), nv)) return false;			\
+      if (!COMPARE_IDX((it->vt), nvt)) return false;			\
+      if (!COMPARE_IDX((it->vn), nvn)) return false;			\
+    }									\
+    return true;							\
+  }									\
+  /* \copydoc ObjElement::append_indexes */				\
+  void append_indexes(const std::map<std::string,size_t> idx) OVERRIDE_CXX11 { \
+    std::map<std::string,size_t>::const_iterator v = idx.find("v");	\
+    std::map<std::string,size_t>::const_iterator vt = idx.find("vt");	\
+    std::map<std::string,size_t>::const_iterator vn = idx.find("vn");	\
+    size_t nv = 0, nvt = 0, nvn = 0;					\
+    if (v != idx.end()) nv = v->second;					\
+    if (vt != idx.end()) nvt = vt->second;				\
+    if (vn != idx.end()) nvn = vn->second;				\
+    for (std::vector<ObjRefVertex>::iterator it = values.begin();	\
+	 it != values.end(); it++) {					\
+      it->v += static_cast<ObjRef>(nv);					\
+      it->vt += static_cast<ObjRef>(nvt);				\
+      it->vn += static_cast<ObjRef>(nvn);				\
+    }									\
+  }									\
+  /*! \copydoc ObjElement::add_value */					\
+  bool add_value(const std::map<std::string, std::vector<int>>& props) OVERRIDE_CXX11 {	\
+    std::map<std::string, std::vector<int>>::const_iterator it = props.find("vertex_index"); \
+    if (it == props.end())						\
+      return ObjElement::add_value(props);				\
+    values.push_back(ObjRefVertex(static_cast<ObjRef>(it->second[0])));	\
+    std::vector<ObjRefVertex>::iterator last = values.end() - 1;	\
+    for (it = props.begin(); it != props.end(); it++) {			\
+      if (it->first == "vertex_index") {				\
+	continue;							\
+      } else if (it->first == "texture_index") {			\
+	last->vt = static_cast<ObjRef>(it->second[0]);			\
+      } else if (it->first == "normal_index") {				\
+	last->vn = static_cast<ObjRef>(it->second[0]);			\
+      } else {								\
+	std::cerr << "Invalid vertex reference field: " << it->first << std::endl; \
+	return false;							\
+      }									\
+    }									\
+    return true;							\
+  }
+  
+  
+// Forward declaration
+class ObjElement;
+class ObjVParameter;
+class ObjVNormal;
+class ObjVTexture;
+class ObjPoint;
+class ObjLine;
+class ObjFace;
+class ObjCurve;
+class ObjCurve2D;
+class ObjSurface;
+class ObjFreeFormType;
+class ObjDegree;
+class ObjBasisMatrix;
+class ObjStep;
+class ObjParameter;
+class ObjTrim;
+class ObjHole;
+class ObjScrv;
+class ObjSpecialPoints;
+class ObjConnect;
+class ObjGroupBase;
+class ObjGroup;
+class ObjSmoothingGroup;
+class ObjMergingGroup;
+class ObjObjectName;
+inline bool read_obj_element(std::istream &in,
+			     ObjGroupBase* parent,
+			     const bool& dont_descend,
+			     ObjElement*& out);
+
+//! ObjWavefront color.
+class ObjColor {
+public:
+  //! Empty initializer with (r,g,b) = (0,0,0)
+  ObjColor() :
+    r(0), g(0), b(0), is_set(false) {}
+  //! \brief Create a RGB color element.
+  //! \param red Color index in red.
+  //! \param green Color index in green.
+  //! \param blue Color index in blue.
+  ObjColor(int red, int green, int blue) :
+    r(red), g(green), b(blue), is_set(true) {}
+  //! Red color index.
+  int r;
+  //! Blue color index.
+  int g;
+  //! Green color index.
+  int b;
+  //! true if the color was set.
+  bool is_set;
+  //! \brief Check if another ObjColor object is equivalent.
+  //! \param rhs Object for comparison.
+  bool is_equal(const ObjColor& rhs) const {
+    const ObjColor& lhs = *this;
+    if (lhs.is_set != rhs.is_set) return false;
+    if (lhs.r != rhs.r) return false;
+    if (lhs.g != rhs.g) return false;
+    if (lhs.b != rhs.b) return false;
+    return true;
+  }
+  friend bool operator == (const ObjColor& lhs, const ObjColor& rhs);
+};
+
+//! \brief Check if two ObjColor instances are equivalent.
+//! \param lhs First instance for comparison.
+//! \param rhs Second instance for comparison.
+//! \return true if the two instances are equivalent.
+inline
+bool operator == (const ObjColor& lhs, const ObjColor& rhs)
+{ return lhs.is_equal(rhs); }
+
 //! ObjWavefront element base class.
 class ObjElement {
 public:
   //! \brief Empty constructor.
   //! \param parent0 The element's parent group.
   ObjElement(const ObjGroupBase* parent0 = nullptr) :
-    code(""), parent(parent0), properties() {}
+    code(""), parent(parent0), properties(), value_properties() {}
   //! \brief Initialize an element from an element code.
   //! \tparam Number of properties/
   //! \param code0 Element code.
   //! \param parent0 The element's parent group.
   ObjElement(const std::string& code0,
 	     const ObjGroupBase* parent0 = nullptr) :
-    code(code0), parent(parent0), properties() {}
+    code(code0), parent(parent0), properties(), value_properties() {}
   //! \brief Copy constructor.
   //! \param rhs Element to copy.
   ObjElement(const ObjElement& rhs) :
-    code(rhs.code), parent(rhs.parent), properties(rhs.properties) {}
+    code(rhs.code), parent(rhs.parent), properties(), value_properties() {}
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
   //! \param parent0 The element's parent group.
   template <typename T, size_t N>
   ObjElement(const std::string& code0, const T (&)[N],
 	     const ObjGroupBase* parent0 = nullptr) :
-    code(code0), parent(parent0), properties() {
+    code(code0), parent(parent0), properties(), value_properties() {
     RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
   }
   //! \brief Initialize and element from a C++ vector of values.
@@ -952,17 +1455,31 @@ public:
   template <typename T>
   ObjElement(const std::string& code0, const std::vector<T> &,
 	     const ObjGroupBase* parent0 = nullptr) :
-    code(code0), parent(parent0), properties() {
+    code(code0), parent(parent0), properties(), value_properties() {
     RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
   }
   
   //! \brief Destructor.
   virtual ~ObjElement() {}
+  //! \brief Initialize properties for the class.
+  virtual void _init_properties() {}
   //! \brief Copy element specific members from another instance.
   //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjElement& rhs) {
-    RAPIDJSON_ASSERT(code == rhs.code);
-    RAPIDJSON_ASSERT(parent == rhs.parent);
+  //! \return true if successful, false otherwise.
+  bool copy_members(const ObjElement* rhs) {
+    RAPIDJSON_ASSERT(code == rhs->code);
+    RAPIDJSON_ASSERT(parent == rhs->parent);
+    return (code == rhs->code && parent == rhs->parent);
+  }
+  //! \brief Determine if any of the properties for this element are missing
+  //!   memory pointers.
+  //! \return true if there is a property with null memory, false otherwise.
+  bool has_null_property() const {
+    for (ObjPropertiesMap::const_iterator it = properties.begin();
+	 it != properties.end(); it++) {
+      if (!it->mem) return true;
+    }
+    return false;
   }
   //! \brief Create a copy of the element.
   //! \return Copied element.
@@ -1033,19 +1550,472 @@ public:
   }
   //! \brief Assign element members from an array of values stored in another
   //!   class member during a previous call to assign_values.
-  virtual void from_values() {} // Do nothing, keep values in vector
+  //! return true if successful, false otherwise.
+  virtual bool from_values() { return true; } // Do nothing, keep values in vector
+  //! \brief Read a property with a null memory pointer.
+  //! \brief Read null property.
+  //! \param in Input stream.
+  //! \return true if successful, false otherwise.
+  virtual bool read_null_property(std::istream& in) { return false; }
   //! \brief Read element members from an input stream.
   //! \param in Input stream.
   //! \param dont_descend If true, subelements will not be read from the
   //!   input stream.
-  virtual void read_values(std::istream& in, const bool& dont_descend=false) = 0;
+  //! \return true if successful, false otherwise.
+  virtual bool read_values(std::istream& in, const bool& dont_descend=false) {
+    size_t i = 0;
+    for (ObjPropertiesMap::iterator it = properties.begin();
+	 it != properties.end(); it++, i++) {
+      if (!it->mem) return this->read_null_property(in);
+      if (!this->has_property(it->first, true)) continue;
+      if (!it->read(in)) return false;
+    }
+    // TOOD: Set meta?
+    return true;
+  };
+  //! \brief Write a property with a null memory pointer.
+  //! \param out Output stream.
+  //! \return true if successful, false otherwise.
+  virtual bool write_null_property(std::ostream& out) const { return false; }
   //! \brief Write element member to an output stream.
   //! \param out Output stream.
-  virtual void write_values(std::ostream& out) const = 0;
+  //! \return true if successful, false otherwise.
+  virtual bool write_values(std::ostream& out) const {
+    size_t i = 0;
+    bool first = true;
+    for (ObjPropertiesMap::const_iterator it = properties.begin();
+	 it != properties.end(); it++, i++) {
+      if (!this->has_property(it->first, true)) continue;
+      if (!first) out << " ";
+      if (!it->mem) return this->write_null_property(out);
+      if (!it->write(out)) return false;
+      first = false;
+    }
+    return true;
+  }
+  //! \brief Check if a property with a null memory pointer is equivalent.
+  virtual bool is_equal_null_property(const ObjElement* rhs) const { return false; }
   //! \brief Check if another element is equivalent.
   //! \param rhs0 Element to compare.
   //! \return true if rhs is equivalent.
-  virtual bool is_equal(const ObjElement* rhs0) const = 0;
+  virtual bool is_equal(const ObjElement* rhs0) const {
+    if (rhs0->code != this->code) return false;
+    if (properties.size() != rhs0->properties.size()) return false;
+    ObjPropertiesMap::const_iterator rit = rhs0->properties.begin();
+    for (ObjPropertiesMap::const_iterator lit = properties.begin();
+	 lit != properties.end(); lit++, rit++) {
+      bool present = this->has_property(lit->first, true);
+      if (present != rhs0->has_property(lit->first, true)) return false;
+      if (!present) continue;
+      if ((!lit->mem) && (!rit->mem))
+	return this->is_equal_null_property(rhs0);
+      if (*lit != *rit) return false;
+    }
+#undef HANDLE_SCALAR_
+#undef HANDLE_ARRAY_
+    return true;
+}
+  //! \brief Get the properties associated with this element.
+  //! \param skipColors If true, color data will not be included.
+  //! \return Property names.
+  std::vector<std::string> property_order(bool skipColors=false) const {
+    std::vector<std::string> out;
+    for (ObjPropertiesMap::const_iterator it = properties.begin();
+	 it != properties.end(); it++) {
+      if (has_property(it->first, true, skipColors))
+	out.push_back(it->first);
+    }
+    return out;
+  }
+  //! \brief Determine if a property is set.
+  //! \param name Property name.
+  //! \param dontCheckOrder If true, it is assumed that the property is in
+  //!    the list of possible properties for this element.
+  //! \param skipColors If true, color data will not be included.
+  virtual bool has_property(const std::string name,
+			    bool dontCheckOrder=false,
+			    bool skipColors=false) const {
+    if (dontCheckOrder)
+      return true;
+    if (skipColors && (name == "red" ||
+		       name == "green" ||
+		       name == "blue"))
+      return false;
+    ObjPropertiesMap::const_iterator it = properties.begin();
+    for (; it != properties.end(); it++) {
+      if (it->first == name) break;
+    }
+    return (it != properties.end());
+  }
+  //! \brief Get the minimum number of values allowed for this element to be valid.
+  //! \param valuesOnly If true, the minimum for the values vector is returned.
+  virtual int min_values(bool valuesOnly=false) const {
+    (void)valuesOnly;
+    int out = 0;
+    for (ObjPropertiesMap::const_iterator it = properties.begin();
+	 it != properties.end(); it++) {
+      if (it->second & ObjTypeList) return 1;
+      if (!(it->second & ObjTypeOpt)) out++;
+    }
+    return out;
+  }
+  //! \brief Get the maximum number of values allowed for this element to be valid.
+  //! \param valuesOnly If true, the maximum for the values vector is returned.
+  virtual int max_values(bool valuesOnly=false) const {
+    (void)valuesOnly;
+    int out = 0;
+    for (ObjPropertiesMap::const_iterator it = properties.begin();
+	 it != properties.end(); it++) {
+      if (it->second & ObjTypeList) return -1;
+      out++;
+    }
+    return out;
+  }
+  //! \brief Set meta properties that control which properties are defined.
+  //! \param N Number of properties provided.
+  //! \return true if successful, false otherwise.
+  virtual bool set_meta_properties(const size_t N) { return true; }
+  //! \brief Set properties from an array of values.
+  //! \param arr Property values.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool set_properties(const std::vector<T>& arr) {
+    if (!set_meta_properties(arr.size())) return false;
+    int minV = min_values();
+    int maxV = max_values();
+    if ((minV >= 0 && arr.size() < minV) ||
+	(maxV >= 0 && arr.size() > maxV)) return false;
+    typename std::vector<T>::const_iterator v = arr.begin();
+    size_t i = 0;
+    for (ObjPropertiesMap::const_iterator it = properties.begin();
+	 it != properties.end(); it++, i++) {
+      if (!has_property(it->first, true)) continue;
+      if (v == arr.end())
+	return (it->second & ObjTypeOpt);
+      if (it->second & ObjTypeList) {
+	std::vector<T> sub_arr(v, arr.end());
+	if (!set_property(i, sub_arr)) return false;
+      } else {
+	if (!set_property(i, *v)) return false;
+      }
+      v++;
+    }
+    return is_valid();
+  }
+  //! \brief Set an element property.
+  //! \tparam T Type of new value.
+  //! \tparam i Index of the property to set.
+  //! \param new_value Value to assign to the property.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool set_property(size_t i, const T new_value,
+		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
+    if (i >= properties.size()) return false;
+    ObjPropertiesMap::iterator it = properties.begin() + (int)i;
+    if (it->second & ObjTypeList) {
+      return false;
+    } else if (it->second & ObjTypeInt) {
+      return set_property_int(i, static_cast<int>(new_value));
+    } else if (it->second & ObjTypeFloat) {
+      return set_property_double(i, static_cast<double>(new_value));
+    }
+    return false;
+  }
+  //! \brief Set an element property.
+  //! \tparam T Type of new value.
+  //! \tparam i Index of the property to set.
+  //! \param new_value Value to assign to the property.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool set_property(size_t i, const T new_value,
+		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) {
+    if (i >= properties.size()) return false;
+    ObjPropertiesMap::iterator it = properties.begin() + (int)i;
+    if (it->second & ObjTypeList)
+      return false;
+    else if (it->second & ObjTypeString)
+      return set_property_string(i, new_value);
+    return false;
+  }
+  //! \brief Set an element property.
+  //! \tparam T Type of new value.
+  //! \tparam i Index of the property to set.
+  //! \param new_value Values to assign to the property.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool set_property(size_t i, const std::vector<T> new_value,
+		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
+    if (i >= properties.size()) return false;
+    ObjPropertiesMap::iterator it = properties.begin() + (int)i;
+    if (!(it->second & ObjTypeList)) {
+      return false;
+    } else if (it->second & ObjTypeInt) {
+      std::vector<int> tmp;
+      for (typename std::vector<T>::const_iterator v = new_value.begin();
+	   v != new_value.end(); v++)
+	tmp.push_back(static_cast<int>(*v));
+      return set_property_array_int(i, tmp);
+    } else if (it->second & ObjTypeFloat) {
+      std::vector<double> tmp;
+      for (typename std::vector<T>::const_iterator v = new_value.begin();
+	   v != new_value.end(); v++)
+	tmp.push_back(static_cast<double>(*v));
+      return set_property_array_double(i, tmp);
+    }
+    return false;
+  }
+  //! \brief Set an element property.
+  //! \tparam T Type of new value.
+  //! \tparam i Index of the property to set.
+  //! \param new_value Values to assign to the property.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool set_property(size_t i, const std::vector<T> new_value,
+		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) {
+    if (i >= properties.size()) return false;
+    ObjPropertiesMap::iterator it = properties.begin() + (int)i;
+    if (!(it->second & ObjTypeList)) {
+      return false;
+    } else if (it->second & ObjTypeString) {
+      return set_property_array_string(i, new_value);
+    }
+    return false;
+  }
+  //! \brief Set an element property.
+  //! \tparam T Type of new value.
+  //! \param name Name of the property to set.
+  //! \param new_value Value to assign to the property.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool set_property(const std::string name, const T& new_value) {
+    size_t i = 0;
+    ObjPropertiesMap::const_iterator it = properties.begin();
+    for (; it != properties.end(); it++, i++) {
+      if (it->first == name) break;
+    }
+    if (it == properties.end() || !has_property(name, true) ||
+	(it->second & ObjTypeList))
+      return false;
+    return set_property(i, new_value);
+  }
+  //! \brief Set an element property array.
+  //! \tparam T Type of new values.
+  //! \param name Name of the property to set.
+  //! \param new_values Values to add to the property.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool set_property(const std::string name, const std::vector<T>& new_values) {
+    size_t i = 0;
+    ObjPropertiesMap::const_iterator it = properties.begin();
+    for (; it != properties.end(); it++, i++) {
+      if (it->first == name) break;
+    }
+    if (it == properties.end() || !has_property(name, true) ||
+	!(it->second & ObjTypeList))
+      return false;
+    return set_property(i, new_values);
+  }
+#define DUMMY_MANAGE_PROPERTY_(type, typeName)				\
+  /*! \brief Set an element property. */				\
+  /*! \param i index of the property to set. */				\
+  /*! \param new_value Value to assign to the property. */		\
+  /*! \return true if successful, false otherwise. */			\
+  virtual bool set_property_ ## typeName(size_t i, const type new_value) { \
+    if (i >= properties.size()) return false;				\
+    ObjPropertiesMap::iterator it = properties.begin() + (int)i;		\
+    if (_type_compatible_ ## typeName(it->second, true) &&		\
+	it->set(new_value)) return true;				\
+    std::cerr << "set_property for " << #typeName << "s not defined for " << it->first << " property of " << code << "elements." << std::endl; \
+    return false;							\
+  }									\
+  /*! \brief Set an element property array. */				\
+  /*! \param i index of the property to set. */				\
+  /*! \param new_values Array of values to assign to the property. */	\
+  /*! \return true if successful, false otherwise. */			\
+  virtual bool set_property_array_ ## typeName(size_t i, const std::vector<type> new_values) { \
+    if (i >= properties.size()) return false;				\
+    ObjPropertiesMap::iterator it = properties.begin() + (int)i;		\
+    if (_type_compatible_ ## typeName(it->second, true) &&		\
+	it->set(new_values)) return true;				\
+    std::cerr << "set_property for array of " << #typeName << "s not defined for " << it->first << " property of " << code << "elements." << std::endl; \
+    return false;							\
+  }									\
+  /*! \brief Get an element property. */				\
+  /*! \param i index of the property to get. */				\
+  /*! \param out Existing memory to copy property to. */		\
+  /*! \return true if successful, false otherwise. */			\
+  virtual bool get_property_ ## typeName(size_t i, type& out) const {	\
+    if (i >= properties.size()) return false;				\
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
+    if (_type_compatible_ ## typeName(it->second, true) &&		\
+	it->get(out)) return true;					\
+    std::cerr << "get_property for " << #typeName << "s not defined for " << it->first << " property of " << code << "elements." << std::endl; \
+    return false;							\
+  }									\
+  /*! \brief Get an element property array. */				\
+  /*! \param i index of the property to get. */				\
+  /*! \param out Existing array to add property values to. */		\
+  /*! \return true if successful, false otherwise. */			\
+  virtual bool get_property_array_ ## typeName(size_t i, std::vector<type>& out) const {	\
+    if (i >= properties.size()) return false;				\
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;	\
+    if (_type_compatible_ ## typeName(it->second, true) &&		\
+	it->get(out)) return true;					\
+    std::cerr << "get_property for array of " << #typeName << "s not defined for " << it->first << " property of " << code << "elements." << std::endl; \
+    return false;							\
+  }
+  
+  DUMMY_MANAGE_PROPERTY_(double, double)
+  DUMMY_MANAGE_PROPERTY_(int, int)
+  DUMMY_MANAGE_PROPERTY_(std::string, string)
+  
+#undef DUMMY_MANAGE_PROPERTY_
+  
+  //! \brief Get properties into an array of values.
+  //! \param[out] arr Vector to add properties to.
+  //! \param skipColors If true, color properties will not be included.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool get_properties(std::vector<T>& arr, bool skipColors=false) const {
+    size_t i = 0, count = 0;
+    arr.resize(size(skipColors));
+    ObjPropertiesMap::const_iterator last = properties.begin() + (int)(properties.size() - 1);
+    for (ObjPropertiesMap::const_iterator it = properties.begin();
+	 it != properties.end(); it++, i++) {
+      if (!has_property(it->first, true, skipColors)) continue;
+      // TODO: Automatically cast ints to double when T is double and property
+      //   has integer type
+      if (it->second & ObjTypeList) {
+	if (it != last) return false;
+	arr.resize(count);  // Trim extra values so that get_property appends
+	if (!get_property(i, arr)) return false;
+      } else {
+	if (count >= arr.size()) return false;
+	if (!get_property(i, arr[count])) return false;
+      }
+      count++;
+    }
+    return true;
+  }
+  //! \brief Get an element property.
+  //! \tparam Type of output.
+  //! \param i index of the property to get.
+  //! \param out Existing memory to copy property to.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool get_property(size_t i, T& out,
+		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
+    if (i >= properties.size()) return false;
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
+    if (it->second & ObjTypeList) {
+      return false;
+    } else if (it->second & ObjTypeInt) {
+      int tmp = 0;
+      bool flag = get_property_int(i, tmp);
+      out = static_cast<T>(tmp);
+      return flag;
+    } else if (it->second & ObjTypeFloat) {
+      double tmp = 0;
+      bool flag = get_property_double(i, tmp);
+      out = static_cast<T>(tmp);
+      return flag;
+    }
+    return false;
+  }
+  //! \brief Get an element property.
+  //! \tparam Type of output.
+  //! \param i index of the property to get.
+  //! \param out Existing memory to copy property to.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool get_property(size_t i, T& out,
+		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
+    if (i >= properties.size()) return false;
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
+    if (it->second & ObjTypeList) {
+      return false;
+    } else if (it->second & ObjTypeString) {
+      return get_property_string(i, out);
+    }
+    return false;
+  }
+  //! \brief Get an element property.
+  //! \tparam Type of output.
+  //! \param i index of the property to get.
+  //! \param out Existing vector to add property values to.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool get_property(size_t i, std::vector<T>& out,
+		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
+    if (i >= properties.size()) return false;
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
+    if (!(it->second & ObjTypeList)) {
+      return false;
+    } else if (it->second & ObjTypeInt) {
+      std::vector<int> tmp;
+      bool flag = get_property_array_int(i, tmp);
+      for (std::vector<int>::iterator v = tmp.begin(); v != tmp.end(); v++)
+	out.push_back(static_cast<T>(*v));
+      return flag;
+    } else if (it->second & ObjTypeFloat) {
+      std::vector<double> tmp;
+      bool flag = get_property_array_double(i, tmp);
+      for (std::vector<double>::iterator v = tmp.begin(); v != tmp.end(); v++)
+	out.push_back(static_cast<T>(*v));
+      return flag;
+    }
+    return false;
+  }
+  //! \brief Get an element property.
+  //! \tparam Type of output.
+  //! \param i index of the property to get.
+  //! \param out Existing vector to add property values to.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool get_property(size_t i, std::vector<T>& out,
+		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
+    if (i >= properties.size()) return false;
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
+    if (!(it->second & ObjTypeList)) {
+      return false;
+    } else if (it->second & ObjTypeString) {
+      return get_property_array_string(i, out);
+    }
+    return false;
+  }
+  //! \brief Get an element property.
+  //! \tparam Type of output.
+  //! \param name Name of the property to get.
+  //! \param out Existing memory to copy property to.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool get_property(const std::string name, T& out) const {
+    size_t i = 0;
+    ObjPropertiesMap::const_iterator it = properties.begin();
+    for (; it != properties.end(); it++, i++) {
+      if (it->first == name) break;
+    }
+    if (it == properties.end() || !has_property(name, true) ||
+	(it->second & ObjTypeList)) return false;
+    return get_property(i, out);
+  }
+  //! \brief Get an element property array.
+  //! \tparam Type of output.
+  //! \param name Name of the property to get.
+  //! \param out Existing array to add property values to.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool get_property(const std::string name, std::vector<T>& out) const {
+    size_t i = 0;
+    ObjPropertiesMap::const_iterator it = properties.begin();
+    for (; it != properties.end(); it++, i++) {
+      if (it->first == name) break;
+    }
+    if (it == properties.end() || !has_property(name, true) ||
+	!(it->second & ObjTypeList)) return false;
+    return get_property(i, out);
+  }
+  
   //! \brief Get element values as an array of strings.
   //! \return Array of string values.
   std::vector<std::string> get_string_array() const {
@@ -1057,11 +2027,8 @@ public:
   //! \param[out] out Array to put values in.
   void get_string_array(std::vector<std::string>& out) const {
     RAPIDJSON_ASSERT(!requires_double());
-    for (PropertiesMap::const_iterator it = properties.begin();
-	 it != properties.end(); it++) {
-      if (!has_property(it->first, true)) continue;
-      get_property_array(it->first, out);
-    }
+    if (requires_double()) return;
+    get_properties(out);
   }
   //! \brief Get element values as an array of ints.
   //! \param nvert Number of vertices previously added to a Ply object
@@ -1079,10 +2046,8 @@ public:
   void get_int_array(std::vector<int>& out,
 		     const size_t nvert=0) const {
     RAPIDJSON_ASSERT(!requires_double());
-    const std::vector<std::string> order = property_order();
-    for (std::vector<std::string>::const_iterator it = order.begin();
-	 it != order.end(); it++)
-      get_property_array(*it, out);
+    if (requires_double()) return;
+    get_properties(out);
     if (nvert > 0) {
       for (size_t i = 0; i < out.size(); i++) {
 	if (out[i] < 0)
@@ -1105,84 +2070,50 @@ public:
   void get_double_array(std::vector<double>& out,
 			bool skipColors=false) const {
     RAPIDJSON_ASSERT(requires_double());
-    const std::vector<std::string> order = property_order(skipColors);
-    for (std::vector<std::string>::const_iterator it = order.begin();
-	 it != order.end(); it++)
-      get_property_array(*it, out, skipColors);
+    get_properties(out, skipColors);
   }
-  //! \brief Get element values for one property as an array of the
-  //!   requested type.
-  //! \param name Property to get values for.
-  //! \param[out] out Array to add values to.
-  //! \param skipColors If true, color data will not be included.
-  virtual void get_property_array(const std::string name,
-				  std::vector<double>& out,
-				  bool=false) const {
-    std::cerr << "get_property_array not implemented for doubles (name = " << name << ")" << std::endl;
-    RAPIDJSON_ASSERT(out.size() > 0);
+  //! \brief Add a value to this element. This is only valid for element
+  //!   types that can contain a variable number of elements.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool add_value(const T value) {
+    if (value_properties.empty()) return false;
+    std::map<std::string, std::vector<T>> value_map;
+    value_map.insert({*value_properties.begin(), std::vector<T>({value})});
+    return add_value(value_map);
   }
-  //! \brief Get element values for one property as an array of the
-  //!   requested type.
-  //! \param name Property to get values for.
-  //! \param[out] out Array to add values to.
-  //! \param skipColors If true, color data will not be included.
-  virtual void get_property_array(const std::string name,
-				  std::vector<int>& out,
-				  bool=false) const {
-    std::cerr << "get_property_array not implemented for integers (name = " << name << ")" << std::endl;
-    RAPIDJSON_ASSERT(out.size() > 0);
+  //! \brief Add a value to this element. This is only valid for element
+  //!   types that can contain a variable number of elements.
+  //! \param props Mapping between properties and values for the new element
+  //!   value.
+  //! \return true if successful, false otherwise.
+  virtual bool add_value(const std::map<std::string, std::vector<double>>& props) {
+    std::cerr << "add_value not implemented for doubles (code = " << code << ")" << std::endl;
+    return false;
   }
-  //! \brief Get element values for one property as an array of the
-  //!   requested type.
-  //! \param name Property to get values for.
-  //! \param[out] out Array to add values to.
-  //! \param skipColors If true, color data will not be included.
-  virtual void get_property_array(const std::string name,
-				  std::vector<std::string>& out,
-				  bool=false) const {
-    std::cerr << "get_property_array not implemented for strings (name = " << name << ")" << std::endl;
-    RAPIDJSON_ASSERT(out.size() > 0);
-  }
-  //! \brief Get the properties associated with this element.
-  //! \param skipColors If true, color data will not be included.
-  //! \return Property names.
-  std::vector<std::string> property_order(bool skipColors=false) const {
-    std::vector<std::string> out;
-    for (PropertiesMap::const_iterator it = properties.begin();
-	 it != properties.end(); it++) {
-      if (has_property(it->first, true, skipColors))
-	out.push_back(it->first);
-    }
-    return out;
-  }
-  //! \brief Determine if a property is set.
-  //! \param name Property name.
-  //! \param dontCheckOrder If true, it is assumed that the property is in
-  //!    the list of possible properties for this element.
-  //! \param skipColors If true, color data will not be included.
-  virtual bool has_property(const std::string name,
-			    bool dontCheckOrder=false,
-			    bool skipColors=false) const {
-    if (dontCheckOrder)
-      return true;
-    if (skipColors && (name == "red" ||
-		       name == "green" ||
-		       name == "blue"))
-      return false;
-    PropertiesMap::const_iterator it = properties.find(name);
-    return (it != properties.end());
+  //! \brief Add a value to this element. This is only valid for element
+  //!   types that can contain a variable number of elements.
+  //! \param props Mapping between properties and values for the new element
+  //!   value.
+  //! \return true if successful, false otherwise.
+  virtual bool add_value(const std::map<std::string, std::vector<int>>& props) {
+    std::cerr << "add_value not implemented for ints (code = " << code << ")" << std::endl;
+    return false;
   }
   //! \brief Determine if the specified property is a vector.
   //! \param name Property name.
   //! \return true if it is a vector, false otherwise.
   bool is_vector(const std::string name) const {
-    PropertiesMap::const_iterator it = properties.find(name);
+    ObjPropertiesMap::const_iterator it = properties.begin();
+    for (; it != properties.end(); it++) {
+      if (it->first == name) break;
+    }
     return (it != properties.end() && it->second & ObjTypeList);
   }
   //! \brief Determine if any of the elements properties require doubles.
   //! \return true if it requires doubles, false otherwise.
   bool requires_double() const {
-    for (PropertiesMap::const_iterator it = properties.begin();
+    for (ObjPropertiesMap::const_iterator it = properties.begin();
 	 it != properties.end(); it++)
       if ((it->second & (ObjTypeFloat | ObjTypeCurve | ObjTypeSurface))
 	  && has_property(it->first, true))
@@ -1193,7 +2124,10 @@ public:
   //! \param name Property to check.
   //! \return true if it requires doubles, false otherwise.
   bool requires_double(const std::string name) const {
-    PropertiesMap::const_iterator it = properties.find(name);
+    ObjPropertiesMap::const_iterator it = properties.begin();
+    for (; it != properties.end(); it++) {
+      if (it->first == name) break;
+    }
     return (it != properties.end() &&
 	    it->second & (ObjTypeFloat | ObjTypeCurve | ObjTypeSurface));
   }
@@ -1202,60 +2136,83 @@ public:
   //! \return Number of properties in the element.
   virtual size_t size(bool skipColors=false) const
   { return property_order(skipColors).size(); }
+  //! \brief Determine if a structure is valid and contains the correct
+  //!   properties.
+  //! \return true if the structure is valid, false otherwise.
+  virtual bool is_valid() const
+  { return true; }
   //! \brief Determine if a structure is valid and there are vertexes for
   //!   all those referenced in faces and edges.
   //! \param idx Map containing the number of preceeding elements of each
   //!   type.
   //! \return true if the structure is valid, false otherwise.
-  virtual bool is_valid(std::map<std::string,size_t>& idx) const
-  { (void)idx; return true; }
+  virtual bool is_valid_idx(std::map<std::string,size_t>& idx) const
+  { (void)idx; return is_valid(); }
   //! \brief Read elements from an input stream.
   //! \param in Input stream.
-  //! \return Input stream.
-  std::istream & read(std::istream &in, const bool& dont_descend=false) {
-    this->read_values(in, dont_descend);
-    return in;
+  //! \param dont_descend If true, groups will not read elements.
+  //! \return true if successful, false otherwise.
+  bool read(std::istream &in, const bool& dont_descend=false) {
+    return this->read_values(in, dont_descend);
   }
   //! \brief Read element members from an input stream into a vector.
   //! \param in Input stream.
   //! \param values Vector to store read values in.
+  //! \return true if successful, false otherwise.
   template <typename T>
-  void read_values(std::istream &in, std::vector<T> &values,
+  bool read_values(std::istream &in, std::vector<T> &values,
 		   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) {
     T x = 0;
     while ((in.peek() != '\n') && (in >> x))
       values.push_back(x);
+    return true;
   }
   //! \brief Read element members from an input stream into a vector.
   //! \param in Input stream.
   //! \param values Vector to store read values in.
-  void read_values(std::istream &in, std::vector<std::string> &values) {
+  //! \return true if successful, false otherwise.
+  bool read_values(std::istream &in, std::vector<std::string> &values) {
     std::string x = "";
     while ((in.peek() != '\n') && (in >> x))
       values.push_back(x);
     in >> std::skipws;
+    return true;
   }
   //! \brief Write the element to an output stream.
   //! \param out Output stream.
-  //! \return Output stream.
-  std::ostream & write(std::ostream &out) const {
+  //! \return true if successful, false otherwise.
+  bool write(std::ostream &out) const {
+    if (!this->write_prefix(out)) return false;
+    if (!this->write_values(out)) return false;
+    return this->write_suffix(out);
+  }
+  //! \brief Write prefix before values.
+  //! \param out Output stream.
+  //! \return true if successful, false otherwise.
+  virtual bool write_prefix(std::ostream &out) const {
     if (code != "")
       out << code << " ";
-    this->write_values(out);
-    if (code != "g")
-      out << std::endl;
-    return out;
+    return true;
   }
   //! \brief Write element member to an output stream from a vector.
   //! \param out Output stream.
   //! \param values Values to write.
+  //! \return true if successful, false otherwise.
   template <typename T>
-  void write_values(std::ostream &out, const std::vector<T> &values) const {
+  bool write_values(std::ostream &out, const std::vector<T> &values) const {
     for (typename std::vector<T>::const_iterator it = values.begin(); it != values.end(); it++) {
       if (it != values.begin())
 	out << " ";
       out << *it;
     }
+    return true;
+  }
+  //! \brief Write suffix after values.
+  //! \param out Output stream.
+  //! \return true if successful, false otherwise.
+  virtual bool write_suffix(std::ostream &out) const {
+    out << std::endl;
+    return true;
   }
   //! \brief Get a string representation of the element.
   //! \return String representation.
@@ -1300,7 +2257,9 @@ public:
   //! Pointer to the parent element class.
   const ObjGroupBase* parent;
   //! Properties contained by the element.
-  PropertiesMap properties;
+  ObjPropertiesMap properties;
+  //! Properties of values within the element.
+  std::vector<std::string> value_properties;
   
   friend std::ostream & operator << (std::ostream &out, const ObjElement &p);
 };
@@ -1311,7 +2270,7 @@ public:
 //! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjElement &p)
-{ return p.write(out); }
+{ p.write(out); return out; }
 
 //! Element grouping base class.
 class ObjGroupBase : public ObjElement {
@@ -1336,7 +2295,7 @@ public:
     ObjElement(code, parent0), elements(), finalized(false) {
     assign_values(elements, elements0);
   }
-  GENERIC_CONSTRUCTOR_COPY(ObjGroupBase, ObjElement, SINGLE_ARG(, elements(), finalized(false)));
+  GENERIC_CONSTRUCTOR_COPY(ObjGroupBase, ObjElement, SINGLE_ARG(, elements(), finalized(false)), SINGLE_ARG(), SINGLE_ARG());
   ~ObjGroupBase() {
     for (std::vector<ObjElement*>::iterator it = elements.begin(); it != elements.end(); it++)
       delete *it;
@@ -1344,10 +2303,12 @@ public:
   }
   //! \brief Copy element specific members from another instance.
   //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjGroupBase& rhs) {
-    finalized = rhs.finalized;
-    for (std::vector<ObjElement*>::const_iterator it = rhs.elements.begin(); it != rhs.elements.end(); it++)
+  //! \return true if successful, false otherwise.
+  bool copy_members(const ObjGroupBase* rhs) {
+    finalized = rhs->finalized;
+    for (std::vector<ObjElement*>::const_iterator it = rhs->elements.begin(); it != rhs->elements.end(); it++)
       elements.push_back((*it)->copy());
+    return true;
   }
   //! \brief Check if the element is a group of elements.
   //! \return true if the element is a group.
@@ -1355,30 +2316,40 @@ public:
   //! \brief Finalize the group.
   void finalize() { finalized = true; }
   //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
-    read_group_header(in);
+  bool read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
+    if (!this->read_group_header(in)) return false;
     if (!dont_descend) {
+      int i = 0;
       while (!finalized) {
-	ObjElement* x = read_obj_element(in, this, true);
-	add_element(x);
+	if (i > 500) return false;
+	ObjElement* x = nullptr;
+	if (!read_obj_element(in, this, true, x)) return false;
+	if (x) add_element(x);
+	i++;
       }
     }
+    return true;
   }
   //! \brief Read group header information.
   //! \param in Input stream.
-  virtual void read_group_header(std::istream &) {}
+  virtual bool read_group_header(std::istream &) { return true; }
   //! \brief Write group header information.
   //! \param out Output stream.
-  virtual void write_group_header(std::ostream &) const {}
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    if (this->code != "") {
-      write_group_header(out);
-      out << std::endl;
-    }
-    for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++)
-      (*it)->write(out);
+  virtual bool write_group_header(std::ostream & out) const {
+    out << std::endl;
+    return true;
   }
+  //! \copydoc ObjElement::write_values
+  bool write_values(std::ostream &out) const OVERRIDE_CXX11 {
+    if (!this->write_group_header(out)) return false;
+    for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
+      if (!(*it)->write(out)) return false;
+    }
+    return this->write_group_footer(out);
+  }
+  //! \brief Write group footer information.
+  //! \param out Output stream.
+  virtual bool write_group_footer(std::ostream &) const { return true; }
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
     if (rhs0->code != this->code)
@@ -1413,11 +2384,33 @@ public:
     std::vector<std::string> out(unique_names.begin(), unique_names.end());
     return out;
   }
-  //! \copydoc ObjElement::is_valid
-  bool is_valid(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 {
+  //! \brief Get a mapping of element types in the group and counts of that
+  //!   type of element.
+  //! \return Map between element type and count.
+  std::map<std::string,size_t> element_counts() const {
+    std::map<std::string,size_t> idx;
+    element_counts(idx);
+    return idx;
+  }
+  void element_counts(std::map<std::string,size_t>& idx,
+		      const ObjGroupBase* stop=nullptr) const {
+    if (this->parent && stop != this->parent)
+      this->parent->element_counts(idx, this);
     for (std::vector<ObjElement*>::const_iterator it = elements.begin();
 	 it != elements.end(); it++) {
-      if (!(*it)->is_valid(idx)) return false;
+      if (stop && stop == *it) break;
+      if (idx.find((*it)->code) == idx.end())
+	idx.insert({(*it)->code, 0});
+      idx[(*it)->code]++;
+      if ((*it)->is_group())
+	(dynamic_cast<ObjGroupBase*>(*it))->element_counts(idx, this);
+    }
+  }
+  //! \copydoc ObjElement::is_valid_idx
+  bool is_valid_idx(std::map<std::string,size_t>& idx) const OVERRIDE_CXX11 {
+    for (std::vector<ObjElement*>::const_iterator it = elements.begin();
+	 it != elements.end(); it++) {
+      if (!(*it)->is_valid_idx(idx)) return false;
       std::map<std::string,size_t>::iterator x = idx.find((*it)->code);
       if (x == idx.end()) {
 	idx.insert({(*it)->code, 0});
@@ -1427,21 +2420,10 @@ public:
     }
     return true;
   }
-  //! \brief Determine if a structure is valid and there are vertexes for
-  //!   all those referenced in faces and edges.
-  //! \return true if the structure is valid, false otherwise.
-  bool is_valid() const {
-    std::map<std::string,size_t> idx;
-    return is_valid(idx);
-  }
   //! \brief Append elements from another group to this one.
   //! \param rhs Group to append elements from.
   void append(const ObjGroupBase* rhs) {
-    std::map<std::string,size_t> idx;
-    std::vector<std::string> types = element_types();
-    for (std::vector<std::string>::iterator it = types.begin();
-	 it != types.end(); it++)
-      idx.insert({*it, count_elements(*it)});
+    std::map<std::string,size_t> idx = element_counts();
     for (std::vector<ObjElement*>::const_iterator rit = rhs->elements.begin();
 	 rit != rhs->elements.end(); rit++) {
       ObjElement* cpy = copy_element(*rit);
@@ -1553,18 +2535,17 @@ public:
     return nullptr;
   }
   //! \brief End a group.
-  void end_group() {
+  //! \return true if successful, false otherwise.
+  virtual bool end_group() {
+    if (this->finalized) return false;
     ObjElement* last = elements.back();
     if (last->is_group()) {
       ObjGroupBase* last_grp = dynamic_cast<ObjGroupBase*>(last);
       if (!(last_grp->finalized)) {
-	last_grp->end_group();
-	return;
+	return last_grp->end_group();
       }
     }
-    // Proper groups only end when a new group is added
-    RAPIDJSON_ASSERT(this->code != "g");
-    RAPIDJSON_ASSERT(!(this->finalized));
+    return false;
   }
   //! \brief Add an element to the geometry.
   //! \param x New element.
@@ -1595,6 +2576,10 @@ public:
   //! \param x New element.
   //! \return New element.
   ObjElement* copy_element(const ObjElement* x);
+  //! \brief Add an empty element to the geometry.
+  //! \param name Name of the type of element being added.
+  //! \return New element.
+  ObjElement* add_element(std::string name);
   //! \brief Add an element to the geometry from a C++ vector of values.
   //! \tparam T Type of value in the values vector.
   //! \param name Name of the type of element being added.
@@ -1758,9 +2743,42 @@ public:
 //! Vertex data
 class ObjVertex : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVertex, ObjElement, v,
-				   SINGLE_ARG(, values(), x(0), y(0), z(0), w(-1), color()),
-				   SINGLE_ARG(OBJ_P_("x", ObjTypeFloat), OBJ_P_("y", ObjTypeFloat), OBJ_P_("z", ObjTypeFloat), OBJ_P_("red", ObjTypeInt), OBJ_P_("green", ObjTypeInt), OBJ_P_("blue", ObjTypeInt), OBJ_P_("w", ObjTypeFloat)))
+  GENERIC_VECTOR_BODY_TEMP(ObjVertex, ObjElement, v,
+			   SINGLE_ARG(, values(), x(0), y(0), z(0), w(-1), color()),
+			   SINGLE_ARG(OBJ_P_(&x, "x", ObjTypeFloat),
+				      OBJ_P_(&y, "y", ObjTypeFloat),
+				      OBJ_P_(&z, "z", ObjTypeFloat),
+				      OBJ_P_(&(color.r), "red", ObjTypeInt | ObjTypeOpt),
+				      OBJ_P_(&(color.g), "green", ObjTypeInt | ObjTypeOpt),
+				      OBJ_P_(&(color.b), "blue", ObjTypeInt | ObjTypeOpt),
+				      OBJ_P_(&w, "w", ObjTypeFloat | ObjTypeOpt)),
+			   SINGLE_ARG(),
+			   SINGLE_ARG(COMPATIBLE_WITH_FLOAT(T)),
+			   double)
+  //! Vertex coordinate in the x direction.
+  double x;
+  //! Vertex coordinate in the y direction.
+  double y;
+  //! Vertex coordinate in the z direction.
+  double z;
+  //! Vertex weight, negative values indicate a default weight of 1.
+  double w;
+  //! Vertex color.
+  ObjColor color;
+  
+  //! \copydoc ObjElement::get_colors_array
+  void get_colors_array(std::vector<uint8_t>& out,
+			uint8_t defaultValue=0) const OVERRIDE_CXX11 {
+    if (color.is_set) {
+      out.push_back(static_cast<uint8_t>(color.r));
+      out.push_back(static_cast<uint8_t>(color.g));
+      out.push_back(static_cast<uint8_t>(color.b));
+    } else {
+      out.push_back(defaultValue);
+      out.push_back(defaultValue);
+      out.push_back(defaultValue);
+    }
+  }
   //! \copydoc ObjElement::has_property
   bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
     return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
@@ -1768,107 +2786,24 @@ public:
 	       && (name == "red" || name == "green" || name == "blue")) ||
 	      (w < 0 && name == "w")));
   }
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjVertex& rhs) {
-    x = rhs.x;
-    y = rhs.y;
-    z = rhs.z;
-    w = rhs.w;
-    color = rhs.color;
-  }
-  //! \copydoc ObjElement::from_values()
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT((values.size() == 3)
-		     || (values.size() == 4)
-		     || (values.size() == 6)
-		     || (values.size() == 7));
-    x = values[0];
-    y = values[1];
-    z = values[2];
-    if ((values.size() == 6) || (values.size() == 7)) {
-      color.is_set = true;
-      color.r = static_cast<uint8_t>(values[3]);
-      color.g = static_cast<uint8_t>(values[4]);
-      color.b = static_cast<uint8_t>(values[5]);
-    }
-    if ((values.size() == 4) || (values.size() == 7))
-      w = values[values.size() - 1];
-    else
+  //! \copydoc ObjElement::set_meta_properties
+  bool set_meta_properties(const size_t N) OVERRIDE_CXX11 {
+    if (N == 3) {
       w = -1;
-  }
-  GENERIC_READ_VALUES;
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << x << " " << y << " " << z;
-    if (color.is_set)
-      out << " " << (int)color.r << " " << (int)color.g << " " << (int)color.b;
-    if (w >= 0)
-      out << " " << w;
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (rhs0->code != this->code) return false;
-    const ObjVertex* lhs = this;
-    const ObjVertex* rhs = dynamic_cast<const ObjVertex*>(rhs0);
-    if (!internal::values_eq(lhs->x, rhs->x)) return false;
-    if (!internal::values_eq(lhs->y, rhs->y)) return false;
-    if (!internal::values_eq(lhs->z, rhs->z)) return false;
-    if (!internal::values_eq(lhs->w, rhs->w)) return false;
-    return (lhs->color == rhs->color);
-  }
-  //! \copydoc ObjElement::get_property_array
-  void get_property_array(const std::string name,
-			  std::vector<double>& out,
-			  bool skipColors=false) const OVERRIDE_CXX11{
-    if (name == "x")
-      out.push_back((double)x);
-    else if (name == "y")
-      out.push_back((double)y);
-    else if (name == "z")
-      out.push_back((double)z);
-    else if (name == "red") {
-      if (!skipColors)
-	out.push_back((double)color.r);
-    } else if (name == "green") {
-      if (!skipColors)
-	out.push_back((double)color.g);
-    } else if (name == "blue") {
-      if (!skipColors)
-	out.push_back((double)color.b);
-    } else if (name == "w")
-      out.push_back((double)w);
-    else
-      ObjElement::get_property_array(name, out, skipColors);
-  }
-  //! \copydoc ObjElement::get_property_array
-  void get_property_array(const std::string name,
-			  std::vector<int>& out,
-			  bool skipColors=false) const OVERRIDE_CXX11{
-    if (name == "red") {
-      if (!skipColors)
-	out.push_back((int)color.r);
-    } else if (name == "green") {
-      if (!skipColors)
-	out.push_back((int)color.g);
-    } else if (name == "blue") {
-      if (!skipColors)
-	out.push_back((int)color.b);
-    } else
-      ObjElement::get_property_array(name, out, skipColors);
-  }
-  //! \copydoc ObjElement::get_colors_array
-  void get_colors_array(std::vector<uint8_t>& out,
-			uint8_t defaultValue=0) const OVERRIDE_CXX11 {
-    if (color.is_set) {
-      out.push_back(color.r);
-      out.push_back(color.g);
-      out.push_back(color.b);
+      color.is_set = false;
+    } else if (N == 4) {
+      w = 0;
+      color.is_set = false;
+    } else if (N == 6) {
+      w = -1;
+      color.is_set = true;
+    } else if (N == 7) {
+      w = 0;
+      color.is_set = true;
     } else {
-      out.push_back(defaultValue);
-      out.push_back(defaultValue);
-      out.push_back(defaultValue);
+      return false;
     }
+    return true;
   }
   //! \copydoc ObjElement::has_colors
   bool has_colors() const OVERRIDE_CXX11 {
@@ -1888,212 +2823,106 @@ public:
     }
     return false;
   }
-  //! Vertex values vector.
-  std::vector<double> values;
-  //! Vertex coordinate in the x direction.
-  double x;
-  //! Vertex coordinate in the y direction.
-  double y;
-  //! Vertex coordinate in the z direction.
-  double z;
-  //! Vertex weight, negative values indicate a default weight of 1.
-  double w;
-  //! Vertex color.
-  ObjColor color;
 };
 
 //! Object vertex parameter
 class ObjVParameter : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVParameter, ObjElement, vp, SINGLE_ARG(, values(), u(0), v(0), w(-1)), SINGLE_ARG(OBJ_P_("u", ObjTypeFloat), OBJ_P_("v", ObjTypeFloat), OBJ_P_("w", ObjTypeFloat)))
-  //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
-	    (w >= 0 || name != "w"));
-  }
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjVParameter& rhs) {
-    u = rhs.u;
-    v = rhs.v;
-    w = rhs.w;
-  }
-  //! \copydoc ObjElement::from_values()
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT((values.size() == 2)
-		     || (values.size() == 3));
-    u = values[0];
-    v = values[1];
-    if (values.size() == 3)
-      w = values[values.size() - 1];
-    else
-      w = -1;
-  }
-  GENERIC_READ_VALUES;
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << u << " " << v;
-    if (w >= 0)
-      out << " " << w;
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (rhs0->code != this->code) return false;
-    const ObjVParameter* lhs = this;
-    const ObjVParameter* rhs = dynamic_cast<const ObjVParameter*>(rhs0);
-    if (!internal::values_eq(lhs->u, rhs->u)) return false;
-    if (!internal::values_eq(lhs->v, rhs->v)) return false;
-    if (!internal::values_eq(lhs->w, rhs->w)) return false;
-    return true;
-  }
-  //! \copydoc ObjElement::get_property_array
-  void get_property_array(const std::string name,
-			  std::vector<double>& out,
-			  bool skipColors=false) const OVERRIDE_CXX11{
-    if (name == "u")
-      out.push_back((double)u);
-    else if (name == "v")
-      out.push_back((double)v);
-    else if (name == "w")
-      out.push_back((double)w);
-    else
-      ObjElement::get_property_array(name, out, skipColors);
-  }
-  //! Array of values.
-  std::vector<double> values;
+  GENERIC_VECTOR_BODY_TEMP(ObjVParameter, ObjElement, vp,
+			   SINGLE_ARG(, values(), u(0), v(0), w(-1)),
+			   SINGLE_ARG(OBJ_P_(&u, "u", ObjTypeFloat),
+				      OBJ_P_(&v, "v", ObjTypeFloat),
+				      OBJ_P_(&w, "w", ObjTypeFloat | ObjTypeOpt)),
+			   SINGLE_ARG(),
+			   SINGLE_ARG(COMPATIBLE_WITH_FLOAT(T)),
+			   double)
   //! Parameter value in first dimension.
   double u;
   //! Parameter value in second dimension.
   double v;
   //! Parameter weight, negative values indicate a default weight of 1.
   double w;
+  
+  //! \copydoc ObjElement::has_property
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
+	    (w >= 0 || name != "w"));
+  }
+  //! \copydoc ObjElement::set_meta_properties
+  bool set_meta_properties(const size_t N) OVERRIDE_CXX11 {
+    if (N == 2)
+      w = -1;
+    else if (N == 3)
+      w = 0;
+    else
+      return false;
+    return true;
+  }
 };
 
 //! Vertex normal element.
 class ObjVNormal : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVNormal, ObjElement, vn, SINGLE_ARG(, values(), i(0), j(0), k(0)), SINGLE_ARG(OBJ_P_("i", ObjTypeFloat), OBJ_P_("j", ObjTypeFloat), OBJ_P_("k", ObjTypeFloat)))
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjVNormal& rhs) {
-    i = rhs.i;
-    j = rhs.j;
-    k = rhs.k;
-  }
-  //! \copydoc ObjElement::from_values
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT(values.size() == 3);
-    i = values[0];
-    j = values[1];
-    k = values[2];
-  }
-  GENERIC_READ_VALUES;
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << i << " " << j << " " << k;
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (rhs0->code != this->code) return false;
-    const ObjVNormal* lhs = this;
-    const ObjVNormal* rhs = dynamic_cast<const ObjVNormal*>(rhs0);
-    if (!internal::values_eq(lhs->i, rhs->i)) return false;
-    if (!internal::values_eq(lhs->j, rhs->j)) return false;
-    if (!internal::values_eq(lhs->k, rhs->k)) return false;
-    return true;
-  }
-  //! \copydoc ObjElement::get_property_array
-  void get_property_array(const std::string name,
-			  std::vector<double>& out,
-			  bool skipColors=false) const OVERRIDE_CXX11{
-    if (name == "i")
-      out.push_back((double)i);
-    else if (name == "j")
-      out.push_back((double)j);
-    else if (name == "k")
-      out.push_back((double)k);
-    else
-      ObjElement::get_property_array(name, out, skipColors);
-  }
-  //! Vector of normal values.
-  std::vector<double> values;
+  GENERIC_VECTOR_BODY_TEMP(ObjVNormal, ObjElement, vn,
+			   SINGLE_ARG(, values(), i(0), j(0), k(0)),
+			   SINGLE_ARG(OBJ_P_(&i, "i", ObjTypeFloat),
+				      OBJ_P_(&j, "j", ObjTypeFloat),
+				      OBJ_P_(&k, "k", ObjTypeFloat)),
+			   SINGLE_ARG(),
+			   SINGLE_ARG(COMPATIBLE_WITH_FLOAT(T)),
+			   double)
   //! Normal vector in the x direction.
   double i;
   //! Normal vector in the y direction.
   double j;
   //! Normal vector in the z direction.
   double k;
+  
+  //! \copydoc ObjElement::set_meta_properties
+  bool set_meta_properties(const size_t N) OVERRIDE_CXX11 {
+    return (N == 3);
+  }
 };
 
 //! Texture vertex element.
 class ObjVTexture : public ObjElement {
 public:
-  GENERIC_CONSTRUCTOR_VECTOR_FLOAT(ObjVTexture, ObjElement, vt, SINGLE_ARG(, values(), u(0), v(0), w(0)), SINGLE_ARG(OBJ_P_("u", ObjTypeFloat), OBJ_P_("v", ObjTypeFloat), OBJ_P_("w", ObjTypeFloat)))
-  //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
-	    !((v < 0 && name == "v") || (w < 0 && name == "w")));
-  }
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjVTexture& rhs) {
-    u = rhs.u;
-    v = rhs.v;
-    w = rhs.w;
-  }
-  //! \copydoc ObjElement::from_values
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT((values.size() == 1)
-		     || (values.size() == 2)
-		     || (values.size() == 3));
-    u = values[0];
-    v = -1.0;
-    w = -1.0;
-    if (values.size() >= 2)
-      v = values[1];
-    if (values.size() == 3)
-      w = values[2];
-  }
-  GENERIC_READ_VALUES;
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << u;
-    if (v >= 0)
-      out << " " << v;
-    if (w >= 0)
-      out << " " << w;
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (rhs0->code != this->code) return false;
-    const ObjVTexture* lhs = this;
-    const ObjVTexture* rhs = dynamic_cast<const ObjVTexture*>(rhs0);
-    if (!internal::values_eq(lhs->u, rhs->u)) return false;
-    if (!internal::values_eq(lhs->v, rhs->v)) return false;
-    if (!internal::values_eq(lhs->w, rhs->w)) return false;
-    return true;
-  }
-  //! \copydoc ObjElement::get_property_array
-  void get_property_array(const std::string name,
-			  std::vector<double>& out,
-			  bool skipColors=false) const OVERRIDE_CXX11{
-    if (name == "u")
-      out.push_back((double)u);
-    else if (name == "v")
-      out.push_back((double)v);
-    else if (name == "w")
-      out.push_back((double)w);
-    else
-      ObjElement::get_property_array(name, out, skipColors);
-  }
-  //! Vector of texture values.
-  std::vector<double> values;
+  GENERIC_VECTOR_BODY_TEMP(ObjVTexture, ObjElement, vt,
+			   SINGLE_ARG(, values(), u(0), v(0), w(0)),
+			   SINGLE_ARG(OBJ_P_(&u, "u", ObjTypeFloat),
+				      OBJ_P_(&v, "v", ObjTypeFloat | ObjTypeOpt),
+				      OBJ_P_(&w, "w", ObjTypeFloat | ObjTypeOpt)),
+			   SINGLE_ARG(),
+			   SINGLE_ARG(COMPATIBLE_WITH_FLOAT(T)),
+			   double)
   //! Texture coordinate in the horizontal direction.
   double u;
   //! Texture coordinate in the vertical direction; a negative value indicates a default of 0.
   double v;
   //! Texture coordinate in the depth direction; a negative value indicates a default of 0.
   double w;
+  
+  //! \copydoc ObjElement::has_property
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
+	    !((v < 0 && name == "v") || (w < 0 && name == "w")));
+  }
+  //! \copydoc ObjElement::set_meta_properties
+  bool set_meta_properties(const size_t N) OVERRIDE_CXX11 {
+    if (N == 1) {
+      v = -1.0;
+      w = -1.0;
+    } else if (N == 2) {
+      v = 0.0;
+      w = -1.0;
+    } else if (N == 3) {
+      v = 0.0;
+      w = 0.0;
+    } else {
+      return false;
+    }
+    return true;
+  }
 };
 
 // Elements
@@ -2101,15 +2930,19 @@ public:
 //! Point element.
 class ObjPoint : public ObjElement {
 public:
-  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(ObjPoint, p, ObjRef, SINGLE_ARG(COMPATIBLE_WITH_INT(T)), SINGLE_ARG(OBJ_P_("vertex_index", ObjTypeInt | ObjTypeList)))
-  GENERIC_CLASS_VECTOR_TYPE_IS_VALID("v", ObjRef);
+  GENERIC_VECTOR_BODY_STORED_(ObjPoint, ObjElement, p,
+			      SINGLE_ARG(OBJ_P_(&values, "vertex_index", ObjTypeInt | ObjTypeRef | ObjTypeList)),
+			      SINGLE_ARG("vertex_index"),
+			      SINGLE_ARG(COMPATIBLE_WITH_INT(T)),
+			      ObjRef, int, int)
+  GENERIC_CLASS_VECTOR_TYPE_IS_VALID("v", ObjRef)
 };
 
 //! Line element.
-GENERIC_CLASS_VECTOR_OBJREFVERTEX(ObjLine, l, 2);
+GENERIC_VECTOR_OBJREFVERTEX(ObjLine, l, 2);
 
 //! Face element.
-GENERIC_CLASS_VECTOR_OBJREFVERTEX(ObjFace, f, 3);
+GENERIC_VECTOR_OBJREFVERTEX(ObjFace, f, 3);
 
 //! Free-form element group.
 class ObjFreeFormElement : public ObjGroupBase {
@@ -2126,19 +2959,49 @@ public:
     ObjGroupBase(code0, parent0) { RAPIDJSON_ASSERT(parent0); }
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjFreeFormElement(const ObjFreeFormElement& rhs) : ObjGroupBase(rhs) {}
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    ObjGroupBase::write_values(out);
+  //! \copydoc ObjGroupBase::read_group_header
+  bool read_group_header(std::istream &in) OVERRIDE_CXX11 {
+    return ObjElement::read_values(in);
+  }
+  //! \copydoc ObjGroupBase::write_group_header
+  bool write_group_header(std::ostream &out) const OVERRIDE_CXX11 {
+    if (!ObjElement::write_values(out)) return false;
+    return ObjGroupBase::write_group_header(out);
+  }
+  //! \copydoc ObjGroupBase::write_group_footer
+  bool write_group_footer(std::ostream &out) const OVERRIDE_CXX11 {
     out << "end";
+    return true;
+  }
+  //! \copydoc ObjElement::is_equal
+  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
+    if (!(ObjGroupBase::is_equal(rhs0))) return false;
+    return ObjElement::is_equal(rhs0);
+  }
+  //! \copydoc ObjGroupBase::end_group
+  bool end_group() OVERRIDE_CXX11 {
+    if (this->finalized) return false;
+    this->finalize();
+    return true;
   }
 };
 
 //! Curve element.
 class ObjCurve : public ObjFreeFormElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjCurve, ObjFreeFormElement, curv, SINGLE_ARG(, values(), u0(0), u1(0)), SINGLE_ARG(OBJ_P_("u0", ObjTypeFloat), OBJ_P_("u1", ObjTypeFloat), OBJ_P_("vertex_index", ObjTypeInt | ObjTypeList)))
-  DUMMY_ARRAY_CONSTRUCTOR(ObjCurve, ObjFreeFormElement, curv, SINGLE_ARG(, values(), u0(0), u1(0)))
+  GENERIC_VECTOR_BODY_MIXED(ObjCurve, ObjFreeFormElement, curv,
+			    SINGLE_ARG(, values(), u0(0), u1(0)),
+			    SINGLE_ARG(OBJ_P_(&u0, "u0", ObjTypeFloat),
+				       OBJ_P_(&u1, "u1", ObjTypeFloat),
+				       OBJ_P_(&values, "vertex_index", ObjTypeInt | ObjTypeRef | ObjTypeList)),
+			    SINGLE_ARG("vertex_index"),
+			    ObjRef, 2, -1)
   GENERIC_CLASS_VECTOR_TYPE_IS_VALID("v", ObjRef)
+  //! Curve value in first parameter direction.
+  double u0;
+  //! Curve value in second parameter direction.
+  double u1;
+  
   //! \brief Initialize and element from a C++ vector of values.
   //! \param u00 Starting curve parameter value.
   //! \param u10 Ending curve parameter value.
@@ -2152,118 +3015,45 @@ public:
 	   const ObjGroupBase* parent0 = nullptr,
 	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjFreeFormElement("curv", parent0), values(), u0(u00), u1(u10) {
+    this->_init_properties();
     assign_values(values, values0);
     from_values();
   }
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjCurve& rhs) {
-    u0 = rhs.u0;
-    u1 = rhs.u1;
-    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
-  }
-  //! \copydoc ObjElement::from_values()
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT(values.size() >= 2);
-  }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
-    in >> u0;
-    in >> u1;
-    ObjElement::read_values(in, values);
-    ObjFreeFormElement::read_values(in, dont_descend);
-  }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << u0 << " " << u1 << " ";
-    ObjElement::write_values(out, values);
-    ObjFreeFormElement::write_values(out);
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (!(ObjFreeFormElement::is_equal(rhs0))) return false;
-    const ObjCurve* lhs = this;
-    const ObjCurve* rhs = dynamic_cast<const ObjCurve*>(rhs0);
-    if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
-    if (!internal::values_eq(lhs->u0, rhs->u0)) return false;
-    if (!internal::values_eq(lhs->u1, rhs->u1)) return false;
-    return true;
-  }
-  //! \copydoc ObjElement::get_property_array
-  void get_property_array(const std::string name,
-			  std::vector<double>& out,
-			  bool skipColors=false) const OVERRIDE_CXX11 {
-    if (name == "u0")
-      out.push_back((double)u0);
-    else if (name == "u1")
-      out.push_back((double)u1);
-    else if (name == "vertex_index") {
-      for (std::vector<ObjRef>::const_iterator it = values.begin(); it != values.end(); it++)
-	out.push_back((double)(*it));
-    } else
-      ObjElement::get_property_array(name, out, skipColors);
-  }
-  //! \copydoc ObjElement::get_property_array
-  void get_property_array(const std::string name,
-			  std::vector<int>& out,
-			  bool skipColors=false) const OVERRIDE_CXX11 {
-    if (name == "vertex_index") {
-      for (std::vector<ObjRef>::const_iterator it = values.begin(); it != values.end(); it++)
-	out.push_back((int)(*it));
-    } else
-      ObjElement::get_property_array(name, out, skipColors);
-  }
-  //! \copydoc ObjElement::size
-  size_t size(bool=false) const OVERRIDE_CXX11 { return values.size() + 2; }
-  //! Vector for curve values.
-  std::vector<ObjRef> values;
-  //! Curve value in first parameter direction.
-  double u0;
-  //! Curve value in second parameter direction.
-  double u1;
 };
 
 //! 2D curve element.
 class ObjCurve2D : public ObjFreeFormElement {
 public:
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjCurve2D, ObjFreeFormElement, curv2, SINGLE_ARG(, values()), SINGLE_ARG(OBJ_P_("parameter_index", ObjTypeInt | ObjTypeList)), COMPATIBLE_WITH_INT(T), int)
+  GENERIC_VECTOR_BODY_STRICT(ObjCurve2D, ObjFreeFormElement, curv2,
+			     SINGLE_ARG(OBJ_P_(&values, "parameter_index", ObjTypeInt | ObjTypeRef | ObjTypeList)),
+			     SINGLE_ARG("parameter_index"),
+			     SINGLE_ARG(COMPATIBLE_WITH_INT(T)),
+			     ObjRef, int, int,
+			     2, -1)
   GENERIC_CLASS_VECTOR_TYPE_IS_VALID("vp", ObjRef)
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjCurve2D& rhs) {
-    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
-  }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
-    ObjElement::read_values(in, values);
-    ObjFreeFormElement::read_values(in, dont_descend);
-  }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    ObjElement::write_values(out, values);
-    ObjFreeFormElement::write_values(out);
-  }
-  //! \copydoc ObjElement::from_values()
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT(values.size() >= 2);
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (!(ObjFreeFormElement::is_equal(rhs0))) return false;
-    const ObjCurve2D* lhs = this;
-    const ObjCurve2D* rhs = dynamic_cast<const ObjCurve2D*>(rhs0);
-    if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
-    return true;
-  }
-  //! Vector of object reference values.
-  std::vector<ObjRef> values;
 };
 
 //! Surface element.
 class ObjSurface : public ObjFreeFormElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjSurface, ObjFreeFormElement, surf, SINGLE_ARG(, values(), s0(0), s1(0), t0(0), t1(0)), SINGLE_ARG(OBJ_P_("s0", ObjTypeFloat), OBJ_P_("s1", ObjTypeFloat), OBJ_P_("t0", ObjTypeFloat), OBJ_P_("t1", ObjTypeFloat), OBJ_P_("vertex_index", ObjTypeInt | ObjTypeList)))
+  GENERIC_VECTOR_BODY_MIXED(ObjSurface, ObjFreeFormElement, surf,
+			    SINGLE_ARG(, values(), s0(0), s1(0), t0(0), t1(0)),
+			    SINGLE_ARG(OBJ_P_(&s0, "s0", ObjTypeFloat),
+				       OBJ_P_(&s1, "s1", ObjTypeFloat),
+				       OBJ_P_(&t0, "t0", ObjTypeFloat),
+				       OBJ_P_(&t1, "t1", ObjTypeFloat),
+				       OBJ_P_(&values, "vertex_index", (ObjTypeInt | ObjTypeRef | ObjTypeVertex | ObjTypeList))),
+			    SINGLE_ARG("vertex_index", "texture_index", "normal_index"),
+			    ObjRefVertex, 1, -1)
   GENERIC_CLASS_VECTOR_TYPE_IS_VALID_VERTREF(1);
+  //! Surface starting parameter in first dimension.
+  double s0;
+  //! Surface ending parameter in first dimension.
+  double s1;
+  //! Surface starting parameter in second dimension.
+  double t0;
+  //! Surface ending parameter in second dimension.
+  double t1;
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer.
   //! \param s00 Starting curve parameter value in 1st dimension.
@@ -2279,86 +3069,10 @@ public:
 	     const ObjGroupBase* parent0 = nullptr,
 	     RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_VERT(T)))) :
     ObjFreeFormElement("surf", parent0), values(), s0(s00), s1(s10), t0(t00), t1(t10) {
+    this->_init_properties();
     assign_values(values, values0);
     from_values();
   }
-  DUMMY_ARRAY_CONSTRUCTOR(ObjSurface, ObjFreeFormElement, surf, SINGLE_ARG(, values(), s0(0), s1(0), t0(0), t1(0)))
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjSurface& rhs) {
-    s0 = rhs.s0;
-    s1 = rhs.s1;
-    t0 = rhs.t0;
-    t1 = rhs.t1;
-    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
-  }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
-    in >> s0;
-    in >> s1;
-    in >> t0;
-    in >> t1;
-    ObjElement::read_values(in, values);
-    ObjFreeFormElement::read_values(in, dont_descend);
-  }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << s0 << " " << s1 << " " << t0 << " " << t1 << " ";
-    ObjElement::write_values(out, values);
-    ObjFreeFormElement::write_values(out);
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (!(ObjFreeFormElement::is_equal(rhs0))) return false;
-    const ObjSurface* lhs = this;
-    const ObjSurface* rhs = dynamic_cast<const ObjSurface*>(rhs0);
-    if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
-    if (!internal::values_eq(lhs->s0, rhs->s0)) return false;
-    if (!internal::values_eq(lhs->s1, rhs->s1)) return false;
-    if (!internal::values_eq(lhs->t0, rhs->t0)) return false;
-    if (!internal::values_eq(lhs->t1, rhs->t1)) return false;
-    return true;
-  }
-  //! \copydoc ObjElement::get_property_array
-  void get_property_array(const std::string name,
-			  std::vector<double>& out,
-			  bool skipColors=false) const OVERRIDE_CXX11 {
-    if (name == "s0")
-      out.push_back((double)s0);
-    else if (name == "s1")
-      out.push_back((double)s1);
-    else if (name == "t0")
-      out.push_back((double)t0);
-    else if (name == "t1")
-      out.push_back((double)t1);
-    else if (name == "vertex_index") {
-      for (std::vector<ObjRefVertex>::const_iterator it = values.begin(); it != values.end(); it++)
-	out.push_back((double)(*it));
-    } else
-      ObjElement::get_property_array(name, out, skipColors);
-  }
-  //! \copydoc ObjElement::get_property_array
-  void get_property_array(const std::string name,
-			  std::vector<int>& out,
-			  bool skipColors=false) const OVERRIDE_CXX11 {
-    if (name == "vertex_index") {
-      for (std::vector<ObjRefVertex>::const_iterator it = values.begin(); it != values.end(); it++)
-	out.push_back((int)(*it));
-    } else
-      ObjElement::get_property_array(name, out, skipColors);
-  }
-  //! \copydoc ObjElement::size
-  size_t size(bool=false) const OVERRIDE_CXX11 { return values.size() + 4; }
-  //! Vector of surface values.
-  std::vector<ObjRefVertex> values;
-  //! Surface starting parameter in first dimension.
-  double s0;
-  //! Surface ending parameter in first dimension.
-  double s1;
-  //! Surface starting parameter in second dimension.
-  double t0;
-  //! Surface ending parameter in second dimension.
-  double t1;
 };
 
 #undef FREEFORM_CONSTRUCTOR_EMPTY
@@ -2367,51 +3081,50 @@ public:
 //! Free-form element group.
 class ObjFreeFormType : public ObjElement {
 public:
-  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(ObjFreeFormType, cstype, std::string, SINGLE_ARG(COMPATIBLE_WITH_TYPE(T, std::string)), SINGLE_ARG(OBJ_P_("rat", ObjTypeString), OBJ_P_("type", ObjTypeString)))
-  GET_PROPERTY_ARRAY_VECTOR_(std::string, std::string, ObjTypeString);
-  //! \copydoc ObjElement::from_values()
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT((values.size() == 1)
-		     || (values.size() == 2));
-    if (!(values.size() == 1 || values.size() == 2)) return;
-    std::string ival = values[0];
-    if (ival == "rat") {
-      RAPIDJSON_ASSERT(values.size() == 2);
-      if (values.size() == 2)
-	ival = values[1];
-    }
-    RAPIDJSON_ASSERT(((ival == "bmatrix" ) || // basis matrix
-		      (ival == "bezier"  ) || // Bezier
-		      (ival == "bspline" ) || // B-spline
-		      (ival == "cardinal") || // Cardinal
-		      (ival == "taylor"  ))); // Taylor
-  }
+  GENERIC_VECTOR_BODY_STORED(ObjFreeFormType, ObjElement, cstype,
+			     SINGLE_ARG(OBJ_P_(nullptr, "rat", ObjTypeString),
+					OBJ_P_(nullptr, "type", ObjTypeString | ObjTypeOpt)),
+			     SINGLE_ARG(),
+			     SINGLE_ARG(COMPATIBLE_WITH_TYPE(T, std::string)),
+			     std::string, std::string, string)
   //! \copydoc ObjElement::is_valid
-  bool is_valid(std::map<std::string,size_t>&) const OVERRIDE_CXX11 {
+  bool is_valid() const OVERRIDE_CXX11 {
     if (!(values.size() == 1 || values.size() == 2)) return false;
     std::string ival = values[0];
     if (ival == "rat" && values.size() == 2)
       ival = values[1];
-    return ((ival == "bmatrix" ) || // basis matrix
-	    (ival == "bezier"  ) || // Bezier
-	    (ival == "bspline" ) || // B-spline
-	    (ival == "cardinal") || // Cardinal
-	    (ival == "taylor"  )); // Taylor    
+    return (ival == "bmatrix"  || // basis matrix
+	    ival == "bezier"   || // Bezier
+	    ival == "bspline"  || // B-spline
+	    ival == "cardinal" || // Cardinal
+	    ival == "taylor"   ); // Taylor    
   }
 };
 
 //! Degree element.
 class ObjDegree : public ObjElement {
 public:
-  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(ObjDegree, deg, uint16_t, SINGLE_ARG(COMPATIBLE_WITH_UINT(T)), SINGLE_ARG(OBJ_P_("degu", ObjTypeInt), OBJ_P_("degv", ObjTypeInt)))
-  GENERIC_FROM_VALUES(1, 2)
+  GENERIC_VECTOR_BODY_STORED(ObjDegree, ObjElement, deg,
+			     SINGLE_ARG(OBJ_P_(nullptr, "degu", ObjTypeUint16 | ObjTypeInt),
+					OBJ_P_(nullptr, "degv", ObjTypeUint16 | ObjTypeInt | ObjTypeOpt)),
+			     SINGLE_ARG(),
+			     SINGLE_ARG(COMPATIBLE_WITH_UINT(T)),
+			     uint16_t, int, int)
 };
 
 
 //! Basis matrix element.
 class ObjBasisMatrix : public ObjElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjBasisMatrix, ObjElement, bmat, SINGLE_ARG(, values(), direction("")), SINGLE_ARG(OBJ_P_("direction", ObjTypeString), OBJ_P_("matrix", ObjTypeFloat)))
+  GENERIC_VECTOR_BODY_MIXED(ObjBasisMatrix, ObjElement, bmat,
+			    SINGLE_ARG(, values(), direction("")),
+			    SINGLE_ARG(OBJ_P_(&direction, "direction", ObjTypeString),
+				       OBJ_P_(&values, "matrix", ObjTypeFloat | ObjTypeList)),
+			    SINGLE_ARG(),
+			    double, 1, -1)
+  //! Basis matrix direction.
+  std::string direction;
+  
   //! \brief Initialize an element from a C array of values.
   //! \tparam T Array element type.
   //! \tparam N Array size.
@@ -2422,6 +3135,7 @@ public:
   ObjBasisMatrix(const std::string& direction0, const T (&src)[N],
 		 const ObjGroupBase* parent0 = nullptr) :
     ObjElement("bmat", parent0), values(), direction(direction0) {
+    this->_init_properties();
     std::vector<T> values0(src, src+N);
     assign_values(values, values0);
     from_values();
@@ -2433,59 +3147,17 @@ public:
   ObjBasisMatrix(const std::string& direction0, const std::vector<double> &values0,
 		 const ObjGroupBase* parent0 = nullptr) :
     ObjElement("bmat", parent0), values(), direction(direction0) {
+    this->_init_properties();
     assign_values(values, values0);
     from_values();
   }
-  DUMMY_ARRAY_CONSTRUCTOR(ObjBasisMatrix, ObjElement, bmat, SINGLE_ARG(, values(), direction("")))
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjBasisMatrix& rhs) {
-    direction = rhs.direction;
-    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
-  }
-  //! \copydoc ObjElement::from_values()
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT((direction == "u") || (direction == "v"));
-    RAPIDJSON_ASSERT(this->parent);
-    const ObjElement* deg0 = this->parent->last_element("deg");
-    RAPIDJSON_ASSERT(deg0);
-    const ObjDegree* deg = dynamic_cast<const ObjDegree*>(deg0);
-    uint16_t n;
-    if (direction == "u")
-      n = deg->values[0];
-    else {
-      RAPIDJSON_ASSERT(deg->values.size() == 2);
-      n = deg->values[1];
-    }
-    (void)n;
-    RAPIDJSON_ASSERT(values.size() == ((n + 1)*(n + 1)));
-  }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {
-    in >> direction;
-    ObjElement::read_values(in, values);
-  }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << direction << " ";
-    ObjElement::write_values(out, values);
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (rhs0->code != this->code) return false;
-    const ObjBasisMatrix* lhs = this;
-    const ObjBasisMatrix* rhs = dynamic_cast<const ObjBasisMatrix*>(rhs0);
-    if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
-    if (lhs->direction != rhs->direction) return false;
-    return true;
-  }
   //! \copydoc ObjElement::is_valid
-  bool is_valid(std::map<std::string,size_t>&) const OVERRIDE_CXX11 {
+  bool is_valid() const OVERRIDE_CXX11 {
     if (!this->parent) return false;
     const ObjElement* deg0 = this->parent->last_element("deg");
     if (!deg0) return false;
     const ObjDegree* deg = dynamic_cast<const ObjDegree*>(deg0);
-    uint16_t n = 0;
+    int n = 0;
     if (direction == "u")
       n = deg->values[0];
     else if (direction == "v") {
@@ -2494,26 +3166,33 @@ public:
     } else {
       return false;
     }
-    return (values.size() == ((n + 1)*(n + 1)));
+    return (values.size() == (size_t)((n + 1)*(n + 1)));
   }
-  //! Vector of matrix values.
-  std::vector<double> values;
-  //! Basis matrix direction.
-  std::string direction;
 };
 
 //! Step element.
 class ObjStep : public ObjElement {
 public:
-  GENERIC_CLASS_VECTOR_TYPE_BODY_COMPARE(ObjStep, step, double, SINGLE_ARG(COMPATIBLE_WITH_FLOAT(T)), SINGLE_ARG(OBJ_P_("stepu", ObjTypeFloat), OBJ_P_("stepv", ObjTypeFloat)))
-  GENERIC_FROM_VALUES(1, 2)
+  GENERIC_VECTOR_BODY_STORED(ObjStep, ObjElement, step,
+			     SINGLE_ARG(OBJ_P_(nullptr, "stepu", ObjTypeFloat),
+					OBJ_P_(nullptr, "stepv", ObjTypeFloat | ObjTypeOpt)),
+			     SINGLE_ARG(),
+			     SINGLE_ARG(COMPATIBLE_WITH_FLOAT(T)),
+			     double, double, double)
 };
 
 //! Parameter element.
 class ObjParameter : public ObjElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjParameter, ObjElement, parm, SINGLE_ARG(, values(), direction("")), SINGLE_ARG(OBJ_P_("direction", ObjTypeString), OBJ_P_("parameter", ObjTypeFloat)))
-  DUMMY_ARRAY_CONSTRUCTOR(ObjParameter, ObjElement, parm, SINGLE_ARG(, values(), direction("")))
+  GENERIC_VECTOR_BODY_MIXED(ObjParameter, ObjElement, parm,
+			    SINGLE_ARG(, values(), direction("")),
+			    SINGLE_ARG(OBJ_P_(&direction, "direction", ObjTypeString),
+				       OBJ_P_(&values, "parameter", ObjTypeFloat | ObjTypeList)),
+			    SINGLE_ARG("parameter"),
+			    double, 2, -1)
+  //! Parameter direction.
+  std::string direction;
+  
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be catable to double.
   //! \param direction0 Parameter direction.
@@ -2524,6 +3203,7 @@ public:
 	       const ObjGroupBase* parent0 = nullptr,
 	       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("parm", parent0), values(), direction(direction0) {
+    this->_init_properties();
     assign_values(values, values0);
     from_values();
   }
@@ -2538,65 +3218,48 @@ public:
     ObjElement("parm", parent0), values(), direction("") {
     RAPIDJSON_ASSERT(sizeof("ObjParameter type is double"));
   }
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjParameter& rhs) {
-    direction = rhs.direction;
-    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
-  }
-  //! \copydoc ObjElement::from_values()
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT((direction == "u") || (direction == "v"));
-  }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {
-    in >> direction;
-    ObjElement::read_values(in, values);
-  }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << direction << " ";
-    ObjElement::write_values(out, values);
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (rhs0->code != this->code) return false;
-    const ObjParameter* lhs = this;
-    const ObjParameter* rhs = dynamic_cast<const ObjParameter*>(rhs0);
-    if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
-    if (lhs->direction != rhs->direction) return false;
-    return true;
-  }
   //! \copydoc ObjElement::is_valid
-  bool is_valid(std::map<std::string,size_t>&) const OVERRIDE_CXX11 {
+  bool is_valid() const OVERRIDE_CXX11 {
     return ((direction == "u") || (direction == "v"));
   }
-  //! Vector of parameter values.
-  std::vector<double> values;
-  //! Parameter direction.
-  std::string direction;
 };
 
 //! Trim element.
-GENERIC_CLASS_VECTOR_OBJREFCURVE(ObjTrim, trim);
+GENERIC_VECTOR_OBJREFCURVE(ObjTrim, trim);
 
 //! Hole element.
-GENERIC_CLASS_VECTOR_OBJREFCURVE(ObjHole, hole);
+GENERIC_VECTOR_OBJREFCURVE(ObjHole, hole);
 
 //! Special curve element.
-GENERIC_CLASS_VECTOR_OBJREFCURVE(ObjScrv, scrv);
+GENERIC_VECTOR_OBJREFCURVE(ObjScrv, scrv);
 
 //! Special points element.
-GENERIC_CLASS_VECTOR_TYPE_COMPARE_INDEX(ObjSpecialPoints, sp, ObjRef, SINGLE_ARG(COMPATIBLE_WITH_INT(T)), SINGLE_ARG(OBJ_P_("param_index", ObjTypeInt | ObjTypeList)));
+class ObjSpecialPoints : public ObjElement {
+public:
+  GENERIC_VECTOR_BODY_STRICT(ObjSpecialPoints, ObjElement, sp,
+			     SINGLE_ARG(OBJ_P_(&values, "param_index", ObjTypeInt | ObjTypeRef | ObjTypeList)),
+			     SINGLE_ARG("param_index"),
+			     SINGLE_ARG(COMPATIBLE_WITH_INT(T)),
+			     ObjRef, int, int,
+			     1, -1);
+  GENERIC_CLASS_VECTOR_TYPE_IS_VALID("vp", ObjRef)
+  MANAGE_PROPERTIES_VECTOR_(ObjRef, double, double)
+};
 
 //! Connection element.
-GENERIC_CLASS_VECTOR_OBJREFSURFACE(ObjConnect, con);
+GENERIC_VECTOR_OBJREFSURFACE(ObjConnect, con);
 
 //! Group of elements.
 class ObjGroup : public ObjGroupBase {
 public:
-  GENERIC_CONSTRUCTOR_VECTOR_TYPE(ObjGroup, ObjGroupBase, g, SINGLE_ARG(, values()), SINGLE_ARG(OBJ_P_("labels", ObjTypeString | ObjTypeList)), COMPATIBLE_WITH_TYPE(T, std::string), std::string)
-  GET_PROPERTY_ARRAY_VECTOR_(std::string, std::string, ObjTypeString);
+  GENERIC_VECTOR_CONSTRUCTOR(ObjGroup, ObjGroupBase, g,
+			     SINGLE_ARG(, values()),
+			     SINGLE_ARG(OBJ_P_(&values, "labels", ObjTypeString | ObjTypeList)),
+			     SINGLE_ARG("labels"),
+			     COMPATIBLE_WITH_TYPE(T, std::string),
+			     std::string)
+  MANAGE_PROPERTIES_VECTOR_(std::string, std::string, string);
+  GENERIC_COPY_MEMBERS(ObjGroup)
   //! \brief Initialize and element from a scalar.
   //! \tparam T Type of value.
   //! \param value Scalar value.
@@ -2606,6 +3269,7 @@ public:
 	   const ObjGroupBase* parent0 = nullptr,
 	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
     ObjGroupBase("g", parent0), values() {
+    this->_init_properties();
     std::vector<T> values0;
     values0.push_back(value);
     assign_values(values, values0);
@@ -2617,22 +3281,24 @@ public:
   template<typename T>
   ObjGroup(const T &,
 	   const ObjGroupBase* parent0 = nullptr,
-	   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
+	   RAPIDJSON_DISABLEIF((internal::OrExpr<COMPATIBLE_WITH_TYPE(T, std::string),
+				internal::IsPointer<T>>))) :
     ObjGroupBase("g", parent0), values() {
     ASSERT_COMPATIBLE(T, std::string);
   }
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjGroup& rhs) {
-    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
-  }
   //! \copydoc ObjGroupBase::read_group_header
-  void read_group_header(std::istream &in) OVERRIDE_CXX11 {
-    ObjElement::read_values(in, values);
+  bool read_group_header(std::istream &in) OVERRIDE_CXX11 {
+    return ObjElement::read_values(in, values);
   }
   //! \copydoc ObjGroupBase::write_group_header
-  void write_group_header(std::ostream &out) const OVERRIDE_CXX11 {
-    ObjElement::write_values(out, values);
+  bool write_group_header(std::ostream &out) const OVERRIDE_CXX11 {
+    if (!ObjElement::write_values(out, values)) return false;
+    return ObjGroupBase::write_group_header(out);
+  }
+  //! \copydoc ObjElement::write_suffix
+  bool write_suffix(std::ostream &out) const OVERRIDE_CXX11 {
+    // No new line as last grouup element will be terminated
+    return true;
   }
   //! \copydoc ObjElement::is_equal
   bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
@@ -2663,38 +3329,28 @@ public:
 //! Smoothing group element.
 class ObjSmoothingGroup : public ObjElement {
 public:
-  GENERIC_CLASS_SCALAR_TYPE_BASE(ObjSmoothingGroup, ObjElement, s, std::string, "off", SINGLE_ARG(OBJ_P_("state", ObjTypeString)))
-  GET_PROPERTY_ARRAY_SCALAR_(std::string, ObjTypeString)
-  //! \brief Initialize the smoothing group from a string.
-  //! \param value0 Scalar value.
-  //! \param parent0 Parent group.
-  template<typename T>
-  ObjSmoothingGroup(const T& value0, const ObjGroupBase* parent0 = nullptr,
-		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
-    ObjElement("s", parent0), value(value0) {}
-  //! \brief Initialize the smoothing group from an integer.
-  //! \param value0 Scalar value.
-  //! \param parent0 Parent group.
-  template<typename T>
-  ObjSmoothingGroup(const T& value0, const ObjGroupBase* parent0 = nullptr,
-		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
-    ObjElement("s", parent0), value(std::to_string(value0)) {}
-  //! \brief Raise an error for non string or integer types.
-  template<typename T>
-  ObjSmoothingGroup(const T&, const ObjGroupBase* parent0 = nullptr,
-		    RAPIDJSON_DISABLEIF((internal::OrExpr<
-					 COMPATIBLE_WITH_INT(T),
-					 COMPATIBLE_WITH_TYPE(T, std::string)>))) :
-    ObjElement("s", parent0), value("off") {
-    RAPIDJSON_ASSERT(!sizeof("ObjSmoothingGroup must be initialized from a string or integer."));
+  GENERIC_SCALAR_BODY(ObjSmoothingGroup, ObjElement, s, 0,
+		      SINGLE_ARG(OBJ_P_(&value, "state", ObjTypeInt | ObjTypeOff)),
+		      int, int, int)
+  //! \copydoc ObjElement::is_valid
+  bool is_valid() const OVERRIDE_CXX11 {
+    return value >= 0;
   }
 };
 
 //! Merging group.
 class ObjMergingGroup : public ObjElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value("off"), resolution(0)), SINGLE_ARG(OBJ_P_("state", ObjTypeString), OBJ_P_("resolution", ObjTypeFloat)))
-  DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value("off"), resolution(0)))
+  GENERIC_ELEMENT_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg,
+			      SINGLE_ARG(, value(0), resolution(0)),
+			      SINGLE_ARG(OBJ_P_(&value, "state", ObjTypeInt | ObjTypeOff),
+					 OBJ_P_(&resolution, "resolution", ObjTypeFloat)),
+			      SINGLE_ARG());
+  DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value(0), resolution(0)));
+  MANAGE_PROPERTIES_SCALAR_(int, int, int)
+  GENERIC_SCALAR_BODY_BASE(ObjMergingGroup, int)
+  //! Group resolution.
+  double resolution;
   //! \brief Initialize the smoothing group from a string.
   //! \param value0 Scalar value.
   //! \param parent0 Parent group.
@@ -2702,7 +3358,9 @@ public:
   ObjMergingGroup(const T& value0, const double& resolution0,
 		  const ObjGroupBase* parent0 = nullptr,
 		  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
-    ObjElement("mg", parent0), value(value0), resolution(resolution0) {}
+    ObjElement("mg", parent0), value((value0 == "off") ? 0 : stoi(value0)), resolution(resolution0) {
+    this->_init_properties();
+  }
   //! \brief Initialize the smoothing group from an integer.
   //! \param value0 Scalar value.
   //! \param parent0 Parent group.
@@ -2710,7 +3368,9 @@ public:
   ObjMergingGroup(const T& value0, const double& resolution0,
 		  const ObjGroupBase* parent0 = nullptr,
 		  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
-    ObjElement("mg", parent0), value(std::to_string(value0)), resolution(resolution0) {}
+    ObjElement("mg", parent0), value(value0), resolution(resolution0) {
+    this->_init_properties();
+  }
   //! \brief Raise an error for non string or integer types.
   template <typename T>
   ObjMergingGroup(const T&, const double&,
@@ -2718,60 +3378,49 @@ public:
 		  RAPIDJSON_DISABLEIF((internal::OrExpr<
 				       COMPATIBLE_WITH_INT(T),
 				       COMPATIBLE_WITH_TYPE(T, std::string)>))) :
-    ObjElement("mg", parent0), value("off"), resolution(0) {
+    ObjElement("mg", parent0), value(0), resolution(0) {
     RAPIDJSON_ASSERT(!sizeof("ObjMergingGroup must be initialized from a string or integer."));
   }
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjMergingGroup& rhs) {
-    value = rhs.value;
-    resolution = rhs.resolution;
+  //! \copydoc ObjElement::is_valid
+  bool is_valid() const OVERRIDE_CXX11 {
+    return value >= 0;
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {
-    in >> value;
-    if (value == "off")
-      resolution = 0.0;
-    else
-      in >> resolution;
-  }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << value;
-    if (value != "off")
-      out << " " << resolution;
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (this->code != rhs0->code) return false;
-    const ObjMergingGroup* lhs = this;
-    const ObjMergingGroup* rhs = dynamic_cast<const ObjMergingGroup*>(rhs0);
-    if (lhs->value != rhs->value) return false;
-    if (!(internal::values_eq(lhs->resolution, rhs->resolution))) return false;
+  //! \copydoc ObjElement::set_property_double
+  bool set_property_double(size_t i, const double new_value) OVERRIDE_CXX11 {
+    switch (i) {
+    case (1):
+      resolution = new_value;
+      break;
+    default:
+      return false;
+    }
     return true;
   }
-  //! Merging group.
-  std::string value;
-  //! Group resolution.
-  double resolution;
+  //! \copydoc ObjElement::get_property_double
+  bool get_property_double(size_t i, double& out) const OVERRIDE_CXX11 {
+    switch (i) {
+    case (1): {
+      out = resolution;
+      break;
+    }
+    default:
+      return false;
+    }
+    return true;
+  }
 };
 
 //! Object name element.
-GENERIC_CLASS_SCALAR_TYPE_STRING(ObjObjectName, o, std::string, "", SINGLE_ARG(OBJ_P_("value", ObjTypeString)));
+GENERIC_SCALAR_STRING(ObjObjectName, o, "", SINGLE_ARG(OBJ_P_(&value, "value", ObjTypeString)));
 
 // Display/render attributes
 
 #define BOOL_ELEMENT_CLASS(cls, code)					\
   class cls : public ObjElement {					\
   public:								\
-  GENERIC_CLASS_SCALAR_TYPE_BODY(cls, ObjElement, code, std::string, "off", SINGLE_ARG(OBJ_P_("state", ObjTypeString))) \
-  GET_PROPERTY_ARRAY_SCALAR_(std::string, ObjTypeString)		\
-  /*! \copydoc ObjElement::from_values() */				\
-  void from_values() OVERRIDE_CXX11 {					\
-    RAPIDJSON_ASSERT(((value == "on") || (value == "off")));		\
-  }									\
+  GENERIC_SCALAR_BODY(cls, ObjElement, code, "off", SINGLE_ARG(OBJ_P_(&value, "state", ObjTypeString)), std::string, std::string, string) \
   /*! \copydoc ObjElement::is_valid */					\
-  bool is_valid(std::map<std::string,size_t>&) const OVERRIDE_CXX11 {	\
+  bool is_valid() const OVERRIDE_CXX11 {				\
     return ((value == "on") || (value == "off"));			\
   }									\
   }
@@ -2788,37 +3437,51 @@ BOOL_ELEMENT_CLASS(ObjDInterp, d_interp);
 #undef BOOL_ELEMENT_CLASS
 
 //! Level of detail.
-GENERIC_CLASS_SCALAR_TYPE(ObjLOD, lod, int, 0, SINGLE_ARG(OBJ_P_("value", ObjTypeInt)));
+class ObjLOD : public ObjElement {
+public:
+  GENERIC_SCALAR_BODY(ObjLOD, ObjElement, lod, 0, SINGLE_ARG(OBJ_P_(&value, "value", ObjTypeInt)), int, int, int)
+};
 
 //! Map library file.
-GENERIC_CLASS_VECTOR_TYPE_STRING(ObjTextureMapLib, maplib, std::string, SINGLE_ARG(OBJ_P_("value", ObjTypeString | ObjTypeList)));
+GENERIC_VECTOR_STRING(ObjTextureMapLib, maplib, std::string, SINGLE_ARG(OBJ_P_(&values, "value", ObjTypeString | ObjTypeList)), SINGLE_ARG("value"));
 
 //! Texture map.
-GENERIC_CLASS_SCALAR_TYPE_STRING(ObjTextureMap, usemap, std::string, "off", SINGLE_ARG(OBJ_P_("value", ObjTypeString)));
+GENERIC_SCALAR_STRING(ObjTextureMap, usemap, "off", SINGLE_ARG(OBJ_P_(&value, "value", ObjTypeString)));
 
 //! Material name.
-GENERIC_CLASS_SCALAR_TYPE_STRING(ObjMaterial, usemtl, std::string, "", SINGLE_ARG(OBJ_P_("value", ObjTypeString)));
+GENERIC_SCALAR_STRING(ObjMaterial, usemtl, "", SINGLE_ARG(OBJ_P_(&value, "value", ObjTypeString)));
 
 //! Matrial library file.
-GENERIC_CLASS_VECTOR_TYPE_STRING(ObjMaterialLib, mtllib, std::string, SINGLE_ARG(OBJ_P_("value", ObjTypeString | ObjTypeList)));
+GENERIC_VECTOR_STRING(ObjMaterialLib, mtllib, std::string, SINGLE_ARG(OBJ_P_(&values, "value", ObjTypeString | ObjTypeList)), SINGLE_ARG("value"));
 
 //! Shadow object file.
-GENERIC_CLASS_SCALAR_TYPE_STRING(ObjShadowFile, shadow_obj, std::string, "", SINGLE_ARG(OBJ_P_("value", ObjTypeString)));
+GENERIC_SCALAR_STRING(ObjShadowFile, shadow_obj, "", SINGLE_ARG(OBJ_P_(&value, "value", ObjTypeString)));
 
 //! Ray tracing object file.
-GENERIC_CLASS_SCALAR_TYPE_STRING(ObjTraceFile, trace_obj, std::string, "", SINGLE_ARG(OBJ_P_("value", ObjTypeString)));
+GENERIC_SCALAR_STRING(ObjTraceFile, trace_obj, "", SINGLE_ARG(OBJ_P_(&value, "value", ObjTypeString)));
 
 //! Curve technique resolution.
 class ObjCTech : public ObjElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjCTech, ObjElement, ctech, SINGLE_ARG(, technique(""), values()), SINGLE_ARG(OBJ_P_("technique", ObjTypeString), OBJ_P_("resolution", ObjTypeFloat), OBJ_P_("maxlength", ObjTypeFloat), OBJ_P_("maxdist", ObjTypeFloat), OBJ_P_("maxangle", ObjTypeFloat)))
-  DUMMY_ARRAY_CONSTRUCTOR(ObjCTech, ObjElement, ctech, SINGLE_ARG(, technique(""), values()))
+  GENERIC_VECTOR_BODY_MIXED(ObjCTech, ObjElement, ctech,
+			    SINGLE_ARG(, values(), technique("")),
+			    SINGLE_ARG(OBJ_P_(&technique, "technique", ObjTypeString),
+				       OBJ_P_(nullptr, "resolution", ObjTypeFloat | ObjTypeOpt),
+				       OBJ_P_(nullptr, "maxlength", ObjTypeFloat | ObjTypeOpt),
+				       OBJ_P_(nullptr, "maxdist", ObjTypeFloat | ObjTypeOpt),
+				       OBJ_P_(nullptr, "maxangle", ObjTypeFloat | ObjTypeOpt)),
+			    SINGLE_ARG(),
+			    double, 1, 2)
+  //! Technique used for the resolution.
+  std::string technique;
+  
   template<typename T>
   ObjCTech(const std::string& technique0,
 	   const std::vector<T> &values0,
 	   const ObjGroupBase* parent0 = nullptr,
 	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
-    ObjElement("ctech", parent0), technique(technique0), values() {
+    ObjElement("ctech", parent0), values(), technique(technique0) {
+    this->_init_properties();
     assign_values(values, values0);
     from_values();
   }
@@ -2827,81 +3490,132 @@ public:
 	   const std::vector<T> &,
 	   const ObjGroupBase* parent0 = nullptr,
 	   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
-    ObjElement("ctech", parent0), technique(technique0), values() {
+    ObjElement("ctech", parent0), values(), technique(technique0) {
     RAPIDJSON_ASSERT(sizeof("ObjCTech type is double"));
   }
   //! \copydoc ObjElement::has_property
   bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
     return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
-	    ((technique == "cparm" && (name == "technique" ||
-				       name == "resolution")) ||
-	     (technique == "cspace" && (name == "technique" ||
-					name == "maxlength")) ||
-	     (technique == "curv" && (name == "technique" ||
-				      name == "maxdist" ||
+	    ((name == "technique") ||
+	     (technique == "cparm" && name == "resolution") ||
+	     (technique == "cspace" && name == "maxlength") ||
+	     (technique == "curv" && (name == "maxdist" ||
 				      name == "maxangle"))));
   }
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjCTech& rhs) {
-    technique = rhs.technique;
-    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
+  //! \copydoc ObjElement::set_property_string
+  bool set_property_string(size_t i, const std::string new_value) OVERRIDE_CXX11 {
+    switch (i) {
+    case (0):
+      technique = new_value;
+      break;
+    default:
+      return false;
+    }
+    return true;
   }
-  //! \copydoc ObjElement::from_values()
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT(((technique == "cparm" ) ||
-		      (technique == "cspace") ||
-		      (technique == "curv"  )));
-    if ((technique == "cparm") || (technique == "cspace"))
-      RAPIDJSON_ASSERT((values.size() == 1));
-    else
-      RAPIDJSON_ASSERT((values.size() == 2));
+  //! \copydoc ObjElement::set_property_double
+  bool set_property_double(size_t i, const double new_value) OVERRIDE_CXX11 {
+    switch (i) {
+    case (1): {
+      if (technique != "cparm") return false;
+      if (values.size() < 1) values.resize(1);
+      values[0] = new_value;
+      break;
+    }
+    case (2): {
+      if (technique != "cspace") return false;
+      if (values.size() < 1) values.resize(1);
+      values[0] = new_value;
+      break;
+    }
+    case (3): {
+      if (technique != "curv") return false;
+      if (values.size() < 2) values.resize(2);
+      values[0] = new_value;
+      break;
+    }
+    case (4): {
+      if (technique != "curv") return false;
+      if (values.size() < 2) values.resize(2);
+      values[1] = new_value;
+      break;
+    }
+    default:
+      return false;
+    }
+    return true;
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {
-    in >> technique;
-    RAPIDJSON_ASSERT(((technique == "cparm" ) ||
-		      (technique == "cspace") ||
-		      (technique == "curv"  )));
-    ObjElement::read_values(in, values);
+  //! \copydoc ObjElement::get_property_string
+  bool get_property_string(size_t i, std::string& out) const OVERRIDE_CXX11 {
+    switch (i) {
+    case (0):
+      out = technique;
+      break;
+    default:
+      return false;
+    }
+    return true;
   }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << technique << " ";
-    ObjElement::write_values(out, values);
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (rhs0->code != this->code) return false;
-    const ObjCTech* lhs = this;
-    const ObjCTech* rhs = dynamic_cast<const ObjCTech*>(rhs0);
-    if (lhs->technique != rhs->technique) return false;
-    if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
+  //! \copydoc ObjElement::get_property_double
+  bool get_property_double(size_t i, double& out) const OVERRIDE_CXX11 {
+    switch (i) {
+    case (1): {
+      if (technique != "cparm" || values.empty()) return false;
+      out = values[0];
+      break;
+    }
+    case (2): {
+      if (technique != "cspace" || values.empty()) return false;
+      out = values[0];
+      break;
+    }
+    case (3): {
+      if (technique != "curv" || values.size() != 2) return false;
+      out = values[0];
+      break;
+    }
+    case (4): {
+      if (technique != "curv" || values.size() != 2) return false;
+      out = values[1];
+      break;
+    }
+    default:
+      return false;
+    }
     return true;
   }
   //! \copydoc ObjElement::is_valid
-  bool is_valid(std::map<std::string,size_t>&) const OVERRIDE_CXX11 {
+  bool is_valid() const OVERRIDE_CXX11 {
     return (((technique == "cparm" ||
 	      technique == "cspace") && values.size() == 1) ||
 	    (technique == "curv" && values.size() == 2));
   }
-  //! Technique used for the resolution.
-  std::string technique;
-  //! Vector of resolution parameters.
-  std::vector<double> values;
 };
 
 //! Surface technique resolution.
 class ObjSTech : public ObjElement {
 public:
-  GENERIC_ELEMENT_CONSTRUCTOR(ObjSTech, ObjElement, stech, SINGLE_ARG(, technique(""), values()), SINGLE_ARG(OBJ_P_("technique", ObjTypeString), OBJ_P_("ures", ObjTypeFloat), OBJ_P_("vres", ObjTypeFloat), OBJ_P_("uvres", ObjTypeFloat), OBJ_P_("maxlength", ObjTypeFloat), OBJ_P_("maxdist", ObjTypeFloat), OBJ_P_("maxangle", ObjTypeFloat)))
-  DUMMY_ARRAY_CONSTRUCTOR(ObjSTech, ObjElement, stech, SINGLE_ARG(, technique(""), values()))
+  GENERIC_VECTOR_BODY_MIXED(ObjSTech, ObjElement, stech,
+			    SINGLE_ARG(, values(), technique("")),
+			    SINGLE_ARG(OBJ_P_(&technique, "technique", ObjTypeString),
+				       OBJ_P_(nullptr, "ures", ObjTypeFloat | ObjTypeOpt),
+				       OBJ_P_(nullptr, "vres", ObjTypeFloat | ObjTypeOpt),
+				       OBJ_P_(nullptr, "uvres", ObjTypeFloat | ObjTypeOpt),
+				       OBJ_P_(nullptr, "maxlength", ObjTypeFloat | ObjTypeOpt),
+				       OBJ_P_(nullptr, "maxdist", ObjTypeFloat | ObjTypeOpt),
+				       OBJ_P_(nullptr, "maxangle", ObjTypeFloat | ObjTypeOpt)),
+			    SINGLE_ARG(),
+			    double, 1, 2)
+  //! Technique used for the resolution.
+  std::string technique;
+    
   template<typename T>
   ObjSTech(const std::string& technique0,
 	   const std::vector<T> &values0,
 	   const ObjGroupBase* parent0 = nullptr,
 	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
-    ObjElement("stech", parent0), technique(technique0), values() {
+    ObjElement("stech", parent0), values(), technique(technique0) {
+    this->_init_properties();
     assign_values(values, values0);
     from_values();
   }
@@ -2910,74 +3624,131 @@ public:
 	   const std::vector<T> &,
 	   const ObjGroupBase* parent0 = nullptr,
 	   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
-    ObjElement("stech", parent0), technique(technique0), values() {
+    ObjElement("stech", parent0), values(), technique(technique0) {
     RAPIDJSON_ASSERT(!sizeof("ObjSTech type is double"));
   }
   //! \copydoc ObjElement::has_property
   bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false) const  OVERRIDE_CXX11 {
     return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
-	    ((technique == "cparma" && (name == "technique" ||
-					name == "ures" ||
+	    ((name == "technique") ||
+	     (technique == "cparma" && (name == "ures" ||
 					name == "vres")) ||
-	     (technique == "cparmb" && (name == "technique" ||
-					name == "uvres")) ||
-	     (technique == "cspace" && (name == "technique" ||
-					name == "maxlength")) ||
-	     (technique == "curv" && (name == "technique" ||
-				      name == "maxdist" ||
+	     (technique == "cparmb" && name == "uvres") ||
+	     (technique == "cspace" && name == "maxlength") ||
+	     (technique == "curv" && (name == "maxdist" ||
 				      name == "maxangle"))));
   }
-  //! \brief Copy element specific members from another instance.
-  //! \param[in] rhs Element to copy members from.
-  void copy_members(const ObjSTech& rhs) {
-    technique = rhs.technique;
-    values.insert(values.begin(), rhs.values.begin(), rhs.values.end());
+  //! \copydoc ObjElement::set_property_string
+  bool set_property_string(size_t i, const std::string new_value) OVERRIDE_CXX11 {
+    switch (i) {
+    case (0):
+      technique = new_value;
+      break;
+    default:
+      return false;
+    }
+    return true;
   }
-  //! \copydoc ObjElement::from_values()
-  void from_values() OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT(((technique == "cparma") ||
-		      (technique == "cparmb") ||
-		      (technique == "cspace") ||
-		      (technique == "curv"  )));
-    if ((technique == "cparmb") || (technique == "cspace"))
-      RAPIDJSON_ASSERT((values.size() == 1));
-    else
-      RAPIDJSON_ASSERT((values.size() == 2));
+  //! \copydoc ObjElement::set_property_double
+  bool set_property_double(size_t i, const double new_value) OVERRIDE_CXX11 {
+    switch (i) {
+    case (1): {
+      if (technique != "cparma") return false;
+      if (values.size() < 2) values.resize(2);
+      values[0] = new_value;
+      break;
+    }
+    case (2): {
+      if (technique != "cparma") return false;
+      if (values.size() < 2) values.resize(2);
+      values[1] = new_value;
+      break;
+    }
+    case (3): {
+      if (technique != "cparmb") return false;
+      if (values.size() < 1) values.resize(1);
+      values[0] = new_value;
+      break;
+    }
+    case (4): {
+      if (technique != "cspace") return false;
+      if (values.size() < 1) values.resize(1);
+      values[0] = new_value;
+      break;
+    }
+    case (5): {
+      if (technique != "curv") return false;
+      if (values.size() < 2) values.resize(2);
+      values[0] = new_value;
+      break;
+    }
+    case (6): {
+      if (technique != "curv") return false;
+      if (values.size() < 2) values.resize(2);
+      values[1] = new_value;
+      break;
+    }
+    default:
+      return false;
+    }
+    return true;
   }
-  //! \copydoc ObjElement::read_values
-  void read_values(std::istream &in, const bool&) OVERRIDE_CXX11 {
-    in >> technique;
-    RAPIDJSON_ASSERT(((technique == "cparma") ||
-		      (technique == "cparmb") ||
-		      (technique == "cspace") ||
-		      (technique == "curv"  )));
-    ObjElement::read_values(in, values);
+  //! \copydoc ObjElement::get_property_string
+  bool get_property_string(size_t i, std::string& out) const OVERRIDE_CXX11 {
+    switch (i) {
+    case (0):
+      out = technique;
+      break;
+    default:
+      return false;
+    }
+    return true;
   }
-  //! \copydoc ObjElement::write_values
-  void write_values(std::ostream &out) const OVERRIDE_CXX11 {
-    out << technique << " ";
-    ObjElement::write_values(out, values);
-  }
-  //! \copydoc ObjElement::is_equal
-  bool is_equal(const ObjElement* rhs0) const OVERRIDE_CXX11 {
-    if (rhs0->code != this->code) return false;
-    const ObjSTech* lhs = this;
-    const ObjSTech* rhs = dynamic_cast<const ObjSTech*>(rhs0);
-    if (lhs->technique != rhs->technique) return false;
-    if (!(is_equal_vectors(lhs->values, rhs->values))) return false;
+  //! \copydoc ObjElement::get_property_double
+  bool get_property_double(size_t i, double& out) const OVERRIDE_CXX11 {
+    switch (i) {
+    case (1): {
+      if (technique != "cparma" || values.size() != 2) return false;
+      out = values[0];
+      break;
+    }
+    case (2): {
+      if (technique != "cparma" || values.size() != 2) return false;
+      out = values[1];
+      break;
+    }
+    case (3): {
+      if (technique != "cparmb" || values.empty()) return false;
+      out = values[0];
+      break;
+    }
+    case (4): {
+      if (technique != "cspace" || values.empty()) return false;
+      out = values[0];
+      break;
+    }
+    case (5): {
+      if (technique != "curv" || values.size() != 2) return false;
+      out = values[0];
+      break;
+    }
+    case (6): {
+      if (technique != "curv" || values.size() != 2) return false;
+      out = values[1];
+      break;
+    }
+    default:
+      return false;
+    }
     return true;
   }
   //! \copydoc ObjElement::is_valid
-  bool is_valid(std::map<std::string,size_t>&) const OVERRIDE_CXX11 {
+  bool is_valid() const OVERRIDE_CXX11 {
     return (((technique == "cparmb" || technique == "cspace") &&
 	     values.size() == 1) ||
 	    ((technique == "cparma" || technique == "curv") &&
 	     values.size() == 2));
   }
-  //! Technique used for the resolution.
-  std::string technique;
-  //! Vector of resolution parameters.
-  std::vector<double> values;
 };
 
 //! \brief Read an element from an input stream.
@@ -2985,15 +3756,25 @@ public:
 //! \param parent Optional element group that will contain the read elements.
 //! \param dont_descend If true, subelements will not be read from the
 //!   input stream.
-//! \return New element.
-inline ObjElement* read_obj_element(std::istream &in,
-				    const ObjGroupBase* parent,
-				    const bool& dont_descend) {
+//! \param[out] out New element. This will be null in the case of an error or
+//!   then end of the input stream.
+//! \return true if successful, false otherwise.
+inline bool read_obj_element(std::istream &in,
+			     ObjGroupBase* parent,
+			     const bool& dont_descend,
+			     ObjElement*& out) {
   std::string word = "";
-  ObjElement* out = nullptr;
-  if (in >> word)
-    OBJ_ELEMENT_INIT(word, out, (in, parent, dont_descend));
-  return out;
+  out = nullptr;
+  if (in >> word) {
+    if (word == "end") {
+      return parent->end_group();
+    } else {
+      OBJ_ELEMENT_INIT(word, out, (parent));
+      if (!out) return false;
+      return out->read_values(in, dont_descend);
+    }
+  }
+  return true;
 }
 
 //! Obj wavefront 3D geometry container class.
@@ -3052,6 +3833,17 @@ public:
     add_element_set("v", vertices);
     add_element_set("f", faces);
     add_element_set("l", edges);
+  }
+  //! \copydoc ObjGroupBase::write_group_header
+  bool write_group_header(std::ostream &out) const OVERRIDE_CXX11 {
+    return true; // Don't write a header for the start of the file
+  }
+  //! \brief Determine if a structure is valid and there are vertexes for
+  //!   all those referenced in faces and edges.
+  //! \return true if the structure is valid, false otherwise.
+  bool is_valid() const OVERRIDE_CXX11 {
+    std::map<std::string,size_t> idx;
+    return ObjGroupBase::is_valid_idx(idx);
   }
   //! \brief Add a set of elements to the geometry from a C array of value
   //!   arrays.
@@ -3289,7 +4081,7 @@ bool operator != (const ObjWavefront& lhs, const ObjWavefront& rhs)
 //! \return Output stream.
 inline
 std::ostream & operator << (std::ostream &out, const ObjWavefront &p)
-{ return p.write(out); }
+{ p.write(out); return out; }
 
 //! \brief Read an ObjWavefront object from an input stream.
 //! \param in Input stream.
@@ -3297,7 +4089,7 @@ std::ostream & operator << (std::ostream &out, const ObjWavefront &p)
 //! \return Input stream.
 inline
 std::istream & operator >> (std::istream &in, ObjWavefront &p)
-{ return p.read(in); }
+{ p.read(in); return in; }
 
 inline
 ObjElement* ObjGroupBase::copy_element(const ObjElement* x) {
@@ -3305,6 +4097,12 @@ ObjElement* ObjGroupBase::copy_element(const ObjElement* x) {
   std::string name_copy = x->code;
   OBJ_ELEMENT_INIT(name_copy, x_cpy, (x));
   return ObjGroupBase::add_element(x_cpy);
+}
+inline
+ObjElement* ObjGroupBase::add_element(std::string name) {
+  ObjElement* x = nullptr;
+  OBJ_ELEMENT_INIT(name, x, (this));
+  return ObjGroupBase::add_element(x);
 }
 template <typename T>
 ObjElement* ObjGroupBase::add_element(std::string name,
@@ -3415,20 +4213,20 @@ ObjElement* ObjGroupBase::add_element(std::string name,
   return ObjGroupBase::add_element(x);
 }
 
-#undef GENERIC_CLASS_VECTOR_OBJREFVERTEX
-#undef GENERIC_CLASS_VECTOR_TYPE
+#undef GENERIC_CLASS_VECTOR_TYPE_IS_VALID_VERTREF
+#undef GENERIC_CLASS_VECTOR_TYPE_IS_VALID
+#undef GENERIC_VECTOR_OBJREFSURFACE
+#undef GENERIC_VECTOR_OBJREFCURVE
+#undef GENERIC_VECTOR_OBJREFVERTEX
+#undef GENERIC_VECTOR_STRING
+#undef GENERIC_SCALAR_STRING
+#undef MANAGE_PROPERTIES_SCALAR_
+#undef MANAGE_PROPERTIES_VECTOR_
 #undef GENERIC_CLASS_SCALAR_TYPE
-#undef GENERIC_CLASS_SCALAR_TYPE_BODY
-#undef GENERIC_CLASS_SCALAR_TYPE_BASE
-#undef GENERIC_CLASS_SCALAR_TYPE_ISEQUAL
-#undef GENERIC_IS_EQUAL
-#undef GENERIC_FROM_VALUES
-#undef GENERIC_WRITE_VALUES
-#undef GENERIC_READ_VALUES
+#undef GENERIC_SCALAR_BODY
+#undef GENERIC_SCALAR_BODY_BASE
 #undef DUMMY_ARRAY_CONSTRUCTOR
-#undef GENERIC_CONSTRUCTOR_VECTOR_TYPE
-#undef GENERIC_CONSTRUCTOR_VECTOR_FLOAT
-#undef GENERIC_CONSTRUCTOR_COPY
+#undef GENERIC_VECTOR_CONSTRUCTOR
 #undef ASSERT_COMPATIBLE
 #undef COMPATIBLE_WITH_ANY
 #undef COMPATIBLE_WITH_TYPE
@@ -3439,9 +4237,12 @@ ObjElement* ObjGroupBase::add_element(std::string name,
 #undef COMPATIBLE_WITH_UINT
 #undef COMPATIBLE_WITH_INT
 #undef GENERIC_ELEMENT_CONSTRUCTOR
+#undef GENERIC_CONSTRUCTOR_COPY
+#undef COMPARE_IDX
+#undef OBJ_P_
+#undef OVERRIDE_CXX11
 #undef OBJ_ELEMENT_INIT
 #undef REPORT_UNSUPPORTED_ELEMENT
-#undef OVERRIDE_CXX11
 
 RAPIDJSON_NAMESPACE_END
 

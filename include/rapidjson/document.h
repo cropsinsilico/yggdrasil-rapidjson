@@ -3245,9 +3245,9 @@ public:
   { SetPythonObjectRaw(x); }
   explicit GenericValue(PyObject* x, Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetPythonObjectRaw(x, &allocator); }
-  explicit GenericValue(ObjWavefront x, Allocator* allocator = 0) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  explicit GenericValue(const ObjWavefront& x, Allocator* allocator = 0) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetObjRaw(x, allocator); }
-  explicit GenericValue(Ply x, Allocator* allocator = 0) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  explicit GenericValue(const Ply& x, Allocator* allocator = 0) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetPlyRaw(x, allocator); }
   // Explicit schema provided
   template <typename SourceAllocator>
@@ -3995,7 +3995,7 @@ public:
     }
     return out;
   }
-  void SetObjRaw(ObjWavefront x, Allocator* allocator = 0) {
+  void SetObjRaw(const ObjWavefront& x, Allocator* allocator = 0) {
     std::stringstream ss;
     ss << x;
     std::string s = ss.str();
@@ -4004,7 +4004,7 @@ public:
                  schema_->GetAllocator());
     AddSchemaMember(GetTypeString(), GetObjString());
   }
-  void SetPlyRaw(Ply x, Allocator* allocator = 0) {
+  void SetPlyRaw(const Ply& x, Allocator* allocator = 0) {
     std::stringstream ss;
     ss << x;
     std::string s = ss.str();
