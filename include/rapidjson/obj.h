@@ -230,7 +230,7 @@ public:
     return true;
   }
 
-#define SET_(T, flag)							\
+#define PROPERTY_TYPE_(T, flag)						\
   /*! \brief Set the property values by copying from a vector. */	\
   /*! \param val Vector of values to copy from. */			\
   /*! \return true if successful, false otherwise. */			\
@@ -238,7 +238,25 @@ public:
   /*! \brief Set the property value. */					\
   /*! \param val Value to copy. */					\
   /*! \return true if successful, false otherwise. */			\
-  bool set(const T& val);
+  bool set(const T& val);						\
+  /*! \brief Copy values into a vector. */				\
+  /*! \param[out] out Vector to copy values to. */			\
+  /*! \return true if successful, false otherwise. */			\
+  bool get(std::vector<T>& out) const;					\
+  /*! \brief Copy value into a scalar. */				\
+  /*! \param[out] out Scalar to copy value to. */			\
+  /*! \return true if successful, false otherwise. */			\
+  bool get(T& out) const;						\
+  /*! \brief Append a value to a vector property. */			\
+  /*! \param val Value to append. */					\
+  /*! \param index Index to append at. Ignored if <0. */		\
+  /*! \return true if successful, false otherwise. */			\
+  bool append(const T& val, int index = -1);				\
+  /*! \brief Index into a vector property. */				\
+  /*! \param index Index. */						\
+  /*! \param[out] out Scalar to copy value into. */			\
+  /*! \return true if successful, false otherwise. */			\
+  bool index(const size_t index, T& out) const
   //! \brief Set the property values by copying from a vector.
   //! \tparam T Type in source vector.
   //! \param val Vector of values to copy from.
@@ -257,19 +275,6 @@ public:
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)>>), (bool))
     set(const T& val);
-  SET_(std::string, ObjTypeString)
-  SET_(ObjRefCurve, ObjTypeCurve)
-  SET_(ObjRefSurface, ObjTypeSurface)
-#undef SET_
-#define GET_(T, flag)							\
-  /*! \brief Copy values into a vector. */				\
-  /*! \param[out] out Vector to copy values to. */			\
-  /*! \return true if successful, false otherwise. */			\
-  bool get(std::vector<T>& out) const;					\
-  /*! \brief Copy value into a scalar. */				\
-  /*! \param[out] out Scalar to copy value to. */			\
-  /*! \return true if successful, false otherwise. */			\
-  bool get(T& out) const;
   //! \brief Copy values into a vector of a desired type if possible.
   //! \tparam T Desired type.
   //! \param[out] out Vector to copy values to.
@@ -288,10 +293,28 @@ public:
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)>>), (bool))
     get(T& out) const;
-  GET_(std::string, ObjTypeString)
-  GET_(ObjRefCurve, ObjTypeCurve)
-  GET_(ObjRefSurface, ObjTypeSurface)
-#undef GET_
+  //! \brief Append a value to a vector property.
+  //! \param val Value to append.
+  //! \param index Index to append at. Ignored if <0.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
+			      COMPATIBLE_WITH_SURF(T)>>), (bool))
+    append(const T& val, int index);
+  //! \brief Index into a vector property.
+  //! \param index Index
+  //! \param[out] out Scalar to copy value into.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
+			      COMPATIBLE_WITH_SURF(T)>>), (bool))
+    index(const size_t index, T& out) const;
+  PROPERTY_TYPE_(std::string, ObjTypeString);
+  PROPERTY_TYPE_(ObjRefCurve, ObjTypeCurve);
+  PROPERTY_TYPE_(ObjRefSurface, ObjTypeSurface);
+#undef PROPERTY_TYPE_
   //! \brief Copy a property from another.
   bool copy(const ObjPropertyType& rhs);
   //! \brief Read a property into memory from a stream.
@@ -359,7 +382,7 @@ public:
   virtual bool has_property(const std::string name,
 			    bool dontCheckOrder=false,
 			    bool skipColors=false,
-			    size_t* idx=nullptr) const {
+			    size_t* idx = nullptr) const {
     if (dontCheckOrder)
       return true;
     if (skipColors && (name == "red" ||
@@ -422,33 +445,15 @@ public:
   //! \param new_value Value to assign to the property.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool set_property(size_t i, const T new_value,
-		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
-    if (i >= properties.size()) return false;
-    ObjPropertiesMap::iterator it = properties.begin() + (int)i;
-    return it->set(new_value);
-  }
-  //! \brief Set an element property.
-  //! \tparam T Type of new value.
-  //! \tparam i Index of the property to set.
-  //! \param new_value Value to assign to the property.
-  //! \return true if successful, false otherwise.
-  template<typename T>
-  bool set_property(size_t i, const T new_value,
-		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) {
-    if (i >= properties.size()) return false;
-    ObjPropertiesMap::iterator it = properties.begin() + (int)i;
-    return it->set(new_value);
-  }
-  //! \brief Set an element property.
-  //! \tparam T Type of new value.
-  //! \tparam i Index of the property to set.
-  //! \param new_value Values to assign to the property.
-  //! \return true if successful, false otherwise.
-  template<typename T>
-  bool set_property(size_t i, const std::vector<T> new_value,
-		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
-    if (i >= properties.size()) return false;
+  bool set_property(size_t i, const T new_value) {
+    if (i >= properties.size()) {
+      if (properties.size() > 0) {
+	ObjPropertiesMap::iterator last = properties.end() - 1;
+	if (last->second & ObjTypeList)
+	  return last->append(new_value, static_cast<int>(i));
+      }
+      return false;
+    }
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
     return it->set(new_value);
   }
@@ -458,55 +463,26 @@ public:
   //! \param new_value Values to assign to the property.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool set_property(size_t i, const std::vector<T> new_value,
-		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) {
+  bool set_property(size_t i, const std::vector<T> new_value) {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
     return it->set(new_value);
   }
-  //! \brief Set an element property.
-  //! \tparam T Type of new value.
-  //! \param name Name of the property to set.
-  //! \param new_value Value to assign to the property.
-  //! \return true if successful, false otherwise.
-  template<typename T>
-  bool set_property(const std::string name, const T& new_value) {
-    size_t i = 0;
-    if (!this->has_property(name, false, false, &i)) return false;
-    return set_property(i, new_value);
-  }
-  //! \brief Set an element property array.
-  //! \tparam T Type of new values.
-  //! \param name Name of the property to set.
-  //! \param new_values Values to add to the property.
-  //! \return true if successful, false otherwise.
-  template<typename T>
-  bool set_property(const std::string name, const std::vector<T>& new_values) {
-    size_t i = 0;
-    if (!this->has_property(name, false, false, &i)) return false;
-    return set_property(i, new_values);
-  }
   //! \brief Get an element property.
   //! \tparam Type of output.
   //! \param i index of the property to get.
   //! \param out Existing memory to copy property to.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool get_property(size_t i, T& out,
-		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
-    if (i >= properties.size()) return false;
-    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
-    return it->get(out);
-  }
-  //! \brief Get an element property.
-  //! \tparam Type of output.
-  //! \param i index of the property to get.
-  //! \param out Existing memory to copy property to.
-  //! \return true if successful, false otherwise.
-  template<typename T>
-  bool get_property(size_t i, T& out,
-		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
-    if (i >= properties.size()) return false;
+  bool get_property(size_t i, T& out) const {
+    if (i >= properties.size()) {
+      if (properties.size() > 0) {
+	ObjPropertiesMap::const_iterator last = properties.end() - 1;
+	if (last->second & ObjTypeList)
+	  return last->index(i, out);
+      }
+      return false;
+    }
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
     return it->get(out);
   }
@@ -516,20 +492,7 @@ public:
   //! \param out Existing vector to add property values to.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool get_property(size_t i, std::vector<T>& out,
-		    RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
-    if (i >= properties.size()) return false;
-    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
-    return it->get(out);
-  }
-  //! \brief Get an element property.
-  //! \tparam Type of output.
-  //! \param i index of the property to get.
-  //! \param out Existing vector to add property values to.
-  //! \return true if successful, false otherwise.
-  template<typename T>
-  bool get_property(size_t i, std::vector<T>& out,
-		    RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_STRING(T)))) const {
+  bool get_property(size_t i, std::vector<T>& out) const {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
     return it->get(out);
@@ -541,17 +504,6 @@ public:
   //! \return true if successful, false otherwise.
   template<typename T>
   bool get_property(const std::string name, T& out) const {
-    size_t i = 0;
-    if (!this->has_property(name, false, false, &i)) return false;
-    return this->get_property(i, out);
-  }
-  //! \brief Get an element property array.
-  //! \tparam Type of output.
-  //! \param name Name of the property to get.
-  //! \param out Existing array to add property values to.
-  //! \return true if successful, false otherwise.
-  template<typename T>
-  bool get_property(const std::string name, std::vector<T>& out) const {
     size_t i = 0;
     if (!this->has_property(name, false, false, &i)) return false;
     return this->get_property(i, out);
@@ -918,24 +870,47 @@ inline
 std::istream & operator >> (std::istream &in, ObjRefSurface &p)
 { return p.read(in); }
 
-#define HANDLE_VECTOR_(T, type)						\
+#define HANDLE_VECTOR_SET_(T, type)					\
     std::vector<type>* mem_cast = (std::vector<type>*)mem;		\
     for (typename std::vector<T>::const_iterator v = val.begin();	\
 	 v != val.end(); v++) {						\
       mem_cast->push_back(static_cast<type>(*v));			\
     }									\
     return true
-#define HANDLE_SCALAR_(T, type)						\
+#define HANDLE_SCALAR_SET_(T, type)					\
     type* mem_cast = nullptr;						\
     if (!_get_scalar_mem(mem_cast, true)) return false;			\
     mem_cast[0] = static_cast<type>(val);				\
     return true
-#define SET_(T, flag)							\
+#define HANDLE_VECTOR_GET_(T, type)					\
+    const std::vector<type>* mem_cast = (std::vector<type>*)mem;	\
+    for (std::vector<type>::const_iterator v = mem_cast->begin();	\
+	 v != mem_cast->end(); v++) {					\
+      out.push_back(static_cast<T>(*v));				\
+    }									\
+    return true
+#define HANDLE_SCALAR_GET_(T, type)					\
+    type* mem_cast = nullptr;						\
+    if (!_get_scalar_mem(mem_cast)) return false;			\
+    out = static_cast<T>(*mem_cast);					\
+    return true
+#define HANDLE_VECTOR_APPEND_(T, type)					\
+    std::vector<type>* mem_cast = (std::vector<type>*)mem;		\
+    if (index >= 0 && index != mem_cast->size()) return false;		\
+    mem_cast->push_back(static_cast<type>(val));			\
+    return true
+#define HANDLE_VECTOR_INDEX_(T, type)					\
+    const std::vector<type>* mem_cast = (std::vector<type>*)mem;	\
+    if (index >= mem_cast->size()) return false;			\
+    out = static_cast<T>(*(mem_cast->begin() + (int)(index)));		\
+    return true
+
+#define PROPERTY_TYPE_(T, flag)						\
   inline								\
   bool ObjPropertyType::set(const std::vector<T>& val) {		\
     if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false; \
     if (second & flag) {						\
-      HANDLE_VECTOR_(T, T);						\
+      HANDLE_VECTOR_SET_(T, T);						\
     }									\
     return false;							\
   }									\
@@ -943,7 +918,39 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
   bool ObjPropertyType::set(const T& val) {				\
     if ((!mem) || second & ObjTypeList) return false;			\
     if (second & flag) {						\
-      HANDLE_SCALAR_(T, T);						\
+      HANDLE_SCALAR_SET_(T, T);						\
+    }									\
+    return false;							\
+  }									\
+  inline								\
+  bool ObjPropertyType::get(std::vector<T>& out) const {		\
+    if ((!mem) || (!(second & ObjTypeList)) || (second & ObjTypeIdx)) return false; \
+    if (second & flag) {						\
+      HANDLE_VECTOR_GET_(T, T);						\
+    }									\
+    return false;							\
+  }									\
+  inline								\
+  bool ObjPropertyType::get(T& out) const {				\
+    if ((!mem) || second & ObjTypeList) return false;			\
+    if (second & flag) {						\
+      HANDLE_SCALAR_GET_(T, T);						\
+    }									\
+    return false;							\
+  }									\
+  inline								\
+  bool ObjPropertyType::append(const T& val, int index) {		\
+    if ((!mem) || (!(second & ObjTypeList)) || (second & ObjTypeIdx)) return false; \
+    if (second & flag) {						\
+      HANDLE_VECTOR_APPEND_(T, T);					\
+    }									\
+    return false;							\
+  }									\
+  inline								\
+  bool ObjPropertyType::index(const size_t index, T& out) const {	\
+    if ((!mem) || (!(second & ObjTypeList)) || (second & ObjTypeIdx)) return false; \
+    if (second & flag) {						\
+      HANDLE_VECTOR_INDEX_(T, T);					\
     }									\
     return false;							\
   }
@@ -953,7 +960,7 @@ RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    COMPATIBLE_WITH_SURF(T)>>), (bool))
 ObjPropertyType::set(const std::vector<T>& val) {
   if ((!mem) || !(second & ObjTypeList)) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_)
+  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_SET_)
     return true;
 }
 template<typename T>
@@ -962,51 +969,16 @@ RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    COMPATIBLE_WITH_SURF(T)>>), (bool))
 ObjPropertyType::set(const T& val) {
   if ((!mem) || second & ObjTypeList) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_)
+  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_SET_)
     return true;
 }
-SET_(std::string, ObjTypeString)
-SET_(ObjRefCurve, ObjTypeCurve)
-SET_(ObjRefSurface, ObjTypeSurface)
-#undef SET_
-#undef HANDLE_VECTOR_
-#undef HANDLE_SCALAR_
-#define HANDLE_VECTOR_(T, type)						\
-    const std::vector<type>* mem_cast = (std::vector<type>*)mem;	\
-    for (std::vector<type>::const_iterator v = mem_cast->begin();	\
-	 v != mem_cast->end(); v++) {					\
-      out.push_back(static_cast<T>(*v));				\
-    }									\
-    return true
-#define HANDLE_SCALAR_(T, type)						\
-    type* mem_cast = nullptr;						\
-    if (!_get_scalar_mem(mem_cast)) return false;			\
-    out = static_cast<T>(*mem_cast);					\
-    return true
-#define GET_(T, flag)							\
-  inline								\
-  bool ObjPropertyType::get(std::vector<T>& out) const {		\
-    if ((!mem) || (!(second & ObjTypeList)) | (second & ObjTypeIdx)) return false; \
-    if (second & flag) {						\
-      HANDLE_VECTOR_(T, T);						\
-    }									\
-    return false;							\
-  }									\
-  inline								\
-  bool ObjPropertyType::get(T& out) const {				\
-    if ((!mem) || second & ObjTypeList) return false;			\
-    if (second & flag) {						\
-      HANDLE_SCALAR_(T, T);						\
-    }									\
-    return false;							\
-  }
 template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)>>), (bool))
 ObjPropertyType::get(std::vector<T>& out) const {
   if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_)
+  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_GET_)
   return false;
 }
 template<typename T>
@@ -1015,35 +987,57 @@ RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    COMPATIBLE_WITH_SURF(T)>>), (bool))
 ObjPropertyType::get(T& out) const {
   if ((!mem) || second & ObjTypeList) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_)
+  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_GET_)
   return true;
 }
-GET_(std::string, ObjTypeString)
-GET_(ObjRefCurve, ObjTypeCurve)
-GET_(ObjRefSurface, ObjTypeSurface)
-#undef GET_
-#undef HANDLE_VECTOR_
-#undef HANDLE_SCALAR_
+template<typename T>
+RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
+			    COMPATIBLE_WITH_SURF(T)>>), (bool))
+  ObjPropertyType::append(const T& val, int index) {
+  if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
+  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_APPEND_)
+  return false;
+}
+template<typename T>
+RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
+			    COMPATIBLE_WITH_SURF(T)>>), (bool))
+ObjPropertyType::index(const size_t index, T& out) const {
+  if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
+  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_INDEX_)
+  return false;
+}
+PROPERTY_TYPE_(std::string, ObjTypeString)
+PROPERTY_TYPE_(ObjRefCurve, ObjTypeCurve)
+PROPERTY_TYPE_(ObjRefSurface, ObjTypeSurface)
+#undef HANDLE_VECTOR_SET_
+#undef HANDLE_SCALAR_SET_
+#undef HANDLE_VECTOR_GET_
+#undef HANDLE_SCALAR_GET_
+#undef HANDLE_VECTOR_APPEND_
+#undef HANDLE_VECTOR_INDEX_
+#undef PROPERTY_TYPE_
 inline
 bool ObjPropertyType::copy(const ObjPropertyType& rhs) {
   if (first != rhs.first || second != rhs.second || idx != rhs.idx)
     return false;
-#define HANDLE_SCALAR_(T0, T)			\
+#define HANDLE_SCALAR_CPY_(T0, T)		\
   T val;					\
   if (!rhs.get(val)) return false;		\
   return set(val)
-#define HANDLE_VECTOR_(T0, T)			\
+#define HANDLE_VECTOR_CPY_(T0, T)		\
   std::vector<T> val;				\
   if (!rhs.get(val)) return false;		\
   return set(val)
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_(HANDLE_SCALAR_, HANDLE_VECTOR_)
-#undef HANDLE_SCALAR_
-#undef HANDLE_VECTOR_
+  RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_(HANDLE_SCALAR_CPY_, HANDLE_VECTOR_CPY_)
+#undef HANDLE_SCALAR_CPY_
+#undef HANDLE_VECTOR_CPY_
     return false;
 }
 inline
 bool ObjPropertyType::read(std::istream& in) {
-#define HANDLE_SCALAR_(T0, T)						\
+#define HANDLE_SCALAR_READ_(T0, T)					\
   if (in.peek() == '\n') {						\
     if (second & ObjTypeIdx && second & ObjTypeString)			\
       in >> std::ws;							\
@@ -1061,7 +1055,7 @@ bool ObjPropertyType::read(std::istream& in) {
     return (second & ObjTypeOpt);					\
   }									\
   return true
-#define HANDLE_VECTOR_(T0, T)			\
+#define HANDLE_VECTOR_READ_(T0, T)		\
   std::vector<T>* val = (std::vector<T>*)mem;	\
   T x = 0;					\
   while ((in.peek() != '\n') && (in >> x))	\
@@ -1083,13 +1077,13 @@ bool ObjPropertyType::read(std::istream& in) {
       in >> std::skipws;
       return true;
     }
-    else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_)
-    else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_)
+    else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_READ_)
+    else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_READ_)
   }
-  else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_SCALAR_)
-  else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_)
-#undef HANDLE_SCALAR_
-#undef HANDLE_VECTOR_
+  else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_SCALAR_READ_)
+  else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_READ_)
+#undef HANDLE_SCALAR_READ_
+#undef HANDLE_VECTOR_READ_
   return false;
 }
 inline
@@ -1103,13 +1097,13 @@ bool ObjPropertyType::write(std::ostream& out, bool pad) const {
 #define RESTORE_FORMAT_				\
   out.precision(out_prec);			\
   out.flags(out_flags)
-#define HANDLE_SCALAR_(T0, T)						\
+#define HANDLE_SCALAR_WRITE_(T0, T)					\
   T* val = nullptr;							\
   if (!_get_scalar_mem(val)) return (second & ObjTypeOpt);		\
   if (pad) out << " ";							\
   out << *val;								\
   return true
-#define HANDLE_VECTOR_(T0, T)						\
+#define HANDLE_VECTOR_WRITE_(T0, T)					\
   std::vector<T>* val = (std::vector<T>*)mem;				\
   if (pad) out << " ";							\
   for (std::vector<T>::iterator v = val->begin(); v != val->end(); v++) { \
@@ -1136,21 +1130,21 @@ bool ObjPropertyType::write(std::ostream& out, bool pad) const {
 	  prec = (std::max)(prec, count_decimals(*v));
       }
       RECORD_FORMAT_(prec);
-      HANDLE_VECTOR_(double, double);
+      HANDLE_VECTOR_WRITE_(double, double);
       RESTORE_FORMAT_;
     }
-    else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_)
-    else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_)
+    else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_WRITE_)
+    else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_WRITE_)
   } else if (second & ObjTypeFloat) {
     int prec = (std::max)(1, count_decimals(*((double*)mem)));
     RECORD_FORMAT_(prec);
-    HANDLE_SCALAR_(doubule, double);
+    HANDLE_SCALAR_WRITE_(doubule, double);
     RESTORE_FORMAT_;
   }
-  else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_SCALAR_)
-  else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_)
-#undef HANDLE_SCALAR_
-#undef HANDLE_VECTOR_
+  else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_SCALAR_WRITE_)
+  else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_WRITE_)
+#undef HANDLE_SCALAR_WRITE_
+#undef HANDLE_VECTOR_WRITE_
 #undef RECORD_FORMAT_
 #undef RESTORE_FORMAT_
   return false;
@@ -1167,13 +1161,13 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   if (!mem_lhs || !mem_rhs)					\
     return ((second & ObjTypeOpt) && (mem_lhs == mem_rhs));	\
   return internal::values_eq(*val_lhs, *val_rhs)
-#define HANDLE_VECTOR_(T0, T)						\
+#define HANDLE_VECTOR_ISEQ_(T0, T)					\
   const std::vector<T>* val_lhs = (std::vector<T>*)mem;			\
   const std::vector<T>* val_rhs = (std::vector<T>*)(rhs.mem);		\
   return is_equal_vectors(*val_lhs, *val_rhs)
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_(HANDLE_SCALAR_, HANDLE_VECTOR_)
+  RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_(HANDLE_SCALAR_, HANDLE_VECTOR_ISEQ_)
 #undef HANDLE_SCALAR_
-#undef HANDLE_VECTOR_
+#undef HANDLE_VECTOR_ISEQ_
   return false;
 }
 #undef RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_
@@ -2092,7 +2086,7 @@ public:
   //! \param[out] temp Pointer to boolean that signals if the returned
   //!   pointer is a temporary wrapper. If true, the returned pointer
   //!   should be cleaned up by the user.
-  virtual ObjPropertyElement* last_subelement(bool* temp = nullptr) {
+  virtual ObjPropertyElement* last_subelement(bool* = nullptr) {
     std::cerr << "last_subelement not implemented for this type (code = " << code << ")" << std::endl;
     return NULL;
   }
@@ -2800,7 +2794,7 @@ public:
   }
   //! \copydoc ObjElement::has_property
   bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=nullptr) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors, idx) &&
 	    !(((skipColors || !color.is_set)
 	       && (name == "red" || name == "green" || name == "blue")) ||
 	      (w < 0 && name == "w")));
@@ -2863,7 +2857,7 @@ public:
   
   //! \copydoc ObjElement::has_property
   bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=nullptr) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors, idx) &&
 	    (w >= 0 || name != "w"));
   }
   //! \copydoc ObjElement::set_meta_properties
@@ -2920,7 +2914,7 @@ public:
   
   //! \copydoc ObjElement::has_property
   bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=nullptr) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors, idx) &&
 	    !((v < 0 && name == "v") || (w < 0 && name == "w")));
   }
   //! \copydoc ObjElement::set_meta_properties
@@ -3472,7 +3466,7 @@ public:
   }
   //! \copydoc ObjElement::has_property
   bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=nullptr) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors, idx) &&
 	    ((name == "technique") ||
 	     (technique == "cparm" && name == "resolution") ||
 	     (technique == "cspace" && name == "maxlength") ||
@@ -3523,7 +3517,7 @@ public:
   }
   //! \copydoc ObjElement::has_property
   bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=nullptr) const  OVERRIDE_CXX11 {
-    return (ObjElement::has_property(name, dontCheckOrder, skipColors) &&
+    return (ObjElement::has_property(name, dontCheckOrder, skipColors, idx) &&
 	    ((name == "technique") ||
 	     (technique == "cparma" && (name == "ures" ||
 					name == "vres")) ||
