@@ -486,6 +486,17 @@ public:
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
     return it->get(out);
   }
+  //! \brief Set an element property.
+  //! \tparam T Type of new value.
+  //! \param name Name of the property to set.
+  //! \param new_value Value to assign to the property.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool set_property(const std::string name, const T new_value) {
+    size_t i = 0;
+    if (!this->has_property(name, false, false, &i)) return false;
+    return this->set_property(i, new_value);
+  }
   //! \brief Get an element property.
   //! \tparam Type of output.
   //! \param i index of the property to get.
@@ -896,7 +907,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     return true
 #define HANDLE_VECTOR_APPEND_(T, type)					\
     std::vector<type>* mem_cast = (std::vector<type>*)mem;		\
-    if (index >= 0 && index != mem_cast->size()) return false;		\
+    if (index >= 0 && static_cast<size_t>(index) != mem_cast->size()) return false; \
     mem_cast->push_back(static_cast<type>(val));			\
     return true
 #define HANDLE_VECTOR_INDEX_(T, type)					\
