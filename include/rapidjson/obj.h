@@ -458,8 +458,6 @@ inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
     method(T, int);					\
   } else if (second & ObjTypeFloat) {			\
     method(T, double);					\
-  } else {						\
-    return false;					\
   }
 #define RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(method)	\
   if (second & ObjTypeCurve) {					\
