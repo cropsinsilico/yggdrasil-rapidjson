@@ -1100,8 +1100,7 @@ bool ObjPropertyType::read(std::istream& in) {
 inline
 bool ObjPropertyType::write(std::ostream& out, bool pad) const {
 #define RECORD_FORMAT_(prec)				\
-  std::streamsize out_prec = 0;				\
-  std::ios_base::fmtflags out_flags = out.flags();	\
+  out_flags = out.flags();				\
   out_prec = out.precision();				\
   out.precision(prec);					\
   out << std::fixed
@@ -1111,18 +1110,33 @@ bool ObjPropertyType::write(std::ostream& out, bool pad) const {
 #define HANDLE_SCALAR_WRITE_(T0, T)					\
   T* val = nullptr;							\
   if (!_get_scalar_mem(val)) return (second & ObjTypeOpt);		\
+  if (second & ObjTypeFloat) {						\
+    RECORD_FORMAT_(prec);						\
+  }									\
   if (pad) out << " ";							\
   out << *val;								\
+  if (second & ObjTypeFloat) {						\
+    RESTORE_FORMAT_;							\
+  }									\
   return true
 #define HANDLE_VECTOR_WRITE_(T0, T)					\
   std::vector<T>* val = (std::vector<T>*)mem;				\
+  if (second & ObjTypeFloat) {						\
+    RECORD_FORMAT_(prec);						\
+  }									\
   if (pad) out << " ";							\
   for (std::vector<T>::iterator v = val->begin(); v != val->end(); v++) { \
     if (v != val->begin())						\
       out << " ";							\
     out << *v;								\
   }									\
+  if (second & ObjTypeFloat) {						\
+    RESTORE_FORMAT_;							\
+  }									\
   return true
+  int prec = 1;
+  std::streamsize out_prec = 0;
+  std::ios_base::fmtflags out_flags = 0;
   if (!mem) return false;
   if (second & ObjTypeOff) {
     if (!(second & ObjTypeInt) || (second & ObjTypeList)) return false;
@@ -1134,23 +1148,18 @@ bool ObjPropertyType::write(std::ostream& out, bool pad) const {
     return true;
   } else if (second & ObjTypeList) {
     if (second & ObjTypeFloat) {
-      int prec = 1;
       {
 	std::vector<double>* val = (std::vector<double>*)mem;
 	for (std::vector<double>::iterator v = val->begin(); v != val->end(); v++)
 	  prec = (std::max)(prec, count_decimals(*v));
       }
-      RECORD_FORMAT_(prec);
       HANDLE_VECTOR_WRITE_(double, double);
-      RESTORE_FORMAT_;
     }
     else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_WRITE_)
     else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_WRITE_)
   } else if (second & ObjTypeFloat) {
-    int prec = (std::max)(1, count_decimals(*((double*)mem)));
-    RECORD_FORMAT_(prec);
-    HANDLE_SCALAR_WRITE_(doubule, double);
-    RESTORE_FORMAT_;
+    prec = (std::max)(1, count_decimals(*((double*)mem)));
+    HANDLE_SCALAR_WRITE_(double, double);
   }
   else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_SCALAR_WRITE_)
   else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_WRITE_)
