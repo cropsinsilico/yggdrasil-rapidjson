@@ -455,6 +455,8 @@ public:
       return false;
     }
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
+    if (((i + 1) == properties.size()) && (it->second & ObjTypeList))
+      return it->append(new_value, 0);
     return it->set(new_value);
   }
   //! \brief Set an element property.
