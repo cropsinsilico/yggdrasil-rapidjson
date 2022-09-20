@@ -1136,7 +1136,7 @@ bool ObjPropertyType::write(std::ostream& out, bool pad) const {
   return true
   int prec = 1;
   std::streamsize out_prec = 0;
-  std::ios_base::fmtflags out_flags = 0;
+  std::ios_base::fmtflags out_flags = out.flags();
   if (!mem) return false;
   if (second & ObjTypeOff) {
     if (!(second & ObjTypeInt) || (second & ObjTypeList)) return false;
@@ -2006,8 +2006,8 @@ public:
   //! \return true if successful, false otherwise.
   template<typename T>
   bool get_properties(std::vector<T>& arr, bool skipColors=false) const {
-    size_t i = 0, count = 0;
-    arr.resize(size(skipColors));
+    size_t i = 0, count = arr.size();
+    arr.resize(count + this->size(skipColors));
     ObjPropertiesMap::const_iterator last = this->properties.begin() + (int)(this->properties.size() - 1);
     for (ObjPropertiesMap::const_iterator it = this->properties.begin();
 	 it != this->properties.end(); it++, i++) {
