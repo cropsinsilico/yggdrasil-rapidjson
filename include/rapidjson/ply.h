@@ -1717,6 +1717,14 @@ public:
       return elementSet->add_colors(arr, M, N, property_colors);
     return false;
   }
+  //! \brief Get the number of elements of a certain type.
+  //! \param[in] Name of the element type to count.
+  //! \return Number of elements of the requested type.
+  size_t count_elements(const std::string name) const {
+    const PlyElementSet* element_set = get_element_set(name);
+    if (!element_set) return 0;
+    return element_set->elements.size();
+  }
   //! \brief Get an element set.
   //! \param name0 Name of the element set to get.
   //! \returns The element set of the requested type if it exists and NULL
