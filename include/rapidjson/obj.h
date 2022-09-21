@@ -449,14 +449,16 @@ public:
     if (i >= properties.size()) {
       if (properties.size() > 0) {
 	ObjPropertiesMap::iterator last = properties.end() - 1;
-	if (last->second & ObjTypeList)
-	  return last->append(new_value, static_cast<int>(i));
+	if (last->second & ObjTypeList) {
+	  return last->append(new_value, static_cast<int>(i - properties.size() + 1));
+	}
       }
       return false;
     }
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
-    if (((i + 1) == properties.size()) && (it->second & ObjTypeList))
+    if (((i + 1) == properties.size()) && (it->second & ObjTypeList)) {
       return it->append(new_value, 0);
+    }
     return it->set(new_value);
   }
   //! \brief Set an element property.
@@ -469,6 +471,17 @@ public:
     if (i >= properties.size()) return false;
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
     return it->set(new_value);
+  }
+  //! \brief Set an element property.
+  //! \tparam T Type of new value.
+  //! \param name Name of the property to set.
+  //! \param new_value Value to assign to the property.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  bool set_property(const std::string name, const T new_value) {
+    size_t i = 0;
+    if (!this->has_property(name, false, false, &i)) return false;
+    return this->set_property(i, new_value);
   }
   //! \brief Get an element property.
   //! \tparam Type of output.
@@ -487,17 +500,6 @@ public:
     }
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
     return it->get(out);
-  }
-  //! \brief Set an element property.
-  //! \tparam T Type of new value.
-  //! \param name Name of the property to set.
-  //! \param new_value Value to assign to the property.
-  //! \return true if successful, false otherwise.
-  template<typename T>
-  bool set_property(const std::string name, const T new_value) {
-    size_t i = 0;
-    if (!this->has_property(name, false, false, &i)) return false;
-    return this->set_property(i, new_value);
   }
   //! \brief Get an element property.
   //! \tparam Type of output.
@@ -567,12 +569,11 @@ public:
     this->_init_properties();
   }
   void _init_properties() OVERRIDE_CXX11 {
-    const ObjPropertiesMap pairs = {
+    this->properties = {
       ObjPropertyType(&v, "vertex_index", ObjTypeRef),
       ObjPropertyType(&vt, "texture_index", (ObjTypeRef | ObjTypeOpt)),
       ObjPropertyType(&vn, "normal_index", (ObjTypeRef | ObjTypeOpt))
     };
-    this->properties = pairs;
   }
   //! \brief Write the vertex to an output stream.
   //! \param out Output stream.
@@ -709,12 +710,11 @@ public:
     this->_init_properties();
   }
   void _init_properties() OVERRIDE_CXX11 {
-    const ObjPropertiesMap pairs = {
+    this->properties = {
       ObjPropertyType(&u0, "u0", ObjTypeFloat),
       ObjPropertyType(&u1, "u1", ObjTypeFloat),
       ObjPropertyType(&curv2d, "curve_index", ObjTypeRef)
     };
-    this->properties = pairs;
   }
   //! \brief Write the curve to an output stream.
   //! \param out Output stream.
@@ -808,13 +808,12 @@ public:
     this->_init_properties();
   }
   void _init_properties() OVERRIDE_CXX11 {
-    const ObjPropertiesMap pairs = {
+    this->properties = {
       ObjPropertyType(&surf, "surface_index", ObjTypeFloat),
       ObjPropertyType(&q0, "q0", ObjTypeFloat),
       ObjPropertyType(&q1, "q1", ObjTypeFloat),
       ObjPropertyType(&curv2d, "curve_index", ObjTypeRef)
     };
-    this->properties = pairs;
   }
   //! \brief Write the surface to an output stream.
   //! \param out Output stream.
@@ -983,7 +982,7 @@ RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 ObjPropertyType::set(const T& val) {
   if ((!mem) || second & ObjTypeList) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_SET_)
-    return true;
+  return true;
 }
 template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
@@ -1283,10 +1282,9 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   }									\
   GENERIC_CONSTRUCTOR_COPY(cls, base, init, props);			\
   void _init_properties() OVERRIDE_CXX11 {				\
-    const ObjPropertiesMap pairs = {					\
+    this->properties = {						\
       UNPACK_MACRO props						\
     };									\
-    this->properties = pairs;						\
   }
 
 #define GENERIC_COPY_MEMBERS(cls)					\
@@ -1430,7 +1428,12 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   /*! \brief Get the minimum number of values required for this element to be valid. */	\
   int min_values(bool=false) const OVERRIDE_CXX11 { return min; }	\
   /*! \brief Get the maximum number of values allowed for this element to be valid. */	\
-  int max_values(bool=false) const OVERRIDE_CXX11 { return max; }
+  int max_values(bool=false) const OVERRIDE_CXX11 { return max; }	\
+  /*! \copydoc ObjElement::add_subelement */				\
+  bool add_subelement() OVERRIDE_CXX11 {				\
+    values.resize(values.size() + 1);					\
+    return true;							\
+  }
 #define GENERIC_VECTOR_BODY_MIXED(cls, base, code, init, props, valType, minB, maxB) \
   GENERIC_ELEMENT_CONSTRUCTOR(cls, base, code, init, props)		\
   DUMMY_ARRAY_CONSTRUCTOR(cls, base, code, init)			\
@@ -1531,16 +1534,11 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
       it->curv2d += static_cast<ObjRef>(ncurv);				\
     }									\
   }									\
-  /*! \copydoc ObjElement::add_subelement */				\
-  bool add_subelement() OVERRIDE_CXX11 {				\
-    values.push_back(ObjRefCurve());					\
-    return true;							\
-  }									\
   /*! \copydoc ObjElement::last_subelement */				\
   ObjPropertyElement* last_subelement(bool* temp = nullptr) OVERRIDE_CXX11 { \
+    if (values.size() == 0) return nullptr;				\
     if (temp) temp[0] = false;						\
-    std::vector<ObjRefCurve>::iterator last = values.end() - 1;		\
-    return &(*last);							\
+    return &(values[values.size() - 1]);				\
   }									\
   }
     
@@ -1580,16 +1578,11 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
       it->surf += static_cast<ObjRef>(nsurf);				\
     }									\
   }									\
-  /*! \copydoc ObjElement::add_subelement */				\
-  bool add_subelement() OVERRIDE_CXX11 {				\
-    values.push_back(ObjRefSurface());					\
-    return true;							\
-  }									\
   /*! \copydoc ObjElement::last_subelement */				\
   ObjPropertyElement* last_subelement(bool* temp = nullptr) OVERRIDE_CXX11 { \
+    if (values.size() == 0) return nullptr;				\
     if (temp) temp[0] = false;						\
-    std::vector<ObjRefSurface>::iterator last = values.end() - 1;	\
-    return &(*last);							\
+    return &(values[values.size() - 1]);				\
   }									\
   }
 #define GENERIC_CLASS_VECTOR_TYPE_IS_VALID(code, type)			\
@@ -1614,12 +1607,6 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
 	 it != values.end(); it++) {					\
       *it += static_cast<type>(nprev);					\
     }									\
-  }									\
-  /*! \copydoc ObjElement::add_subelement */				\
-  bool add_subelement() OVERRIDE_CXX11 {				\
-    type val = 0;							\
-    values.push_back(val);						\
-    return true;							\
   }									\
   /*! \copydoc ObjElement::last_subelement */				\
   ObjPropertyElement* last_subelement(bool* temp = nullptr) OVERRIDE_CXX11 { \
@@ -1665,16 +1652,11 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
       it->vn += static_cast<ObjRef>(nvn);				\
     }									\
   }									\
-  /*! \copydoc ObjElement::add_subelement */				\
-  bool add_subelement() OVERRIDE_CXX11 {				\
-    values.push_back(ObjRefVertex());					\
-    return true;							\
-  }									\
   /*! \copydoc ObjElement::last_subelement */				\
   ObjPropertyElement* last_subelement(bool* temp = nullptr) OVERRIDE_CXX11 { \
+    if (values.size() == 0) return nullptr;				\
     if (temp) temp[0] = false;						\
-    std::vector<ObjRefVertex>::iterator last = values.end() - 1;	\
-    return &(*last);							\
+    return &(values[values.size() - 1]);				\
   }
   
   
@@ -2124,7 +2106,7 @@ public:
     ObjPropertyElement* last = this->last_subelement(&temp);
     if (!last) return false;
     bool flag = last->set_property(name, value);
-    if (temp) delete last;
+    // if (temp) delete last;
     return flag;
   }
   //! \brief Get a subelement property for the most recently added sub-element.
@@ -2139,7 +2121,7 @@ public:
     const ObjPropertyElement* last = this->last_subelement(&temp);
     if (!last) return false;
     bool flag = last->get_property(name, value);
-    if (temp) delete last;
+    // if (temp) delete last;
     return flag;
   }
   //! \brief Determine if the specified property is a vector.
