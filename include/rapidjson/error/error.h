@@ -202,6 +202,8 @@ enum ValidateErrorCode {
     kValidateErrorPythonImport,                //!< Property is not an importable Python object.
     kValidateErrorPythonClass,                 //!< Property is not a Python instance of the class specified in the schema.
     kValidateErrorInvalidSchema,               //!< Property is not a valid JSON schema.
+    kValidateErrorPly,                         //!< Property is not a valid Ply document: %disallowed.
+    kValidateErrorObjWavefront,                //!< Property is not a valid ObjWavefront document: %disallowed.
     kNormalizeErrorAliasDuplicate,             //!< Aliased property already exists in the normalized document.
     kNormalizeErrorCircularAlias,              //!< Property has circular aliases.
     kNormalizeErrorConflictingAliases,         //!< Property has conflicting aliases.

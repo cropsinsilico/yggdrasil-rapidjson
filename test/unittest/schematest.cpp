@@ -2234,6 +2234,30 @@ TEST(SchemaValidator, Schema) { // 33
 	     "}");
 }
 
+TEST(SchemaValidator, Ply) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"ply\""
+        "}");
+  SchemaDocument s(sd);
+  VALIDATE(s,
+	   "\"-YGG-eyJ0eXBlIjoicGx5In0=-YGG-cGx5CmZvcm1hdCBhc2NpaSAxLjAKZWxlbWVudCB2ZXJ0ZXggOApwcm9wZXJ0eSBkb3VibGUgeApwcm9wZXJ0eSBkb3VibGUgeQpwcm9wZXJ0eSBkb3VibGUgegplbGVtZW50IGZhY2UgMgpwcm9wZXJ0eSBsaXN0IHVjaGFyIGludCB2ZXJ0ZXhfaW5kZXgKZWxlbWVudCBlZGdlIDUKcHJvcGVydHkgaW50IHZlcnRleDEKcHJvcGVydHkgaW50IHZlcnRleDIKZW5kX2hlYWRlcgowIDAgMAowIDAgMQowIDEgMQowIDEgMAoxIDAgMAoxIDAgMQoxIDEgMQoxIDEgMAozIDMgMCAxCjMgMyAwIDIKMCAxCjEgMgoyIDMKMyAwCjIgMAo=-YGG-\"",
+	   true);
+}
+
+TEST(SchemaValidator, ObjWavefront) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"obj\""
+        "}");
+  SchemaDocument s(sd);
+  VALIDATE(s,
+	   "\"-YGG-eyJ0eXBlIjoib2JqIn0=-YGG-diAwIDAgMAp2IDAgMCAxCnYgMCAxIDEKdiAwIDEgMAp2IDEgMCAwCnYgMSAwIDEKdiAxIDEgMQp2IDEgMSAwCmYgNCAxIDIKZiA0IDEgMwpsIDEgMgpsIDIgMwpsIDMgNApsIDQgMQpsIDMgMQoK-YGG-\"",
+	   true);
+}
+
 TEST(SchemaValidator, Alias) {
   Document sd;
   sd.Parse(
@@ -2432,7 +2456,7 @@ TEST(SchemaValidator, CircularAliases) {
   INVALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }",
 	     "", "aliases", "/street",
 	     "{ \"aliases\": {"
-	     "    \"errorCode\": 35,"
+	     "    \"errorCode\": 37,"
 	     "    \"instanceRef\": \"#\","
 	     "    \"schemaRef\": \"#\","
 	     "    \"circular\": [\"street\", \"street_address\"]"
@@ -2455,7 +2479,7 @@ TEST(SchemaValidator, ConflictingAliases) {
   INVALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }",
 	     "", "aliases", "/street",
 	     "{ \"aliases\": {"
-	     "    \"errorCode\": 36,"
+	     "    \"errorCode\": 38,"
 	     "    \"instanceRef\": \"#\","
 	     "    \"schemaRef\": \"#\","
 	     "    \"conflicting\": \"street\","
@@ -2480,7 +2504,7 @@ TEST(SchemaValidator, Deprecating) {
   VALIDATE_WARNING(s, "{\"deprecated\": \"string\", \"valid\": 0}",
 		   "", "warnings", "",
 		   "{ \"deprecated\": {"
-		   "    \"errorCode\": 39,"
+		   "    \"errorCode\": 41,"
 		   "    \"instanceRef\": \"#/deprecated\","
 		   "    \"schemaRef\": \"#/properties/deprecated\","
 		   "    \"warning\": \"Deprecation message\""
@@ -2504,7 +2528,7 @@ TEST(SchemaValidator, DeprecatingBool) {
   VALIDATE_WARNING(s, "{\"deprecated\": \"string\", \"valid\": 0}",
 		   "", "warnings", "",
 		   "{ \"deprecated\": {"
-		   "    \"errorCode\": 39,"
+		   "    \"errorCode\": 41,"
 		   "    \"instanceRef\": \"#/deprecated\","
 		   "    \"schemaRef\": \"#/properties/deprecated\""
 		   "  }"
@@ -2550,12 +2574,12 @@ TEST(SchemaValidator, DeprecatingArray) {
 		   "", "warnings", "",
 		   "{ \"deprecated\": ["
 		   "  {"
-		   "    \"errorCode\": 39,"
+		   "    \"errorCode\": 41,"
 		   "    \"instanceRef\": \"#/deprecated\","
 		   "    \"schemaRef\": \"#/allOf/0/properties/deprecated\""
 		   "  },"
 		   "  {"
-		   "    \"errorCode\": 39,"
+		   "    \"errorCode\": 41,"
 		   "    \"instanceRef\": \"#/deprecated2\","
 		   "    \"schemaRef\": \"#/allOf/1/allOf/0/properties/deprecated2\""
 		   "  }"
@@ -2564,17 +2588,17 @@ TEST(SchemaValidator, DeprecatingArray) {
 		   "", "warnings", "",
 		   "{ \"deprecated\": ["
 		   "  {"
-		   "    \"errorCode\": 39,"
+		   "    \"errorCode\": 41,"
 		   "    \"instanceRef\": \"#/deprecated\","
 		   "    \"schemaRef\": \"#/allOf/0/properties/deprecated\""
 		   "  },"
 		   "  {"
-		   "    \"errorCode\": 39,"
+		   "    \"errorCode\": 41,"
 		   "    \"instanceRef\": \"#/deprecated2\","
 		   "    \"schemaRef\": \"#/allOf/1/allOf/0/properties/deprecated2\""
 		   "  },"
 		   "  {"
-		   "    \"errorCode\": 39,"
+		   "    \"errorCode\": 41,"
 		   "    \"instanceRef\": \"#/deprecated3\","
 		   "    \"schemaRef\": \"#/allOf/1/allOf/1/properties/deprecated3\""
 		   "  }"
@@ -4062,39 +4086,72 @@ TEST(SchemaValidator, Schema_UnknownError) {
 }
 
 #ifdef RAPIDJSON_YGGDRASIL
-#define VALIDATE_ENCODED(obj, exp)					\
+#define VALIDATE_ENCODED(obj, exp, exp_min)				\
   Document d_obj;							\
   d_obj.Parse(obj);							\
   EXPECT_FALSE(d_obj.HasParseError());					\
-  SchemaEncoder encoder;						\
-  EXPECT_TRUE(d_obj.Accept(encoder));					\
-  Document d_exp;							\
-  d_exp.Parse(exp);							\
-  EXPECT_FALSE(d_exp.HasParseError());					\
-  if (encoder.GetSchema() != d_exp) {					\
-    StringBuffer sb;							\
-    Writer<StringBuffer> w(sb);						\
-    encoder.GetSchema().Accept(w);					\
-    printf("GetSchema() Expected: %s Actual: %s\n", exp, sb.GetString()); \
-    ADD_FAILURE();							\
+  {									\
+    SchemaEncoder encoder;						\
+    EXPECT_TRUE(d_obj.Accept(encoder));					\
+    Document d_exp;							\
+    d_exp.Parse(exp);							\
+    EXPECT_FALSE(d_exp.HasParseError());				\
+    if (encoder.GetSchema() != d_exp) {					\
+      StringBuffer sb;							\
+      Writer<StringBuffer> w(sb);					\
+      encoder.GetSchema().Accept(w);					\
+      printf("GetSchema() Expected: %s Actual: %s\n", exp, sb.GetString()); \
+      ADD_FAILURE();							\
+    }									\
+    }									\
+  {									\
+   SchemaEncoder encoder(true);						\
+    EXPECT_TRUE(d_obj.Accept(encoder));					\
+    Document d_exp;							\
+    d_exp.Parse(exp_min);						\
+    EXPECT_FALSE(d_exp.HasParseError());				\
+    if (encoder.GetSchema() != d_exp) {					\
+      StringBuffer sb;							\
+      Writer<StringBuffer> w(sb);					\
+      encoder.GetSchema().Accept(w);					\
+      printf("GetSchema() Expected: %s Actual: %s\n", exp_min, sb.GetString()); \
+      ADD_FAILURE();							\
+    }									\
   }
 TEST(SchemaEncoder, Boolean) {
-  VALIDATE_ENCODED("true", "{\"type\":\"boolean\"}");
+  VALIDATE_ENCODED("true",
+		   "{\"type\":\"boolean\"}",
+		   "{\"type\":\"boolean\"}");
 }
 TEST(SchemaEncoder, Null) {
-  VALIDATE_ENCODED("null", "{\"type\":\"null\"}");
+  VALIDATE_ENCODED("null",
+		   "{\"type\":\"null\"}",
+		   "{\"type\":\"null\"}");
 }
 TEST(SchemaEncoder, Int) {
-  VALIDATE_ENCODED("1", "{\"type\":\"integer\"}");
+  VALIDATE_ENCODED("1",
+		   "{\"type\":\"integer\"}",
+		   "{\"type\":\"integer\"}");
 }
 TEST(SchemaEncoder, Double) {
-  VALIDATE_ENCODED("1.5", "{\"type\":\"number\"}");
+  VALIDATE_ENCODED("1.5",
+		   "{\"type\":\"number\"}",
+		   "{\"type\":\"number\"}");
 }
 TEST(SchemaEncoder, String) {
-  VALIDATE_ENCODED("\"hello\"", "{\"type\":\"string\"}");
+  VALIDATE_ENCODED("\"hello\"",
+		   "{\"type\":\"string\"}",
+		   "{\"type\":\"string\"}");
 }
 TEST(SchemaEncoder, Array) {
   VALIDATE_ENCODED("[1, \"hello\"]",
+		   "{"
+		   "  \"type\":\"array\","
+		   "  \"items\": ["
+		   "    {\"type\": \"integer\"},"
+		   "    {\"type\": \"string\"}"
+		   "  ]"
+		   "}",
 		   "{"
 		   "  \"type\":\"array\","
 		   "  \"items\": ["
@@ -4111,10 +4168,23 @@ TEST(SchemaEncoder, Object) {
 		   "    \"a\": {\"type\": \"integer\"},"
 		   "    \"b\": {\"type\": \"string\"}"
 		   "  }"
+		   "}",
+		   "{"
+		   "  \"type\": \"object\","
+		   "  \"properties\": {"
+		   "    \"a\": {\"type\": \"integer\"},"
+		   "    \"b\": {\"type\": \"string\"}"
+		   "  }"
 		   "}");
 }
 TEST(SchemaEncoder, Scalar) {
   VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\"",
+		   "{"
+		   "  \"type\": \"scalar\","
+		   "  \"subtype\": \"uint\","
+		   "  \"precision\": 1,"
+		   "  \"units\": \"g\""
+		   "}",
 		   "{"
 		   "  \"type\": \"scalar\","
 		   "  \"subtype\": \"uint\","
@@ -4130,6 +4200,12 @@ TEST(SchemaEncoder, OneDArray) {
 		   "  \"precision\": 1,"
 		   "  \"units\": \"g\","
 		   "  \"shape\": [3]"
+		   "}",
+		   "{"
+		   "  \"type\": \"ndarray\","
+		   "  \"subtype\": \"uint\","
+		   "  \"precision\": 1,"
+		   "  \"units\": \"g\""
 		   "}");
 }
 TEST(SchemaEncoder, NDArray) {
@@ -4140,10 +4216,19 @@ TEST(SchemaEncoder, NDArray) {
 		   "  \"precision\": 1,"
 		   "  \"units\": \"g\","
 		   "  \"shape\": [2, 3]"
+		   "}",
+		   "{"
+		   "  \"type\": \"ndarray\","
+		   "  \"subtype\": \"uint\","
+		   "  \"precision\": 1,"
+		   "  \"units\": \"g\""
 		   "}");
 }
 TEST(SchemaEncoder, PythonClass) {
   VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"",
+		   "{"
+		   "  \"type\": \"class\""
+		   "}",
 		   "{"
 		   "  \"type\": \"class\""
 		   "}");
@@ -4152,16 +4237,25 @@ TEST(SchemaEncoder, PythonFunction) {
   VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9mdW5jdGlvbgA=-YGG-\"",
 		   "{"
 		   "  \"type\": \"function\""
+		   "}",
+		   "{"
+		   "  \"type\": \"function\""
 		   "}");
 }
 TEST(SchemaEncoder, PythonInstance) {
   VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"",
 		   "{"
 		   "  \"type\": \"instance\""
+		   "}",
+		   "{"
+		   "  \"type\": \"instance\""
 		   "}");
 }
 TEST(SchemaEncoder, Schema) {
   VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"",
+		   "{"
+		   "  \"type\": \"schema\""
+		   "}",
 		   "{"
 		   "  \"type\": \"schema\""
 		   "}");

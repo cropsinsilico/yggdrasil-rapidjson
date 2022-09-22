@@ -300,6 +300,8 @@ public:
   virtual void InvalidPythonImport(const Ch* str, SizeType len) = 0;
   virtual void InvalidPythonClass(const Ch* str, SizeType len, const SValue& expected) = 0;
   virtual void InvalidSchema(ValidateErrorCode code, ISchemaValidator* subvalidator) = 0;
+  virtual void InvalidPly(const Ch* str, SizeType len) = 0;
+  virtual void InvalidObjWavefront(const Ch* str, SizeType len) = 0;
   // Normalization errors
   virtual void DuplicateAlias(const SValue& base, const SValue& alias) = 0;
   virtual void CircularAlias(const SValue& alias) = 0;
@@ -4994,6 +4996,24 @@ public:
 	       (yggtype_ & (1 << kYggPythonImportSchemaType))) {
       if (!CheckPythonImport(context, str, length))
 	return false;
+    } else if ((v == GetPlyString()) &&
+	       (yggtype_ & (1 << kYggPlySchemaType))) {
+      Ply x;
+      std::stringstream ss;
+      ss.str((char*)str);
+      if ((!x.read(ss)) || (!x.is_valid())) {
+	context.error_handler.InvalidPly(str, length);
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPly);
+      }
+    } else if ((v == GetObjString()) &&
+	       (yggtype_ & (1 << kYggObjSchemaType))) {
+      ObjWavefront x;
+      std::stringstream ss;
+      ss.str((char*)str);
+      if ((!x.read(ss)) || (!x.is_valid())) {
+	context.error_handler.InvalidObjWavefront(str, length);
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorObjWavefront);
+      }
     } else {
       DisallowedType(context, v);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
@@ -8839,6 +8859,16 @@ public:
 			   GetStateAllocator());
     AddCurrentError(code, true);
   }
+  void InvalidPly(const Ch* str, SizeType len) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetDisallowedString(), ValueType(str, len, GetStateAllocator()).Move(), GetStateAllocator());
+    AddCurrentError(kValidateErrorPly, true);
+  }
+  void InvalidObjWavefront(const Ch* str, SizeType len) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetDisallowedString(), ValueType(str, len, GetStateAllocator()).Move(), GetStateAllocator());
+    AddCurrentError(kValidateErrorObjWavefront, true);
+  }
   void DuplicateAlias(const SValue& base, const SValue& alias) {
     currentError_.SetObject();
     currentError_.AddMember(GetDuplicatesString(),
@@ -9776,10 +9806,11 @@ public:
   typedef GenericValue<Encoding, Allocator> ValueType;
   typedef GenericDocument<Encoding, Allocator> DocumentType;
   typedef internal::Schema<GenericSchemaDocument<ValueType> > SchemaType;
-  GenericSchemaEncoder(Allocator* allocator = 0,
+  GenericSchemaEncoder(bool minimal = false,
+		       Allocator* allocator = 0,
 		       StackAllocator* stackAllocator = 0,
 		       size_t stackCapacity = kDefaultStackCapacity) :
-    document_(allocator, stackCapacity, stackAllocator) {}
+    document_(allocator, stackCapacity, stackAllocator), minimal_(minimal) {}
 #define ADD_TYPE_(method)						\
   if (!AddKey(SchemaType::GetTypeString()))				\
     return false;							\
@@ -9825,6 +9856,41 @@ public:
   }
   template <typename YggSchemaValueType>
   bool YggdrasilString(const Ch*, SizeType, bool, YggSchemaValueType& schema) {
+    if (minimal_) {
+      const typename YggSchemaValueType::ConstMemberIterator v = schema.FindMember(ValueType::GetTypeString());
+      RAPIDJSON_ASSERT(v != schema.MemberEnd());
+      if (v == schema.MemberEnd()) return false;
+      typename YggSchemaValueType::ValueType minimal_schema(kObjectType);
+      typename YggSchemaValueType::AllocatorType allocator;
+      for (typename YggSchemaValueType::ConstMemberIterator m = schema.MemberBegin(); m != schema.MemberEnd(); ++m) {
+	typename YggSchemaValueType::ValueType new_value(m->value, allocator);
+	minimal_schema.AddMember(m->name, new_value, allocator);
+      }
+      if (v->value == YggSchemaValueType::GetScalarString()) {
+	const typename YggSchemaValueType::ConstMemberIterator m_subtype = schema.FindMember(YggSchemaValueType::GetSubTypeString());
+	RAPIDJSON_ASSERT(m_subtype != schema.MemberEnd());
+	if (m_subtype == schema.MemberEnd()) return false;
+	if (m_subtype->value == YggSchemaValueType::GetStringSubTypeString() ||
+	    m_subtype->value == YggSchemaValueType::GetBytesSubTypeString() ||
+	    m_subtype->value == YggSchemaValueType::GetUnicodeSubTypeString()) {
+	  if (!minimal_schema.RemoveMember(YggSchemaValueType::GetPrecisionString()))
+	    return false;
+	}
+      } else if (v->value == YggSchemaValueType::GetNDArrayString()) {
+	minimal_schema.RemoveMember(YggSchemaValueType::GetLengthString());
+	minimal_schema.RemoveMember(YggSchemaValueType::GetShapeString());
+      } else {
+	return schema.Accept(document_);
+      }
+      const typename YggSchemaValueType::ConstMemberIterator m_units = schema.FindMember(YggSchemaValueType::GetUnitsString());
+      if (m_units != schema.MemberEnd()) {
+	units::Units x(m_units->value.GetString());
+	if (x.is_dimensionless()) {
+	  minimal_schema.RemoveMember(YggSchemaValueType::GetUnitsString());
+	}
+      }
+      return minimal_schema.Accept(document_);
+    }
     return schema.Accept(document_);
   }
   template <typename YggSchemaValueType>
@@ -9869,6 +9935,7 @@ private:
   
   static const size_t kDefaultStackCapacity = 1024;
   DocumentType document_;
+  bool minimal_;
 };
 
 typedef GenericSchemaEncoder<UTF8<char> > SchemaEncoder;

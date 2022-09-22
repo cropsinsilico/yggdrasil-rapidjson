@@ -1951,6 +1951,7 @@ public:
   //! \return Input stream.
   std::istream & read(std::istream &in) {
     std::string word;
+    in >> std::ws;
     in >> word;
     if (word != "ply")
       RAPIDJSON_ASSERT(!sizeof("Input does not appear to be in ply format"));

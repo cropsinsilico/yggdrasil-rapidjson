@@ -2166,7 +2166,7 @@ public:
   //! \param in Input stream.
   //! \param dont_descend If true, groups will not read elements.
   //! \return true if successful, false otherwise.
-  bool read(std::istream &in, const bool& dont_descend=false) {
+  virtual bool read(std::istream &in, const bool& dont_descend=false) {
     return this->read_values(in, dont_descend);
   }
   //! \brief Read element members from an input stream into a vector.
@@ -2327,15 +2327,14 @@ public:
   void finalize() { finalized = true; }
   //! \copydoc ObjElement::read_values
   bool read_values(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
-    if (!this->read_group_header(in)) return false;
+    if (!this->read_group_header(in))  return false;
     if (!dont_descend) {
-      int i = 0;
       while (!finalized) {
-	if (i > 500) return false;
 	ObjElement* x = nullptr;
 	if (!read_obj_element(in, this, true, x)) return false;
-	if (x) add_element(x);
-	i++;
+	if (!x) return false;
+	if (x != this)
+	  add_element(x);
       }
     }
     return true;
@@ -2576,6 +2575,9 @@ public:
     }
     if (x == nullptr) {
       finalize();
+    } else if (this->code == "g" && x->code == "g") {
+      finalize();
+      const_cast<ObjGroupBase*>(this->parent)->add_element(x);
     } else {
       x->parent = this;
       elements.push_back(x);
@@ -3555,12 +3557,16 @@ inline bool read_obj_element(std::istream &in,
   out = nullptr;
   if (in >> word) {
     if (word == "end") {
+      out = parent;
       return parent->end_group();
     } else {
       OBJ_ELEMENT_INIT(word, out, (parent));
-      if (!out) return false;
-      return out->read_values(in, dont_descend);
+      if (!out)  return false;
+      if (!out->read_values(in, dont_descend)) return false;
     }
+  } else {
+    out = parent;
+    parent->finalize();
   }
   return true;
 }
@@ -3839,6 +3845,12 @@ public:
     }
     return true;
   }
+  //! \copydoc ObjElement::read
+  bool read(std::istream &in, const bool& dont_descend=false) OVERRIDE_CXX11 {
+    in >> std::ws;
+    return ObjGroupBase::read(in, dont_descend);
+  }
+  
 
   friend bool operator == (const ObjWavefront& lhs, const ObjWavefront& rhs);
   friend bool operator != (const ObjWavefront& lhs, const ObjWavefront& rhs);
