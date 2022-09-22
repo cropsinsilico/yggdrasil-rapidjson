@@ -1204,7 +1204,8 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
 #define OBJ_ELEMENT_INIT(word, lhs, args) {				\
     bool first = true;							\
     while (true) {							\
-      if      (word == "v"         ) lhs = new ObjVertex args;		\
+      if      (word == "#"         ) lhs = new ObjComment args;		\
+      else if (word == "v"         ) lhs = new ObjVertex args;		\
       else if (word == "vp"        ) lhs = new ObjVParameter args;	\
       else if (word == "vn"        ) lhs = new ObjVNormal args;		\
       else if (word == "vt"        ) lhs = new ObjVTexture args;	\
@@ -2759,6 +2760,9 @@ public:
   ObjElement* add_element(std::string name, const std::string& value, const double& resolution);
 
 };
+
+//! Comment data
+GENERIC_VECTOR_STRING(ObjComment, #, std::string, SINGLE_ARG(OBJ_P_(&values, "words", ObjTypeString | ObjTypeList)));
 
 //! Vertex data
 class ObjVertex : public ObjElement {
