@@ -1956,7 +1956,7 @@ public:
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
   void display(std::ostream& os) const {
-    os << "GenericQuantity(" << value_ << ", \"";
+    os << "Quantity(" << value_ << ", \"";
     os << units_;
     os << "\")";
   }
@@ -2440,7 +2440,7 @@ public:
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
   void display(std::ostream& os) const {
-    os << "GenericQuantityArray(";
+    os << "QuantityArray(";
     _write_array(os);
     os << ", ";
     os << units_;
