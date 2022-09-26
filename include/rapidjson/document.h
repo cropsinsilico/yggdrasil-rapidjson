@@ -3335,6 +3335,19 @@ public:
     if (!HasSchema()) return false;
     return schema_->HasMember(GetUnitsString());
   }
+#if RAPIDJSON_HAS_STDSTRING
+  bool SetUnits(const std::basic_string<Ch> units) {
+    return SetUnits(units.c_str(), units.length());
+  }
+#endif // RAPIDJSON_HAS_STDSTRING
+  bool SetUnits(const Ch* units_str, const SizeType units_len=0) {
+    if (units_len == 0)
+      AddSchemaMember(GetUnitsString(), units_str,
+		      internal::StrLen(units_str));
+    else
+      AddSchemaMember(GetUnitsString(), units_str, units_len);
+    return true;
+  }
   const ValueType& GetUnits() const {
     RAPIDJSON_ASSERT(HasUnits());
     return schema_->FindMember(GetUnitsString())->value;
@@ -3560,11 +3573,7 @@ public:
     AddSchemaMember(GetSubTypeString(), YggSubTypeString<T>());
     AddSchemaMember(GetPrecisionString(), static_cast<unsigned int>(sizeof(T)));
     if (units_str) {
-      if (units_len == 0)
-	AddSchemaMember(GetUnitsString(), units_str,
-			internal::StrLen(units_str));
-      else
-	AddSchemaMember(GetUnitsString(), units_str, units_len);
+      if (!SetUnits(units_str, units_len)) return false;
     }
     if (ndim > 0) {
       AddSchemaMember(GetShapeString(), shape_array);
