@@ -1022,6 +1022,14 @@ public:
 	return false;
     return true;
   }
+  //! \brief Determine if the units are null.
+  //! \return true if the units are null.
+  bool is_null() const {
+    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++)
+      if (!it->is_null())
+	return false;
+    return true;
+  }
   //! \brief Determine if another set of units are compatible and share the
   //!   same dimensions.
   //! \param x Units for comparison.
@@ -1120,14 +1128,23 @@ public:
     }
     return *this;
   }
+  bool has_factor() const {
+    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++) {
+      if (!(it->is_null())) continue;
+      if (!internal::values_eq(it->factor_, 1.0))
+	return true;
+    }
+    return false;
+  }
   double pull_factor() {
     double factor = 1.0;
     std::vector<size_t> idx_remove;
     size_t i = 0;
     for (typename std::vector<GenericUnit<Encoding> >::iterator it = units_.begin(); it != units_.end(); it++, i++) {
+      if (!(it->is_null())) continue;
       factor *= std::pow(it->factor_, it->power_);
       it->factor_ = 1.0;
-      if (it->is_null() && (units_.size() > 1))
+      if (units_.size() > 1)
 	idx_remove.push_back(i);
     }
     for (typename std::vector<size_t>::reverse_iterator it = idx_remove.rbegin(); it != idx_remove.rend(); it++)
