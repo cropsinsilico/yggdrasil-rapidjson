@@ -2861,8 +2861,6 @@ public:
   RAPIDJSON_STRING_(FloatSubType, 'f', 'l', 'o', 'a', 't')
   RAPIDJSON_STRING_(ComplexSubType, 'c', 'o', 'm', 'p', 'l', 'e', 'x')
   RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'g')
-  RAPIDJSON_STRING_(BytesSubType, 'b', 'y', 't', 'e', 's')
-  RAPIDJSON_STRING_(UnicodeSubType, 'u', 'n', 'i', 'c', 'o', 'd', 'e')
 
 #undef RAPIDJSON_STRING_
 

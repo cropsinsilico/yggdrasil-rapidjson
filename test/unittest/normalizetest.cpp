@@ -203,7 +203,7 @@ using namespace rapidjson;
     FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",	\
 		     "/a",					\
 		     "{ \"normalization\": {"			\
-		     "    \"errorCode\": 39,"			\
+		     "    \"errorCode\": 40,"			\
 		     "    \"instanceRef\": \"#/a\","		\
 		     "    \"schemaRef\": \"#/allOf/1\","	\
 		     "    \"conflicting\": \"" #method "\","	\
@@ -235,7 +235,7 @@ using namespace rapidjson;
     FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",	\
 		     "/a",					\
 		     "{ \"normalization\": {"			\
-		     "    \"errorCode\": 39,"			\
+		     "    \"errorCode\": 40,"			\
 		     "    \"instanceRef\": \"#/a\","		\
 		     "    \"schemaRef\": \"#/allOf/1\","	\
 		     "    \"conflicting\": \"" #method "\","	\
@@ -410,7 +410,7 @@ TEST(SchemaNormalizer, MergeAllOf) {
     FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",
 		     "/field",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 39,"
+		     "    \"errorCode\": 40,"
 		     "    \"instanceRef\": \"#/field\","
 		     "    \"schemaRef\": \"#/allOf/1\","
 		     "    \"conflicting\": \"string\","
@@ -461,7 +461,7 @@ TEST(SchemaNormalizer, MergeAnyOf) {
     FAILED_NORMALIZE(s, "{}", "/anyOf/0", "normalization",
 		     "/field",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 39,"
+		     "    \"errorCode\": 40,"
 		     "    \"instanceRef\": \"#/field\","
 		     "    \"schemaRef\": \"#/anyOf/0\","
 		     "    \"conflicting\": \"string\","
@@ -516,7 +516,7 @@ TEST(SchemaNormalizer, MergeOneOf) {
     FAILED_NORMALIZE(s, "{}", "/oneOf/0", "normalization",
 		     "/field",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 39,"
+		     "    \"errorCode\": 40,"
 		     "    \"instanceRef\": \"#/field\","
 		     "    \"schemaRef\": \"#/oneOf/0\","
 		     "    \"conflicting\": \"string\","
@@ -546,7 +546,7 @@ TEST(SchemaNormalizer, MergeConflict) {
     FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",
 		     "/shipping_address",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 39,"
+		     "    \"errorCode\": 40,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/allOf/1\","
 		     "    \"conflicting\": \"string\","
@@ -590,7 +590,7 @@ TEST(SchemaNormalizer, MergeConflictNested) {
 		     "/properties/client/allOf/1", "normalization",
 		     "/client/shipping_address",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 39,"
+		     "    \"errorCode\": 40,"
 		     "    \"instanceRef\": \"#/client/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/client/allOf/1\","
 		     "    \"conflicting\": \"string\","
@@ -675,7 +675,7 @@ TEST(SchemaNormalizer, Alias) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address/street_address",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 36,"
+		     "    \"errorCode\": 37,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"duplicates\": [\"street\", \"street_address\"]"
@@ -735,7 +735,7 @@ TEST(SchemaNormalizer, AliasConflict) {
 		     "{\"b2\": \"bar\"}",
 		     "", "aliases", "",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 36,"
+		     "    \"errorCode\": 37,"
 		     "    \"instanceRef\": \"#\","
 		     "    \"schemaRef\": \"#\","
 		     "    \"duplicates\": [\"b\", \"b2\"]"
@@ -885,7 +885,7 @@ TEST(SchemaNormalizer, AliasCircular) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address/street",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 37,"
+		     "    \"errorCode\": 38,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"circular\": [\"street\", \"street_address\"]"
@@ -925,7 +925,7 @@ TEST(SchemaNormalizer, AliasConflicting) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address/street",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 38,"
+		     "    \"errorCode\": 39,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"conflicting\": \"street\","
@@ -982,7 +982,7 @@ TEST(SchemaNormalizer, AliasNested) {
 		     "{ \"allOf\": {"
 		     "    \"errors\": ["
 		     "       { \"aliases\": {"
-		     "           \"errorCode\": 36,"
+		     "           \"errorCode\": 37,"
 		     "           \"instanceRef\": \"#/shipping_address\","
 		     "           \"schemaRef\": \"#/definitions/address\","
 		     "           \"duplicates\": [\"street\", \"street_address\"]"
@@ -1039,7 +1039,7 @@ TEST(SchemaNormalizer, AliasNestedCircular) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 37,"
+		     "    \"errorCode\": 38,"
 		     "    \"instanceRef\": \"#\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"circular\": [\"street\", \"street_address\"]"
@@ -1091,7 +1091,7 @@ TEST(SchemaNormalizer, AliasNestedConflicting) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 38,"
+		     "    \"errorCode\": 39,"
 		     "    \"instanceRef\": \"#\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "  \"conflicting\": \"street\","

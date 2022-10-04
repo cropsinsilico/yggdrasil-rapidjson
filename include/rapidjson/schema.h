@@ -297,6 +297,7 @@ public:
   virtual void IncorrectPrecision(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
   virtual void IncorrectUnits(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
   virtual void IncorrectShape(const SValue& actual, const SValue& expected) = 0;
+  virtual void IncorrectEncoding(const SValue& actual, const SValue& expected) = 0;
   virtual void InvalidPythonImport(const Ch* str, SizeType len) = 0;
   virtual void InvalidPythonClass(const Ch* str, SizeType len, const SValue& expected) = 0;
   virtual void InvalidSchema(ValidateErrorCode code, ISchemaValidator* subvalidator) = 0;
@@ -2004,6 +2005,7 @@ public:
   }
   template <typename YggSchemaValueType>
   bool NormYggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool, YggSchemaValueType& valueSchema) {
+    // TODO: Encoding
     NORM_BEGIN_(YggdrasilString);
     // Units
     RAPIDJSON_ASSERT(valueSchema.IsObject());
@@ -4108,6 +4110,7 @@ public:
 	precision_(),
 	units_(),
 	shape_(),
+	encoding_(),
 	class_(),
 	args_(),
 	kwargs_(),
@@ -4460,6 +4463,10 @@ public:
 	if (const ValueType* v = GetMember(value, GetShapeString())) {
 	    if (v->IsArray())
 	        shape_.CopyFrom(*v, *allocator_);
+	}
+	if (const ValueType* v = GetMember(value, GetEncodingString())) {
+	    if (v->IsString())
+	        encoding_.CopyFrom(*v, *allocator_, true);
 	}
 	if (const ValueType* v = GetMember(value, GetArgsString())) {
 	    if (v->IsArray())
@@ -4981,6 +4988,8 @@ public:
 	return false;
       if (!CheckUnits(context, schema))
 	return false;
+      if (!CheckEncoding(context, schema))
+	return false;
     } else if (((v == Get1DArrayString()) || (v == GetNDArrayString())) &&
 	       (yggtype_ & (1 << kYggNDArraySchemaType))) {
       if (!CheckSubType(context, schema))
@@ -4988,6 +4997,8 @@ public:
       if (!CheckPrecision(context, schema))
 	return false;
       if (!CheckUnits(context, schema))
+	return false;
+      if (!CheckEncoding(context, schema))
 	return false;
       if (!CheckShape(context, schema))
 	return false;
@@ -5398,12 +5409,16 @@ public:
     RAPIDJSON_STRING_(Ply, 'p', 'l', 'y')
     RAPIDJSON_STRING_(Any, 'a', 'n', 'y')
     RAPIDJSON_STRING_(Schema, 's', 'c', 'h', 'e', 'm', 'a')
+    // for backward compat
+    RAPIDJSON_STRING_(Bytes, 'b', 'y', 't', 'e', 's')
+    RAPIDJSON_STRING_(Unicode, 'u', 'n', 'i', 'c', 'o', 'd', 'e')
     // props
     RAPIDJSON_STRING_(SubType, 's', 'u', 'b', 't', 'y', 'p', 'e')
     RAPIDJSON_STRING_(Precision, 'p', 'r', 'e', 'c', 'i', 's', 'i', 'o', 'n')
     RAPIDJSON_STRING_(Units, 'u', 'n', 'i', 't', 's')
     RAPIDJSON_STRING_(Length, 'l', 'e', 'n', 'g', 't', 'h')
     RAPIDJSON_STRING_(Shape, 's', 'h', 'a', 'p', 'e')
+    RAPIDJSON_STRING_(Encoding, 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g')
     RAPIDJSON_STRING_(Args, 'a', 'r', 'g', 's')
     RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
     RAPIDJSON_STRING_(Aliases, 'a', 'l', 'i', 'a', 's', 'e', 's')
@@ -5661,6 +5676,18 @@ protected:
 	else if (type == GetAnyString()    ) {
 	  type_ |= ((1 << kTotalSchemaType) - 1);
 	  yggtype_ |= ((1 << kYggTotalSchemaType) - 1);
+	} else if (type == GetBytesString()) {
+	  yggtype_ |= 1 << kYggScalarSchemaType;
+	  subtype_ = kYggStringSchemaSubType;
+	} else if (type == GetUnicodeString()) {
+	  yggtype_ |= 1 << kYggScalarSchemaType;
+	  subtype_ = kYggStringSchemaSubType;
+	} else {
+	  YggSchemaValueSubType subT = GetSubType(type);
+	  if (subT != kYggNullSubType) {
+	    yggtype_ |= 1 << kYggScalarSchemaType;
+	    subtype_ = subT;
+	  }
 	}
 #endif // RAPIDJSON_YGGDRASIL
     }
@@ -6103,6 +6130,22 @@ protected:
     if (!shape_.IsNull() && (shape_ != actual)) {
       context.error_handler.IncorrectShape(actual, shape_);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorShape);
+    }
+    return true;
+  }
+  template <typename YggSchemaValueType>
+  bool CheckEncoding(Context& context, const YggSchemaValueType& schema) const {
+    RAPIDJSON_ASSERT(schema.IsObject());
+    if (encoding_.IsNull())
+      return true;
+    SValue actual(kStringType);
+    typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetEncodingString());
+    if (vs != schema.MemberEnd()) {
+      actual.SetString(vs->value.GetString(), *allocator_);
+    }
+    if (encoding_ != actual) {
+      context.error_handler.IncorrectEncoding(actual, encoding_);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorEncoding);
     }
     return true;
   }
@@ -7517,6 +7560,7 @@ protected:
     SValue precision_;
     SValue units_;
     SValue shape_;
+    SValue encoding_;
     SValue class_;
     SValue args_;
     SValue kwargs_;
@@ -8837,6 +8881,16 @@ public:
 			    GetStateAllocator());
     AddCurrentError(kValidateErrorShape, true);
   }
+  void IncorrectEncoding(const SValue& actual, const SValue& expected) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetExpectedString(),
+			    ValueType(expected, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    currentError_.AddMember(GetActualString(),
+			    ValueType(actual, GetStateAllocator()).Move(),
+			    GetStateAllocator());
+    AddCurrentError(kValidateErrorEncoding, true);
+  }
   void InvalidPythonImport(const Ch* str, SizeType len) {
     currentError_.SetObject();
     currentError_.AddMember(GetDisallowedString(), ValueType(str, len, GetStateAllocator()).Move(), GetStateAllocator());
@@ -9870,9 +9924,7 @@ public:
 	const typename YggSchemaValueType::ConstMemberIterator m_subtype = schema.FindMember(YggSchemaValueType::GetSubTypeString());
 	RAPIDJSON_ASSERT(m_subtype != schema.MemberEnd());
 	if (m_subtype == schema.MemberEnd()) return false;
-	if (m_subtype->value == YggSchemaValueType::GetStringSubTypeString() ||
-	    m_subtype->value == YggSchemaValueType::GetBytesSubTypeString() ||
-	    m_subtype->value == YggSchemaValueType::GetUnicodeSubTypeString()) {
+	if (m_subtype->value == YggSchemaValueType::GetStringSubTypeString()) {
 	  if (!minimal_schema.RemoveMember(YggSchemaValueType::GetPrecisionString()))
 	    return false;
 	}

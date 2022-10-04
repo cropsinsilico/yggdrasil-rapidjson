@@ -282,12 +282,11 @@ if __name__ == "__main__":
         "subtype": {
             "description": "The base type for each item.",
             "enum": [
-                "bytes",
+                "string",
                 "complex",
                 "float",
                 "int",
-                "uint",
-                "unicode"
+                "uint"
             ],
             "type": "string"
         },
