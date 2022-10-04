@@ -3818,13 +3818,20 @@ public:
                   *allocator);
       }
       Py_DECREF(keys);
-    } else if (PyBytes_CheckExact(x)) {
+    } else if (PyBytes_CheckExact(x) || PyByteArray_Check(x)) {
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
       ResetSchema(allocator);
-      SetStringRaw(StringRef(PyBytes_AsString(x), (size_t)(PyBytes_Size(x))),
-		   *allocator);
+      if (PyBytes_CheckExact(x)) {
+	SetStringRaw(StringRef(PyBytes_AsString(x),
+			       (size_t)(PyBytes_Size(x))),
+		     *allocator);
+      } else {
+	SetStringRaw(StringRef(PyByteArray_AsString(x),
+			       (size_t)(PyByteArray_Size(x))),
+		     *allocator);
+      }
       schema_->MemberReserve(5, schema_->GetAllocator());
       AddSchemaMember(GetTypeString(), GetScalarString());
       AddSchemaMember(GetSubTypeString(), GetStringSubTypeString());
