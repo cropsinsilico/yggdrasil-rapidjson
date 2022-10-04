@@ -3710,9 +3710,9 @@ public:
 	if (typenum < 0)
 	  return NULL;
 	if (typenum == NPY_STRING) {
-	  return PyBytes_FromString(GetString());
+	  return PyBytes_FromStringAndSize(GetString(), GetStringLength());
 	} else if (typenum == NPY_UNICODE) {
-	  PyObject* pyBytes = PyBytes_FromString(GetString());
+	  PyObject* pyBytes = PyBytes_FromStringAndSIze(GetString(), GetStringLength());
 	  out = PyUnicode_FromEncodedObject(pyBytes, enc.GetString(), NULL);
 	  Py_DECREF(pyBytes);
 	  return out;
