@@ -759,6 +759,13 @@ enum YggSubType {
     kYggStringSubType = 5
 };
 
+enum YggEncodingType {
+  kYggNullEncodingType = 0,
+  kYggASCIIEncodingType = 1,
+  kYggUTF8EncodingType = 2,
+  kYggUCS4EncodingType = 3
+};
+
 
 template <typename T> inline enum YggSubType GetYggSubType() { return kYggNullSubType; }
 template<> inline enum YggSubType GetYggSubType<uint8_t>() { return kYggUintSubType; }
