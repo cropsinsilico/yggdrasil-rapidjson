@@ -2141,10 +2141,10 @@ public:
 	  // TODO: Change encoding?
 	  valueSchema.RemoveMember(YggSchemaValueType::GetEncodingString());
 	}
-	bool out = NormString(context, schema, str, length, true);
-	if (out)
+	bool out_string = NormString(context, schema, str, length, true);
+	if (out_string)
 	  RecordModified(kModificationTypeValue);
-	return out;
+	return out_string;
       }
     }
     NORM_BODY_(YggdrasilString, (str, length, true, valueSchema));
