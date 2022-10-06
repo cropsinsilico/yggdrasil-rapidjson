@@ -3820,12 +3820,21 @@ public:
                   *allocator);
       }
       Py_DECREF(keys);
-    } else if (PyBytes_CheckExact(x) || PyByteArray_Check(x)) {
+    } else if (PyUnicode_CheckExact(x)) {
+      RAPIDJSON_ASSERT(allocator);
+      if (!allocator)
+	return false;
+      PyObject* x_bytes = PyUnicode_AsUTF8String(x);
+      SetStringRaw(StringRef(PyBytes_AsString(x_bytes),
+			     (size_t)(PyBytes_Size(x_bytes))),
+		   *allocator);
+      Py_DECREF(x_bytes);
+    } else if (PyBytes_Check(x) || PyByteArray_Check(x)) {
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
       ResetSchema(allocator);
-      if (PyBytes_CheckExact(x)) {
+      if (PyBytes_Check(x)) {
 	SetStringRaw(StringRef(PyBytes_AsString(x),
 			       (size_t)(PyBytes_Size(x))),
 		     *allocator);
@@ -3838,15 +3847,6 @@ public:
       AddSchemaMember(GetTypeString(), GetScalarString());
       AddSchemaMember(GetSubTypeString(), GetStringSubTypeString());
       AddSchemaMember(GetPrecisionString(), GetStringLength());
-    } else if (PyUnicode_CheckExact(x)) {
-      RAPIDJSON_ASSERT(allocator);
-      if (!allocator)
-	return false;
-      PyObject* x_bytes = PyUnicode_AsUTF8String(x);
-      SetStringRaw(StringRef(PyBytes_AsString(x_bytes),
-			     (size_t)(PyBytes_Size(x_bytes))),
-		   *allocator);
-      Py_DECREF(x_bytes);
     } else if (PyLong_Check(x)) {
       int overflow = 0;
       Set(static_cast<int64_t>(PyLong_AsLongLongAndOverflow(x, &overflow)));
