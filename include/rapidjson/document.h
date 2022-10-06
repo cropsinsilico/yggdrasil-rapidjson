@@ -3720,6 +3720,10 @@ public:
 	if (PyTypeNum_ISFLEXIBLE(typenum))
 	  desc->elsize = GetPrecision();
 	out = PyArray_Scalar((void*)GetString(), desc, NULL);
+	// if (out != NULL) {
+	//   Py_INCREF(desc);
+	//   out = PyArray_FromScalar(out, desc);
+	// }
 	return out;
       } else if (IsNDArray()) {
 	ValueType enc;
@@ -3880,24 +3884,47 @@ public:
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
     } else if (PyArray_CheckScalar(x)) {
       ResetSchema(allocator);
-      PyArray_Descr* desc = PyArray_DescrFromScalar(x);
-      if (desc == NULL)
+      PyArray_Descr* desc = NULL;
+      PyObject* scalar = NULL;
+      if (PyObject_IsInstance(x, (PyObject*)&PyArray_Type)) {
+	desc = PyArray_DESCR((PyArrayObject*)x);
+	Py_INCREF(desc);
+	scalar = PyArray_Scalar(PyArray_DATA((PyArrayObject*)x), desc, NULL);
+      } else {
+	desc = PyArray_DescrFromScalar(x);
+	Py_INCREF(x);
+	scalar = x;
+      }
+      if (desc == NULL || scalar == NULL) {
+	Py_XDECREF(desc);
+	Py_XDECREF(scalar);
 	return false;
+      }
       SizeType precision;
       ValueType subtype;
       ValueType encoding;
       if (!NumpyType2SubType(desc, subtype, precision, encoding, 0,
-			     schema_->GetAllocator()))
+			     schema_->GetAllocator())) {
+	Py_DECREF(desc);
+	Py_DECREF(scalar);
 	return false;
+      }
       void* data = schema_->GetAllocator().Malloc(precision);
-      if (!data)
+      if (!data) {
+	Py_DECREF(desc);
 	return false;
-      PyArray_ScalarAsCtype(x, data);
+      }
+      PyArray_CastScalarToCtype(scalar, data, desc);
+      Py_DECREF(scalar);
+      Py_INCREF(desc);
       SetStringRaw(StringRef(static_cast<Ch*>(data), precision),
 		   schema_->GetAllocator());
       schema_->GetAllocator().Free(data);
-      if (desc->type_num == NPY_UNICODE && encoding == GetUTF8EncodingString())
+      if (desc->type_num == NPY_UNICODE && encoding == GetUTF8EncodingString()) {
+	Py_DECREF(desc);
 	return true;
+      }
+      Py_DECREF(desc);
       schema_->MemberReserve(5, schema_->GetAllocator());
       AddSchemaMember(GetTypeString(), GetScalarString());
       AddSchemaMember(GetSubTypeString(), subtype);
