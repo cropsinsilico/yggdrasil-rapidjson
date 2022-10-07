@@ -2078,11 +2078,11 @@ public:
 	  (src_subtype == dst_subtype) &&
 	  (src_encoding != dst_encoding)) {
 	// TODO: Change encoding & precision if necessary
-      } else if (((src_subtype == dst_subtype) &&
-		  (src_precision < dst_precision)) ||
-		 ((src_subtype != dst_subtype) &&
-		  canCast(src_subtype, src_precision,
-			  dst_subtype, dst_precision, false))) {
+      } else if ((src_subtype != dst_subtype ||
+		  src_precision != dst_precision) &&
+		 canTruncate(src_subtype, src_precision,
+			     (const unsigned char*)str,
+			     dst_subtype, dst_precision, nelements)) {
 	SizeType src_size = sizeOfSubtype(src_subtype, src_precision);
 	SizeType dst_size = sizeOfSubtype(dst_subtype, dst_precision);
 	SizeType src_nbytes = length * (SizeType)sizeof(Ch);
@@ -2093,10 +2093,8 @@ public:
 	  dst_nbytes = nelements * dst_size;
 	  dst = (unsigned char*)SetTemporary(dst_nbytes);
 	}
-	changePrecision(src_subtype, src_precision,
-			(const unsigned char*)str, src_nbytes,
-			dst_subtype, dst_precision,
-			dst, dst_nbytes, nelements);
+	truncateCast(src_subtype, src_precision, (const unsigned char*)str,
+		     dst_subtype, dst_precision, dst, nelements);
 	if (dst_size > src_size) {
 	  str = (Ch*)dst;
 	  length = dst_nbytes / (SizeType)sizeof(Ch);
@@ -2104,7 +2102,13 @@ public:
 	subtype = (typename SchemaType::YggSchemaValueSubType)dst_subtype;
 	precision = dst_precision;
 	const typename SchemaType::ValueType& subtype_str = schema.SubType2String(subtype);
-	valueSchema[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema.GetAllocator());
+	if (subtype != (typename SchemaType::YggSchemaValueSubType)src_subtype) {
+	  valueSchema[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema.GetAllocator());
+	}
+	if (precision != src_precision) {
+	  valueSchema[SchemaType::GetPrecisionString()].SetUint(precision);
+	}
+	RecordModified(kModificationTypeValue, false);
       }
       // Units
       if (unitsV != valueSchema.MemberEnd()) {

@@ -187,7 +187,6 @@ void changePrecision(const unsigned char*, T2*, SizeType,
   RAPIDJSON_ASSERT(!sizeof("Cannot change from T1 to T2"));
 }
 
-#undef CAST_SOURCE
 #undef SAME_PRECISION
 #undef DIFF_PRECISION
 
@@ -255,6 +254,205 @@ void changePrecision(const YggSubType src_subtype, const SizeType src_precision,
 				 dst_bytes, dst_nbytes, nelements),
 		 RAPIDJSON_ASSERT(false));
 }
+
+#define MIN_MAX_(TT, min, max)			\
+  template<typename T>				\
+  T get_max_(const T, RAPIDJSON_ENABLEIF((internal::IsSame<T, TT>))) {	\
+    return max;					\
+  }						\
+  template<typename T>				\
+  T get_min_(const T, RAPIDJSON_ENABLEIF((internal::IsSame<T, TT>))) {	\
+    return min;					\
+  }
+#define MIN_MAX_S_(T, base)			\
+  MIN_MAX_(T, base ## _MIN, base ## _MAX)
+#define MIN_MAX_U_(T, base)			\
+  MIN_MAX_(T, 0, base ## _MAX)
+#define MIN_MAX_F_(T, base)			\
+  MIN_MAX_(T, -base ## _MAX, base ## _MAX)
+
+MIN_MAX_S_(int8_t, INT8)
+MIN_MAX_S_(int16_t, INT16)
+MIN_MAX_S_(int32_t, INT32)
+MIN_MAX_S_(int64_t, INT64)
+MIN_MAX_U_(uint8_t, UINT8)
+MIN_MAX_U_(uint16_t, UINT16)
+MIN_MAX_U_(uint32_t, UINT32)
+MIN_MAX_U_(uint64_t, UINT64)
+MIN_MAX_F_(float, FLT)
+MIN_MAX_F_(double, DBL)
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+MIN_MAX_F_(long double, LDBL)
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+
+#undef MIN_MAX_S_
+#undef MIN_MAX_U_
+#undef MIN_MAX_F_
+#undef MIN_MAX_
+
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#define COMPARE_LIMITS_(x)						\
+  (static_cast<long double>(x) >= static_cast<long double>(get_min_((T2)0)) && \
+   static_cast<long double>(x) <= static_cast<long double>(get_max_((T2)0)))
+#else
+#define COMPARE_LIMITS_(x)						\
+  (static_cast<double>(x) >= static_cast<double>(get_min_((T2)0)) && \
+   static_cast<double>(x) <= static_cast<double>(get_max_((T2)0)))
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+
+template <typename T1, typename T2>
+bool canTruncate(const T1& x,
+		 RAPIDJSON_ENABLEIF((internal::AndExpr<
+				     YGGDRASIL_IS_FLOAT_TYPE(T1),
+				     internal::OrExpr<
+				     YGGDRASIL_IS_INT_TYPE(T2),
+				     YGGDRASIL_IS_UINT_TYPE(T2)>>))) {
+  T1 x_int = floor(x);
+  if (!internal::values_eq(x_int, x))
+    return false;
+  return COMPARE_LIMITS_(x_int);
+}
+template <typename T1, typename T2>
+bool canTruncate(const T1& x,
+		 RAPIDJSON_ENABLEIF((internal::OrExpr<
+				     internal::AndExpr<
+				     internal::OrExpr<
+				     YGGDRASIL_IS_INT_TYPE(T1),
+				     YGGDRASIL_IS_UINT_TYPE(T1)>,
+				     internal::NotExpr<
+				     YGGDRASIL_IS_COMPLEX_TYPE(T2)>>,
+				     internal::AndExpr<
+				     YGGDRASIL_IS_FLOAT_TYPE(T1),
+				     YGGDRASIL_IS_FLOAT_TYPE(T2)>>))) {
+  return COMPARE_LIMITS_(x);
+}
+template <typename T1, typename T2>
+bool canTruncate(const T1& x,
+		 RAPIDJSON_ENABLEIF((internal::AndExpr<
+				     YGGDRASIL_IS_COMPLEX_TYPE(T1),
+				     YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) {
+  return (canTruncate<typename T1::value_type, typename T2::value_type>(x.real()) &&
+	  canTruncate<typename T1::value_type, typename T2::value_type>(x.imag()));
+}
+template <typename T1, typename T2>
+bool canTruncate(const T1& x,
+		 RAPIDJSON_ENABLEIF((internal::AndExpr<
+				     internal::NotExpr<
+				     YGGDRASIL_IS_COMPLEX_TYPE(T1)>,
+				     YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) {
+  return canTruncate<T1, typename T2::value_type>(x);
+}
+template <typename T1, typename T2>
+bool canTruncate(const T1& x,
+		 RAPIDJSON_ENABLEIF((internal::AndExpr<
+				     YGGDRASIL_IS_COMPLEX_TYPE(T1),
+				     internal::NotExpr<
+				     YGGDRASIL_IS_COMPLEX_TYPE(T2)>>))) {
+  if (!internal::values_eq(x.imag(), 0))
+    return false;
+  return canTruncate<typename T1::value_type, T2>(x.imag());
+}
+#undef COMPARE_LIMITS_
+  
+template <typename T1, typename T2>
+bool canTruncate(const unsigned char* bytes, SizeType nelements) {
+  CAST_SOURCE;
+  for (SizeType i = 0; i < nelements; i++)
+    if (!canTruncate<T1, T2>(src[i]))
+      return false;
+  return true;
+}
+
+template <typename T, size_t>
+bool canTruncate(YggSubType subtype, SizeType precision,
+		 const unsigned char* src_bytes,
+		 SizeType nelements) {
+  SWITCH_SUBTYPE(subtype, precision, canTruncate,
+		 PACK_MACRO(T), (src_bytes, nelements),
+		 RAPIDJSON_ASSERT(false));
+  return false;
+}
+
+static inline
+bool canTruncate(const YggSubType src_subtype, const SizeType src_precision,
+		  const unsigned char* src_bytes,
+		  YggSubType dst_subtype, SizeType dst_precision,
+		  const SizeType nelements) {
+  SWITCH_SUBTYPE(dst_subtype, dst_precision, canTruncate,
+		 PACK_MACRO(1), (src_subtype, src_precision, src_bytes,
+				 nelements),
+		 RAPIDJSON_ASSERT(false));
+  return false;
+}
+
+template <typename T1, typename T2>
+T2 truncateCast(const T1& x,
+		RAPIDJSON_ENABLEIF((internal::AndExpr<
+				    internal::NotExpr<
+				    YGGDRASIL_IS_COMPLEX_TYPE(T1)>,
+				    internal::NotExpr<
+				    YGGDRASIL_IS_COMPLEX_TYPE(T2)>>)))
+{ return static_cast<const T2>(x); }
+template <typename T1, typename T2>
+T2 truncateCast(const T1& x,
+		RAPIDJSON_ENABLEIF((internal::AndExpr<
+				    internal::NotExpr<
+				    YGGDRASIL_IS_COMPLEX_TYPE(T1)>,
+				    YGGDRASIL_IS_COMPLEX_TYPE(T2)>)))
+{ return T2(truncateCast<T1, typename T2::value_type>(x)); }
+template <typename T1, typename T2>
+T2 truncateCast(const T1& x,
+		RAPIDJSON_ENABLEIF((internal::AndExpr<
+				    YGGDRASIL_IS_COMPLEX_TYPE(T1),
+				    internal::NotExpr<
+				    YGGDRASIL_IS_COMPLEX_TYPE(T2)>>)))
+{ return truncateCast<typename T1::value_type, T2>(x.real()); }
+template <typename T1, typename T2>
+T2 truncateCast(const T1& x,
+		RAPIDJSON_ENABLEIF((internal::AndExpr<
+				    YGGDRASIL_IS_COMPLEX_TYPE(T1),
+				    YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) {
+  return T2(truncateCast<typename T1::value_type, typename T2::value_type>(x.real()),
+	    truncateCast<typename T1::value_type, typename T2::value_type>(x.imag()));
+}
+
+template <typename T1, typename T2>
+void truncateCast(const unsigned char* bytes, T2* dst, SizeType nelements) {
+  CAST_SOURCE;
+  for (SizeType i = 0; i < nelements; i++)
+    dst[i] = truncateCast<T1, T2>(src[i]);
+}
+
+// template <typename T>
+// void truncateCast(YggSubType subtype, SizeType precision,
+// 		  const unsigned char* bytes, T* dst,
+// 		  SizeType nelements) {
+//   SWITCH_SUBTYPE(subtype, precision, truncateCast,
+// 		 PACK_MACRO(T), (bytes, dst, nelements),
+// 		 RAPIDJSON_ASSERT(false));
+// }
+
+template <typename T, size_t>
+void truncateCast(YggSubType subtype, SizeType precision,
+		  const unsigned char* src_bytes,
+		  unsigned char* dst_bytes, SizeType nelements) {
+  SWITCH_SUBTYPE(subtype, precision, truncateCast,
+		 PACK_MACRO(T), (src_bytes, (T*)dst_bytes, nelements),
+		 RAPIDJSON_ASSERT(false));
+}
+
+static inline
+void truncateCast(const YggSubType src_subtype, const SizeType src_precision,
+		  const unsigned char* src_bytes,
+		  YggSubType dst_subtype, SizeType dst_precision,
+		  unsigned char* dst_bytes,
+		  const SizeType nelements) {
+  SWITCH_SUBTYPE(dst_subtype, dst_precision, truncateCast,
+		 PACK_MACRO(1), (src_subtype, src_precision, src_bytes,
+				 dst_bytes, nelements),
+		 RAPIDJSON_ASSERT(false));
+}
+#undef CAST_SOURCE
 
 #endif // RAPIDJSON_YGGDRASIL
 
