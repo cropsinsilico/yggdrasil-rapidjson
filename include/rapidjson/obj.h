@@ -3352,7 +3352,7 @@ public:
 			      SINGLE_ARG(, value(0), resolution(0)),
 			      SINGLE_ARG(OBJ_P_(&value, "state", ObjTypeInt | ObjTypeOff),
 					 OBJ_P_(&resolution, "resolution", ObjTypeFloat)));
-  DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value(0), resolution(0)));
+  DUMMY_ARRAY_CONSTRUCTOR(ObjMergingGroup, ObjElement, mg, SINGLE_ARG(, value(0), resolution(0)))
   GENERIC_SCALAR_BODY_BASE(ObjMergingGroup, int)
   //! Group resolution.
   double resolution;
