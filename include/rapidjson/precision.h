@@ -292,10 +292,14 @@ MIN_MAX_F_(long double, LDBL)
 #undef MIN_MAX_
 
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#define DISPLAY_LIMITS_(x)						\
+  std::cerr << "limits: " << static_cast<long double>(x) << ", min = " << static_cast<long double>(get_min_((T2)0)) << ", max = " << static_cast<long double>(get_max_((T2)0)) << std::endl
 #define COMPARE_LIMITS_(x)						\
   (static_cast<long double>(x) >= static_cast<long double>(get_min_((T2)0)) && \
    static_cast<long double>(x) <= static_cast<long double>(get_max_((T2)0)))
 #else
+#define DISPLAY_LIMITS_(x)						\
+  std::cerr << "limits: " << static_cast<double>(x) << ", min = " << static_cast<double>(get_min_((T2)0)) << ", max = " << static_cast<double>(get_max_((T2)0)) << std::endl
 #define COMPARE_LIMITS_(x)						\
   (static_cast<double>(x) >= static_cast<double>(get_min_((T2)0)) && \
    static_cast<double>(x) <= static_cast<double>(get_max_((T2)0)))
@@ -354,6 +358,7 @@ bool canTruncate(const T1& x,
   return canTruncate<typename T1::value_type, T2>(x.imag());
 }
 #undef COMPARE_LIMITS_
+#undef DISPLAY_LIMITS_
   
 template <typename T1, typename T2>
 bool canTruncate(const unsigned char* bytes, SizeType nelements) {

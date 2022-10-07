@@ -3629,7 +3629,6 @@ public:
 				bool call_function = false) {
     if (!attr || !PyObject_HasAttrString(x, attr))
       return false;
-    std::cerr << "found attribute: " << attr << std::endl;
     PyObject* x_attr = PyObject_GetAttrString(x, attr);
     RAPIDJSON_ASSERT(x_attr != NULL);
     if (x_attr == NULL)
@@ -3996,7 +3995,6 @@ public:
       RAPIDJSON_ASSERT(out && (mod_cls_ref != NULL));
       if (!out && (mod_cls_ref == NULL))
 	return false;
-      std::cerr << "class = " << (char*)mod_cls_ref << std::endl;
       ValueType mod_cls(mod_cls_ref, mod_cls_siz, schema_->GetAllocator());
       schema_->GetAllocator().Free(mod_cls_ref);
       AddMember(GetPythonClassString(), mod_cls, schema_->GetAllocator());

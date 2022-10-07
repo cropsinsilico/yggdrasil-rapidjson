@@ -1116,7 +1116,7 @@ TEST(SchemaNormalizer, Units) {
 	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImcifQ==-YGG-AAAAAABAj0A=-YGG-\"");
 }
 
-TEST(SchemaNormalizer, Scalar) {
+TEST(SchemaNormalizer, ScalarFloat) {
     Document sd;
     sd.Parse(
         "{"
@@ -1130,6 +1130,22 @@ TEST(SchemaNormalizer, Scalar) {
 	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoia2cifQ==-YGG-AQ==-YGG-\"",
 	      true,
 	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImcifQ==-YGG-AAAAAABAj0A=-YGG-\"");
+}
+
+TEST(SchemaNormalizer, ScalarInt) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": \"int\","
+	"  \"precision\": 8,"
+	"  \"units\": \"g\""
+	"}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "1",
+	      true,
+	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6OH0=-YGG-AQAAAAAAAAA=-YGG-\"");
 }
 
 TEST(SchemaNormalizer, OneDArray) {

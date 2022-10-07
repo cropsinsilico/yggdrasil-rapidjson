@@ -807,6 +807,19 @@ public:
   NormalizedDocument* doc_;
   void* mem_;
 };
+
+template <typename NormalizedDocument>
+class NormalizerContext : public TemporaryMemory<NormalizedDocument> {
+public:
+  NormalizerContext(NormalizedDocument* doc=0) :
+    TemporaryMemory<NormalizedDocument>(doc) {}
+  bool reset() {
+    bool out = this->doc_->exit_after_normalize_;
+    this->doc_->exit_after_normalize_ = false;
+    this->stealMemory();
+    return out;
+  }
+};
   
 ///////////////////////////////////////////////////////////////////////////////
 // GenericNormalizedDocument
@@ -846,7 +859,7 @@ public:
     tempStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
-    temporary_memory_(nullptr),
+    temporary_memory_(nullptr), exit_after_normalize_(false),
     extend_child_(nullptr), basePointer_(allocator), core_(0) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent,
 			    unsigned& index, StackAllocator* stackAllocator = 0,
@@ -862,7 +875,7 @@ public:
     tempStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
     aliases_(kObjectType), inSingular_(false),
-    temporary_memory_(nullptr),
+    temporary_memory_(nullptr), exit_after_normalize_(false),
     extend_child_(nullptr),
     basePointer_(&parent->GetAllocator()),
     core_(parent->core_) {
@@ -1969,21 +1982,137 @@ public:
   NORM_BEGIN_(method);				\
   NORM_BODY_(method, args);			\
   NORM_END_(method)
+#define NORM_SCALAR_(method, args, subT)				\
+  {									\
+    GenericDocument<EncodingType, AllocatorType>* valueSchema = NULL;	\
+    SizeType length = sizeof args;					\
+    const Ch* str = (Ch*)(&args);					\
+    typename SchemaType::YggSchemaValueSubType subtype = subT;		\
+    SizeType precision = length;					\
+    typename SchemaType::YggSchemaEncodingType encoding = SchemaType::kYggNullSchemaEncodingType; \
+    if (!NormScalar(context, schema, str, length, subtype, precision,	\
+		    encoding, 1, valueSchema))				\
+      return false;							\
+    if (exit_after_normalize_) {					\
+      return true;							\
+    }									\
+  }									\
+  NORM_VALUE_(method, args)
+
+  template <typename YggSchemaValueType>
+  bool NormScalar(Context& context, const SchemaType& schema,
+		  const Ch*& str, SizeType& length,
+		  typename SchemaType::YggSchemaValueSubType& src_subtype,
+		  SizeType& src_precision,
+		  typename SchemaType::YggSchemaEncodingType& src_encoding,
+		  SizeType nelements,
+		  YggSchemaValueType* valueSchema) {
+    // TODO: Check units here?
+    typename SchemaType::YggSchemaValueSubType dst_subtype = src_subtype;
+    SizeType dst_precision = src_precision;
+    typename SchemaType::YggSchemaEncodingType dst_encoding = src_encoding;
+    if (schema.precision_.IsUint())
+      dst_precision = schema.precision_.GetUint();
+    if (schema.subtype_ != SchemaType::kYggNullSubType)
+      dst_subtype = schema.subtype_;
+    if (schema.encoding_ != SchemaType::kYggNullSchemaEncodingType)
+      dst_encoding = schema.encoding_;
+    SizeType src_nbytes = length * (SizeType)sizeof(Ch);
+    SizeType dst_nbytes = src_nbytes;
+    if ((src_subtype == SchemaType::kYggStringSchemaSubType) &&
+	(src_subtype == dst_subtype) &&
+	(src_encoding != dst_encoding)) {
+      // TODO: Change encoding & precision if necessary
+    } else if ((src_subtype != dst_subtype ||
+		src_precision != dst_precision) &&
+	       canTruncate((YggSubType)src_subtype, src_precision,
+			   (const unsigned char*)str,
+			   (YggSubType)dst_subtype, dst_precision,
+			   nelements)) {
+      SizeType src_size = sizeOfSubtype((YggSubType)src_subtype, src_precision);
+      SizeType dst_size = sizeOfSubtype((YggSubType)dst_subtype, dst_precision);
+      RAPIDJSON_ASSERT(src_nbytes == (nelements * src_size));
+      unsigned char* dst = (unsigned char*)(&(str[0]));
+      if (dst_size > src_size) {
+	dst_nbytes = nelements * dst_size;
+	dst = (unsigned char*)SetTemporary(dst_nbytes);
+      }
+      truncateCast((YggSubType)src_subtype, src_precision, (const unsigned char*)str,
+		   (YggSubType)dst_subtype, dst_precision, dst, nelements);
+      if (dst_size > src_size) {
+	str = (Ch*)dst;
+	length = dst_nbytes / (SizeType)sizeof(Ch);
+      }
+    } else {
+      return true;
+    }
+    if (valueSchema == NULL) {
+      GenericDocument<EncodingType, AllocatorType> newValueSchema(kObjectType);
+      newValueSchema.AddMember(SValue(schema.GetTypeString(),
+				      GetAllocator(),
+				      true).Move(),
+			       SValue(schema.GetScalarString(),
+				      GetAllocator(),
+				      true).Move(),
+			       GetAllocator());
+      newValueSchema.AddMember(SValue(schema.GetSubTypeString(),
+				      GetAllocator(),
+				      true).Move(),
+			       SValue(schema.SubType2String(dst_subtype),
+				      GetAllocator(),
+				      true).Move(),
+			       GetAllocator());
+      newValueSchema.AddMember(SValue(schema.GetPrecisionString(),
+				      GetAllocator(),
+				      true).Move(),
+			       SValue((SizeType)(dst_nbytes)).Move(),
+			       GetAllocator());
+      if (dst_encoding != SchemaType::kYggNullSchemaEncodingType) {
+	newValueSchema.AddMember(SValue(schema.GetEncodingString(),
+					GetAllocator(),
+					true).Move(),
+				 SValue(schema.EncodingType2String(dst_encoding),
+					GetAllocator(),
+					true).Move(),
+				 GetAllocator());
+      }
+      RecordModified(kModificationTypeValue, false);
+      exit_after_normalize_ = true;
+      return NormYggdrasilString(context, schema, str, length, true, newValueSchema);
+    } else {
+      if (src_subtype != dst_subtype) {
+	const typename SchemaType::ValueType& subtype_str = schema.SubType2String(dst_subtype);
+	(*valueSchema)[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema->GetAllocator());
+      }
+      if (src_precision != dst_precision) {
+	(*valueSchema)[SchemaType::GetPrecisionString()].SetUint(dst_precision);
+      }
+      if (src_encoding != dst_encoding) {
+	const typename SchemaType::ValueType& encoding_str = schema.EncodingType2String(dst_encoding);
+	(*valueSchema)[SchemaType::GetEncodingString()].SetString(encoding_str.GetString(), encoding_str.GetStringLength(), valueSchema->GetAllocator());
+      }
+      src_subtype = dst_subtype;
+      src_precision = dst_precision;
+      src_encoding = dst_encoding;
+    }
+    RecordModified(kModificationTypeValue, false);
+    return true;
+  }
 
   bool NormNull(Context& context, const SchemaType& schema)
   { NORM_VALUE_(Null, ()); }
   bool NormBool(Context& context, const SchemaType& schema, bool b)
   { NORM_VALUE_(Bool, (b)); }
   bool NormInt(Context& context, const SchemaType& schema, int i)
-  { NORM_VALUE_(Int, (i)); }
+  { NORM_SCALAR_(Int, (i), SchemaType::kYggUintSchemaSubType); }
   bool NormUint(Context& context, const SchemaType& schema, unsigned u)
-  { NORM_VALUE_(Uint, (u)); }
+  { NORM_SCALAR_(Uint, (u), SchemaType::kYggUintSchemaSubType); }
   bool NormInt64(Context& context, const SchemaType& schema, int64_t i)
-  { NORM_VALUE_(Int64, (i)); }
+  { NORM_SCALAR_(Int64, (i), SchemaType::kYggUintSchemaSubType); }
   bool NormUint64(Context& context, const SchemaType& schema, uint64_t u)
-  { NORM_VALUE_(Uint64, (u)); }
+  { NORM_SCALAR_(Uint64, (u), SchemaType::kYggUintSchemaSubType); }
   bool NormDouble(Context& context, const SchemaType& schema, double d)
-  { NORM_VALUE_(Double, (d)); }
+  { NORM_SCALAR_(Double, (d), SchemaType::kYggFloatSchemaSubType); }
   bool NormString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy)
   {
     // Normalize function name
@@ -2062,54 +2191,9 @@ public:
 	  nelements *= static_cast<SizeType>(v->GetUint64());
       }
       // Subtype & precision
-      YggSubType src_subtype = (YggSubType)subtype;
-      YggSubType dst_subtype = src_subtype;
-      SizeType src_precision = precision;
-      SizeType dst_precision = src_precision;
-      YggEncodingType src_encoding = (YggEncodingType)encoding;
-      YggEncodingType dst_encoding = src_encoding;
-      if (schema.precision_.IsUint())
-	dst_precision = schema.precision_.GetUint();
-      if (schema.subtype_ != SchemaType::kYggNullSubType)
-	dst_subtype = (YggSubType)schema.subtype_;
-      if (schema.encoding_ != SchemaType::kYggNullSchemaEncodingType)
-	dst_encoding = (YggEncodingType)schema.encoding_;
-      if ((src_subtype == (YggSubType)SchemaType::kYggStringSchemaSubType) &&
-	  (src_subtype == dst_subtype) &&
-	  (src_encoding != dst_encoding)) {
-	// TODO: Change encoding & precision if necessary
-      } else if ((src_subtype != dst_subtype ||
-		  src_precision != dst_precision) &&
-		 canTruncate(src_subtype, src_precision,
-			     (const unsigned char*)str,
-			     dst_subtype, dst_precision, nelements)) {
-	SizeType src_size = sizeOfSubtype(src_subtype, src_precision);
-	SizeType dst_size = sizeOfSubtype(dst_subtype, dst_precision);
-	SizeType src_nbytes = length * (SizeType)sizeof(Ch);
-	SizeType dst_nbytes = src_nbytes;
-	RAPIDJSON_ASSERT(src_nbytes == (nelements * src_size));
-	unsigned char* dst = (unsigned char*)(&(str[0]));
-	if (dst_size > src_size) {
-	  dst_nbytes = nelements * dst_size;
-	  dst = (unsigned char*)SetTemporary(dst_nbytes);
-	}
-	truncateCast(src_subtype, src_precision, (const unsigned char*)str,
-		     dst_subtype, dst_precision, dst, nelements);
-	if (dst_size > src_size) {
-	  str = (Ch*)dst;
-	  length = dst_nbytes / (SizeType)sizeof(Ch);
-	}
-	subtype = (typename SchemaType::YggSchemaValueSubType)dst_subtype;
-	precision = dst_precision;
-	const typename SchemaType::ValueType& subtype_str = schema.SubType2String(subtype);
-	if (subtype != (typename SchemaType::YggSchemaValueSubType)src_subtype) {
-	  valueSchema[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema.GetAllocator());
-	}
-	if (precision != src_precision) {
-	  valueSchema[SchemaType::GetPrecisionString()].SetUint(precision);
-	}
-	RecordModified(kModificationTypeValue, false);
-      }
+      if (!NormScalar(context, schema, str, length, subtype, precision,
+		      encoding, nelements, &valueSchema))
+	return false;
       // Units
       if (unitsV != valueSchema.MemberEnd()) {
 	if (schema.units_.IsString() && (unitsV->value != schema.units_.IsString())) {
@@ -2133,7 +2217,7 @@ public:
 	}
       }
       // Allow normalization of scalar string to regular string
-      if ((src_subtype == (YggSubType)SchemaType::kYggStringSchemaSubType) &&
+      if ((subtype == SchemaType::kYggStringSchemaSubType) &&
 	  (schema.type_ & (1 << SchemaType::kStringSchemaType)) &&
 	  (schema.yggtype_ == 0) && (nelements == 1)) {
 	valueSchema[YggSchemaValueType::GetTypeString()].SetString(YggSchemaValueType::GetStringSubTypeString().GetString(),
@@ -4022,6 +4106,7 @@ public:
   ValueType aliases_;
   bool inSingular_;
   void* temporary_memory_;
+  bool exit_after_normalize_;
   GenericNormalizedDocument* extend_child_;
   PointerType basePointer_;
   GenericNormalizedDocument* core_;
@@ -4905,11 +4990,12 @@ public:
   }
   
 #define RAPIDJSON_NORMALIZER_BASE_(method, arg)				\
-  TemporaryMemory<typename Context::NormalizedDocumentType> __temporary_normalized_memory(context.normalized); \
+  NormalizerContext<typename Context::NormalizedDocumentType> __normalizer_context(context.normalized); \
   if (context.normalized) {						\
     if (!context.normalized->Base ## method arg)			\
       return false;							\
-    __temporary_normalized_memory.stealMemory();			\
+    if (__normalizer_context.reset())					\
+      return true;							\
   }
 #define RAPIDJSON_NORMALIZER_NOARG_(method)				\
   RAPIDJSON_NORMALIZER_BASE_(method, (context, *this))
