@@ -1948,6 +1948,11 @@ TEST(Value, PythonClass) {
   Py_DECREF(pyclass_cpy);
 }
 
+TEST(Value, PythonInstanceFailed) {
+  CREATE_PYTHON_INSTANCE(FailedClass, pyinst)
+  Value x;
+  EXPECT_FALSE(x.SetPythonObjectRaw(pyinst));
+}
 TEST(Value, PythonInstance) {
   CREATE_PYTHON_INSTANCE(ExampleClass, pyinst)
   Value z(pyinst);

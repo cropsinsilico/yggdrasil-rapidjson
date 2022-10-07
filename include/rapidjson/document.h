@@ -3624,13 +3624,13 @@ public:
     allocator.Free(cls);
     return true;
   }
-  bool GetPythonObjectClassAttr(PyObject* x, const Ch* attr,
+  bool GetPythonObjectClassAttr(PyObject* x, const char* attr,
                                 Allocator& allocator, ValueType& out,
 				bool call_function = false) {
-    if (!PyObject_HasAttrString(x, attr))
+    if (!attr || !PyObject_HasAttrString(x, attr))
       return false;
-    std::cerr << "found attribute: " << (const char*)attr << std::endl;
-    PyObject* x_attr = PyObject_GetAttrString(x, reinterpret_cast<const char*>(attr));
+    std::cerr << "found attribute: " << attr << std::endl;
+    PyObject* x_attr = PyObject_GetAttrString(x, attr);
     RAPIDJSON_ASSERT(x_attr != NULL);
     if (x_attr == NULL)
       return false;
@@ -4013,11 +4013,11 @@ public:
 	"_input_kwargs",
 	"get_input_keyword_arguments",
 	"get_input_kwargs"};
-      for (SizeType i = 0; i < sizeof(args_keys); i++) {
+      for (SizeType i = 0; i < 6; i++) {
 	if (GetPythonObjectClassAttr(x, args_keys[i], schema_->GetAllocator(), args, true))
 	  break;
       }
-      for (SizeType i = 0; i < sizeof(kwargs_keys); i++) {
+      for (SizeType i = 0; i < 6; i++) {
 	if (GetPythonObjectClassAttr(x, kwargs_keys[i], schema_->GetAllocator(), kwargs, true))
 	  break;
       }

@@ -1,3 +1,9 @@
+class FailedClass(object):
+    def __init__(self, *args, **kwargs):
+        self.x = args
+        self.y = kwargs
+
+
 class ExampleClass(object):
 
     def __init__(self, *args, **kwargs):
