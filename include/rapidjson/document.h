@@ -3638,9 +3638,10 @@ public:
       PyObject* py_args = PyTuple_New(0);
       PyObject* x_attr_res = PyObject_Call(x_attr, py_args, NULL);
       Py_DECREF(py_args);
-      if (!x_attr_res)
-	return false;
       Py_DECREF(x_attr);
+      if (x_attr_res == NULL) {
+	return false;
+      }
       x_attr = x_attr_res;
     }
     bool ret = out.SetPythonObjectRaw(x_attr, &allocator);
