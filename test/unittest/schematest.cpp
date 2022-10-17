@@ -4260,6 +4260,2015 @@ TEST(SchemaEncoder, Schema) {
 		   "  \"type\": \"schema\""
 		   "}");
 }
+
+#define COMPARE(lhs, rhs)						\
+  {									\
+    Document sd_lhs, sd_rhs;						\
+    sd_lhs.Parse(lhs);							\
+    sd_rhs.Parse(rhs);							\
+    SchemaDocument s_lhs(sd_lhs);					\
+    SchemaDocument s_rhs(sd_rhs);					\
+    SchemaValidator validator_lhs(s_lhs);				\
+    SchemaValidator validator_rhs(s_rhs);				\
+    bool result = validator_lhs.Compare(validator_rhs);			\
+    EXPECT_TRUE(result);						\
+    EXPECT_TRUE(validator_lhs.IsValid());				\
+    ValidateErrorCode code = validator_lhs.GetInvalidSchemaCode();	\
+    EXPECT_TRUE(code == kValidateErrorNone);				\
+    EXPECT_TRUE(validator_lhs.GetInvalidSchemaKeyword() == 0);		\
+    if (!result) {							\
+      StringBuffer sb;							\
+      PrettyWriter<StringBuffer> w(sb);					\
+      validator_lhs.GetError().Accept(w);				\
+      printf("Comparison error: %s\n", sb.GetString());			\
+    }									\
+  }
+#define INVALID_COMPARE(lhs, rhs, error)				\
+  {									\
+    Document sd_lhs, sd_rhs;						\
+    sd_lhs.Parse(lhs);							\
+    sd_rhs.Parse(rhs);							\
+    SchemaDocument s_lhs(sd_lhs);					\
+    SchemaDocument s_rhs(sd_rhs);					\
+    SchemaValidator validator_lhs(s_lhs);				\
+    SchemaValidator validator_rhs(s_rhs);				\
+    bool result = validator_lhs.Compare(validator_rhs);			\
+    EXPECT_FALSE(result);						\
+    Document e;								\
+    e.Parse(error);							\
+    RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;			\
+    Value e_msg;							\
+    if (!validator_lhs.GetErrorMsg(e_msg, error_msg_allocator)) {	\
+      StringBuffer sb_t;						\
+      PrettyWriter<StringBuffer> w_t(sb_t);				\
+      printf("ErrorMsg = %s\n", sb_t.GetString());			\
+      StringBuffer sb;							\
+      PrettyWriter<StringBuffer> w(sb);					\
+      validator_lhs.GetError().Accept(w);				\
+      printf("GetError(): %s", sb.GetString());				\
+      ADD_FAILURE();							\
+    }									\
+    if (validator_lhs.GetError() != e) {				\
+      StringBuffer sb;							\
+      PrettyWriter<StringBuffer> w(sb);					\
+      validator_lhs.GetError().Accept(w);				\
+      StringBuffer sb_e;						\
+      PrettyWriter<StringBuffer> w_e(sb_e);				\
+      e.Accept(w_e);							\
+      printf("GetError() Expected: %s Actual: %s\n", sb_e.GetString(), sb.GetString()); \
+      ADD_FAILURE();							\
+    }									\
+  }
+  
+TEST(SchemaCompare, Type) {
+  COMPARE("{"
+	  "  \"type\": \"schema\""
+	  "}",
+	  "{"
+	  "  \"type\": \"schema\""
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"schema\""
+	  "}",
+	  "{"
+	  "  \"type\": [\"number\", \"schema\"]"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"schema\""
+		  "}",
+		  "{"
+		  "  \"type\": \"string\""
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"schema\"], \"actual\": [\"string\"]"
+		  "}}");
+}
+TEST(SchemaCompare, SubType) {
+  COMPARE("{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8"
+	  "}",
+	  "{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"scalar\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 8"
+		  "}",
+		  "{"
+		  "  \"type\": \"scalar\","
+		  "  \"subtype\": \"int\","
+		  "  \"precision\": 8"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"subtype\","
+		  "    \"expected\": \"float\", \"actual\": \"int\""
+		  "}}");
+}
+TEST(SchemaCompare, Precision) {
+  INVALID_COMPARE("{"
+		  "  \"type\": \"scalar\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 8"
+		  "}",
+		  "{"
+		  "  \"type\": \"scalar\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 4"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"precision\","
+		  "    \"expected\": 8, \"actual\": 4"
+		  "}}");
+}
+TEST(SchemaCompare, Units) {
+  COMPARE("{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"units\": \"cm\""
+	  "}",
+	  "{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"units\": \"cm\""
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"units\": \"cm\""
+	  "}",
+	  "{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"scalar\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 8,"
+		  "  \"units\": \"cm\""
+		  "}",
+		  "{"
+		  "  \"type\": \"scalar\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 8,"
+		  "  \"units\": \"kg\""
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"units\","
+		  "    \"expected\": \"cm\", \"actual\": \"kg\""
+		  "}}");
+}
+TEST(SchemaCompare, Shape) {
+  COMPARE("{"
+	  "  \"type\": \"ndarray\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"shape\": [2, 3]"
+	  "}",
+	  "{"
+	  "  \"type\": \"ndarray\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"shape\": [2, 3]"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"ndarray\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"shape\": [2, 3]"
+	  "}",
+	  "{"
+	  "  \"type\": \"ndarray\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"ndarray\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 8,"
+		  "  \"shape\": [2, 3]"
+		  "}",
+		  "{"
+		  "  \"type\": \"ndarray\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 8,"
+		  "  \"shape\": [4, 5]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"shape\","
+		  "    \"expected\": [2, 3], \"actual\": [4, 5]"
+		  "}}");
+}
+TEST(SchemaCompare, Encoding) {
+  COMPARE("{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"encoding\": \"UTF8\""
+	  "}",
+	  "{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"encoding\": \"UTF8\""
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"scalar\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 8,"
+		  "  \"encoding\": \"UTF8\""
+		  "}",
+		  "{"
+		  "  \"type\": \"scalar\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 8"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"encoding\","
+		  "    \"expected\": \"UTF8\", \"actual\": \"null\""
+		  "}}");
+}
+TEST(SchemaCompare, Class) {
+  COMPARE("{"
+	  "  \"type\": \"instance\","
+	  "  \"class\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\""
+	  "}",
+	  "{"
+	  "  \"type\": \"instance\","
+	  "  \"class\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\""
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"instance\","
+	  "  \"class\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\""
+	  "}",
+	  "{"
+	  "  \"type\": \"instance\","
+	  "  \"class\": \"example_python:ExampleClass\""
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"instance\","
+		  "  \"class\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\""
+		  "}",
+		  "{"
+		  "  \"type\": \"instance\","
+		  "  \"class\": \"example_python:OtherClass\""
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"class\","
+		  "    \"expected\": \"example_python:ExampleClass\", \"actual\": \"example_python:OtherClass\""
+		  "}}");
+}
+TEST(SchemaCompare, Enum) {
+  COMPARE("{"
+	  "  \"enum\": [\"NW\", \"NE\", \"SW\"]"
+	  "}",
+	  "{"
+	  "  \"enum\": [\"SW\", \"SE\"]"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"enum\": [\"NW\", \"NE\"]"
+		  "}",
+		  "{"
+		  "  \"enum\": [\"SW\", \"SE\"]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"enum\","
+		  "    \"expected\": [\"NW\", \"NE\"], \"actual\": [\"SW\", \"SE\"]"
+		  "}}");
+}
+TEST(SchemaCompare, Not) {
+  COMPARE("{"
+	  "  \"not\": { \"type\": \"string\" }"
+	  "}",
+	  "{"
+	  "  \"not\": { \"type\": \"string\" }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"not\": { \"type\": \"string\" }"
+		  "}",
+		  "{"
+		  "  \"not\": { \"type\": \"schema\" }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#/not\", \"schemaRef\": \"#/not\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"string\"], \"actual\": [\"schema\"]"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"schema\","
+		  "  \"not\": { \"type\": \"string\" }"
+		  "}",
+		  "{"
+		  "  \"type\": \"schema\""
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"not\","
+		  "    \"expected\": true, \"actual\": false"
+		  "}}");
+}
+TEST(SchemaCompare, AllOf) {
+  COMPARE("{"
+	  "  \"allOf\": ["
+	  "    { \"type\": \"string\" },"
+	  "    { \"maxLength\": 5 }"
+	  "  ]"
+	  "}",
+	  "{"
+	  "  \"allOf\": ["
+	  "    { \"type\": \"string\" },"
+	  "    { \"maxLength\": 5 }"
+	  "  ]"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"allOf\": ["
+		  "    { \"type\": \"string\" },"
+		  "    { \"maxLength\": 5 }"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"allOf\": ["
+		  "    { \"type\": \"string\" }"
+		  "  ]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"allOf\","
+		  "    \"expected\": 2, \"actual\": 1"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"allOf\": ["
+		  "    { \"type\": \"string\" },"
+		  "    { \"maxLength\": 5 }"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"allOf\": ["
+		  "    { \"type\": \"string\" },"
+		  "    { \"maxLength\": 3 }"
+		  "  ]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/allOf/1\","
+		  "    \"instanceRef\": \"#/allOf/1\","
+		  "    \"property\": \"maxLength\","
+		  "    \"expected\": 5, \"actual\": 3"
+		  "}}");
+}
+TEST(SchemaCompare, AnyOf) {
+  COMPARE("{"
+	  "  \"anyOf\": ["
+	  "    { \"type\": \"string\" },"
+	  "    { \"maxLength\": 5 }"
+	  "  ]"
+	  "}",
+	  "{"
+	  "  \"anyOf\": ["
+	  "    { \"type\": \"string\" },"
+	  "    { \"maxLength\": 5 }"
+	  "  ]"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"anyOf\": ["
+		  "    { \"type\": \"string\" },"
+		  "    { \"maxLength\": 5 }"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"anyOf\": ["
+		  "    { \"type\": \"string\" }"
+		  "  ]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"anyOf\","
+		  "    \"expected\": 2, \"actual\": 1"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"anyOf\": ["
+		  "    { \"type\": \"string\" },"
+		  "    { \"maxLength\": 5 }"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"anyOf\": ["
+		  "    { \"type\": \"string\" },"
+		  "    { \"maxLength\": 3 }"
+		  "  ]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/anyOf/1\","
+		  "    \"instanceRef\": \"#/anyOf/1\","
+		  "    \"property\": \"maxLength\","
+		  "    \"expected\": 5, \"actual\": 3"
+		  "}}");
+}
+TEST(SchemaCompare, OneOf) {
+  COMPARE("{"
+	  "  \"oneOf\": ["
+	  "    { \"type\": \"string\" },"
+	  "    { \"maxLength\": 5 }"
+	  "  ]"
+	  "}",
+	  "{"
+	  "  \"oneOf\": ["
+	  "    { \"type\": \"string\" },"
+	  "    { \"maxLength\": 5 }"
+	  "  ]"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"oneOf\": ["
+		  "    { \"type\": \"string\" },"
+		  "    { \"maxLength\": 5 }"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"oneOf\": ["
+		  "    { \"type\": \"string\" }"
+		  "  ]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"oneOf\","
+		  "    \"expected\": 2, \"actual\": 1"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"oneOf\": ["
+		  "    { \"type\": \"string\" },"
+		  "    { \"maxLength\": 5 }"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"oneOf\": ["
+		  "    { \"type\": \"string\" },"
+		  "    { \"maxLength\": 3 }"
+		  "  ]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/oneOf/1\","
+		  "    \"instanceRef\": \"#/oneOf/1\","
+		  "    \"property\": \"maxLength\","
+		  "    \"expected\": 5, \"actual\": 3"
+		  "}}");
+}
+TEST(SchemaCompare, Properties) {
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"string\"}"
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#/properties/b\", \"schemaRef\": \"#/properties/b\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
+		  "}}");
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"},"
+	  "    \"c\": {\"type\": \"boolean\"}"
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  }"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"},"
+	  "    \"c\": {\"type\": \"boolean\"}"
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\", \"c\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"},"
+		  "    \"c\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"properties\","
+		  "    \"expected\": \"c\", \"actual\": null"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\", \"c\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"},"
+		  "    \"c\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"properties\","
+		  "    \"expected\": null, \"actual\": \"c\""
+		  "}}");
+}
+TEST(SchemaCompare, AdditionalProperties) {
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"additionalProperties\": {"
+	  "    \"type\": \"string\""
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"additionalProperties\": {"
+	  "    \"type\": \"string\""
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"boolean\""
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#/additionalProperties\", \"schemaRef\": \"#/additionalProperties\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
+		  "}}");
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"additionalProperties\": false"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"additionalProperties\": false"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": false"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": true"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"additionalProperties\","
+		  "    \"expected\": false, \"actual\": true"
+		  "}}");
+}
+TEST(SchemaCompare, PatternProperties) {
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"patternProperties\": {"
+	  "    \"^S_\": { \"type\": \"string\" },"
+	  "    \"^I_\": { \"type\": \"integer\" }"
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"patternProperties\": {"
+	  "    \"^S_\": { \"type\": \"string\" },"
+	  "    \"^I_\": { \"type\": \"integer\" }"
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"patternProperties\": {"
+		  "    \"^S_\": { \"type\": \"string\" },"
+		  "    \"^I_\": { \"type\": \"integer\" }"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"patternProperties\": {"
+		  "    \"^S_\": { \"type\": \"boolean\" },"
+		  "    \"^I_\": { \"type\": \"integer\" }"
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#/patternProperties/%5ES_\", \"schemaRef\": \"#/patternProperties/%5ES_\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
+		  "}}");
+}
+TEST(SchemaCompare, PropertiesCount) {
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"additionalProperties\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"minProperties\": 2,"
+	  "  \"maxProperties\": 10"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"additionalProperties\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"minProperties\": 2,"
+	  "  \"maxProperties\": 10"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minProperties\": 2,"
+		  "  \"maxProperties\": 10"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minProperties\": 3,"
+		  "  \"maxProperties\": 10"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"minProperties\","
+		  "    \"expected\": 2, \"actual\": 3"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minProperties\": 2,"
+		  "  \"maxProperties\": 10"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minProperties\": 2,"
+		  "  \"maxProperties\": 15"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxProperties\","
+		  "    \"expected\": 10, \"actual\": 15"
+		  "}}");
+  // Estimate min based on propertyCount
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"string\"},"
+	  "    \"c\": {\"type\": \"string\"}"
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"additionalProperties\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"minProperties\": 2"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"}"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minProperties\": 2"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"minProperties\","
+		  "    \"expected\": 1, \"actual\": 2"
+		  "}}");
+  // Estimate max based on propertyCount
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"string\"},"
+	  "    \"c\": {\"type\": \"string\"}"
+	  "  },"
+	  "  \"additionalProperties\": false"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"additionalProperties\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"maxProperties\": 3"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"additionalProperties\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"maxProperties\": 3"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"string\"},"
+	  "    \"c\": {\"type\": \"string\"}"
+	  "  },"
+	  "  \"additionalProperties\": false"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"string\"},"
+		  "    \"c\": {\"type\": \"string\"}"
+		  "  },"
+		  "  \"additionalProperties\": true"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"maxProperties\": 3"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxProperties\","
+		  "    \"expected\": 4294967295, \"actual\": 3"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"maxProperties\": 3"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"string\"},"
+		  "    \"c\": {\"type\": \"string\"}"
+		  "  },"
+		  "  \"additionalProperties\": true"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxProperties\","
+		  "    \"expected\": 3, \"actual\": 4294967295"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"string\"},"
+		  "    \"c\": {\"type\": \"string\"}"
+		  "  },"
+		  "  \"additionalProperties\": false"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"maxProperties\": 2"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxProperties\","
+		  "    \"expected\": 3, \"actual\": 2"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"maxProperties\": 2"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"string\"},"
+		  "    \"c\": {\"type\": \"string\"}"
+		  "  },"
+		  "  \"additionalProperties\": false"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxProperties\","
+		  "    \"expected\": 2, \"actual\": 3"
+		  "}}");
+}
+TEST(SchemaCompare, PropertiesComplex) {
+  // Missing property not required, but additional properties disallowed
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  },"
+		  "  \"additionalProperties\": false"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"},"
+		  "    \"c\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"properties\","
+		  "    \"expected\": null, \"actual\": \"c\""
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"},"
+		  "    \"c\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  },"
+		  "  \"additionalProperties\": false"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"properties\","
+		  "    \"expected\": \"c\", \"actual\": null"
+		  "}}");
+  // Missing property matches additional properties
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"},"
+	  "    \"c\": {\"type\": \"boolean\"}"
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  },"
+	  "  \"additionalProperties\": {"
+	  "    \"type\": \"boolean\""
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"},"
+		  "    \"c\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  },"
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"string\""
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/properties/c\","
+		  "    \"instanceRef\": \"#/additionalProperties\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
+		  "}}");
+  // Missing property matches pattern
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"},"
+	  "    \"I_0\": {\"type\": \"boolean\"}"
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  },"
+	  "  \"patternProperties\": {"
+	  "    \"^I_\": { \"type\": \"boolean\" }"
+	  "  }"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  },"
+	  "  \"patternProperties\": {"
+	  "    \"^I_\": { \"type\": \"boolean\" }"
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"},"
+	  "    \"I_0\": {\"type\": \"boolean\"}"
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"},"
+		  "    \"I_0\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  },"
+		  "  \"patternProperties\": {"
+		  "    \"^I_\": { \"type\": \"string\" }"
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/properties/I_0\","
+		  "    \"instanceRef\": \"#/patternProperties/%5EI_\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  },"
+		  "  \"patternProperties\": {"
+		  "    \"^I_\": { \"type\": \"string\" }"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"},"
+		  "    \"I_0\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/patternProperties/%5EI_\","
+		  "    \"instanceRef\": \"#/properties/I_0\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
+		  "}}");
+  // Pattern matches additional properties
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  },"
+	  "  \"additionalProperties\": {"
+	  "    \"type\": \"boolean\""
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  },"
+	  "  \"patternProperties\": {"
+	  "    \"^I_\": { \"type\": \"boolean\" }"
+	  "  }"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"required\": [\"a\", \"b\"],"
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  },"
+	  "  \"patternProperties\": {"
+	  "    \"^I_\": { \"type\": \"boolean\" }"
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"object\","
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"},"
+	  "    \"b\": {\"type\": \"boolean\"}"
+	  "  },"
+	  "  \"additionalProperties\": {"
+	  "    \"type\": \"boolean\""
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  },"
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"boolean\""
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  },"
+		  "  \"patternProperties\": {"
+		  "    \"^I_\": { \"type\": \"string\" }"
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/additionalProperties\","
+		  "    \"instanceRef\": \"#/patternProperties/%5EI_\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"required\": [\"a\", \"b\"],"
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  },"
+		  "  \"patternProperties\": {"
+		  "    \"^I_\": { \"type\": \"string\" }"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  },"
+		  "  \"additionalProperties\": {"
+		  "    \"type\": \"boolean\""
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/patternProperties/%5EI_\","
+		  "    \"instanceRef\": \"#/additionalProperties\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
+		  "}}");
+}
+TEST(SchemaCompare, ItemsList) {
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": {"
+	  "    \"type\": \"string\""
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"items\": {"
+	  "    \"type\": \"string\""
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": {"
+		  "    \"type\": \"boolean\""
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": {"
+		  "    \"type\": \"string\""
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/items\","
+		  "    \"instanceRef\": \"#/items\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
+		  "}}");
+}
+TEST(SchemaCompare, ItemsTuple) {
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"boolean\"},"
+	  "    {\"type\": \"integer\"}"
+	  "  ]"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"boolean\"},"
+	  "    {\"type\": \"integer\"}"
+	  "  ]"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"boolean\"},"
+		  "    {\"type\": \"integer\"}"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"boolean\"},"
+		  "    {\"type\": \"string\"}"
+		  "  ]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/items/2\","
+		  "    \"instanceRef\": \"#/items/2\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"integer\"], \"actual\": [\"string\"]"
+		  "}}");
+}
+TEST(SchemaCompare, ItemsListTuple) {
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": {"
+	  "    \"type\": \"string\""
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"}"
+	  "  ]"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"}"
+	  "  ]"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"items\": {"
+	  "    \"type\": \"string\""
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": {"
+		  "    \"type\": \"string\""
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"boolean\"}"
+		  "  ]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/items\","
+		  "    \"instanceRef\": \"#/items/2\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"boolean\"}"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": {"
+		  "    \"type\": \"string\""
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/items/2\","
+		  "    \"instanceRef\": \"#/items\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
+		  "}}");
+}
+TEST(SchemaCompare, AdditionalItems) {
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"additionalItems\": {"
+	  "    \"type\": \"string\""
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"additionalItems\": {"
+	  "    \"type\": \"string\""
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"string\""
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"boolean\""
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#/additionalItems\", \"schemaRef\": \"#/additionalItems\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
+		  "}}");
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"additionalItems\": false"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"additionalItems\": false"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": false"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": true"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"additionalItems\","
+		  "    \"expected\": false, \"actual\": true"
+		  "}}");
+  // Missing item with & without additional items
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"boolean\"}"
+	  "  ],"
+	  "  \"additionalItems\": true"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"boolean\"},"
+	  "    {\"type\": \"integer\"}"
+	  "  ],"
+	  "  \"additionalItems\": true"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"boolean\"},"
+	  "    {\"type\": \"integer\"}"
+	  "  ],"
+	  "  \"additionalItems\": true"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"boolean\"}"
+	  "  ],"
+	  "  \"additionalItems\": true"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"boolean\"}"
+		  "  ],"
+		  "  \"additionalItems\": false"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"boolean\"},"
+		  "    {\"type\": \"integer\"}"
+		  "  ]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"items\","
+		  "    \"expected\": null, \"actual\": 2"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"boolean\"},"
+		  "    {\"type\": \"integer\"}"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"boolean\"}"
+		  "  ],"
+		  "  \"additionalItems\": false"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"items\","
+		  "    \"expected\": 2, \"actual\": null"
+		  "}}");
+}
+TEST(SchemaCompare, ItemsCount) {
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"minItems\": 2,"
+	  "  \"maxItems\": 10"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"additionalItems\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"minItems\": 2,"
+	  "  \"maxItems\": 10"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minItems\": 2,"
+		  "  \"maxItems\": 10"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minItems\": 3,"
+		  "  \"maxItems\": 10"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"minItems\","
+		  "    \"expected\": 2, \"actual\": 3"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minItems\": 2,"
+		  "  \"maxItems\": 10"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minItems\": 2,"
+		  "  \"maxItems\": 15"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxItems\","
+		  "    \"expected\": 10, \"actual\": 15"
+		  "}}");
+  // Estimate min based on itemsTuple
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"}"
+	  "  ]"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"additionalItems\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"minItems\": 2"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"additionalItems\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"minItems\": 2"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"}"
+	  "  ]"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"}"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minItems\": 2"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"minItems\","
+		  "    \"expected\": 1, \"actual\": 2"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"minItems\": 2"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"}"
+		  "  ]"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"minItems\","
+		  "    \"expected\": 2, \"actual\": 1"
+		  "}}");
+  // Estimate max based on itemsTuple
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"}"
+	  "  ],"
+	  "  \"additionalItems\": false"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"additionalItems\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"maxItems\": 3"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"additionalItems\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"maxItems\": 3"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"string\"}"
+	  "  ],"
+	  "  \"additionalItems\": false"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"string\"}"
+		  "  ],"
+		  "  \"additionalItems\": true"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"maxItems\": 3"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxItems\","
+		  "    \"expected\": 4294967295, \"actual\": 3"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"maxItems\": 3"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"string\"}"
+		  "  ],"
+		  "  \"additionalItems\": true"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxItems\","
+		  "    \"expected\": 3, \"actual\": 4294967295"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"string\"}"
+		  "  ],"
+		  "  \"additionalItems\": false"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"maxItems\": 2"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxItems\","
+		  "    \"expected\": 3, \"actual\": 2"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"maxItems\": 2"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"string\"}"
+		  "  ],"
+		  "  \"additionalItems\": false"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxItems\","
+		  "    \"expected\": 2, \"actual\": 3"
+		  "}}");
+}
+TEST(SchemaCompare, ItemsComplex) {
+  // Items matches additional items
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": {"
+	  "    \"type\": \"string\""
+	  "  }"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"additionalItems\": {"
+	  "    \"type\": \"string\""
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": {"
+		  "    \"type\": \"boolean\""
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"string\""
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/items\","
+		  "    \"instanceRef\": \"#/additionalItems\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
+		  "}}");
+  // Missing item matches additional items
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"boolean\"},"
+	  "    {\"type\": \"integer\"}"
+	  "  ]"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"boolean\"}"
+	  "  ],"
+	  "  \"additionalItems\": {"
+	  "    \"type\": \"integer\""
+	  "  }"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"boolean\"},"
+		  "    {\"type\": \"integer\"}"
+		  "  ]"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": ["
+		  "    {\"type\": \"string\"},"
+		  "    {\"type\": \"boolean\"}"
+		  "  ],"
+		  "  \"additionalItems\": {"
+		  "    \"type\": \"boolean\""
+		  "  }"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#/items/2\","
+		  "    \"instanceRef\": \"#/additionalItems\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"integer\"], \"actual\": [\"boolean\"]"
+		  "}}");
+}
+TEST(SchemaCompare, UniqueItems) {
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"uniqueItems\": true"
+	  "}",
+	  "{"
+	  "  \"type\": \"array\","
+	  "  \"items\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"uniqueItems\": true"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"uniqueItems\": true"
+		  "}",
+		  "{"
+		  "  \"type\": \"array\","
+		  "  \"items\": {"
+		  "    \"type\": \"string\""
+		  "  },"
+		  "  \"uniqueItems\": false"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"uniqueItems\","
+		  "    \"expected\": true, \"actual\": false"
+		  "}}");
+}
+TEST(SchemaCompare, Minimum) {
+  COMPARE("{"
+	  "  \"type\": \"number\","
+	  "  \"minimum\": 0"
+	  "}",
+	  "{"
+	  "  \"type\": \"number\","
+	  "  \"minimum\": 0"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"number\","
+		  "  \"minimum\": 0"
+		  "}",
+		  "{"
+		  "  \"type\": \"number\","
+		  "  \"minimum\": 5"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"minimum\","
+		  "    \"expected\": 0, \"actual\": 5"
+		  "}}");
+}
+TEST(SchemaCompare, Maximum) {
+  COMPARE("{"
+	  "  \"type\": \"number\","
+	  "  \"maximum\": 0"
+	  "}",
+	  "{"
+	  "  \"type\": \"number\","
+	  "  \"maximum\": 0"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"number\","
+		  "  \"maximum\": 0"
+		  "}",
+		  "{"
+		  "  \"type\": \"number\","
+		  "  \"maximum\": 5"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maximum\","
+		  "    \"expected\": 0, \"actual\": 5"
+		  "}}");
+}
+TEST(SchemaCompare, MultipleOf) {
+  COMPARE("{"
+	  "  \"type\": \"number\","
+	  "  \"multipleOf\": 1"
+	  "}",
+	  "{"
+	  "  \"type\": \"number\","
+	  "  \"multipleOf\": 1"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"number\","
+		  "  \"multipleOf\": 1"
+		  "}",
+		  "{"
+		  "  \"type\": \"number\","
+		  "  \"multipleOf\": 5"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"multipleOf\","
+		  "    \"expected\": 1, \"actual\": 5"
+		  "}}");
+}
+TEST(SchemaCompare, String) {
+  COMPARE("{"
+	  "  \"type\": \"string\","
+	  "  \"minLength\": 1,"
+	  "  \"maxLength\": 4,"
+	  "  \"pattern\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
+	  "}",
+	  "{"
+	  "  \"type\": \"string\","
+	  "  \"minLength\": 1,"
+	  "  \"maxLength\": 4,"
+	  "  \"pattern\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"string\","
+		  "  \"minLength\": 1,"
+		  "  \"maxLength\": 4,"
+		  "  \"pattern\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
+		  "}",
+		  "{"
+		  "  \"type\": \"string\","
+		  "  \"minLength\": 3,"
+		  "  \"maxLength\": 4,"
+		  "  \"pattern\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"minLength\","
+		  "    \"expected\": 1, \"actual\": 3"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"string\","
+		  "  \"minLength\": 1,"
+		  "  \"maxLength\": 4,"
+		  "  \"pattern\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
+		  "}",
+		  "{"
+		  "  \"type\": \"string\","
+		  "  \"minLength\": 1,"
+		  "  \"maxLength\": 10,"
+		  "  \"pattern\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"maxLength\","
+		  "    \"expected\": 4, \"actual\": 10"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"string\","
+		  "  \"minLength\": 1,"
+		  "  \"maxLength\": 4,"
+		  "  \"pattern\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
+		  "}",
+		  "{"
+		  "  \"type\": \"string\","
+		  "  \"minLength\": 1,"
+		  "  \"maxLength\": 4,"
+		  "  \"pattern\": \"^[0-9]{3}-[0-9]{4}$\""
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"pattern\","
+		  "    \"expected\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\","
+		  "    \"actual\": \"^[0-9]{3}-[0-9]{4}$\""
+		  "}}");
+}
 #endif // RAPIDJSON_YGGDRASIL
 
 #if defined(_MSC_VER) || defined(__clang__)

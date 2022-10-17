@@ -211,7 +211,8 @@ enum ValidateErrorCode {
     kNormalizeErrorMergeConflict,              //!< Property has conflicting normalized documents.
     kValidateWarnings,                         //!< Top level code indicating that warnings are present.
     kDeprecatedWarning,                        //!< Property is being deprecated.
-    kValidateErrorGeneric                      //!< Generic error occurred: %message.
+    kValidateErrorGeneric,                     //!< Generic error occurred: %message.
+    kIncompatibleSchemas                       //!< Incompatible schema property `%property`: %expected vs %actual.
 #endif // RAPIDJSON_YGGDRASIL
 };
 

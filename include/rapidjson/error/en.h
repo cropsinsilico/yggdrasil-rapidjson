@@ -130,6 +130,7 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
 	// Generic error for debugging
         case kValidateErrorGeneric:                     return RAPIDJSON_ERROR_STRING("Generic error occurred: %message");
 #endif // RAPIDJSON_YGGDRASIL
+        case kIncompatibleSchemas:                      return RAPIDJSON_ERROR_STRING("Incompatible schema property '%property': %expected vs %actual.");
         default:                                        return RAPIDJSON_ERROR_STRING("Unknown error.");
     }
 }

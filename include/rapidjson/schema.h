@@ -282,6 +282,10 @@ public:
 
 #ifndef RAPIDJSON_YGGDRASIL
     virtual void DisallowedValue(const ValidateErrorCode code) = 0;
+#else // RAPIDJSON_YGGDRASIL
+    virtual void StartDisallowedTypeKey(bool actual) = 0;
+    virtual void AddExpectedTypeKey(const typename SchemaType::ValueType& expectedType, bool actual) = 0;
+    virtual void EndDisallowedTypeKey(bool actual) = 0;
 #endif // RAPIDJSON_YGGDRASIL
     virtual void StartDisallowedType() = 0;
     virtual void AddExpectedType(const typename SchemaType::ValueType& expectedType) = 0;
@@ -317,6 +321,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
   virtual void GenericError(const char* str) = 0;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+  virtual void IncompatibleSchemas(const typename SchemaType::ValueType& key, const SValue& expected, const SValue& actual, typename SchemaType::PointerType ptr1, typename SchemaType::PointerType ptr2, bool existingValues = false) = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -4248,6 +4253,9 @@ public:
         additionalItems_(true),
         uniqueItems_(false),
         pattern_(),
+#ifdef RAPIDJSON_YGGDRASIL
+	patternStr_(),
+#endif // RAPIDJSON_YGGDRASIL
         minLength_(0),
         maxLength_(~SizeType(0)),
         exclusiveMinimum_(false),
@@ -4262,8 +4270,6 @@ public:
 	shape_(),
 	encoding_(),
 	class_(),
-	args_(),
-	kwargs_(),
 	isMetaschema_(isMetaschema),
 	inSort_(0),
 	metaschema_(0),
@@ -4557,7 +4563,14 @@ public:
         AssignIfExist(maxLength_, value, GetMaxLengthString());
 
         if (const ValueType* v = GetMember(value, GetPatternString()))
+#ifdef RAPIDJSON_YGGDRASIL
+	  {
+#endif // RAPIDJSON_YGGDRASIL
             pattern_ = CreatePattern(*v);
+#ifdef RAPIDJSON_YGGDRASIL
+	    patternStr_.CopyFrom(*v, *allocator_, true);
+	  }
+#endif // RAPIDJSON_YGGDRASIL
 
         // Number
         if (const ValueType* v = GetMember(value, GetMinimumString()))
@@ -4598,11 +4611,12 @@ public:
 	if (const ValueType* v = GetMember(value, GetPrecisionString())) {
 	    precision_ = 0;
 	    if (v->IsNumber() && v->GetInt() >= 0)
-	        precision_.CopyFrom(*v, *allocator_);
+	      precision_.CopyFrom(*v, *allocator_);
 	}
 	if (const ValueType* v = GetMember(value, GetUnitsString())) {
-	    if (v->IsString())
+	    if (v->IsString()) {
 	        units_.CopyFrom(*v, *allocator_, true);
+	    }
 	}
 	if (const ValueType* v = GetMember(value, GetLengthString())) {
 	    if (v->IsNumber() && v->GetInt() > 0) {
@@ -4611,21 +4625,14 @@ public:
 	    }
 	}
 	if (const ValueType* v = GetMember(value, GetShapeString())) {
-	    if (v->IsArray())
+	    if (v->IsArray()) {
 	        shape_.CopyFrom(*v, *allocator_);
+	    }
 	}
 	if (const ValueType* v = GetMember(value, GetEncodingString())) {
 	    encoding_ = kYggNullSchemaEncodingType;
 	    if (v->IsString())
 	        encoding_ = GetEncodingType(*v);
-	}
-	if (const ValueType* v = GetMember(value, GetArgsString())) {
-	    if (v->IsArray())
-	        args_.CopyFrom(*v, *allocator_, true);
-	}
-	if (const ValueType* v = GetMember(value, GetKwargsString())) {
-	    if (v->IsObject())
-	        kwargs_.CopyFrom(*v, *allocator_, true);
 	}
 	// Push/pull shared properties
 	const ValueType* pushProperties = GetMember(value, GetPushPropertiesString());
@@ -4672,6 +4679,296 @@ public:
 	return allowSingularSchema_.schemas[0]->GetDefaultValue();
       if (defaultSet_) return &default_;
       return 0;
+    }
+
+    bool Compare(const Schema<SchemaDocumentType>& rhs, Context& context) const {
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA(key, expected, actual)		\
+      {									\
+	context.error_handler.IncompatibleSchemas(key, expected, actual, pointer_, rhs.pointer_); \
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
+      }
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(key, expected, actual)	\
+      {									\
+	context.error_handler.IncompatibleSchemas(key, expected, actual, pointer_, rhs.pointer_, true); \
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
+      }
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, a, b)	\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a).Move(), SValue(b).Move())
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(key, a, b)	\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a.GetString(), a.GetStringLength()).Move(), SValue(b.GetString(), b.GetStringLength()).Move())
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(key, a, b)	\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, (bool)(a), (bool)(b))
+      if (this == &rhs) return true;
+      // Type
+      if (!(((type_ || rhs.type_) && (type_ & rhs.type_)) ||
+	    ((yggtype_ || rhs.yggtype_) && (yggtype_ & rhs.yggtype_)))) {
+	DisallowedTypeKey(context);
+	rhs.DisallowedTypeKey(context, true);
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+      }
+      if (((subtype_ != kYggNullSubType) || (rhs.subtype_ != kYggNullSubType))
+	  && (subtype_ != rhs.subtype_)) {
+	const ValueType& lhs_subtype = SubType2String(subtype_);
+	const ValueType& rhs_subtype = SubType2String(rhs.subtype_);
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetSubTypeString(), lhs_subtype, rhs_subtype);
+      }
+      // Number properties
+      if (minimum_ != rhs.minimum_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetMinimumString(), minimum_, rhs.minimum_);
+      if (maximum_ != rhs.maximum_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetMaximumString(), maximum_, rhs.maximum_);
+      if (multipleOf_ != rhs.multipleOf_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetMultipleOfString(), multipleOf_, rhs.multipleOf_);
+      // String properties
+      if (patternStr_ != rhs.patternStr_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPatternString(), patternStr_, rhs.patternStr_);
+      if (minLength_ != rhs.minLength_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinLengthString(), minLength_, rhs.minLength_);
+      if (maxLength_ != rhs.maxLength_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxLengthString(), maxLength_, rhs.maxLength_);
+      // Scalar properties
+      if (precision_ != rhs.precision_) {
+	if (!((yggtype_ & (1 << kYggScalarSchemaType)) &&
+	      subtype_ == kYggStringSchemaSubType))
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPrecisionString(), precision_, rhs.precision_);
+      }
+      if (units_.IsString() && rhs.units_.IsString()) {
+	// This version allows the units to be compatible
+	// UnitsType lhs_units(units_.GetString(), units_.GetStringLength(), false);
+	// UnitsType rhs_units(rhs.units_.GetString(), rhs.units_.GetStringLength(), false);
+	// if (!lhs_units.is_compatible(rhs_units))
+	if (units_ != rhs.units_)
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetUnitsString(), units_, rhs.units_);
+      }
+      if (((!shape_.IsNull()) && (!rhs.shape_.IsNull())) && (shape_ != rhs.shape_))
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetShapeString(), shape_, rhs.shape_);
+      if (encoding_ != rhs.encoding_) {
+	const ValueType& lhs_encoding = EncodingType2String(encoding_);
+	const ValueType& rhs_encoding = EncodingType2String(rhs.encoding_);
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetEncodingString(), lhs_encoding, rhs_encoding);
+      }
+      if (class_ != rhs.class_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPythonClassString(), class_, rhs.class_);
+      // Enum
+      if (enumCount_ || rhs.enumCount_) {
+	for (SizeType i = 0; i < enumCount_; i++) {
+	  for (SizeType j = 0; j < rhs.enumCount_; j++) {
+	    if (enum_[i] == rhs.enum_[j])
+	      goto foundEnum;
+	  }
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetEnumString(), SValue(*enumValues_, *allocator_).Move(), SValue(*rhs.enumValues_, *allocator_).Move());
+        foundEnum:;
+      }
+      // Schema logic
+      if (not_ || rhs.not_) {
+	if (!(not_ && rhs.not_))
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetNotString(), not_, rhs.not_);
+	if (!(not_->Compare(*rhs.not_, context))) return false;
+      }
+      if (allOf_.schemas || rhs.allOf_.schemas) {
+	if (!(allOf_.schemas && rhs.allOf_.schemas))
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAllOfString(), allOf_.schemas, rhs.allOf_.schemas);
+	if (allOf_.count != rhs.allOf_.count)
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetAllOfString(), allOf_.count, rhs.allOf_.count);
+	for (SizeType i = 0; i < allOf_.count; i++) {
+	  if (!allOf_.schemas[i]->Compare(*rhs.allOf_.schemas[i], context))
+	    return false;
+	}
+      }
+      if (anyOf_.schemas || rhs.anyOf_.schemas) {
+	if (!(anyOf_.schemas && rhs.anyOf_.schemas))
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAnyOfString(), anyOf_.schemas, rhs.anyOf_.schemas);
+	if (anyOf_.count != rhs.anyOf_.count)
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetAnyOfString(), anyOf_.count, rhs.anyOf_.count);
+	for (SizeType i = 0; i < anyOf_.count; i++) {
+	  if (!anyOf_.schemas[i]->Compare(*rhs.anyOf_.schemas[i], context))
+	    return false;
+	}
+      }
+      if (oneOf_.schemas || rhs.oneOf_.schemas) {
+	if (!(oneOf_.schemas && rhs.oneOf_.schemas))
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetOneOfString(), oneOf_.schemas, rhs.oneOf_.schemas);
+	if (oneOf_.count != rhs.oneOf_.count)
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetOneOfString(), oneOf_.count, rhs.oneOf_.count);
+	for (SizeType i = 0; i < oneOf_.count; i++) {
+	  if (!oneOf_.schemas[i]->Compare(*rhs.oneOf_.schemas[i], context))
+	    return false;
+	}
+      }
+      // Properties
+      if (properties_) {
+	for (SizeType i = 0; i < propertyCount_; i++) {
+	  const SchemaType* ischema = rhs.FindPropertySchema(properties_[i].name);
+	  if (ischema) {
+	    if (!properties_[i].schema->Compare(*ischema, context))
+	      return false;
+	  } else if (!rhs.additionalProperties_ || properties_[i].required) {
+	    RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPropertiesString(), properties_[i].name, SValue(kNullType).Move());
+	  }
+	}
+      }
+      if (rhs.properties_) {
+	for (SizeType j = 0; j < rhs.propertyCount_; j++) {
+	  SizeType i = 0;
+	  if (FindPropertyIndex(rhs.properties_[j].name.GetString(),
+				rhs.properties_[j].name.GetStringLength(), &i))
+	    continue;
+	  const SchemaType* ischema = FindPropertySchema(rhs.properties_[j].name);
+	  if (ischema) {
+	    if (!ischema->Compare(*rhs.properties_[j].schema, context))
+	      return false;
+	  } else if (!additionalProperties_ || rhs.properties_[j].required) {
+	    RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPropertiesString(), SValue(kNullType).Move(), rhs.properties_[j].name);
+	  }
+	}
+      }
+      // Additional proeprties
+      bool lhs_addProps = (additionalProperties_ || additionalPropertiesSchema_);
+      bool rhs_addProps = (rhs.additionalProperties_ || rhs.additionalPropertiesSchema_);
+      if (lhs_addProps != rhs_addProps) {
+	if ((!rhs_addProps && maxProperties_ == SizeType(~0)) ||
+	    (!lhs_addProps && rhs.maxProperties_ == SizeType(~0))) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), lhs_addProps, rhs_addProps);
+	}
+      }
+      if (additionalPropertiesSchema_ && rhs.additionalPropertiesSchema_ &&
+	  !additionalPropertiesSchema_->Compare(*rhs.additionalPropertiesSchema_, context))
+	return false;
+      // Pattern properties
+      for (SizeType i = 0; i < patternPropertyCount_; i++) {
+	bool patternMatch = false;
+	const SchemaType* ischema = rhs.FindPatternPropertySchema(patternProperties_[i].patternStr, patternProperties_[i].pattern, patternMatch);
+	if (ischema) {
+	  if (!patternMatch && !patternProperties_[i].schema->Compare(*ischema, context))
+	    return false;
+	} else if (!rhs.additionalProperties_) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPatternPropertiesString(), patternProperties_[i].patternStr, SValue(kNullType).Move());
+	}
+      }
+      for (SizeType j = 0; j < rhs.patternPropertyCount_; j++) {
+	bool patternMatch = false;
+	const SchemaType* ischema = FindPatternPropertySchema(rhs.patternProperties_[j].patternStr, rhs.patternProperties_[j].pattern, patternMatch);
+	if (ischema) {
+	  if (!patternMatch && !ischema->Compare(*rhs.patternProperties_[j].schema, context))
+	    return false;
+	} else if (!additionalProperties_) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPatternPropertiesString(), SValue(kNullType).Move(), rhs.patternProperties_[j].patternStr);
+	}
+      }
+      // Other property properties
+      if (minProperties_ != rhs.minProperties_) {
+	SizeType lhs_minProps = minProperties_, rhs_minProps = rhs.minProperties_;
+	if (minProperties_ == 0) {
+	  if (propertyCount_ >= rhs.minProperties_)
+	    goto minPropertiesMatch;
+	  lhs_minProps = propertyCount_;
+	}
+	if (rhs.minProperties_ == 0) {
+	  if (rhs.propertyCount_ >= rhs.minProperties_)
+	    goto minPropertiesMatch;
+	  rhs_minProps = rhs.propertyCount_;
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinPropertiesString(), lhs_minProps, rhs_minProps);
+        minPropertiesMatch:;
+      }
+      if (maxProperties_ != rhs.maxProperties_) {
+	SizeType lhs_maxProps = maxProperties_, rhs_maxProps = rhs.maxProperties_;
+	if (maxProperties_ == SizeType(~0) && propertyCount_ != 0 && !lhs_addProps) {
+	  if (propertyCount_ <= rhs.maxProperties_)
+	    goto maxPropertiesMatch;
+	  lhs_maxProps = propertyCount_;
+	}
+	if (rhs.maxProperties_ == SizeType(~0) && rhs.propertyCount_ != 0 && !rhs_addProps) {
+	  if (rhs.propertyCount_ <= maxProperties_)
+	    goto maxPropertiesMatch;
+	  rhs_maxProps = rhs.propertyCount_;
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxPropertiesString(), lhs_maxProps, rhs_maxProps);
+        maxPropertiesMatch:;
+      }
+      // Items
+      for (SizeType i = 0; i < itemsTupleCount_; i++) {
+	const SchemaType* ischema = rhs.FindItemSchema(i);
+	if (ischema) {
+	  if (!itemsTuple_[i]->Compare(*ischema, context))
+	    return false;
+	} else if (!rhs.additionalItems_) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetItemsString(), i, kNullType);
+	}
+      }
+      for (SizeType j = 0; j < rhs.itemsTupleCount_; j++) {
+	if (j < itemsTupleCount_) continue;
+	const SchemaType* ischema = FindItemSchema(j);
+	if (ischema) {
+	  if (!ischema->Compare(*rhs.itemsTuple_[j], context))
+	    return false;
+	} else if (!additionalItems_) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetItemsString(), kNullType, j);
+	}
+      }
+      if (!(itemsTuple_ || rhs.itemsTuple_)) {
+	if (itemsList_ && rhs.itemsList_) {
+	  if (!itemsList_->Compare(*rhs.itemsList_, context))
+	    return false;
+	} else if (itemsList_ && rhs.additionalItemsSchema_) {
+	  if (!itemsList_->Compare(*rhs.additionalItemsSchema_, context))
+	    return false;
+	} else if (additionalItemsSchema_ && rhs.itemsList_) {
+	  if (!additionalItemsSchema_->Compare(*rhs.itemsList_, context))
+	    return false;
+	}
+      }
+      // Additional items
+      bool lhs_addItems = (additionalItems_ || additionalItemsSchema_);
+      bool rhs_addItems = (rhs.additionalItems_ || rhs.additionalItemsSchema_);
+      if (lhs_addItems != rhs_addItems) {
+	if ((!rhs_addItems && maxItems_ == SizeType(~0)) ||
+	    (!lhs_addItems && rhs.maxItems_ == SizeType(~0))) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalItemsString(), lhs_addItems, rhs_addItems);
+	}
+      }
+      if (additionalItemsSchema_ && rhs.additionalItemsSchema_ &&
+	  !additionalItemsSchema_->Compare(*rhs.additionalItemsSchema_, context))
+	return false;
+      // Other item properties
+      if (uniqueItems_ != rhs.uniqueItems_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetUniqueItemsString(), uniqueItems_, rhs.uniqueItems_);
+      if (minItems_ != rhs.minItems_) {
+	SizeType lhs_minItems = minItems_, rhs_minItems = rhs.minItems_;
+	if (minItems_ == 0) {
+	  if (itemsTupleCount_ >= rhs.minItems_)
+	    goto minItemsMatch;
+	  lhs_minItems = itemsTupleCount_;
+	}
+	if (rhs.minItems_ == 0) {
+	  if (rhs.itemsTupleCount_ >= minItems_)
+	    goto minItemsMatch;
+	  rhs_minItems = rhs.itemsTupleCount_;
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinItemsString(), lhs_minItems, rhs_minItems);
+        minItemsMatch:;
+      }
+      if (maxItems_ != rhs.maxItems_) {
+	SizeType lhs_maxItems = maxItems_, rhs_maxItems = rhs.maxItems_;
+	
+	if (maxItems_ == SizeType(~0) && itemsTupleCount_ != 0 && !lhs_addItems) {
+	  if (itemsTupleCount_ <= rhs.maxItems_)
+	    goto maxItemsMatch;
+	  lhs_maxItems = itemsTupleCount_;
+	}
+	if (rhs.maxItems_ == SizeType(~0) && rhs.itemsTupleCount_ != 0 && !rhs_addItems) {
+	  if (rhs.itemsTupleCount_ <= maxItems_)
+	    goto maxItemsMatch;
+	  rhs_maxItems = rhs.itemsTupleCount_;
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxItemsString(), lhs_maxItems, rhs_maxItems);
+        maxItemsMatch:;
+      }
+      return true;
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA
     }
 #endif // RAPIDJSON_YGGDRASIL
 
@@ -5526,6 +5823,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 	    case kValidateErrorGeneric:                 return GetGenericString();
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+	    case kIncompatibleSchemas:                  return GetCompareString();
 #endif // RAPIDJSON_YGGDRASIL
 
             default:                                    return GetNullString();
@@ -5607,6 +5905,7 @@ public:
     RAPIDJSON_STRING_(Length, 'l', 'e', 'n', 'g', 't', 'h')
     RAPIDJSON_STRING_(Shape, 's', 'h', 'a', 'p', 'e')
     RAPIDJSON_STRING_(Encoding, 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g')
+    RAPIDJSON_STRING_(NullEncoding, 'n', 'u', 'l', 'l')
     RAPIDJSON_STRING_(ASCIIEncoding, 'A', 'S', 'C', 'I', 'I')
     RAPIDJSON_STRING_(UCS4Encoding, 'U', 'C', 'S', '4')
     RAPIDJSON_STRING_(UTF8Encoding, 'U', 'T', 'F', '8')
@@ -5636,6 +5935,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     RAPIDJSON_STRING_(Generic, 'g', 'e', 'n', 'e', 'r', 'i', 'c')
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    RAPIDJSON_STRING_(Compare, 'c', 'o', 'm', 'p', 'a', 'r', 'e')
     RAPIDJSON_STRING_(RelativeUp, '.', '.')
     RAPIDJSON_STRING_(Wildcard, '.', '*')
 #endif // RAPIDJSON_YGGDRASIL
@@ -5926,6 +6226,30 @@ protected:
       }
       return out;
     }
+    void DisallowedTypeKey(Context& context, bool actual = false) const {
+      ErrorHandler& eh = context.error_handler;
+      eh.StartDisallowedTypeKey(actual);
+#define ADD_TYPE(exp)				\
+      eh.AddExpectedTypeKey(exp, actual)
+      if (type_ & (1 << kNullSchemaType)) ADD_TYPE(GetNullString());
+      if (type_ & (1 << kBooleanSchemaType)) ADD_TYPE(GetBooleanString());
+      if (type_ & (1 << kObjectSchemaType)) ADD_TYPE(GetObjectString());
+      if (type_ & (1 << kArraySchemaType)) ADD_TYPE(GetArrayString());
+      if (type_ & (1 << kStringSchemaType)) ADD_TYPE(GetStringString());
+      if (type_ & (1 << kNumberSchemaType)) ADD_TYPE(GetNumberString());
+      else if (type_ & (1 << kIntegerSchemaType)) ADD_TYPE(GetIntegerString());
+      if (yggtype_ & (1 << kYggScalarSchemaType)) ADD_TYPE(GetScalarString());
+      if (yggtype_ & (1 << kYggNDArraySchemaType)) ADD_TYPE(GetNDArrayString());
+      if (yggtype_ & (1 << kYggPythonImportSchemaType)) ADD_TYPE(GetPythonClassString());
+      if (yggtype_ & (1 << kYggPythonInstanceSchemaType)) ADD_TYPE(GetPythonInstanceString());
+      if (yggtype_ & (1 << kYggObjSchemaType)) ADD_TYPE(GetObjString());
+      if (yggtype_ & (1 << kYggPlySchemaType)) ADD_TYPE(GetPlyString());
+      if (yggtype_ & (1 << kYggSchemaSchemaType)) ADD_TYPE(GetSchemaString());
+      if (yggtype_ == ((1 << kYggTotalSchemaType) - 1))
+	ADD_TYPE(GetAnyString());
+#undef ADD_TYPE
+      eh.EndDisallowedTypeKey(actual);
+    }
   YggSchemaValueSubType GetSubType(const ValueType& subtype) const {
     if      (subtype == GetIntSubTypeString()    ) return kYggIntSchemaSubType;
     else if (subtype == GetUintSubTypeString()   ) return kYggUintSchemaSubType;
@@ -5949,13 +6273,15 @@ protected:
   }
   void AddSubType(const ValueType& subtype) { subtype_ = GetSubType(subtype); }
   YggSchemaEncodingType GetEncodingType(const ValueType& encoding) const {
-    if      (encoding == GetASCIIEncodingString()) return kYggASCIISchemaEncodingType;
+    if      (encoding == GetNullEncodingString() ) return kYggNullSchemaEncodingType;
+    else if (encoding == GetASCIIEncodingString()) return kYggASCIISchemaEncodingType;
     else if (encoding == GetUTF8EncodingString() ) return kYggUTF8SchemaEncodingType;
     else if (encoding == GetUCS4EncodingString() ) return kYggUCS4SchemaEncodingType;
     return kYggNullSchemaEncodingType;
   }
   const ValueType& EncodingType2String(const YggSchemaEncodingType encoding) const {
     switch (encoding) {
+    case (kYggNullSchemaEncodingType): return GetNullEncodingString();
     case (kYggASCIISchemaEncodingType): return GetASCIIEncodingString();
     case (kYggUTF8SchemaEncodingType): return GetUTF8EncodingString();
     case (kYggUCS4SchemaEncodingType): return GetUCS4EncodingString();
@@ -6058,6 +6384,59 @@ protected:
     }
 #endif // RAPIDJSON_YGGDRASIL
 
+#ifdef RAPIDJSON_YGGDRASIL
+    const SchemaType* FindItemSchema(const SizeType idx) const {
+      if (itemsTuple_ && idx < itemsTupleCount_) {
+	return itemsTuple_[idx];
+      } else if (itemsList_) {
+	return itemsList_;
+      }
+      if (additionalItemsSchema_) {
+	return additionalItemsSchema_;
+      }
+      return NULL;
+    }
+    const SchemaType* FindPropertySchema(const SValue& name) const {
+      SizeType idx = 0;
+      if (properties_ && FindPropertyIndex(name.GetString(), name.GetStringLength(), &idx)) {
+	return properties_[idx].schema;
+      }
+      if (patternProperties_) {
+	for (SizeType i = 0; i < patternPropertyCount_; i++) {
+	  if (patternProperties_[i].pattern && IsPatternMatch(patternProperties_[i].pattern, name.GetString(), name.GetStringLength()))
+	    return patternProperties_[i].schema;
+	}
+      }
+      if (additionalPropertiesSchema_) {
+	return additionalPropertiesSchema_;
+      }
+      return NULL;
+    }
+    const SchemaType* FindPatternPropertySchema(const SValue& patternStr, RegexType* pattern, bool& patternMatch) const {
+      if (patternProperties_) {
+	for (SizeType i = 0; i < patternPropertyCount_; i++) {
+	  if (patternProperties_[i].patternStr == patternStr)
+	    return patternProperties_[i].schema;
+	}
+      }
+      if (properties_ && pattern) {
+	for (SizeType i = 0; i < propertyCount_; i++) {
+	  if (IsPatternMatch(pattern, properties_[i].name.GetString(), properties_[i].name.GetStringLength())) {
+	    patternMatch = true;
+	    return properties_[i].schema;
+	  }
+	}
+      }
+      if (additionalPropertiesSchema_) {
+	return additionalPropertiesSchema_;
+      }
+      return NULL;
+    }
+    bool FindPropertyIndex(const Ch* str, SizeType len, SizeType* outIndex) const {
+      ValueType name(str, len);
+      return FindPropertyIndex(name, outIndex);
+    }
+#endif // RAPIDJSON_YGGDRASIL
     // O(n)
     bool FindPropertyIndex(const ValueType& name, SizeType* outIndex) const {
         SizeType len = name.GetStringLength();
@@ -7760,6 +8139,9 @@ protected:
     bool uniqueItems_;
 
     RegexType* pattern_;
+#ifdef RAPIDJSON_YGGDRASIL
+    SValue patternStr_;
+#endif // RAPIDJSON_YGGDRASIL
     SizeType minLength_;
     SizeType maxLength_;
 
@@ -7780,8 +8162,6 @@ protected:
     SValue shape_;
     YggSchemaEncodingType encoding_;
     SValue class_;
-    SValue args_;
-    SValue kwargs_;
     bool isMetaschema_;
     int inSort_;
     const SchemaType* metaschema_;
@@ -7907,7 +8287,8 @@ public:
         schemaMap_(allocator, kInitialSchemaMapSize),
         schemaRef_(allocator, kInitialSchemaRefSize)
 #ifdef RAPIDJSON_YGGDRASIL
-	, metaschema_doc_(), metaschema_(), isMetaschema_(isMetaschema),
+	, metaschema_doc_(), metaschema_(),
+	isMetaschema_(isMetaschema),
 	instanceMap_(allocator, kInitialInstanceMapSize)
 #endif // RAPIDJSON_YGGDRASIL
     {
@@ -8083,7 +8464,7 @@ private:
             }
             else if (!HandleRefSchema(pointer, schema, v, document, id)) {
                 // The new schema constructor adds itself and its $ref(s) to schemaMap_
-	        SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id);
+	      SchemaType* s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id);
                 if (schema)
                     *schema = s;
                 return s->GetId();
@@ -8970,6 +9351,31 @@ public:
       AddCurrentError(kValidateErrorGeneric);
     }
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    void IncompatibleSchemas(const typename SchemaType::ValueType& key, const SValue& expected, const SValue& actual, typename SchemaType::PointerType ptr1, typename SchemaType::PointerType ptr2, bool existingValues) {
+      if (!existingValues)
+	currentError_.SetObject();
+      currentError_.AddMember(GetPropertyString(),
+			      ValueType(key, GetStateAllocator()).Move(),
+			      GetStateAllocator());
+      if (!existingValues) {
+	currentError_.AddMember(GetExpectedString(),
+				ValueType(expected, GetStateAllocator()).Move(),
+				GetStateAllocator());
+	currentError_.AddMember(GetActualString(),
+				ValueType(actual, GetStateAllocator()).Move(),
+				GetStateAllocator());
+      }
+      AddErrorCode(currentError_, kIncompatibleSchemas);
+      AddErrorSchemaLocation(currentError_, ptr2);
+      typename ValueType::MemberIterator it = currentError_.FindMember(GetSchemaRefString());
+      RAPIDJSON_ASSERT(it != currentError_.MemberEnd());
+      currentError_.AddMember(GetInstanceRefString(),
+			      ValueType(it->value, GetStateAllocator()).Move(),
+			      GetStateAllocator());
+      currentError_.RemoveMember(GetSchemaRefString());
+      AddErrorSchemaLocation(currentError_, ptr1);
+      AddError(ValueType(SchemaType::GetValidateErrorKeyword(kIncompatibleSchemas), GetStateAllocator(), false).Move(), currentError_);
+    }
 #endif // RAPIDJSON_YGGDRASIL
     void PropertyViolations(ISchemaValidator** subvalidators, SizeType count) {
         for (SizeType i = 0; i < count; ++i)
@@ -9025,6 +9431,24 @@ public:
         currentError_.SetObject();
         AddCurrentError(code);
     }
+#else // RAPIDJSON_YGGDRASIL
+    void StartDisallowedTypeKey(bool actual) {
+      if (!actual)
+	currentError_.SetObject();
+      if (actual)
+        currentError_.AddMember(GetActualString(), ValueType(kArrayType).Move(), GetStateAllocator());
+      else
+	currentError_.AddMember(GetExpectedString(), ValueType(kArrayType).Move(), GetStateAllocator());
+    }
+    void AddExpectedTypeKey(const typename SchemaType::ValueType& expectedType, bool actual) {
+      typename ValueType::MemberIterator dst;
+      if (actual)
+	dst = currentError_.FindMember(GetActualString());
+      else
+	dst = currentError_.FindMember(GetExpectedString());
+      dst->value.PushBack(ValueType(expectedType, GetStateAllocator()).Move(), GetStateAllocator());
+    }
+    void EndDisallowedTypeKey(bool) {}
 #endif // RAPIDJSON_YGGDRASIL
     void StartDisallowedType() {
         currentError_.SetArray();
@@ -9245,6 +9669,7 @@ public:
     RAPIDJSON_STRING_(Warnings, 'w', 'a', 'r', 'n', 'i', 'n', 'g', 's')
     RAPIDJSON_STRING_(Singular, 's', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
     RAPIDJSON_STRING_(Message, 'm', 'e', 's', 's', 'a', 'g', 'e')
+    RAPIDJSON_STRING_(Property, 'p', 'r', 'o', 'p', 'e', 'r', 't', 'y')
 #endif //RAPIDJSON_YGGDRASIL
 #undef RAPIDJSON_STRING_
 
@@ -9432,6 +9857,16 @@ RAPIDJSON_MULTILINEMACRO_END
     virtual void FreeState(void* p) {
         StateAllocator::Free(p);
     }
+
+#ifdef RAPIDJSON_YGGDRASIL
+    //! Compare against another schema
+    bool Compare(const GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>& rhs) {
+      PushSchema(root_);
+      bool out = root_.Compare(rhs.root_, CurrentContext());
+      PopSchema();
+      return out;
+    }
+#endif // RAPIDJSON_YGGDRASIL
 
 private:
     typedef typename SchemaType::Context Context;
