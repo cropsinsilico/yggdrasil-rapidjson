@@ -5357,12 +5357,13 @@ public:
     bool Double(Context& context, double d) const {
         RAPIDJSON_NORMALIZER_(Double, d);
 #ifdef RAPIDJSON_YGGDRASIL
-      if ((yggtype_ & (1 << kYggScalarSchemaType))) {
-	if (!(CheckScalar(context, GetFloatSubTypeString(), ValueType(8))))
-	  return false;
-      }
+	if ((yggtype_ & (1 << kYggScalarSchemaType))) {
+	  if (!(CheckScalar(context, GetFloatSubTypeString(), ValueType(8))))
+	    return false;
+	} else if (!(type_ & (1 << kNumberSchemaType))) {
+#else // RAPIDJSON_YGGDRASIL
+	if (!(type_ & (1 << kNumberSchemaType))) {
 #endif // RAPIDJSON_YGGDRASIL
-        if (!(type_ & (1 << kNumberSchemaType))) {
             DisallowedType(context, GetNumberString());
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
@@ -6461,23 +6462,59 @@ protected:
             }
         return false;
     }
-
-    bool CheckInt(Context& context, int64_t i) const {
+    
 #ifdef RAPIDJSON_YGGDRASIL
+    bool CheckInt(Context& context, int i) const {
+      bool skipType = false;
       if ((yggtype_ & (1 << kYggScalarSchemaType))) {
 	if (i >= 0) {
-	  if (!(CheckScalar(context, GetUintSubTypeString(), ValueType(8))))
+	  if (!(CheckScalar(context, GetUintSubTypeString(), ValueType((int)sizeof(int)))))
 	    return false;
 	} else {
-	  if (!(CheckScalar(context, GetIntSubTypeString(), ValueType(8))))
+	  if (!(CheckScalar(context, GetIntSubTypeString(), ValueType((int)sizeof(int)))))
 	    return false;
 	}
+	skipType = true;
       }
+      return CheckInt(context, (int64_t)i, skipType);
+    }
+    bool CheckUint(Context& context, unsigned i) const {
+      bool skipType = false;
+      if ((yggtype_ & (1 << kYggScalarSchemaType))) {
+	if (!(CheckScalar(context, GetUintSubTypeString(), ValueType((int)sizeof(unsigned)))))
+	  return false;
+	skipType = true;
+      }
+      return CheckUint(context, (uint64_t)i, skipType);
+    }
 #endif // RAPIDJSON_YGGDRASIL
+
+    bool CheckInt(Context& context, int64_t i
+#ifdef RAPIDJSON_YGGDRASIL
+		  , bool skipType = false
+#endif // RAPIDJSON_YGGDRASIL
+		  ) const {
+#ifdef RAPIDJSON_YGGDRASIL
+        if (!skipType) {
+	  if ((yggtype_ & (1 << kYggScalarSchemaType))) {
+	    if (i >= 0) {
+	      if (!(CheckScalar(context, GetUintSubTypeString(), ValueType(8))))
+		return false;
+	    } else {
+	      if (!(CheckScalar(context, GetIntSubTypeString(), ValueType(8))))
+		return false;
+	    }
+	  } else if (!(type_ & ((1 << kIntegerSchemaType) | (1 << kNumberSchemaType)))) {
+            DisallowedType(context, GetIntegerString());
+            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+	  }
+	}
+#else // RAPIDJSON_YGGDRASIL
         if (!(type_ & ((1 << kIntegerSchemaType) | (1 << kNumberSchemaType)))) {
             DisallowedType(context, GetIntegerString());
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
+#endif // RAPIDJSON_YGGDRASIL
 
         if (!minimum_.IsNull()) {
             if (minimum_.IsInt64()) {
@@ -6521,17 +6558,27 @@ protected:
         return true;
     }
 
-    bool CheckUint(Context& context, uint64_t i) const {
+    bool CheckUint(Context& context, uint64_t i
 #ifdef RAPIDJSON_YGGDRASIL
-      if ((yggtype_ & (1 << kYggScalarSchemaType))) {
-	if (!(CheckScalar(context, GetUintSubTypeString(), ValueType(8))))
-	  return false;
-      }
+		   , bool skipType = false
 #endif // RAPIDJSON_YGGDRASIL
+		   ) const {
+#ifdef RAPIDJSON_YGGDRASIL
+        if (!skipType) {
+	  if ((yggtype_ & (1 << kYggScalarSchemaType))) {
+	    if (!(CheckScalar(context, GetUintSubTypeString(), ValueType(8))))
+	      return false;
+	  } else if (!(type_ & ((1 << kIntegerSchemaType) | (1 << kNumberSchemaType)))) {
+            DisallowedType(context, GetIntegerString());
+            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+	  }
+	}
+#else // RAPIDJSON_YGGDRASIL
         if (!(type_ & ((1 << kIntegerSchemaType) | (1 << kNumberSchemaType)))) {
             DisallowedType(context, GetIntegerString());
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
+#endif // RAPIDJSON_YGGDRASIL
 
         if (!minimum_.IsNull()) {
             if (minimum_.IsUint64()) {
@@ -9865,6 +9912,10 @@ RAPIDJSON_MULTILINEMACRO_END
       bool out = root_.Compare(rhs.root_, CurrentContext());
       PopSchema();
       return out;
+    }
+    //! Generate data according to a schema
+    bool Generate(ValueType& data) {
+      
     }
 #endif // RAPIDJSON_YGGDRASIL
 
