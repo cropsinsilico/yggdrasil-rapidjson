@@ -9913,10 +9913,10 @@ RAPIDJSON_MULTILINEMACRO_END
       PopSchema();
       return out;
     }
-    //! Generate data according to a schema
-    bool Generate(ValueType& data) {
+    // //! Generate data according to a schema
+    // bool Generate(ValueType& data) {
       
-    }
+    // }
 #endif // RAPIDJSON_YGGDRASIL
 
 private:
