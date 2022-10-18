@@ -311,6 +311,153 @@ PyObject* import_python_object(const char* mod_class,
   }
   return out;
 }
+inline
+bool IsStructuredArray(PyObject* x) {
+  RAPIDJSON_ASSERT(isPythonInitialized());
+  if (!isPythonInitialized())
+    return false;
+#ifdef RAPIDJSON_DONT_IMPORT_NUMPY
+  return false;
+#else // RAPIDJSON_DONT_IMPORT_NUMPY
+  if (x == NULL || !PyList_Check(x)) return false;
+  int nd = 0;
+  npy_intp *dims = NULL;
+  Py_ssize_t N = PyList_Size(x);
+  if (N < 2) return false;
+  for (Py_ssize_t i = 0; i < N; i++) {
+    PyObject* item = PyList_GetItem(x, i);
+    RAPIDJSON_ASSERT(item);
+    if (item == NULL)
+      return false;
+    if (!PyArray_CheckExact(item))
+      return false;
+    PyArray_Descr* desc = PyArray_DESCR((PyArrayObject*)item);
+    RAPIDJSON_ASSERT(desc);
+    if (desc == NULL)
+      return false;
+    if (desc->names == NULL)
+      return false;
+    if (PyTuple_Size(desc->names) != 1)
+      return false;
+    if (dims == NULL) {
+      if (i > 0)
+	return false;
+      nd = PyArray_NDIM((PyArrayObject*)item);
+      dims = PyArray_DIMS((PyArrayObject*)item);
+    } else {
+      if (nd != PyArray_NDIM((PyArrayObject*)item))
+	return false;
+      for (int j = 0; j < nd; j++) {
+	npy_intp* idims = PyArray_DIMS((PyArrayObject*)item);
+	if (dims[j] != idims[j])
+	  return false;
+      }
+    }
+  }
+  return true;
+#endif // RAPIDJSON_DONT_IMPORT_NUMPY
+}
+inline
+PyObject* GetStructuredArray(PyObject* x) {
+  RAPIDJSON_ASSERT(isPythonInitialized());
+  if (!isPythonInitialized())
+    return NULL;
+#ifdef RAPIDJSON_DONT_IMPORT_NUMPY
+  return NULL;
+#else // RAPIDJSON_DONT_IMPORT_NUMPY
+  Py_ssize_t N = PyList_Size(x);
+  int nd = 0;
+  npy_intp *dims = NULL, *strides = NULL;
+  PyObject *out = NULL, *names = NULL, *fields = NULL;
+  PyObject *ikey = NULL, *idtype = NULL, *ioffset = NULL;
+  PyArray_Descr *idesc = NULL, *sub_desc = NULL, *desc = NULL;
+  PyArrayObject *ival = NULL, *array = NULL;
+  Py_ssize_t i = 0, kw_pos = 0;
+  npy_intp offset = 0;
+  std::vector<npy_intp> offsets;
+  names = PyTuple_New(N);
+  if (names == NULL)
+    goto cleanup;
+  fields = PyDict_New();
+  if (fields == NULL)
+    goto cleanup;
+  for (i = 0; i < N; i++) {
+    ival = (PyArrayObject*)PyList_GetItem(x, i);
+    if (ival == NULL)
+      goto cleanup;
+    if (i == 0) {
+      nd = PyArray_NDIM(ival);
+      dims = PyArray_DIMS(ival);
+    }
+    idesc = PyArray_DESCR(ival);
+    if (idesc == NULL)
+      goto cleanup;
+    ikey = PyTuple_GetItem(idesc->names, 0);
+    if (ikey == NULL)
+      goto cleanup;
+    Py_INCREF(ikey);
+    if (PyTuple_SetItem(names, i, ikey) < 0)
+      goto cleanup;
+    sub_desc = PyArray_DescrNewFromType(PyArray_TYPE(ival));
+    if (sub_desc == NULL)
+      goto cleanup;
+    sub_desc->elsize = PyArray_ITEMSIZE(ival);
+    offsets.push_back(offset);
+    ioffset = PyLong_FromSsize_t((Py_ssize_t)offset);
+    if (ioffset == NULL) {
+      Py_DECREF(sub_desc);
+      goto cleanup;
+    }
+    idtype = PyTuple_Pack(2, sub_desc, ioffset);
+    Py_DECREF(sub_desc);
+    Py_DECREF(ioffset);
+    if (idtype == NULL)
+      goto cleanup;
+    if (PyDict_SetItem(fields, ikey, idtype) < 0) {
+      Py_DECREF(idtype);
+      goto cleanup;
+    }
+    Py_DECREF(idtype);
+    offset += PyArray_ITEMSIZE(ival);
+  }
+  desc = PyArray_DescrNewFromType(NPY_VOID);
+  if (desc == NULL)
+    goto cleanup;
+  Py_INCREF(fields);
+  desc->fields = fields;
+  Py_INCREF(names);
+  desc->names = names;
+  desc->elsize = (int)offset;
+  // TODO: fill in other fields? alignment?
+  array = (PyArrayObject*)PyArray_NewFromDescr(&PyArray_Type, desc,
+					       nd, dims, strides,
+					       NULL, 0, NULL);
+  desc = NULL;
+  if (array == NULL)
+    goto cleanup;
+  i = 0;
+  while (PyDict_Next(fields, &kw_pos, &ikey, &idtype)) {
+    ival = (PyArrayObject*)PyList_GetItem(x, i);
+    if (ival == NULL)
+      goto cleanup;
+    idesc = (PyArray_Descr*)PyTuple_GetItem(idtype, 0);
+    if (idesc == NULL)
+      goto cleanup;
+    Py_INCREF(idesc); // Does PyArray_SetField steal descr ref?
+    if (PyArray_SetField(array, idesc, offsets[(size_t)i], (PyObject*)ival) < 0)
+      goto cleanup;
+    i++;
+  }
+  out = (PyObject*)array;
+  array = NULL;
+ cleanup:
+  Py_XDECREF(fields);
+  Py_XDECREF(names);
+  Py_XDECREF(desc);
+  Py_XDECREF(array);
+  return out;
+#endif // RAPIDJSON_DONT_IMPORT_NUMPY
+}
 
 
 RAPIDJSON_NAMESPACE_END

@@ -2843,6 +2843,7 @@ public:
   RAPIDJSON_STRING_(Schema, 's', 'c', 'h', 'e', 'm', 'a')
   RAPIDJSON_STRING_(Any, 'a', 'n', 'y')
   // props
+  RAPIDJSON_STRING_(Title, 't', 'i', 't', 'l', 'e')
   RAPIDJSON_STRING_(SubType, 's', 'u', 'b', 't', 'y', 'p', 'e')
   RAPIDJSON_STRING_(Precision, 'p', 'r', 'e', 'c', 'i', 's', 'i', 'o', 'n')
   RAPIDJSON_STRING_(Units, 'u', 'n', 'i', 't', 's')
@@ -3685,16 +3686,27 @@ public:
     case kArrayType: {
       Py_ssize_t len = 0;
       out = PyList_New(len);
-      RAPIDJSON_ASSERT(out);
+      if (out == NULL)
+	return NULL;
       ConstValueIterator item;
-      int result = 0;
       for (item = Begin(); item != End(); item++) {
 	PyObject* ival = item->GetPythonObjectRaw();
-	result = PyList_Append(out, ival);
-	RAPIDJSON_ASSERT(result == 0);
+	if (ival == NULL) {
+	  Py_DECREF(out);
+	  return NULL;
+	}
+	if (PyList_Append(out, ival) < 0) {
+	  Py_DECREF(out);
+	  Py_DECREF(ival);
+	  return NULL;
+	}
 	Py_DECREF(ival);
       }
-      (void)result;
+      if (IsStructuredArray(out)) {
+	PyObject* tmp = GetStructuredArray(out);
+	Py_DECREF(out);
+	return tmp;
+      }
       return out;
     }
     case kStringType: {
@@ -3734,6 +3746,21 @@ public:
 	if (desc == NULL) return NULL;
 	if (PyTypeNum_ISFLEXIBLE(typenum))
 	  desc->elsize = GetPrecision();
+	if (HasTitle()) {
+	  const ValueType& title = GetTitle();
+	  PyObject* titlePy = PyUnicode_FromString(title.GetString());
+	  PyArray_Descr* sub_desc = PyArray_DescrNewFromType(typenum);
+	  sub_desc->elsize = desc->elsize;
+	  desc->names = PyTuple_Pack(1, titlePy);
+	  desc->fields = PyDict_New();
+	  PyObject* offset = PyLong_FromSsize_t(0);
+	  PyObject* sub_dtype = PyTuple_Pack(2, sub_desc, offset);
+	  Py_DECREF(sub_desc);
+	  Py_DECREF(offset);
+	  PyDict_SetItem(desc->fields, titlePy, sub_dtype);
+	  Py_DECREF(titlePy);
+	  Py_DECREF(sub_dtype);
+	}
 	SizeType ndim = 0;
 	SizeType* shape = GetShape(ndim, schema_->GetAllocator());
 	if (!shape) {
@@ -3934,10 +3961,48 @@ public:
 	AddSchemaMember(GetEncodingString(), encoding);
       return true;
     } else if (PyArray_Check(x)) {
-      ResetSchema(allocator);
       PyArray_Descr* desc = PyArray_DESCR((PyArrayObject*)x);
       if (desc == NULL)
 	return false;
+      if (PyDataType_HASFIELDS(desc)) {
+	SetArray();
+	ResetSchema(allocator);
+	Reserve((SizeType)PyDict_Size(desc->fields), schema_->GetAllocator());
+	PyObject *kw_key, *kw_val;
+	Py_ssize_t kw_pos = 0;
+	while (PyDict_Next(desc->fields, &kw_pos, &kw_key, &kw_val)) {
+	  PyObject* dtype = PyTuple_GetItem(kw_val, 0);
+	  if (dtype == NULL)
+	    return false;
+	  PyObject* offsetObj = PyTuple_GetItem(kw_val, 1);
+	  if (offsetObj == NULL)
+	    return false;
+	  Py_ssize_t offset = PyNumber_AsSsize_t(offsetObj, NULL);
+	  if (offset < 0)
+	    return false;
+	  Ch* kw_keyS = NULL;
+	  Py_ssize_t kw_keyS_len = 0;
+	  if (sizeof(Ch) == sizeof(wchar_t))
+	    kw_keyS = (Ch*)PyUnicode_AsWideCharString(kw_key, &kw_keyS_len);
+	  else
+	    kw_keyS = (Ch*)PyUnicode_AsUTF8AndSize(kw_key, &kw_keyS_len);
+	  if (kw_keyS == NULL)
+	    return false;
+	  Py_INCREF(dtype);
+	  PyObject* field = PyArray_GetField((PyArrayObject*)x,
+					     (PyArray_Descr*)dtype,
+					     (int)offset);
+	  if (field == NULL)
+	    return false;
+	  ValueType field_name(kw_keyS, kw_keyS_len, schema_->GetAllocator());
+	  ValueType pyField(field);
+	  Py_DECREF(field);
+	  pyField.AddSchemaMember(GetTitleString(), field_name);
+	  PushBack(pyField, schema_->GetAllocator());
+	}
+	return true;
+      }
+      ResetSchema(allocator);
       SizeType precision;
       ValueType subtype;
       ValueType encoding;
@@ -4097,6 +4162,16 @@ public:
   bool IsYggdrasil() const {
     if (!(IsString() || IsObject())) return false;
     return HasSchema();
+  }
+  bool HasTitle() const {
+    if (!IsYggdrasil()) return false;
+    ConstMemberIterator title = schema_->FindMember(GetTitleString());
+    return (title != schema_->MemberEnd());
+  }
+  const ValueType& GetTitle() const {
+    RAPIDJSON_ASSERT(HasTitle());
+    ConstMemberIterator title = schema_->FindMember(GetTitleString());
+    return title->value;
   }
   bool IsScalar() const {
     if (!IsYggdrasil()) return false;
@@ -4300,7 +4375,13 @@ public:
       return encoding->value;
     return ValueType(kNullType).Move();
   }
-
+  
+  const ValueType& GetShape() const {
+    RAPIDJSON_ASSERT(IsNDArray());
+    ConstMemberIterator shape = schema_->FindMember(GetShapeString());
+    RAPIDJSON_ASSERT(shape != schema_->MemberEnd());
+    return shape->value;
+  }
   SizeType* GetShape(SizeType &ndim, Allocator& allocator) const {
     RAPIDJSON_ASSERT(IsYggdrasil());
     ndim = 0;
