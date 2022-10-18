@@ -129,8 +129,8 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
         case kDeprecatedWarning:                        return RAPIDJSON_ERROR_STRING("Property is being deprecated.");
 	// Generic error for debugging
         case kValidateErrorGeneric:                     return RAPIDJSON_ERROR_STRING("Generic error occurred: %message");
-#endif // RAPIDJSON_YGGDRASIL
         case kIncompatibleSchemas:                      return RAPIDJSON_ERROR_STRING("Incompatible schema property '%property': %expected vs %actual.");
+#endif // RAPIDJSON_YGGDRASIL
         default:                                        return RAPIDJSON_ERROR_STRING("Unknown error.");
     }
 }
