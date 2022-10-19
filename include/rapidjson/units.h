@@ -1423,7 +1423,7 @@ bool GenericUnit<Encoding>::from_table(const std::basic_string<typename Encoding
 	if ((*it)->matches(substr, *p))
 	  return from_table(**it, *p);
   }
-  std::cerr << "No units match found for \"" << convert_chars<Encoding,UTF8<char> >(substr) << "\"" << std::endl; // GCOVR_EXCL_LINE
+  // std::cerr << "No units match found for \"" << convert_chars<Encoding,UTF8<char> >(substr) << "\"" << std::endl; // GCOVR_EXCL_LINE
   return false; // GCOVR_EXCL_LINE
 }
 

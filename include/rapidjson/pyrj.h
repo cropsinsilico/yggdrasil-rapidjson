@@ -317,6 +317,7 @@ bool IsStructuredArray(PyObject* x) {
   if (!isPythonInitialized())
     return false;
 #ifdef RAPIDJSON_DONT_IMPORT_NUMPY
+  (void)x;
   return false;
 #else // RAPIDJSON_DONT_IMPORT_NUMPY
   if (x == NULL || !PyList_Check(x)) return false;
@@ -363,7 +364,7 @@ PyObject* GetStructuredArray(PyObject* x) {
   if (!isPythonInitialized())
     return NULL;
 #ifdef RAPIDJSON_DONT_IMPORT_NUMPY
-  return NULL;
+  return x;
 #else // RAPIDJSON_DONT_IMPORT_NUMPY
   Py_ssize_t N = PyList_Size(x);
   int nd = 0;
