@@ -402,7 +402,7 @@ PyObject* GetStructuredArray(PyObject* x) {
     sub_desc = PyArray_DescrNewFromType(PyArray_TYPE(ival));
     if (sub_desc == NULL)
       goto cleanup;
-    sub_desc->elsize = PyArray_ITEMSIZE(ival);
+    sub_desc->elsize = (int)PyArray_ITEMSIZE(ival);
     offsets.push_back(offset);
     ioffset = PyLong_FromSsize_t((Py_ssize_t)offset);
     if (ioffset == NULL) {
