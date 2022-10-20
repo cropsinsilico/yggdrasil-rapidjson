@@ -324,7 +324,7 @@ bool IsStructuredArray(PyObject* x) {
   int nd = 0;
   npy_intp *dims = NULL;
   Py_ssize_t N = PyList_Size(x);
-  if (N < 2) return false;
+  if (N == 0) return false;
   for (Py_ssize_t i = 0; i < N; i++) {
     PyObject* item = PyList_GetItem(x, i);
     RAPIDJSON_ASSERT(item);
@@ -445,7 +445,7 @@ PyObject* GetStructuredArray(PyObject* x) {
     if (idesc == NULL)
       goto cleanup;
     Py_INCREF(idesc); // Does PyArray_SetField steal descr ref?
-    if (PyArray_SetField(array, idesc, offsets[(size_t)i], (PyObject*)ival) < 0)
+    if (PyArray_SetField(array, idesc, (int)offsets[(size_t)i], (PyObject*)ival) < 0)
       goto cleanup;
     i++;
   }
