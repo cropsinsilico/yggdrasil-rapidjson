@@ -8,26 +8,44 @@
 RAPIDJSON_NAMESPACE_BEGIN
 
 #if RAPIDJSON_ENDIAN == RAPIDJSON_LITTLEENDIAN
-#define NUMBER_MEMBER_(name, member, type, ptype1, ptype2, ptype3)	\
-  struct name {								\
+#define NUMBER_MEMBER_BASE_(name, type, ptype1, ptype2, ptype3)		\
     name(const type x) : v(x), pad1(0), pad2(0), pad3(0) {}		\
     name() : v(0), pad1(0), pad2(0), pad3(0) {}				\
     name(std::istream &in) : v(0), pad1(0), pad2(0), pad3(0) { read(in); } \
-    std::ostream & write(std::ostream &out) const {			\
-      out << v;								\
-      return out;							\
-    }									\
+    bool is_equal(const name &y) const {				\
+      return internal::values_eq(v, y.v); }				\
+    type v;								\
+    ptype1 pad1;							\
+    ptype2 pad2;							\
+    ptype3 pad3
+#define NUMBER_MEMBER_(name, member, type, ptype1, ptype2, ptype3)	\
+  struct name {								\
+    NUMBER_MEMBER_BASE_(name, type, ptype1, ptype2, ptype3);		\
     std::istream & read(std::istream &in) {				\
       in >> v;								\
       return in;							\
     }									\
-    bool is_equal(const name &y) const {				\
-      return (abs((double)(v - y.v)) < 0.01); }				\
-    type v;								\
-    ptype1 pad1;							\
-    ptype2 pad2;							\
-    ptype3 pad3;							\
+    std::ostream & write(std::ostream &out) const {			\
+      out << v;								\
+      return out;							\
+    }									\
   } member
+#define NUMBER_MEMBER_CHAR_(name, member, type, ptype1, ptype2, ptype3)	\
+  struct name {								\
+    NUMBER_MEMBER_BASE_(name, type, ptype1, ptype2, ptype3);		\
+    std::istream & read(std::istream &in) {				\
+      int tmp = 0;							\
+      in >> tmp;							\
+      RAPIDJSON_ASSERT(tmp >= 0 && tmp < 256);				\
+      v = (type)tmp;							\
+      return in;							\
+    }									\
+    std::ostream & write(std::ostream &out) const {			\
+      out << (int)v;							\
+      return out;							\
+    }									\
+  } member
+  
 #else
 // TODO
 #endif
@@ -98,6 +116,29 @@ public:
   //! \brief Copy constructor.
   //! \param rhs Element to copy.
   PlyElement(const PlyElement &rhs) : property_order(rhs.property_order), colors(rhs.colors), properties(rhs.properties) {}
+  //! \brief Create an element with type information.
+  //! \param property_order0 The names of properties of this element in the
+  //!   order they should be read.
+  //! \param colors0 The names of properties defining the color of this
+  //!   element.
+  //! \param properties0 Mapping between element properties and a flag
+  //!   indicating the data type used for the property.
+  //! \param in Input stream.
+  PlyElement(const std::vector<std::string> &property_order0,
+	     const std::vector<std::string> &colors0,
+	     const std::map<std::string, uint16_t> &properties0) :
+    property_order(property_order0), colors(colors0), properties() {
+    for (std::map<std::string, uint16_t>::const_iterator it = properties0.begin();
+	 it != properties0.end(); it++) {
+#if RAPIDJSON_HAS_CXX11
+      properties.emplace(std::piecewise_construct,
+			 std::forward_as_tuple(it->first),
+			 std::forward_as_tuple(it->second));
+#else // RAPIDJSON_HAS_CXX11
+      properties[it->first] = Data(it->second);
+#endif // RAPIDJSON_HAS_CXX11
+    }
+  }
   //! \brief Create an element by reading from an input stream.
   //! \param property_order0 The names of properties of this element in the
   //!   order they should be read.
@@ -161,7 +202,6 @@ public:
     }
   }
 
-private:
   enum ElementType {
     kNullFlag       = 0x0000,
     kInt8Flag       = 0x0008,
@@ -174,11 +214,12 @@ private:
     kDoubleFlag     = 0x0400,
     kListFlag       = 0x0800
   };
+private:
   struct Number {
     int64_t i64;
     NUMBER_MEMBER_(F, f, float, int16_t, int8_t, int8_t);
-    NUMBER_MEMBER_(I8, i8, int8_t, int8_t, int16_t, int32_t);
-    NUMBER_MEMBER_(U8, u8, uint8_t, int8_t, int16_t, int32_t);
+    NUMBER_MEMBER_CHAR_(I8, i8, int8_t, int8_t, int16_t, int32_t);
+    NUMBER_MEMBER_CHAR_(U8, u8, uint8_t, int8_t, int16_t, int32_t);
     NUMBER_MEMBER_(I16, i16, int16_t, int16_t, int16_t, int16_t);
     NUMBER_MEMBER_(U16, u16, uint16_t, int16_t, int16_t, int16_t);
     NUMBER_MEMBER_(I32, i32, int32_t, int16_t, int8_t, int8_t);
@@ -228,8 +269,21 @@ private:
       default: return false;
       }
     }
+    //! \brief Determine if the number has a default value.
+    //! \param flag Flag indicating type of stored data.
+    //! \return true if there is a default, false otherwise.
+    static bool has_default(const uint16_t &flag) {
+      switch (flag & ~kListFlag) {
+      case (kUint8Flag) :
+      case (kUint16Flag) :
+      case (kUint32Flag) :
+	return false;
+      default:
+	return true;
+      }
+    }
     //! \brief Get default value.
-    //! \param flag Flag indicating what type to store x as.
+    //! \param flag Flag indicating type of stored data.
     //! \return The default value for a value of the specified type.
     template<typename T>
     static T default_value(const uint16_t &flag) {
@@ -315,7 +369,7 @@ private:
       case (kInt32Flag) : return i32.is_equal(y.i32);
       case (kUint32Flag) : return u32.is_equal(y.u32);
       case (kFloatFlag) : return f.is_equal(y.f);
-      case (kDoubleFlag) : return (abs(d - y.d) < 0.01);
+      case (kDoubleFlag) : return internal::values_eq(d, y.d);
       default: RAPIDJSON_ASSERT(false);
       }
       return false;
@@ -383,8 +437,7 @@ private:
     template<typename T>
     Data(const uint16_t flag, const T &x) :
       f(flag), n(flag), elements() {
-      RAPIDJSON_ASSERT(!(flag & kListFlag));
-      n.assign(flag, x);
+      assign(x);
     }
     //! \brief Create a data instance from a vector of values.
     //! \tparam T Type of data in the vector.
@@ -409,6 +462,33 @@ private:
 	elements.push_back(Number(element_flags, *it));
       }
 #endif // RAPIDJSON_HAS_CXX11
+    }
+    //! \brief Assign a vector of values.
+    //! \tparam Scalar type.
+    //! \param x Scalar.
+    template<typename T>
+    void assign(const std::vector<T>& x, const T* ignore = 0) {
+      RAPIDJSON_ASSERT(f & kListFlag);
+      uint16_t element_flags = (uint16_t)(f & ~kListFlag);
+#if RAPIDJSON_HAS_CXX11
+      for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++) {
+	if (ignore && internal::values_eq(*ignore, *it)) return;
+	elements.emplace_back(element_flags, *it);
+      }
+#else // RAPIDJSON_HAS_CXX11
+      for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++) {
+	if (ignore && internal::values_eq(*ignore, *it)) return;
+	elements.push_back(Number(element_flags, *it));
+      }
+#endif // RAPIDJSON_HAS_CXX11
+    }
+    //! \brief Assign a scalar value.
+    //! \tparam Scalar type.
+    //! \param x Scalar.
+    template<typename T>
+    void assign(const T& x) {
+      RAPIDJSON_ASSERT(!(f & kListFlag));
+      n.assign(f, x);
     }
     //! \brief Increment the data inplace.
     //! \param x Scalar to increment by.
@@ -468,6 +548,17 @@ private:
     bool is_vector() const {
       return (f & kListFlag);
     }
+    //! \brief Get the type flag associated with the data.
+    //! \return flags
+    uint16_t flags() const {
+      return f;
+    }
+    //! \brief Determine if the data has a default value.
+    //! \return true if there is a default, false otherwise.
+    bool has_default() const {
+      if (is_vector()) return true;
+      return n.has_default(f);
+    }
     //! \brief Determine if the value is the default.
     //! \return true if the value is default, false otherwise.
     bool is_default() const {
@@ -521,25 +612,6 @@ private:
     // };
   };
 
-  //! \brief Check if two Data instances are equivalent.
-  //! \param d1 First data instance for comparison.
-  //! \param d2 Second data instance for comparison.
-  //! \return true if the two instances are equivalent.
-  bool is_equal_data(const Data &d1, const Data &d2) const {
-    bool out = false;
-    if (d1.f != d2.f) return false;
-    if (d1.f & kListFlag) {
-      uint16_t element_flags = (uint16_t)(d1.f & ~kListFlag);
-      if (d1.elements.size() != d2.elements.size()) return false;
-      for (std::vector<Number>::const_iterator it1 = d1.elements.begin(), it2 = d2.elements.begin(); it1 != d1.elements.end(); it1++, it2++) {
-	NUMBER_DATA_COMPARE_((*it1), (*it2), element_flags, out);
-	if (!out) return false;
-      }
-    } else {
-      NUMBER_DATA_COMPARE_(d1.n, d2.n, d1.f, out);
-    }
-    return out;
-  }
   //! \brief Add a property value from a Number instance to a vector.
   //! \param x Number instance.
   //! \param flag Type flag indicating the type of data stored in x.
@@ -586,6 +658,83 @@ public:
   std::vector<std::string> colors;
   //! Mapping between property names and the property values.
   std::map<std::string, Data> properties;
+
+  //! \brief Set a vector property by name.
+  //! \tparam Value type.
+  //! \param name Name of property to set.
+  //! \param values Property values.
+  //! \param isColor If true, the property is treated as a color.
+  //! \return true if successful, false otherwise.
+  template <typename T>
+  bool set_property(const std::string name, std::vector<T>& values, bool isColor = false) {
+    std::map<std::string, Data>::const_iterator it = properties.find(name);
+    if (it == properties.end()) {
+      property_order.push_back(name);
+      if (isColor)
+	colors.push_back(name);
+      uint16_t flags = type2flag<T>() | kListFlag;
+#if RAPIDJSON_HAS_CXX11
+      properties.emplace(std::piecewise_construct,
+			 std::forward_as_tuple(name),
+			 std::forward_as_tuple(flags, values));
+#else // RAPIDJSON_HAS_CXX11
+      properties[name] = Data(flags, values);
+#endif // RAPIDJSON_HAS_CXX11
+    } else {
+      properties[name].assign(values);
+    }
+    return true;
+  }
+  //! \brief Set a scalar property by name.
+  //! \tparam Value type.
+  //! \param name Name of property to set.
+  //! \param value Property value.
+  //! \param isColor If true, the property is treated as a color.
+  //! \return true if successful, false otherwise.
+  template <typename T>
+  bool set_property(const std::string name, T& value, bool isColor = false) {
+    std::map<std::string, Data>::const_iterator it = properties.find(name);
+    if (it == properties.end()) {
+      property_order.push_back(name);
+      if (isColor)
+	colors.push_back(name);
+      uint16_t flags = type2flag<T>();
+#if RAPIDJSON_HAS_CXX11
+      properties.emplace(std::piecewise_construct,
+			 std::forward_as_tuple(name),
+			 std::forward_as_tuple(flags, value));
+#else // RAPIDJSON_HAS_CXX11
+      properties[name] = Data(flags, value);
+#endif // RAPIDJSON_HAS_CXX11
+    } else {
+      properties[name].assign(value);
+    }
+    return true;
+  }
+  //! \brief Get mapping of type flags for each property.
+  //! \param[out] property_flags Existing map to be populated with property flags.
+  //! \param[out] property_size_flags Existing map to be populated with
+  //!   property size flags.
+  void get_property_flags(std::map<std::string, uint16_t>& property_flags,
+			  std::map<std::string, uint16_t>& property_size_flags) const {
+    for (std::map<std::string, Data>::const_iterator it = properties.begin();
+	 it != properties.end(); it++) {
+      uint16_t size_flags = 0;
+      if (it->second.f & kListFlag)
+	size_flags = kUint8Flag;
+#if RAPIDJSON_HAS_CXX11
+      property_flags.emplace(std::piecewise_construct,
+			     std::forward_as_tuple(it->first),
+			     std::forward_as_tuple(it->second.f));
+      property_size_flags.emplace(std::piecewise_construct,
+				  std::forward_as_tuple(it->first),
+				  std::forward_as_tuple(size_flags));
+#else // RAPIDJSON_HAS_CXX11
+      property_flags[it->first] = it->second.f;
+      property_size_flags[it->first] = size_flags;
+#endif // RAPIDJSON_HAS_CXX11
+    }
+  }
   
   //! \brief Determine if the data contains multiple elements.
   //! \param name Property to check.
@@ -596,6 +745,15 @@ public:
     if (it != properties.end())
       out = it->second.is_vector();
     return out;
+  }
+  //! \brief Get the type flag associated with the data ina property.
+  //! \param name Property to check.
+  //! \return flags
+  uint16_t flags(const std::string name) const {
+    std::map<std::string, Data>::const_iterator it = properties.find(name);
+    if (it != properties.end())
+      return it->second.flags();
+    return 0;
   }
   //! \brief Determine if a property contains floating point values.
   //! \param name Property to check.
@@ -703,7 +861,7 @@ public:
       RAPIDJSON_ASSERT(rit != rhs.properties.end());
       if (rit == rhs.properties.end())
 	return false;
-      if (!(is_equal_data(lit->second, rit->second)))
+      if (!(lit->second.is_equal(rit->second)))
 	return false;
     }
     return true;
@@ -755,7 +913,8 @@ public:
 #endif // RAPIDJSON_HAS_CXX11
       if (properties[it->first].is_vector())
 	properties[it->first].prune_defaults();
-      else if (properties[it->first].is_default())
+      else if (properties[it->first].has_default() &&
+	       properties[it->first].is_default())
 	properties.erase(it->first);
     }
     return in;
@@ -1150,28 +1309,48 @@ public:
 #endif // RAPIDJSON_HAS_CXX11
     }
   }
+  //! \brief Add a single empty element to the geometry.
+  //! \returns New element.
+  PlyElement* add_element() {
+    if (property_order.size() == 0 && elements.size() == 1) {
+      const PlyElement& first = elements[0];
+      first.get_property_flags(property_flags, property_size_flags);
+      property_order = first.property_order;
+      colors = first.colors;
+    }
+#if RAPIDJSON_HAS_CXX11
+    elements.emplace_back(property_order, colors, property_flags);
+#else // RAPIDJSON_HAS_CXX11
+    elements.push_back(PlyElement(property_order, colors, property_flags));
+#endif // RAPIDJSON_HAS_CXX11
+    return &(elements[elements.size() - 1]);
+  }
   //! \brief Add an element to the set.
   //! \tparam Type of property values.
   //! \param arr Property values for the new element.
   //! \param ignore Value to ignore. After this value is encountered for an
   //!   element will be added.
+  //! \returns New element.
   template<typename T>
-  void add_element(const std::vector<T> &arr, const T* ignore = 0)
+  PlyElement* add_element(const std::vector<T> &arr, const T* ignore = 0)
   {
 #if RAPIDJSON_HAS_CXX11
     elements.emplace_back(property_order, colors, property_flags, arr, ignore);
 #else // RAPIDJSON_HAS_CXX11
     elements.push_back(PlyElement(property_order, colors, property_flags, arr, ignore));
 #endif // RAPIDJSON_HAS_CXX11
+    return &(elements[elements.size() - 1]);
   }
   //! \brief Add an element to the set by copying an existing element.
   //! \param other Element to copy.
-  void add_element(const PlyElement& other) {
+  //! \returns New element.
+  PlyElement* add_element(const PlyElement& other) {
 #if RAPIDJSON_HAS_CXX11
     elements.emplace_back(other);
 #else // RAPIDJSON_HAS_CXX11
     elements.push_back(PlyElement(other));
 #endif // RAPIDJSON_HAS_CXX11
+    return &(elements[elements.size() - 1]);
   }
   //! \brief Determine if an element set requires doubles to be represented
   //!   as an array.
@@ -1281,8 +1460,9 @@ public:
   //! \param arr Colors.
   //! \param property_colors Names of the colors.
   //! \return true if successful, false otherwise.
+  template <typename T>
   bool add_element_colors(const size_t idx,
-			  const std::vector<uint8_t>& arr) {
+			  const std::vector<T>& arr) {
     std::vector<std::string> property_colors = colors;
     if (property_colors.empty()) {
       property_colors.push_back("red");
@@ -1296,16 +1476,19 @@ public:
   //! \param arr Colors.
   //! \param property_colors Names of the colors.
   //! \return true if successful, false otherwise.
+  template <typename T>
   bool add_element_colors(const size_t idx,
-			  const std::vector<uint8_t>& arr,
+			  const std::vector<T>& arr,
 			  const std::vector<std::string>& property_colors) {
     if (idx >= elements.size()) return false;
     if (colors.size() == 0) {
       colors = property_colors;
-      set_flags<uint8_t>(property_colors, false);
+      set_flags<T>(property_colors, false);
     } else if (colors != property_colors) {
       return false;
     }
+    if (colors.size() != arr.size())
+      return false;
     return elements[idx].add_colors(arr.data(), property_flags, colors);
   }
   //! \brief Check if this element set is equivalent to another.
@@ -1364,7 +1547,10 @@ public:
   }
   //! \brief Read the next property from an input stream.
   //! \param in Input stream.
-  void read_property(std::istream &in) {
+  //! \param[in,out] inColors If true, the property is a colors. If false,
+  //!   the read property will be checked against known colors parameters
+  //!   and inColors will be set to the result.
+  void read_property(std::istream &in, bool &inColors) {
     std::string property_name;
     std::string property_type;
     in >> property_type;
@@ -1378,6 +1564,11 @@ public:
       flags = flags | PlyElement::typename2flag(word);
     }
     in >> property_name;
+    if (!inColors) {
+      inColors = (property_name == "red" || property_name == "r");
+    }
+    if (inColors)
+      colors.push_back(property_name);
     property_order.push_back(property_name);
     property_flags[property_name] = flags;
     property_size_flags[property_name] = size_flags;
@@ -1527,12 +1718,13 @@ public:
   //!   element.
   //! \param ignore Value to ignore. After this value is encountered for an
   //!   element will be added.
+  //! \returns New element.
   template <typename T>
-  void add_element(const std::string& name0,
-		   const std::vector<T> &arr,
-		   const std::vector<std::string> &property_names,
-		   const std::vector<std::string> &property_colors,
-		   const T* ignore = 0) {
+  PlyElement* add_element(const std::string& name0,
+			  const std::vector<T> &arr,
+			  const std::vector<std::string> &property_names,
+			  const std::vector<std::string> &property_colors,
+			  const T* ignore = 0) {
     std::string name = ply_alias2base(name0);
     bool is_array = bool(arr.size() != property_names.size());
     RAPIDJSON_ASSERT((!is_array) || (property_names.size() == 1));
@@ -1542,22 +1734,34 @@ public:
       elements[name].colors = property_colors;
     }
     elements[name].count++;
-    elements[name].add_element(arr, ignore);
+    return elements[name].add_element(arr, ignore);
   }
   //! \brief Add a single element to the geometry.
   //! \param name Name of the type of element being added.
   //! \param arr Vector of element properties.
   //! \param ignore Value to ignore. After this value is encountered for an
   //!   element will be added.
+  //! \returns New element.
   template <typename T>
-  void add_element(const std::string& name,
-		   const std::vector<T> &arr,
-		   const T* ignore = 0) {
+  PlyElement* add_element(const std::string& name,
+			  const std::vector<T> &arr,
+			  const T* ignore = 0) {
     std::vector<std::string> property_colors;
     std::vector<std::string> property_names = get_property_names(name,
 								 (SizeType)arr.size(),
 								 property_colors);
-    add_element(name, arr, property_names, property_colors, ignore);
+    return add_element(name, arr, property_names, property_colors, ignore);
+  }
+  //! \brief Add a single empty element to the geometry.
+  //! \param name Name of the type of element being added.
+  //! \returns New element.
+  PlyElement* add_element(const std::string& name) {
+    std::string name2 = ply_alias2base(name);
+    if (elements.find(name2) == elements.end()) {
+      add_element_set(name2);
+    }
+    elements[name2].count++;
+    return elements[name2].add_element();
   }
   //! \brief Add a new element set to the geometry.
   //! \tparam T Type of property values.
@@ -1957,6 +2161,7 @@ public:
       RAPIDJSON_ASSERT(!sizeof("Input does not appear to be in ply format"));
     // Read header
     std::string current_element;
+    bool inColors = false;
     while (in >> word) {
       if (word == "end_header")
 	break;
@@ -1984,8 +2189,9 @@ public:
 	in >> current_element;
 	in >> count;
 	add_element_set(current_element, count);
+	inColors = false;
       } else if (word == "property") {
-	elements[current_element].read_property(in);
+	elements[current_element].read_property(in, inColors);
       } else {
 	RAPIDJSON_ASSERT(!sizeof(std::string("Unrecognized input beginning w/ ") + word));
       }
