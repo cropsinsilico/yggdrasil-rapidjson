@@ -3748,7 +3748,8 @@ public:
 	  desc->elsize = GetPrecision();
 	if (HasTitle()) {
 	  const ValueType& title = GetTitle();
-	  PyObject* titlePy = PyUnicode_FromString(title.GetString());
+	  PyObject* titlePy = PyUnicode_FromStringAndSize(title.GetString(),
+							  title.GetStringLength());
 	  PyArray_Descr* sub_desc = PyArray_DescrNewFromType(typenum);
 	  sub_desc->elsize = desc->elsize;
 	  desc->names = PyTuple_Pack(1, titlePy);
@@ -3794,7 +3795,7 @@ public:
 	return out;
       }
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
-      return PyUnicode_FromString(GetString());
+      return PyUnicode_FromStringAndSize(GetString(), GetStringLength());
     }
     case kNumberType: {
       if (IsDouble()) {

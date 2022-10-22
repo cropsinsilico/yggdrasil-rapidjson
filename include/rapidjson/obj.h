@@ -27,6 +27,8 @@ std::string obj_alias2base(const std::string& alias) {
   else if (alias == "face"    ) return std::string("f");
   else if (alias == "edges"   ) return std::string("l");
   else if (alias == "edge"    ) return std::string("l");
+  else if (alias == "comment" ) return std::string("#");
+  else if (alias == "comments") return std::string("#");
   return std::string(alias);
 }
 
@@ -38,6 +40,7 @@ std::string obj_code2long(const std::string& code) {
   if      (code == "v" ) return std::string("vertex");
   else if (code == "f" ) return std::string("face");
   else if (code == "l" ) return std::string("edge");
+  else if (code == "#" ) return std::string("comment");
   return std::string(code);
 }
 
@@ -144,6 +147,7 @@ bool _type_compatible_string(const uint16_t x, bool=false) {
 //! Test if two vectors are equal element-by-element using is_equal
 template <typename T>
 inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
+  
   if (a.size() != b.size()) return false;
   for (typename std::vector<T>::const_iterator ait = a.begin(), bit = b.begin(); ait != a.end(); ait++, bit++)
     if (!internal::values_eq(*ait, *bit)) return false;
@@ -2388,10 +2392,16 @@ public:
   //! \return Unique element types.
   std::vector<std::string> element_types() const {
     std::set<std::string> unique_names;
+    std::vector<std::string> out;
+    size_t prev_size = 0;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin();
-	 it != elements.end(); it++)
+	 it != elements.end(); it++) {
       unique_names.insert((*it)->code);
-    std::vector<std::string> out(unique_names.begin(), unique_names.end());
+      if (unique_names.size() > prev_size) {
+	out.push_back((*it)->code);
+	prev_size++;
+      }
+    }
     return out;
   }
   //! \brief Get a mapping of element types in the group and counts of that
@@ -3989,6 +3999,22 @@ ObjElement* ObjGroupBase::add_element(std::string name, const std::string& value
     std::vector<std::string> values;
     values.push_back(value);
     x = new ObjMaterialLib(values, this);
+  }
+  else if (name == "#") {
+    std::vector<std::string> values;
+    size_t prev = 0, i = 0;
+    while (i < value.size()) {
+      if (value[i] == ' ') {
+	if (i > 0)
+	  values.push_back(value.substr(prev, i));
+	while (i < value.size() && value[i] == ' ')
+	  i++;
+	prev = i;
+      } else {
+	i++;
+      }
+    }
+    x = new ObjComment(values, this);
   }
   else REPORT_UNSUPPORTED_ELEMENT(scalar, name);
   return ObjGroupBase::add_element(x);
