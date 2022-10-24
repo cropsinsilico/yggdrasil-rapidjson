@@ -120,6 +120,10 @@ public:
   }
   //! \brief Copy constructor.
   //! \param rhs Element to copy.
+  PlyElement(const PlyElement &rhs) : parent(rhs.parent), property_order(rhs.property_order), colors(rhs.colors), properties(rhs.properties) {}
+  //! \brief Copy constructor.
+  //! \param parent0 Parent to set for copy.
+  //! \param rhs Element to copy.
   PlyElement(PlyElementSet* parent0, const PlyElement &rhs) : parent(parent0), property_order(rhs.property_order), colors(rhs.colors), properties(rhs.properties) {}
   //! \brief Create an element by reading from an input stream.
   //! \param parent0 Element set containing this element.
@@ -169,6 +173,8 @@ public:
     kListFlag       = 0x0800
   };
 private:
+  //! Disable copy assignment for elements.
+  PlyElement& operator=(const PlyElement& other);
   void init_from_parent_();
   struct Number {
     int64_t i64;
