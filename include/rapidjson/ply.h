@@ -1982,8 +1982,18 @@ public:
   void append(const Ply& other) {
     size_t nvert = 0;
     for (std::vector<std::string>::const_iterator it = other.comments.begin();
-	 it != other.comments.end(); it++)
-      comments.push_back(*it);
+	 it != other.comments.end(); it++) {
+      bool match = false;
+      for (std::vector<std::string>::const_iterator jt = comments.begin();
+	   jt != comments.end(); jt++) {
+	if (*it == *jt) {
+	  match = true;
+	  break;
+	}
+      }
+      if (!match)
+	comments.push_back(*it);
+    }
     const PlyElementSet* vertices = get_element_set("vertex");
     if (vertices) nvert = vertices->elements.size();
     for (std::map<std::string,PlyElementSet>::const_iterator it = other.elements.begin();
