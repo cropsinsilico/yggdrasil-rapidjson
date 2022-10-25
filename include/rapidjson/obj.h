@@ -143,6 +143,16 @@ static inline
 bool _type_compatible_string(const uint16_t x, bool=false) {
   return _types_compatible(x, ObjTypeString);
 }
+template <typename T>
+void _type_inc(T& x, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
+  x += static_cast<T>(1);
+}
+template <typename T>
+void _type_dec(T& x, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
+  x -= static_cast<T>(1);
+}
+void _type_inc(std::string&) {}
+void _type_dec(std::string&) {}
 
 //! Test if two vectors are equal element-by-element using is_equal
 template <typename T>
@@ -718,13 +728,26 @@ public:
   }
   //! \brief In-place addition.
   //! \param i Integer to increment indexes by.
-  ObjRefVertex& operator +=(int i) {
+  template <typename T>
+  ObjRefVertex& operator +=(T i) {
     int8_t Nparam0 = get_Nparam();
-    v += i;
+    v += static_cast<ObjRef>(i);
     if (Nparam0 > 1 && vt != 0)
-      vt += i;
+      vt += static_cast<ObjRef>(i);
     if (Nparam0 > 2 && vn != 0)
-      vn += i; 
+      vn += static_cast<ObjRef>(i); 
+    return *this;
+  }
+  //! \brief In-place subtraction.
+  //! \param i Integer to decrement indexes by.
+  template <typename T>
+  ObjRefVertex& operator -=(T i) {
+    int8_t Nparam0 = get_Nparam();
+    v -= static_cast<ObjRef>(i);
+    if (Nparam0 > 1 && vt != 0)
+      vt -= static_cast<ObjRef>(i);
+    if (Nparam0 > 2 && vn != 0)
+      vn -= static_cast<ObjRef>(i); 
     return *this;
   }
   friend bool operator == (const ObjRefVertex& lhs, const ObjRefVertex& rhs);
@@ -816,8 +839,16 @@ public:
   }
   //! \brief In-place addition.
   //! \param i Integer to increment indexes by.
-  ObjRefCurve& operator +=(int i) {
-    curv2d += i;
+  template <typename T>
+  ObjRefCurve& operator +=(T i) {
+    curv2d += static_cast<ObjRef>(i);
+    return *this;
+  }
+  //! \brief In-place subtraction.
+  //! \param i Integer to decrement indexes by.
+  template <typename T>
+  ObjRefCurve& operator -=(T i) {
+    curv2d -= static_cast<ObjRef>(i);
     return *this;
   }
   friend bool operator == (const ObjRefCurve& lhs, const ObjRefCurve& rhs);
@@ -925,9 +956,18 @@ public:
   }
   //! \brief In-place addition.
   //! \param i Integer to increment indexes by.
-  ObjRefSurface& operator +=(int i) {
-    surf += i;
-    curv2d += i;
+  template <typename T>
+  ObjRefSurface& operator +=(T i) {
+    surf += static_cast<ObjRef>(i);
+    curv2d += static_cast<ObjRef>(i);
+    return *this;
+  }
+  //! \brief In-place subtraction.
+  //! \param i Integer to decrement indexes by.
+  template <typename T>
+  ObjRefSurface& operator -=(T i) {
+    surf -= static_cast<ObjRef>(i);
+    curv2d -= static_cast<ObjRef>(i);
     return *this;
   }
   friend bool operator == (const ObjRefSurface& lhs, const ObjRefSurface& rhs);
@@ -965,7 +1005,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
       for (typename std::vector<T>::const_iterator v = val.begin();	\
 	   v != val.end(); v++) {					\
 	type vv = static_cast<type>(*v);				\
-	vv += 1;							\
+	_type_inc(vv);							\
 	mem_cast->push_back(vv);					\
       }									\
     } else {								\
@@ -980,7 +1020,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     if (!_get_scalar_mem(mem_cast, true)) return false;			\
     if (inc && is_index) {						\
       type vv = static_cast<type>(val);					\
-      vv += 1;								\
+      _type_inc(vv);							\
       mem_cast[0] = vv;							\
     } else {								\
       mem_cast[0] = static_cast<type>(val);				\
@@ -992,7 +1032,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
       for (std::vector<type>::const_iterator v = mem_cast->begin();	\
 	   v != mem_cast->end(); v++) {					\
 	T vv = static_cast<T>(*v);					\
-	vv += -1;							\
+	_type_dec(vv);							\
 	out.push_back(vv);						\
       }									\
     } else {								\
@@ -1007,7 +1047,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     if (!_get_scalar_mem(mem_cast)) return false;			\
     out = static_cast<T>(*mem_cast);					\
     if (dec && is_index) {						\
-      out += -1;							\
+      _type_dec(out);							\
     }									\
     return true
 #define HANDLE_VECTOR_APPEND_(T, type)					\
@@ -1015,7 +1055,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     if (index >= 0 && static_cast<size_t>(index) != mem_cast->size()) return false; \
     if (inc && is_index) {						\
       type vv = static_cast<type>(val);					\
-      vv += 1;								\
+      _type_inc(vv);							\
       mem_cast->push_back(vv);						\
     } else {								\
       mem_cast->push_back(static_cast<type>(val));			\
@@ -1026,7 +1066,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     if (index >= mem_cast->size()) return false;			\
     out = static_cast<T>(*(mem_cast->begin() + (int)(index)));		\
     if (dec && is_index) {						\
-      out += -1;							\
+      _type_dec(out);							\
     }									\
     return true
 
