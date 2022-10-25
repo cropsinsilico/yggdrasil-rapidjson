@@ -4178,7 +4178,7 @@ ObjElement* ObjGroupBase::add_element(const std::string name,
   ObjElement* x = nullptr;
   if (name == "curv") x = new ObjCurve(u0, u1, values, this);
   else REPORT_UNSUPPORTED_ELEMENT(ObjCurve, name);
-  return ObjGroupBase::add_element(x);
+  return ObjGroupBase::add_element(x, inc);
 }
 template <typename T>
 ObjElement* ObjGroupBase::add_element(const std::string name,
