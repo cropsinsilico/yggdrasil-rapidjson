@@ -143,16 +143,18 @@ static inline
 bool _type_compatible_string(const uint16_t x, bool=false) {
   return _types_compatible(x, ObjTypeString);
 }
-template <typename T>
-void _type_inc(T& x, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
-  x += static_cast<T>(1);
-}
-template <typename T>
-void _type_dec(T& x, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_STRING(T)))) {
-  x -= static_cast<T>(1);
-}
+static inline
 void _type_inc(std::string&) {}
+static inline
 void _type_dec(std::string&) {}
+template <typename T>
+inline void _type_inc(T& x, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) {
+  x++;
+}
+template <typename T>
+inline void _type_dec(T& x, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) {
+  x--;
+}
 
 //! Test if two vectors are equal element-by-element using is_equal
 template <typename T>
@@ -597,6 +599,26 @@ public:
   }
 };
 
+#define OPERATOR_(type, op, ip, ic)			\
+  template <typename T>					\
+  friend type operator op(type lhs, const T& rhs) {	\
+    lhs ip rhs;						\
+    return lhs;						\
+  }							\
+  type& operator ic() {					\
+    (*this) ip 1;					\
+    return *this;					\
+  }							\
+  type operator ic(int) {				\
+    type old = *this;					\
+    operator ic();					\
+    return old;						\
+  }
+#define ARITHMETIC_OPERATORS_(type)			\
+  OPERATOR_(type, +, +=, ++)				\
+  OPERATOR_(type, -, -=, --)
+  
+
 //! ObjWavefront vertex reference
 class ObjRefVertex : public ObjPropertyElement {
 public:
@@ -750,6 +772,7 @@ public:
       vn -= static_cast<ObjRef>(i); 
     return *this;
   }
+  ARITHMETIC_OPERATORS_(ObjRefVertex)
   friend bool operator == (const ObjRefVertex& lhs, const ObjRefVertex& rhs);
   friend std::ostream & operator << (std::ostream &out, const ObjRefVertex &p);
   friend std::istream & operator >> (std::istream &in, ObjRefVertex &p);
@@ -851,6 +874,7 @@ public:
     curv2d -= static_cast<ObjRef>(i);
     return *this;
   }
+  ARITHMETIC_OPERATORS_(ObjRefCurve)
   friend bool operator == (const ObjRefCurve& lhs, const ObjRefCurve& rhs);
   friend std::ostream & operator << (std::ostream &out, const ObjRefCurve &p);
   friend std::istream & operator >> (std::istream &in, ObjRefCurve &p);
@@ -970,10 +994,14 @@ public:
     curv2d -= static_cast<ObjRef>(i);
     return *this;
   }
+  ARITHMETIC_OPERATORS_(ObjRefSurface)
   friend bool operator == (const ObjRefSurface& lhs, const ObjRefSurface& rhs);
   friend std::ostream & operator << (std::ostream &out, const ObjRefSurface &p);
   friend std::istream & operator >> (std::istream &in, ObjRefSurface &p);
 };
+
+#undef ARITHMETIC_OPERATORS_
+#undef OPERATOR_
 
 //! Check if two ObjRefSurface instances are equivalent.
 //! \param lhs First element for comparison.
