@@ -188,10 +188,12 @@ inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
 struct ObjPropertyType {
 public:
   ObjPropertyType(void* mem0, std::string name0, uint16_t flag0, size_t idx0=0) :
-    mem(mem0), first(name0), second(flag0), idx(idx0), missing(false) {}
+    mem(mem0), first(name0), second(flag0), idx(idx0), missing(false), is_index(false) {
+    is_index = (first.size() > 6 && (first.substr(first.size() - 6) == "_index"));
+  }
   ObjPropertyType(const ObjPropertyType& other) :
     mem(other.mem), first(other.first), second(other.second), idx(other.idx),
-    missing(other.missing) {}
+    missing(other.missing), is_index(other.is_index) {}
   //! \brief Copy assignment.
   ObjPropertyType& operator=(const ObjPropertyType& other) {
     mem = other.mem;
@@ -199,6 +201,7 @@ public:
     second = other.second;
     idx = other.idx;
     missing = other.missing;
+    is_index = other.is_index;
     return *this;
   }
   void* mem;
@@ -206,6 +209,7 @@ public:
   uint16_t second;
   size_t idx;
   bool missing;
+  bool is_index;
 
   //! \brief Determine if the property contains a vector of values.
   //! \return true if it contains a vector, false otherwise.
@@ -233,88 +237,103 @@ public:
     }
     return true;
   }
+  //! \brief Increment the property if an index.
+  //! \return true if successful, false otherwise.
+  bool inc();
 
 #define PROPERTY_TYPE_(T, flag)						\
   /*! \brief Set the property values by copying from a vector. */	\
   /*! \param val Vector of values to copy from. */			\
+  /*! \param inc If true and the property is an index, it will be incremented. */ \
   /*! \return true if successful, false otherwise. */			\
-  bool set(const std::vector<T>& val);					\
+  bool set(const std::vector<T>& val, bool inc=false);			\
   /*! \brief Set the property value. */					\
   /*! \param val Value to copy. */					\
+  /*! \param inc If true and the property is an index, it will be incremented. */ \
   /*! \return true if successful, false otherwise. */			\
-  bool set(const T& val);						\
+  bool set(const T& val, bool inc=false);				\
   /*! \brief Copy values into a vector. */				\
   /*! \param[out] out Vector to copy values to. */			\
+  /*! \param dec If true and the property is an index, it will be decremented. */ \
   /*! \return true if successful, false otherwise. */			\
-  bool get(std::vector<T>& out) const;					\
+  bool get(std::vector<T>& out, bool dec=false) const;			\
   /*! \brief Copy value into a scalar. */				\
   /*! \param[out] out Scalar to copy value to. */			\
+  /*! \param dec If true and the property is an index, it will be decremented. */ \
   /*! \return true if successful, false otherwise. */			\
-  bool get(T& out) const;						\
+  bool get(T& out, bool dec=false) const;				\
   /*! \brief Append a value to a vector property. */			\
   /*! \param val Value to append. */					\
   /*! \param index Index to append at. Ignored if <0. */		\
+  /*! \param inc If true and the property is an index, it will be incremented. */ \
   /*! \return true if successful, false otherwise. */			\
-  bool append(const T& val, int index = -1);				\
+  bool append(const T& val, int index = -1, bool inc=false);		\
   /*! \brief Index into a vector property. */				\
   /*! \param index Index. */						\
   /*! \param[out] out Scalar to copy value into. */			\
+  /*! \param dec If true and the property is an index, it will be decremented. */ \
   /*! \return true if successful, false otherwise. */			\
-  bool index(const size_t index, T& out) const
+  bool index(const size_t index, T& out, bool dec=false) const
   //! \brief Set the property values by copying from a vector.
   //! \tparam T Type in source vector.
   //! \param val Vector of values to copy from.
+  //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)>>), (bool))
-    set(const std::vector<T>& val);
+    set(const std::vector<T>& val, bool inc=false);
   //! \brief Set the property value.
   //! \tparam T Type of source valuue.
   //! \param val Value to copy.
+  //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)>>), (bool))
-    set(const T& val);
+    set(const T& val, bool inc=false);
   //! \brief Copy values into a vector of a desired type if possible.
   //! \tparam T Desired type.
   //! \param[out] out Vector to copy values to.
+  //! \param dec If true and the property is an index, it will be decremented.
   //! \return true if successful, false otherwise.
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)>>), (bool))
-    get(std::vector<T>& out) const;
+    get(std::vector<T>& out, bool dec=false) const;
   //! \brief Copy value into a scalar of a desired type.
   //! \tparam T Desired type.
   //! \param[out] out Scalar to copy value to.
+  //! \param dec If true and the property is an index, it will be decremented.
   //! \return true if successful, false otherwise.
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)>>), (bool))
-    get(T& out) const;
+    get(T& out, bool dec=false) const;
   //! \brief Append a value to a vector property.
   //! \param val Value to append.
   //! \param index Index to append at. Ignored if <0.
+  //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)>>), (bool))
-    append(const T& val, int index);
+    append(const T& val, int index, bool inc=false);
   //! \brief Index into a vector property.
   //! \param index Index
   //! \param[out] out Scalar to copy value into.
+  //! \param dec If true and the property is an index, it will be decremented.
   //! \return true if successful, false otherwise.
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)>>), (bool))
-    index(const size_t index, T& out) const;
+    index(const size_t index, T& out, bool dec=false) const;
   PROPERTY_TYPE_(std::string, ObjTypeString);
   PROPERTY_TYPE_(ObjRefCurve, ObjTypeCurve);
   PROPERTY_TYPE_(ObjRefSurface, ObjTypeSurface);
@@ -375,6 +394,19 @@ public:
   //! \return true if the structure is valid, false otherwise.
   virtual bool is_valid() const
   { return true; }
+  //! \brief Determine if a property refers to an index.
+  //! \param name Property name.
+  //! \return true if index, false otherwise.
+  virtual bool is_index(const std::string name) const
+  { return (name.size() > 6 && (name.substr(name.size() - 6) == "_index")); }
+  //! \brief Determine if a property refers to an index.
+  //! \param i Index of the property to check.
+  //! \return true if index, false otherwise.
+  virtual bool is_index(size_t i) const {
+    if (i >= properties.size()) return false;
+    ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
+    return is_index(it->first);
+  }
   //! \brief Determine if a property is set.
   //! \param name Property name.
   //! \param dontCheckOrder If true, it is assumed that the property is in
@@ -447,85 +479,98 @@ public:
   //! \tparam T Type of new value.
   //! \tparam i Index of the property to set.
   //! \param new_value Value to assign to the property.
+  //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool set_property(size_t i, const T new_value) {
+  bool set_property(size_t i, const T new_value, bool inc=false) {
     if (i >= properties.size()) {
       if (properties.size() > 0) {
 	ObjPropertiesMap::iterator last = properties.end() - 1;
 	if (last->second & ObjTypeList) {
-	  return last->append(new_value, static_cast<int>(i - properties.size() + 1));
+	  return last->append(new_value, static_cast<int>(i - properties.size() + 1), inc);
 	}
       }
       return false;
     }
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
     if (((i + 1) == properties.size()) && (it->second & ObjTypeList)) {
-      return it->append(new_value, 0);
+      return it->append(new_value, 0, inc);
     }
-    return it->set(new_value);
+    return it->set(new_value, inc);
   }
   //! \brief Set an element property.
   //! \tparam T Type of new value.
   //! \tparam i Index of the property to set.
   //! \param new_value Values to assign to the property.
+  //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool set_property(size_t i, const std::vector<T> new_value) {
+  bool set_property(size_t i, const std::vector<T> new_value, bool inc=false) {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::iterator it = properties.begin() + (int)i;
-    return it->set(new_value);
+    return it->set(new_value, inc);
   }
   //! \brief Set an element property.
   //! \tparam T Type of new value.
   //! \param name Name of the property to set.
   //! \param new_value Value to assign to the property.
+  //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool set_property(const std::string name, const T new_value) {
+  bool set_property(const std::string name, const T new_value, bool inc=false) {
     size_t i = 0;
     if (!this->has_property(name, false, false, &i)) return false;
-    return this->set_property(i, new_value);
+    return this->set_property(i, new_value, inc);
   }
   //! \brief Get an element property.
   //! \tparam Type of output.
   //! \param i index of the property to get.
   //! \param out Existing memory to copy property to.
+  //! \param dec If true and the property is an index, it will be decremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool get_property(size_t i, T& out) const {
+  bool get_property(size_t i, T& out, bool dec=false) const {
     if (i >= properties.size()) {
       if (properties.size() > 0) {
 	ObjPropertiesMap::const_iterator last = properties.end() - 1;
 	if (last->second & ObjTypeList)
-	  return last->index(i, out);
+	  return last->index(i, out, dec);
       }
       return false;
     }
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
-    return it->get(out);
+    return it->get(out, dec);
   }
   //! \brief Get an element property.
   //! \tparam Type of output.
   //! \param i index of the property to get.
   //! \param out Existing vector to add property values to.
+  //! \param dec If true and the property is an index, it will be decremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool get_property(size_t i, std::vector<T>& out) const {
+  bool get_property(size_t i, std::vector<T>& out, bool dec=false) const {
     if (i >= properties.size()) return false;
     ObjPropertiesMap::const_iterator it = properties.begin() + (int)i;
-    return it->get(out);
+    return it->get(out, dec);
   }
   //! \brief Get an element property.
   //! \tparam Type of output.
   //! \param name Name of the property to get.
   //! \param out Existing memory to copy property to.
+  //! \param dec If true and the property is an index, it will be decremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool get_property(const std::string name, T& out) const {
+  bool get_property(const std::string name, T& out, bool dec=false) const {
     size_t i = 0;
     if (!this->has_property(name, false, false, &i)) return false;
-    return this->get_property(i, out);
+    return this->get_property(i, out, dec);
+  }
+  bool _inc_properties() {
+    for (ObjPropertiesMap::iterator it = properties.begin();
+	 it != properties.end(); it++) {
+      if (!it->inc()) return false;
+    }
+    return true;
   }
 };
 
@@ -579,10 +624,7 @@ public:
       ObjPropertyType(&vn, "normal_index", (ObjTypeRef | ObjTypeOpt))
     };
   }
-  //! \brief Write the vertex to an output stream.
-  //! \param out Output stream.
-  //! \return Output stream.
-  std::ostream & write(std::ostream &out) const {
+  int8_t get_Nparam() const {
     int8_t Nparam0 = Nparam;
     if (Nparam0 < 0) {
       if (vn != 0)
@@ -592,6 +634,13 @@ public:
       else
 	Nparam0 = 1;
     }
+    return Nparam0;
+  }
+  //! \brief Write the vertex to an output stream.
+  //! \param out Output stream.
+  //! \return Output stream.
+  std::ostream & write(std::ostream &out) const {
+    int8_t Nparam0 = get_Nparam();
     out << v;
     if (Nparam0 > 1) {
       out << "/";
@@ -666,6 +715,17 @@ public:
     if (lhs.vt != rhs.vt) return false;
     if (lhs.vn != rhs.vn) return false;
     return true;
+  }
+  //! \brief In-place addition.
+  //! \param i Integer to increment indexes by.
+  ObjRefVertex& operator +=(int i) {
+    int8_t Nparam0 = get_Nparam();
+    v += i;
+    if (Nparam0 > 1 && vt != 0)
+      vt += i;
+    if (Nparam0 > 2 && vn != 0)
+      vn += i; 
+    return *this;
   }
   friend bool operator == (const ObjRefVertex& lhs, const ObjRefVertex& rhs);
   friend std::ostream & operator << (std::ostream &out, const ObjRefVertex &p);
@@ -753,6 +813,12 @@ public:
     if (!internal::values_eq(lhs.u1, rhs.u1)) return false;
     if (lhs.curv2d != rhs.curv2d) return false;
     return true;
+  }
+  //! \brief In-place addition.
+  //! \param i Integer to increment indexes by.
+  ObjRefCurve& operator +=(int i) {
+    curv2d += i;
+    return *this;
   }
   friend bool operator == (const ObjRefCurve& lhs, const ObjRefCurve& rhs);
   friend std::ostream & operator << (std::ostream &out, const ObjRefCurve &p);
@@ -857,6 +923,13 @@ public:
     if (lhs.curv2d != rhs.curv2d) return false;
     return true;
   }
+  //! \brief In-place addition.
+  //! \param i Integer to increment indexes by.
+  ObjRefSurface& operator +=(int i) {
+    surf += i;
+    curv2d += i;
+    return *this;
+  }
   friend bool operator == (const ObjRefSurface& lhs, const ObjRefSurface& rhs);
   friend std::ostream & operator << (std::ostream &out, const ObjRefSurface &p);
   friend std::istream & operator >> (std::istream &in, ObjRefSurface &p);
@@ -888,42 +961,78 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
 
 #define HANDLE_VECTOR_SET_(T, type)					\
     std::vector<type>* mem_cast = (std::vector<type>*)mem;		\
-    for (typename std::vector<T>::const_iterator v = val.begin();	\
-	 v != val.end(); v++) {						\
-      mem_cast->push_back(static_cast<type>(*v));			\
+    if (inc && is_index) {						\
+      for (typename std::vector<T>::const_iterator v = val.begin();	\
+	   v != val.end(); v++) {					\
+	type vv = static_cast<type>(*v);				\
+	vv += 1;							\
+	mem_cast->push_back(vv);					\
+      }									\
+    } else {								\
+      for (typename std::vector<T>::const_iterator v = val.begin();	\
+	   v != val.end(); v++) {					\
+	mem_cast->push_back(static_cast<type>(*v));			\
+      }									\
     }									\
     return true
 #define HANDLE_SCALAR_SET_(T, type)					\
     type* mem_cast = nullptr;						\
     if (!_get_scalar_mem(mem_cast, true)) return false;			\
-    mem_cast[0] = static_cast<type>(val);				\
+    if (inc && is_index) {						\
+      type vv = static_cast<type>(val);					\
+      vv += 1;								\
+      mem_cast[0] = vv;							\
+    } else {								\
+      mem_cast[0] = static_cast<type>(val);				\
+    }									\
     return true
 #define HANDLE_VECTOR_GET_(T, type)					\
     const std::vector<type>* mem_cast = (std::vector<type>*)mem;	\
-    for (std::vector<type>::const_iterator v = mem_cast->begin();	\
-	 v != mem_cast->end(); v++) {					\
-      out.push_back(static_cast<T>(*v));				\
+    if (dec && is_index) {						\
+      for (std::vector<type>::const_iterator v = mem_cast->begin();	\
+	   v != mem_cast->end(); v++) {					\
+	T vv = static_cast<T>(*v);					\
+	vv += -1;							\
+	out.push_back(vv);						\
+      }									\
+    } else {								\
+      for (std::vector<type>::const_iterator v = mem_cast->begin();	\
+	   v != mem_cast->end(); v++) {					\
+	out.push_back(static_cast<T>(*v));				\
+      }									\
     }									\
     return true
 #define HANDLE_SCALAR_GET_(T, type)					\
     type* mem_cast = nullptr;						\
     if (!_get_scalar_mem(mem_cast)) return false;			\
     out = static_cast<T>(*mem_cast);					\
+    if (dec && is_index) {						\
+      out += -1;							\
+    }									\
     return true
 #define HANDLE_VECTOR_APPEND_(T, type)					\
     std::vector<type>* mem_cast = (std::vector<type>*)mem;		\
     if (index >= 0 && static_cast<size_t>(index) != mem_cast->size()) return false; \
-    mem_cast->push_back(static_cast<type>(val));			\
+    if (inc && is_index) {						\
+      type vv = static_cast<type>(val);					\
+      vv += 1;								\
+      mem_cast->push_back(vv);						\
+    } else {								\
+      mem_cast->push_back(static_cast<type>(val));			\
+    }									\
     return true
 #define HANDLE_VECTOR_INDEX_(T, type)					\
     const std::vector<type>* mem_cast = (std::vector<type>*)mem;	\
     if (index >= mem_cast->size()) return false;			\
     out = static_cast<T>(*(mem_cast->begin() + (int)(index)));		\
+    if (dec && is_index) {						\
+      out += -1;							\
+    }									\
     return true
 
 #define PROPERTY_TYPE_(T, flag)						\
   inline								\
-  bool ObjPropertyType::set(const std::vector<T>& val) {		\
+  bool ObjPropertyType::set(const std::vector<T>& val, bool inc) {	\
     if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false; \
     if (second & flag) {						\
       HANDLE_VECTOR_SET_(T, T);						\
@@ -931,7 +1040,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     return false;							\
   }									\
   inline								\
-  bool ObjPropertyType::set(const T& val) {				\
+  bool ObjPropertyType::set(const T& val, bool inc) {			\
     if ((!mem) || second & ObjTypeList) return false;			\
     if (second & flag) {						\
       HANDLE_SCALAR_SET_(T, T);						\
@@ -939,7 +1048,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     return false;							\
   }									\
   inline								\
-  bool ObjPropertyType::get(std::vector<T>& out) const {		\
+  bool ObjPropertyType::get(std::vector<T>& out, bool dec) const {	\
     if ((!mem) || (!(second & ObjTypeList)) || (second & ObjTypeIdx)) return false; \
     if (second & flag) {						\
       HANDLE_VECTOR_GET_(T, T);						\
@@ -947,7 +1056,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     return false;							\
   }									\
   inline								\
-  bool ObjPropertyType::get(T& out) const {				\
+  bool ObjPropertyType::get(T& out, bool dec) const {			\
     if ((!mem) || second & ObjTypeList) return false;			\
     if (second & flag) {						\
       HANDLE_SCALAR_GET_(T, T);						\
@@ -955,7 +1064,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     return false;							\
   }									\
   inline								\
-  bool ObjPropertyType::append(const T& val, int index) {		\
+  bool ObjPropertyType::append(const T& val, int index, bool inc) {	\
     if ((!mem) || (!(second & ObjTypeList)) || (second & ObjTypeIdx)) return false; \
     if (second & flag) {						\
       HANDLE_VECTOR_APPEND_(T, T);					\
@@ -963,7 +1072,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     return false;							\
   }									\
   inline								\
-  bool ObjPropertyType::index(const size_t index, T& out) const {	\
+  bool ObjPropertyType::index(const size_t index, T& out, bool dec) const { \
     if ((!mem) || (!(second & ObjTypeList)) || (second & ObjTypeIdx)) return false; \
     if (second & flag) {						\
       HANDLE_VECTOR_INDEX_(T, T);					\
@@ -974,7 +1083,7 @@ template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)>>), (bool))
-ObjPropertyType::set(const std::vector<T>& val) {
+ObjPropertyType::set(const std::vector<T>& val, bool inc) {
   if ((!mem) || !(second & ObjTypeList)) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_SET_)
     return true;
@@ -983,7 +1092,7 @@ template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)>>), (bool))
-ObjPropertyType::set(const T& val) {
+ObjPropertyType::set(const T& val, bool inc) {
   if ((!mem) || second & ObjTypeList) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_SET_)
   return true;
@@ -992,7 +1101,7 @@ template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)>>), (bool))
-ObjPropertyType::get(std::vector<T>& out) const {
+ObjPropertyType::get(std::vector<T>& out, bool dec) const {
   if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_GET_)
   return false;
@@ -1001,7 +1110,7 @@ template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)>>), (bool))
-ObjPropertyType::get(T& out) const {
+ObjPropertyType::get(T& out, bool dec) const {
   if ((!mem) || second & ObjTypeList) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_GET_)
   return true;
@@ -1010,7 +1119,7 @@ template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)>>), (bool))
-  ObjPropertyType::append(const T& val, int index) {
+ObjPropertyType::append(const T& val, int index, bool inc) {
   if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_APPEND_)
   return false;
@@ -1019,7 +1128,7 @@ template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)>>), (bool))
-ObjPropertyType::index(const size_t index, T& out) const {
+ObjPropertyType::index(const size_t index, T& out, bool dec) const {
   if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_INDEX_)
   return false;
@@ -1027,6 +1136,33 @@ ObjPropertyType::index(const size_t index, T& out) const {
 PROPERTY_TYPE_(std::string, ObjTypeString)
 PROPERTY_TYPE_(ObjRefCurve, ObjTypeCurve)
 PROPERTY_TYPE_(ObjRefSurface, ObjTypeSurface)
+inline
+bool ObjPropertyType::inc() {
+  if (!is_index) return true;
+  void* T = NULL;
+#define INC_SCALAR_(T, type)				\
+  {							\
+    type v;						\
+    if (!get(v)) return false;				\
+    if (!set(v, true)) return false;			\
+  }
+#define INC_VECTOR_(T, type)					\
+  {								\
+    std::vector<type> v;					\
+    if (!get(v)) return false;					\
+    std::vector<type>* mem_cast = (std::vector<type>*)mem;	\
+    mem_cast->clear();						\
+    if (!set(v, true)) return false;				\
+  }
+  if (second & ObjTypeList) {
+    RAPIDJSON_HANDLE_PROPERTY_TYPES_(INC_VECTOR_);
+  } else {
+    RAPIDJSON_HANDLE_PROPERTY_TYPES_(INC_SCALAR_);
+  }
+#undef INC_SCALAR_
+#undef INC_VECTOR_
+  return (T == NULL);
+}
 #undef HANDLE_VECTOR_SET_
 #undef HANDLE_SCALAR_SET_
 #undef HANDLE_VECTOR_GET_
@@ -1311,13 +1447,15 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   /*! \brief Raise an error. */						\
   template <typename T>							\
   cls(const std::vector<T> &,						\
-      const ObjGroupBase* parent0 = nullptr) : base(#code, parent0) UNPACK_MACRO init { \
+      const ObjGroupBase* parent0 = nullptr,				\
+      bool = false) : base(#code, parent0) UNPACK_MACRO init {		\
     RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from a vector")); \
   }									\
   /*! \brief Raise an error. */						\
   template <typename T, size_t N>					\
   cls(const T (&)[N],							\
-      const ObjGroupBase* parent0 = nullptr) : base(#code, parent0) UNPACK_MACRO init { \
+      const ObjGroupBase* parent0 = nullptr,				\
+      bool = false) : base(#code, parent0) UNPACK_MACRO init {		\
     RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from an array")); \
   }
 
@@ -1992,9 +2130,10 @@ public:
   //! \brief Get properties into an array of values.
   //! \param[out] arr Vector to add properties to.
   //! \param skipColors If true, color properties will not be included.
+  //! \param dec If true and a property is an index, it will be decremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  bool get_properties(std::vector<T>& arr, bool skipColors=false) const {
+  bool get_properties(std::vector<T>& arr, bool skipColors=false, bool dec=false) const {
     size_t i = 0, count = arr.size();
     arr.resize(count + this->size(skipColors));
     ObjPropertiesMap::const_iterator last = this->properties.begin() + (int)(this->properties.size() - 1);
@@ -2006,10 +2145,10 @@ public:
       if (it->second & ObjTypeList) {
 	if (it != last) return false;
 	arr.resize(count);  // Trim extra values so that get_property appends
-	if (!get_property(i, arr)) return false;
+	if (!get_property(i, arr, dec)) return false;
       } else {
 	if (count >= arr.size()) return false;
-	if (!get_property(i, arr[count])) return false;
+	if (!get_property(i, arr[count], dec)) return false;
       }
       count++;
     }
@@ -2018,14 +2157,14 @@ public:
   
   //! \brief Get element values as an array of strings.
   //! \return Array of string values.
-  std::vector<std::string> get_string_array() const {
+  std::vector<std::string> get_string_array(bool=false) const {
     std::vector<std::string> out;
     get_string_array(out);
     return out;
   }
   //! \brief Get element values as an array of strings.
   //! \param[out] out Array to put values in.
-  void get_string_array(std::vector<std::string>& out) const {
+  void get_string_array(std::vector<std::string>& out, bool=false) const {
     RAPIDJSON_ASSERT(!requires_double());
     if (requires_double()) return;
     get_properties(out);
@@ -2033,21 +2172,23 @@ public:
   //! \brief Get element values as an array of ints.
   //! \param nvert Number of vertices previously added to a Ply object
   //!   being constructed from this geometry.
+  //! \param dec If true and a property is an index, it will be decremented.
   //! \return Array of int values.
-  std::vector<int> get_int_array(const size_t nvert=0) const {
+  std::vector<int> get_int_array(const size_t nvert=0, bool dec=false) const {
     std::vector<int> out;
-    get_int_array(out, nvert);
+    get_int_array(out, nvert, dec);
     return out;
   }
   //! \brief Get element values as an array of ints.
   //! \param nvert Number of vertices previously added to a Ply object
   //!   being constructed from this geometry.
+  //! \param dec If true and a property is an index, it will be decremented.
   //! \param[out] out Array to put values in.
   void get_int_array(std::vector<int>& out,
-		     const size_t nvert=0) const {
+		     const size_t nvert=0, bool dec=false) const {
     RAPIDJSON_ASSERT(!requires_double());
     if (requires_double()) return;
-    get_properties(out);
+    get_properties(out, dec);
     if (nvert > 0) {
       for (size_t i = 0; i < out.size(); i++) {
 	if (out[i] < 0)
@@ -2058,19 +2199,21 @@ public:
   }
   //! \brief Get element values as an array of doubles.
   //! \param skipColors If true, color data will not be included.
+  //! \param dec If true and a property is an index, it will be decremented.
   //! \return Array of double values.
-  std::vector<double> get_double_array(bool skipColors=false) const {
+  std::vector<double> get_double_array(bool skipColors=false, bool dec=false) const {
     std::vector<double> out;
-    get_double_array(out, skipColors);
+    get_double_array(out, skipColors, dec);
     return out;
   }
   //! \brief Get element values as an array of doubles.
   //! \param skipColors If true, color data will not be included.
+  //! \param dec If true and a property is an index, it will be decremented.
   //! \param[out] out Array to put values in.
   void get_double_array(std::vector<double>& out,
-			bool skipColors=false) const {
+			bool skipColors=false, bool dec=false) const {
     RAPIDJSON_ASSERT(requires_double());
-    get_properties(out, skipColors);
+    get_properties(out, skipColors, dec);
   }
   //! \brief Add a property sub-element to this element. This is only valid
   //!   for element types that can contain a variable number of sub-elements.
@@ -2104,13 +2247,14 @@ public:
   //!   subelements.
   //! \param name Name of the property to set.
   //! \param value Value to set the property to.
+  //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if succesful, false otherwise.
   template<typename T>
-  bool set_subelement_property(const std::string name, const T& value) {
+  bool set_subelement_property(const std::string name, const T& value, bool inc=false) {
     bool temp = false;
     ObjPropertyElement* last = this->last_subelement(&temp);
     if (!last) return false;
-    bool flag = last->set_property(name, value);
+    bool flag = last->set_property(name, value, inc);
     // if (temp) delete last;
     return flag;
   }
@@ -2119,13 +2263,14 @@ public:
   //!   subelements.
   //! \param name Name of the property to get.
   //! \param value Reference to memory where the value should be stored.
+  //! \param dec If true and the property is an index, it will be decremented.
   //! \return true if succesful, false otherwise.
   template<typename T>
-  bool get_subelement_property(const std::string name, T& value) const {
+  bool get_subelement_property(const std::string name, T& value, bool dec=false) const {
     bool temp = false;
     const ObjPropertyElement* last = this->last_subelement(&temp);
     if (!last) return false;
-    bool flag = last->get_property(name, value);
+    bool flag = last->get_property(name, value, dec);
     // if (temp) delete last;
     return flag;
   }
@@ -2493,19 +2638,21 @@ public:
   //! \param minSize Minimum number of values to add for each element.
   //! \param defaultValue Value to pad with for elements with fewer than
   //!   minSize values.
+  //! \param dec If true and a property is an index, it will be decremented.
   void get_int_array(const std::string& name,
 		     std::vector<int>& out,
 		     const size_t minSize,
-		     int defaultValue=-1) const {
+		     int defaultValue=-1,
+		     bool dec=false) const {
     std::string name2 = obj_alias2base(name);
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
       if ((*it)->code != name2) continue;
       if ((*it)->is_group()) {
 	dynamic_cast<ObjGroupBase*>(*it)->get_int_array(name2, out, minSize,
-							defaultValue);
+							defaultValue, dec);
       } else {
 	size_t before = out.size();
-	(*it)->get_int_array(out);
+	(*it)->get_int_array(out, 0, dec);
 	for (size_t i = 0; i < (minSize - (out.size() - before)); i++)
 	  out.push_back(defaultValue);
       }
@@ -2519,21 +2666,23 @@ public:
   //!   minSize values.
   //! \param skipColors If true, the parameters containing colors will not be
   //!   included.
+  //! \param dec If true and a property is an index, it will be decremented.
   void get_double_array(const std::string& name,
 			std::vector<double>& out,
 			const size_t minSize,
 			double defaultValue=NAN,
-			bool skipColors=false) const {
+			bool skipColors=false,
+			bool dec=false) const {
     std::string name2 = obj_alias2base(name);
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
       if ((*it)->code != name2) continue;
       if ((*it)->is_group()) {
 	dynamic_cast<ObjGroupBase*>(*it)->get_double_array(name2, out, minSize,
 							   defaultValue,
-							   skipColors);
+							   skipColors, dec);
       } else {
 	size_t before = out.size();
-	(*it)->get_double_array(out, skipColors);
+	(*it)->get_double_array(out, skipColors, dec);
 	for (size_t i = 0; i < (minSize - (out.size() - before)); i++)
 	  out.push_back(defaultValue);
       }
@@ -2569,8 +2718,9 @@ public:
   }
   //! \brief Add an element to the geometry.
   //! \param x New element.
+  //! \param inc If true and a property is an index, it will be incremented.
   //! \return New element.
-  ObjElement* add_element(ObjElement* x) {
+  ObjElement* add_element(ObjElement* x, bool inc = false) {
     RAPIDJSON_ASSERT(!finalized);
     if (elements.size() > 0) {
       ObjElement* last = elements.back();
@@ -2580,7 +2730,7 @@ public:
 	  if ((x != nullptr) && (last_grp->code == "g") && (x->code == "g"))
 	    last_grp->finalize();
 	  else
-	    return last_grp->add_element(x);
+	    return last_grp->add_element(x, inc);
 	}
       }
     }
@@ -2588,9 +2738,11 @@ public:
       finalize();
     } else if (this->code == "g" && x->code == "g") {
       finalize();
-      const_cast<ObjGroupBase*>(this->parent)->add_element(x);
+      const_cast<ObjGroupBase*>(this->parent)->add_element(x, inc);
     } else {
       x->parent = this;
+      if (inc)
+	x->_inc_properties();
       elements.push_back(x);
     }
     return x;
@@ -2609,10 +2761,11 @@ public:
   //! \param values Vector of values defining the element.
   //! \param ignore Value to ignore. After this value is encountered for an
   //!   element will be added.
+  //! \param inc If true and a property is an index, it will be incremented.
   //! \return New element.
   template <typename T>
   ObjElement* add_element(std::string name, const std::vector<T> &values,
-			  const T* ignore = 0);
+			  const T* ignore = 0, bool inc = false);
   //! \brief Add an element to the geometry from a C array of values.
   //! \tparam T Type of value in the values array.
   //! \tparam N Number of elements in the values array.
@@ -2620,12 +2773,13 @@ public:
   //! \param values Array of values defining the element.
   //! \param ignore Value to ignore. After this value is encountered for an
   //!   element will be added.
+  //! \param inc If true and a property is an index, it will be incremented.
   //! \return New element.
   template <typename T, size_t N>
   ObjElement* add_element(std::string name, const T (&values)[N],
-			  const T* ignore = 0,
+			  const T* ignore = 0, bool inc = false,
 			  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_ANY(T)))) {
-    return add_element(name, std::vector<T>(values, values+N), ignore);
+    return add_element(name, std::vector<T>(values, values+N), ignore, inc);
   }
   //! \brief Add an element to the geometry from a C array of values.
   //! \tparam T Type of value in the values array.
@@ -2634,12 +2788,13 @@ public:
   //! \param N Number of elements in the values array.
   //! \param ignore Value to ignore. After this value is encountered for an
   //!   element will be added.
+  //! \param inc If true and a property is an index, it will be incremented.
   //! \return New element.
   template <typename T>
   ObjElement* add_element(std::string name, const T* values, size_t N,
-			  const T* ignore = 0,
+			  const T* ignore = 0, bool inc = false,
 			  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_ANY(T)))) {
-    return add_element(name, std::vector<T>(values, values+N), ignore);
+    return add_element(name, std::vector<T>(values, values+N), ignore, inc);
   }
   // template <size_t N>
   // ObjElement* ObjGroupBase::add_element(std::string name, const char* values[N]) {
@@ -2655,11 +2810,12 @@ public:
   //! \param u0 1st element parameter.
   //! \param u1 2nd element parameter.
   //! \param values Vector of additional values defining the element.
+  //! \param inc If true and a property is an index, it will be incremented.
   //! \return New element.
   template <typename T>
   ObjElement* add_element(const std::string name,
 			  const double& u0, const double& u1,
-			  const std::vector<T> &values);
+			  const std::vector<T> &values, bool inc = false);
   //! \brief Add an element to the geometry from a C array of values.
   //! \tparam T Type of value in the values array.
   //! \tparam N Number of elements in the values array.
@@ -2667,12 +2823,13 @@ public:
   //! \param u0 1st element parameter.
   //! \param u1 2nd element parameter.
   //! \param values Array of values defining the element.
+  //! \param inc If true and a property is an index, it will be incremented.
   //! \return New element.
   template <typename T, size_t N>
   ObjElement* add_element(std::string name,
 			  const double& u0, const double& u1,
-			  const T (&values)[N]) {
-    return add_element(name, u0, u1, std::vector<T>(values, values+N));
+			  const T (&values)[N], bool inc = false) {
+    return add_element(name, u0, u1, std::vector<T>(values, values+N), inc);
   }
 
   // Surface element methods
@@ -2683,12 +2840,13 @@ public:
   //! \param u2 3rd element parameter.
   //! \param u3 4th element parameter.
   //! \param values Vector of additional values defining the element.
+  //! \param inc If true and a property is an index, it will be incremented.
   //! \return New element.
   template <typename T>
   ObjElement* add_element(const std::string name,
 			  const double& u0, const double& u1,
 			  const double& u2, const double& u3,
-			  const std::vector<T> &values);
+			  const std::vector<T> &values, bool inc = false);
   //! \brief Add an element to the geometry from a C array of values.
   //! \tparam T Type of value in the values array.
   //! \tparam N Number of elements in the values array.
@@ -2698,13 +2856,14 @@ public:
   //! \param u2 3rd element parameter.
   //! \param u3 4th element parameter.
   //! \param values Array of values defining the element.
+  //! \param inc If true and a property is an index, it will be incremented.
   //! \return New element.
   template <typename T, size_t N>
   ObjElement* add_element(std::string name,
 			  const double& u0, const double& u1,
 			  const double& u2, const double& u3,
-			  const T (&values)[N]) {
-    return add_element(name, u0, u1, u2, u3, std::vector<T>(values, values+N));
+			  const T (&values)[N], bool inc = false) {
+    return add_element(name, u0, u1, u2, u3, std::vector<T>(values, values+N), inc);
   }
 
   // Parameter element methods
@@ -2760,8 +2919,9 @@ public:
   //! \param name Name of the type of element being added.
   //! \param value Scalar value.
   //! \param resolution Merge resolution.
+  //! \param inc If true and a property is an index, it will be incremented.
   //! \return New element.
-  ObjElement* add_element(std::string name, const int& value, const double& resolution);
+  ObjElement* add_element(std::string name, const int& value, const double& resolution, bool inc = false);
   //! \brief Add a merging group element.
   //! \param name Name of the type of element being added.
   //! \param value Scalar value.
@@ -3662,12 +3822,13 @@ public:
   //! \param values Array of value arrays defining the elements.
   //! \param ignore Value to ignore. After this value is encountered for an
   //!   element will be added.
+  //! \param inc If true and a property is an index, it will be incremented.
   template <typename T, size_t M, size_t N>
   void add_element_set(std::string name, const T (&values)[M][N],
-		       const T* ignore = 0) {
+		       const T* ignore = 0, bool inc = false) {
     std::string name2 = obj_alias2base(name);
     for (SizeType i = 0; i < M; i++)
-      this->add_element(name2, values[i], ignore);
+      this->add_element(name2, values[i], ignore, inc);
   }
   //! \brief Add a new element set to the geometry.
   //! \tparam T Type of property values.
@@ -3677,14 +3838,15 @@ public:
   //! \param N Number of properties for each element.
   //! \param ignore Value to ignore. After this value is encountered for an
   //!   element will be added.
+  //! \param inc If true and a property is an index, it will be incremented.
   template <typename T>
   void add_element_set(const std::string& name,
 		       const T* arr, SizeType M, SizeType N,
-		       const T* ignore = 0) {
+		       const T* ignore = 0, bool inc = false) {
     std::string name2 = obj_alias2base(name);
     const T* p = arr;
     for (SizeType i = 0; i < M; i++, p += N)
-      this->add_element(name2, p, N, ignore);
+      this->add_element(name2, p, N, ignore, inc);
   }
   //! \brief Get the minimum bounds of the structure in 3D.
   //! \return Minimum extend of structure in x, y, z.
@@ -3782,14 +3944,17 @@ public:
   //! \param[out[ M Number of values for each element in the returned array.
   //! \param skipColors If true, the parameters containing colors will not be
   //!   included.
+  //! \param dec If true and a property is an index, it will be decremented.
   //! \returns The element set of the requested type in array form.
   std::vector<int> get_int_array(const std::string& name0,
 				 size_t &N, size_t &M,
-				 bool=false) const {
+				 bool=false, bool dec=false) const {
     std::string name = obj_alias2base(name0);
     std::vector<int> out;
     size_t minSize = this->max_size(name);
-    ObjGroupBase::get_int_array(name, out, minSize, 0);
+    int defaultValue = 0;
+    if (dec) defaultValue--;
+    ObjGroupBase::get_int_array(name, out, minSize, defaultValue, dec);
     M = minSize;
     N = out.size() / M;
     return out;
@@ -3800,14 +3965,16 @@ public:
   //! \param[out[ M Number of values for each element in the returned array.
   //! \param skipColors If true, the parameters containing colors will not be
   //!   included.
+  //! \param dec If true and a property is an index, it will be decremented.
   //! \returns The element set of the requested type in array form.
   std::vector<double> get_double_array(const std::string& name0,
 				       size_t &N, size_t &M,
-				       bool skipColors=false) const {
+				       bool skipColors=false,
+				       bool dec=false) const {
     std::string name = obj_alias2base(name0);
     std::vector<double> out;
     size_t minSize = this->max_size(name, skipColors);
-    ObjGroupBase::get_double_array(name, out, minSize, NAN, skipColors);
+    ObjGroupBase::get_double_array(name, out, minSize, NAN, skipColors, dec);
     M = minSize;
     N = out.size() / M;
     return out;
@@ -3921,7 +4088,7 @@ ObjElement* ObjGroupBase::add_element(std::string name) {
 template <typename T>
 ObjElement* ObjGroupBase::add_element(std::string name,
 				      const std::vector<T> &values,
-				      const T* ignore) {
+				      const T* ignore, bool inc) {
   ObjElement* x = nullptr;
   if (ignore) {
     std::vector<T> values2;
@@ -3933,12 +4100,13 @@ ObjElement* ObjGroupBase::add_element(std::string name,
   } else {
     OBJ_ELEMENT_INIT(name, x, (values, this));
   }
-  return ObjGroupBase::add_element(x);
+  return ObjGroupBase::add_element(x, inc);
 }
 template <typename T>
 ObjElement* ObjGroupBase::add_element(const std::string name,
 				      const double& u0, const double& u1,
-				      const std::vector<T> &values) {
+				      const std::vector<T> &values,
+				      bool inc) {
   ObjElement* x = nullptr;
   if (name == "curv") x = new ObjCurve(u0, u1, values, this);
   else REPORT_UNSUPPORTED_ELEMENT(ObjCurve, name);
@@ -3948,11 +4116,12 @@ template <typename T>
 ObjElement* ObjGroupBase::add_element(const std::string name,
 				      const double& u0, const double& u1,
 				      const double& u2, const double& u3,
-				      const std::vector<T> &values) {
+				      const std::vector<T> &values,
+				      bool inc) {
   ObjElement* x = nullptr;
   if (name == "surf") x = new ObjSurface(u0, u1, u2, u3, values, this);
   else REPORT_UNSUPPORTED_ELEMENT(ObjSurface, name);
-  return ObjGroupBase::add_element(x);
+  return ObjGroupBase::add_element(x, inc);
 }
 template <typename T>
 ObjElement* ObjGroupBase::add_element(std::string name, std::string direction,
@@ -4022,11 +4191,12 @@ ObjElement* ObjGroupBase::add_element(std::string name, const std::string& value
 
 inline
 ObjElement* ObjGroupBase::add_element(std::string name, const int& value,
-				      const double& resolution) {
+				      const double& resolution,
+				      bool inc) {
   ObjElement* x = nullptr;
   if      (name == "mg"   ) x = new ObjMergingGroup(value, resolution, this);
   else REPORT_UNSUPPORTED_ELEMENT(ObjMergingGroup, name);
-  return ObjGroupBase::add_element(x);
+  return ObjGroupBase::add_element(x, inc);
 }
 inline
 ObjElement* ObjGroupBase::add_element(std::string name,
