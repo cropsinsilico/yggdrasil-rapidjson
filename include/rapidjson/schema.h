@@ -4612,6 +4612,15 @@ public:
 	    precision_ = 0;
 	    if (v->IsNumber() && v->GetInt() >= 0)
 	      precision_.CopyFrom(*v, *allocator_);
+	    if (subtype_ != kYggStringSchemaSubType) {
+	      SizeType pval = precision_.GetUint();
+	      if (subtype_ == kYggComplexSchemaSubType) {
+		if (pval == 64 || pval == 128 || pval == 256)
+		  precision_.SetUint(pval / 8);
+	      } else if (pval == 16 || pval == 32 || pval == 64 || pval == 128) {
+		precision_.SetUint(pval / 8);
+	      }
+	    }
 	}
 	if (const ValueType* v = GetMember(value, GetUnitsString())) {
 	    if (v->IsString()) {
