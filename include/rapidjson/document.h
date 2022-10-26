@@ -3716,14 +3716,16 @@ public:
 	return GetPythonFunction();
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
       else if (IsScalar()) {
+	std::cerr << "get scalar" << std::endl;
 	ValueType enc;
 	int typenum = GetSubTypeNumpyType(enc);
 	if (typenum < 0)
 	  return NULL;
 	if (typenum == NPY_STRING) {
-	  std::cerr << "GetPythonObjectRaw: " << GetStringLength() << ", " << GetPrecision() << std::endl;
-	  return PyBytes_FromStringAndSize(GetString(), GetPrecision());
+	  std::cerr << "GetPythonObjectRaw bytes: " << GetStringLength() << std::endl;
+	  return PyBytes_FromStringAndSize(GetString(), GetStringLength());
 	} else if (typenum == NPY_UNICODE) {
+	  std::cerr << "GetPythonObjectRaw unicode: " << enc.GetString() << std::endl;
 	  PyObject* pyBytes = PyBytes_FromStringAndSize(GetString(), GetStringLength());
 	  out = PyUnicode_FromEncodedObject(pyBytes, enc.GetString(), NULL);
 	  Py_DECREF(pyBytes);
@@ -3883,7 +3885,7 @@ public:
       schema_->MemberReserve(5, schema_->GetAllocator());
       AddSchemaMember(GetTypeString(), GetScalarString());
       AddSchemaMember(GetSubTypeString(), GetStringSubTypeString());
-      AddSchemaMember(GetPrecisionString(), (unsigned int)x_size);
+      AddSchemaMember(GetPrecisionString(), GetStringLength());
     } else if (PyLong_Check(x)) {
       int overflow = 0;
       Set(static_cast<int64_t>(PyLong_AsLongLongAndOverflow(x, &overflow)));
@@ -4487,8 +4489,10 @@ public:
       }
     }
     case (kYggStringSubType): {
+      if (!HasEncoding())
+	return NPY_STRING;
       enc.CopyFrom(GetEncoding(), schema_->GetAllocator());
-      if (enc.IsNull() || enc == GetASCIIEncodingString())
+      if (enc == GetASCIIEncodingString())
 	return NPY_STRING;
       return NPY_UNICODE;
     }
@@ -4518,6 +4522,11 @@ public:
     return static_cast<SizeType>(schema_->FindMember(GetPrecisionString())->value.GetUint());
   }
 
+  bool HasEncoding() const {
+    if (!IsYggdrasil()) return false;
+    ConstMemberIterator x = schema_->FindMember(GetEncodingString());
+    return (x != schema_->MemberEnd());
+  }
   const ValueType& GetEncoding() const {
     ConstMemberIterator encoding = schema_->FindMember(GetEncodingString());
     if (encoding != schema_->MemberEnd())
