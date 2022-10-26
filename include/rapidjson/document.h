@@ -3721,7 +3721,7 @@ public:
 	if (typenum < 0)
 	  return NULL;
 	if (typenum == NPY_STRING) {
-	  std::cerr << "GetPythonObjectRaw: " << GetStringLength() << ", " << ", " << GetPrecision() << std::endl;
+	  std::cerr << "GetPythonObjectRaw: " << GetStringLength() << ", " << GetPrecision() << std::endl;
 	  return PyBytes_FromStringAndSize(GetString(), GetPrecision());
 	} else if (typenum == NPY_UNICODE) {
 	  PyObject* pyBytes = PyBytes_FromStringAndSize(GetString(), GetStringLength());
@@ -3851,6 +3851,7 @@ public:
       }
       Py_DECREF(keys);
     } else if (PyUnicode_CheckExact(x)) {
+      std::cerr << "unicode" << std::endl;
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
@@ -3863,6 +3864,7 @@ public:
       const char* x_bytes = PyUnicode_AsUTF8AndSize(x, &x_size);
       SetStringRaw(StringRef(x_bytes, (size_t)x_size), *allocator);
     } else if (PyBytes_Check(x) || PyByteArray_Check(x)) {
+      std::cerr << "bytes" << std::endl;
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
@@ -3918,6 +3920,7 @@ public:
       schema_->GetAllocator().Free(mod_cls);
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
     } else if (PyArray_CheckScalar(x)) {
+      std::cerr << "array scalar" << std::endl;
       ResetSchema(allocator);
       PyArray_Descr* desc = NULL;
       PyObject* scalar = NULL;
