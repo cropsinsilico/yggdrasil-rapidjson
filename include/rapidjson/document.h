@@ -3721,7 +3721,8 @@ public:
 	if (typenum < 0)
 	  return NULL;
 	if (typenum == NPY_STRING) {
-	  return PyBytes_FromStringAndSize(GetString(), GetStringLength());
+	  std::cerr << "GetPythonObjectRaw: " << GetStringLength() << ", " << ", " << GetPrecision() << std::endl;
+	  return PyBytes_FromStringAndSize(GetString(), GetPrecision());
 	} else if (typenum == NPY_UNICODE) {
 	  PyObject* pyBytes = PyBytes_FromStringAndSize(GetString(), GetStringLength());
 	  out = PyUnicode_FromEncodedObject(pyBytes, enc.GetString(), NULL);
@@ -3869,11 +3870,9 @@ public:
       Py_ssize_t x_size = 0;
       if (PyBytes_Check(x)) {
 	x_size = PyBytes_Size(x);
-	std::cerr << "bytes: " << PyBytes_Size(x) << std::endl;
 	SetStringRaw(StringRef(PyBytes_AsString(x), (size_t)x_size),
 		     *allocator);
       } else {
-	std::cerr << "bytes array: " << PyBytes_Size(x) << std::endl;
 	x_size = PyByteArray_Size(x);
 	SetStringRaw(StringRef(PyByteArray_AsString(x), (size_t)x_size),
 		     *allocator);
