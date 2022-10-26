@@ -3716,16 +3716,13 @@ public:
 	return GetPythonFunction();
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
       else if (IsScalar()) {
-	std::cerr << "get scalar" << std::endl;
 	ValueType enc;
 	int typenum = GetSubTypeNumpyType(enc);
 	if (typenum < 0)
 	  return NULL;
 	if (typenum == NPY_STRING) {
-	  std::cerr << "GetPythonObjectRaw bytes: " << GetStringLength() << std::endl;
 	  return PyBytes_FromStringAndSize(GetString(), GetStringLength());
 	} else if (typenum == NPY_UNICODE) {
-	  std::cerr << "GetPythonObjectRaw unicode: " << enc.GetString() << std::endl;
 	  PyObject* pyBytes = PyBytes_FromStringAndSize(GetString(), GetStringLength());
 	  out = PyUnicode_FromEncodedObject(pyBytes, enc.GetString(), NULL);
 	  Py_DECREF(pyBytes);
@@ -3853,20 +3850,13 @@ public:
       }
       Py_DECREF(keys);
     } else if (PyUnicode_Check(x)) {
-      std::cerr << "unicode" << std::endl;
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
-      // PyObject* x_bytes = PyUnicode_AsUTF8String(x);
-      // SetStringRaw(StringRef(PyBytes_AsString(x_bytes),
-      // 			     (size_t)(PyBytes_Size(x_bytes))),
-      // 		   *allocator);
-      // Py_DECREF(x_bytes);
       Py_ssize_t x_size = 0;
       const char* x_bytes = PyUnicode_AsUTF8AndSize(x, &x_size);
       SetStringRaw(StringRef(x_bytes, (size_t)x_size), *allocator);
     } else if (PyBytes_Check(x) || PyByteArray_Check(x)) {
-      std::cerr << "bytes" << std::endl;
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
@@ -3881,7 +3871,6 @@ public:
 	SetStringRaw(StringRef(PyByteArray_AsString(x), (size_t)x_size),
 		     *allocator);
       }
-      std::cerr << "GetStringLength: " << x_size << ", " << GetStringLength() << std::endl;
       schema_->MemberReserve(5, schema_->GetAllocator());
       AddSchemaMember(GetTypeString(), GetScalarString());
       AddSchemaMember(GetSubTypeString(), GetStringSubTypeString());
@@ -3922,7 +3911,6 @@ public:
       schema_->GetAllocator().Free(mod_cls);
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
     } else if (PyArray_CheckScalar(x)) {
-      std::cerr << "array scalar" << std::endl;
       ResetSchema(allocator);
       PyArray_Descr* desc = NULL;
       PyObject* scalar = NULL;
@@ -4516,9 +4504,13 @@ public:
     return subtype.GetString();
   }
 
+  bool HasPrecision() const {
+    if (!IsYggdrasil()) return false;
+    ConstMemberIterator x = schema_->FindMember(GetPrecisionString());
+    return (x != schema_->MemberEnd());
+  }
   SizeType GetPrecision() const {
-    RAPIDJSON_ASSERT(IsYggdrasil());
-    RAPIDJSON_ASSERT(schema_->HasMember(GetPrecisionString()));
+    RAPIDJSON_ASSERT(HasPrecision());
     return static_cast<SizeType>(schema_->FindMember(GetPrecisionString())->value.GetUint());
   }
 
@@ -4528,10 +4520,10 @@ public:
     return (x != schema_->MemberEnd());
   }
   const ValueType& GetEncoding() const {
+    RAPIDJSON_ASSERT(HasEncoding());
     ConstMemberIterator encoding = schema_->FindMember(GetEncodingString());
-    if (encoding != schema_->MemberEnd())
-      return encoding->value;
-    return ValueType(kNullType).Move();
+    RAPIDJSON_ASSERT(encoding != schema_->MemberEnd());
+    return encoding->value;
   }
   
   const ValueType& GetShape() const {
