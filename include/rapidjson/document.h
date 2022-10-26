@@ -3853,29 +3853,36 @@ public:
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
-      PyObject* x_bytes = PyUnicode_AsUTF8String(x);
-      SetStringRaw(StringRef(PyBytes_AsString(x_bytes),
-			     (size_t)(PyBytes_Size(x_bytes))),
-		   *allocator);
-      Py_DECREF(x_bytes);
+      // PyObject* x_bytes = PyUnicode_AsUTF8String(x);
+      // SetStringRaw(StringRef(PyBytes_AsString(x_bytes),
+      // 			     (size_t)(PyBytes_Size(x_bytes))),
+      // 		   *allocator);
+      // Py_DECREF(x_bytes);
+      Py_ssize_t x_size = 0;
+      const char* x_bytes = PyUnicode_AsUTF8AndSize(x, &x_size);
+      SetStringRaw(StringRef(x_bytes, (size_t)x_size), *allocator);
     } else if (PyBytes_Check(x) || PyByteArray_Check(x)) {
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
       ResetSchema(allocator);
+      Py_ssize_t x_size = 0;
       if (PyBytes_Check(x)) {
-	SetStringRaw(StringRef(PyBytes_AsString(x),
-			       (size_t)(PyBytes_Size(x))),
+	x_size = PyBytes_Size(x);
+	std::cerr << "bytes: " << PyBytes_Size(x) << std::endl;
+	SetStringRaw(StringRef(PyBytes_AsString(x), (size_t)x_size),
 		     *allocator);
       } else {
-	SetStringRaw(StringRef(PyByteArray_AsString(x),
-			       (size_t)(PyByteArray_Size(x))),
+	std::cerr << "bytes array: " << PyBytes_Size(x) << std::endl;
+	x_size = PyByteArray_Size(x);
+	SetStringRaw(StringRef(PyByteArray_AsString(x), (size_t)x_size),
 		     *allocator);
       }
+      std::cerr << "GetStringLength: " << x_size << ", " << GetStringLength() << std::endl;
       schema_->MemberReserve(5, schema_->GetAllocator());
       AddSchemaMember(GetTypeString(), GetScalarString());
       AddSchemaMember(GetSubTypeString(), GetStringSubTypeString());
-      AddSchemaMember(GetPrecisionString(), GetStringLength());
+      AddSchemaMember(GetPrecisionString(), (unsigned int)x_size);
     } else if (PyLong_Check(x)) {
       int overflow = 0;
       Set(static_cast<int64_t>(PyLong_AsLongLongAndOverflow(x, &overflow)));
