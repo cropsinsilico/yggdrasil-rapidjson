@@ -312,6 +312,22 @@ PyObject* import_python_object(const char* mod_class,
   return out;
 }
 inline
+bool PyObject_IsInstanceString(PyObject* x, std::string class_name) {
+  if (!PyObject_HasAttrString(x, "__class__"))
+    return false;
+  PyObject* inst_class = PyObject_GetAttrString(x, "__class__");
+  if (inst_class == NULL)
+    return false;
+  PyObject* inst_class_str = PyObject_Str(inst_class);
+  Py_DECREF(inst_class);
+  if (inst_class_str == NULL)
+    return false;
+  std::string result(PyUnicode_AsUTF8(inst_class_str));
+  Py_DECREF(inst_class_str);
+  std::string check = "<class '" + class_name + "'>";
+  return (check == result);
+}
+inline
 bool IsStructuredArray(PyObject* x) {
   RAPIDJSON_ASSERT(isPythonInitialized());
   if (!isPythonInitialized())

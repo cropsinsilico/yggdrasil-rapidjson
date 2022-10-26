@@ -4041,6 +4041,145 @@ public:
       if (!encoding.IsNull())
 	AddSchemaMember(GetEncodingString(), encoding);
       return true;
+    } else if (PyObject_IsInstanceString(x, "pandas.core.frame.DataFrame")) {
+      bool error = false;
+      PyObject *column_dtypes = NULL, *columns = NULL, *dtypes = NULL,
+	*key = NULL, *itype = NULL, *val = NULL,
+	*vtype = NULL, *vv = NULL;
+      PyObject *method = NULL, *args = NULL, *kwargs = NULL, *arr = NULL;
+      PyObject* new_itype = NULL;
+      std::string new_itype_str;
+      column_dtypes = PyDict_New();
+      if (column_dtypes == NULL) {
+	error = true;
+	goto cleanup;
+      }
+      columns = PyObject_GetAttrString(x, "columns");
+      if (columns == NULL || !PySequence_Check(columns)) {
+	error = true;
+	goto cleanup;
+      }
+      dtypes = PyObject_GetAttrString(x, "dtypes");
+      if (dtypes == NULL || !PyMapping_Check(dtypes)) {
+	error = true;
+	goto cleanup;
+      }
+      for (Py_ssize_t i = 0; i < PySequence_Size(columns); i++) {
+	key = PySequence_GetItem(columns, i);
+	if (key == NULL) {
+	  error = true;
+	  goto cleanup;
+	}
+	itype = PyObject_GetItem(dtypes, key);
+	if (itype == NULL) {
+	  error = true;
+	  goto cleanup;
+	}
+	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT) {
+	  val = PyObject_GetItem(x, key);
+	  if (val == NULL) {
+	    error = true;
+	    goto cleanup;
+	  }
+	  Py_ssize_t max_len = 0;
+	  for (Py_ssize_t j = 0; j < PyObject_Size(val); j++) {
+	    vv = PySequence_GetItem(val, j);
+	    if (vv == NULL) {
+	      error = true;
+	      goto cleanup;
+	    }
+	    if (vtype == NULL) {
+	      vtype = PyObject_Type(vv);
+	    } else if (!PyObject_IsInstance(vv, vtype)) {
+	      error = true;
+	      goto cleanup;
+	    }
+	    Py_ssize_t new_len = 0;
+	    if (vtype == (PyObject*)(&PyUnicode_Type)) {
+	      new_len = PyUnicode_GET_LENGTH(vv);
+	    } else {
+	      new_len = PyObject_Size(vv);
+	    }
+	    Py_DECREF(vv);
+	    vv = NULL;
+	    if (new_len > max_len)
+	      max_len = new_len;
+	  }
+	  new_itype_str = "";
+	  if (vtype == (PyObject*)(&PyUnicode_Type)) {
+	    new_itype_str += "<U";
+	  } else if (vtype == (PyObject*)(&PyBytes_Type)) {
+	    new_itype_str += "<S";
+	  } else {
+	    error = true;
+	    goto cleanup;
+	  }
+	  new_itype_str += std::to_string((int)max_len);
+	  new_itype = PyUnicode_FromString(new_itype_str.c_str());
+	  if (new_itype == NULL) {
+	    error = true;
+	    goto cleanup;
+	  }
+	  if (PyDict_SetItem(column_dtypes, key, (PyObject*)new_itype) < 0) {
+	    error = true;
+	    goto cleanup;
+	  }
+	  Py_DECREF(new_itype);
+	  Py_DECREF(vtype);
+	  Py_DECREF(val);
+	  new_itype = NULL;
+	  vtype = NULL;
+	  val = NULL;
+	}
+	Py_DECREF(key);
+	Py_DECREF(itype);
+	key = NULL;
+	itype = NULL;
+      }
+      method = PyObject_GetAttrString(x, "to_records");
+      if (method == NULL) {
+	error = true;
+	goto cleanup;
+      }
+      args = PyTuple_New(0);
+      if (args == NULL) {
+	error = true;
+	goto cleanup;
+      }
+      kwargs = PyDict_New();
+      if (kwargs == NULL) {
+	error = true;
+	goto cleanup;
+      }
+      if (PyDict_SetItemString(kwargs, "index", Py_False) < 0) {
+	error = true;
+	goto cleanup;
+      }
+      if (PyDict_SetItemString(kwargs, "column_dtypes", column_dtypes) < 0) {
+	error = true;
+	goto cleanup;
+      }
+      arr = PyObject_Call(method, args, kwargs);
+      if (arr == NULL) {
+	error = true;
+	goto cleanup;
+      }
+      error = !SetPythonObjectRaw(arr, allocator);
+    cleanup:
+      Py_XDECREF(column_dtypes);
+      Py_XDECREF(columns);
+      Py_XDECREF(dtypes);
+      Py_XDECREF(key);
+      Py_XDECREF(itype);
+      Py_XDECREF(new_itype);
+      Py_XDECREF(val);
+      Py_XDECREF(vtype);
+      Py_XDECREF(vv);
+      Py_XDECREF(method);
+      Py_XDECREF(args);
+      Py_XDECREF(kwargs);
+      Py_XDECREF(arr);
+      return (!error);
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
     } else {
       SetObject();
