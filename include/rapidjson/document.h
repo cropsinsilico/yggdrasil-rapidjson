@@ -3850,7 +3850,7 @@ public:
                   *allocator);
       }
       Py_DECREF(keys);
-    } else if (PyUnicode_CheckExact(x)) {
+    } else if (PyUnicode_Check(x)) {
       std::cerr << "unicode" << std::endl;
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
