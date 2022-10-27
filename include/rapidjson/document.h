@@ -3750,10 +3750,12 @@ public:
 	  const ValueType& title = GetTitle();
 	  PyObject* titlePy = PyUnicode_FromStringAndSize(title.GetString(),
 							  title.GetStringLength());
-	  PyArray_Descr* sub_desc = PyArray_DescrNewFromType(typenum);
-	  sub_desc->elsize = desc->elsize;
+	  PyArray_Descr* sub_desc = desc;
+	  desc = PyArray_DescrNewFromType(NPY_VOID);
+	  if (desc == NULL) return NULL;
 	  desc->names = PyTuple_Pack(1, titlePy);
 	  desc->fields = PyDict_New();
+	  desc->elsize = sub_desc->elsize;
 	  PyObject* offset = PyLong_FromSsize_t(0);
 	  PyObject* sub_dtype = PyTuple_Pack(2, sub_desc, offset);
 	  Py_DECREF(sub_desc);

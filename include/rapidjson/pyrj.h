@@ -386,8 +386,8 @@ PyObject* GetStructuredArray(PyObject* x) {
   int nd = 0;
   npy_intp *dims = NULL, *strides = NULL;
   PyObject *out = NULL, *names = NULL, *fields = NULL;
-  PyObject *ikey = NULL, *idtype = NULL, *ioffset = NULL;
-  PyArray_Descr *idesc = NULL, *sub_desc = NULL, *desc = NULL;
+  PyObject *ikey = NULL, *idtype = NULL, *ioffset = NULL, *ifield = NULL;
+  PyArray_Descr *idesc = NULL, *sub_desc = NULL, *desc = NULL, *isub_desc;
   PyArrayObject *ival = NULL, *array = NULL;
   Py_ssize_t i = 0, kw_pos = 0;
   npy_intp offset = 0;
@@ -415,7 +415,14 @@ PyObject* GetStructuredArray(PyObject* x) {
     Py_INCREF(ikey);
     if (PyTuple_SetItem(names, i, ikey) < 0)
       goto cleanup;
-    sub_desc = PyArray_DescrNewFromType(PyArray_TYPE(ival));
+    ifield = PyDict_GetItem(idesc->fields, ikey);
+    if (ifield == NULL)
+      goto cleanup;
+    isub_desc = (PyArray_Descr*)PyTuple_GetItem(ifield, 0);
+    if (isub_desc == NULL)
+      goto cleanup;
+    sub_desc = PyArray_DescrNewFromType(isub_desc->type_num);
+    // sub_desc = PyArray_DescrNewFromType(PyArray_TYPE(ival));
     if (sub_desc == NULL)
       goto cleanup;
     sub_desc->elsize = (int)PyArray_ITEMSIZE(ival);

@@ -1995,8 +1995,9 @@ public:
     typename SchemaType::YggSchemaValueSubType subtype = subT;		\
     SizeType precision = length;					\
     typename SchemaType::YggSchemaEncodingType encoding = SchemaType::kYggNullSchemaEncodingType; \
+    const Ch units[] = { '\0' };					\
     if (!NormScalar(context, schema, str, length, subtype, precision,	\
-		    encoding, 1, valueSchema))				\
+		    units, 0, encoding, 1, valueSchema))		\
       return false;							\
     if (exit_after_normalize_) {					\
       return true;							\
@@ -2009,31 +2010,45 @@ public:
 		  const Ch*& str, SizeType& length,
 		  typename SchemaType::YggSchemaValueSubType& src_subtype,
 		  SizeType& src_precision,
+		  const Ch* src_units, SizeType src_units_len,
 		  typename SchemaType::YggSchemaEncodingType& src_encoding,
 		  SizeType nelements,
 		  YggSchemaValueType* valueSchema) {
-    // TODO: Check units here?
     typename SchemaType::YggSchemaValueSubType dst_subtype = src_subtype;
     SizeType dst_precision = src_precision;
     typename SchemaType::YggSchemaEncodingType dst_encoding = src_encoding;
-    if (schema.precision_.IsUint())
-      dst_precision = schema.precision_.GetUint();
+    const Ch* dst_units = src_units;
+    SizeType dst_units_len = src_units_len;
     if (schema.subtype_ != SchemaType::kYggNullSubType)
       dst_subtype = schema.subtype_;
+    if (schema.precision_.IsUint())
+      dst_precision = schema.precision_.GetUint();
+    if (schema.units_.IsString()) {
+      dst_units = schema.units_.GetString();
+      dst_units_len = schema.units_.GetStringLength();
+    }
+    UnitsType src_Units(src_units, src_units_len, false);
+    UnitsType dst_Units(dst_units, dst_units_len, false);
     if (schema.encoding_ != SchemaType::kYggNullSchemaEncodingType)
       dst_encoding = schema.encoding_;
     SizeType src_nbytes = length * (SizeType)sizeof(Ch);
     SizeType dst_nbytes = src_nbytes;
+    bool modified = false;
+    // Encoding
     if ((src_subtype == SchemaType::kYggStringSchemaSubType) &&
 	(src_subtype == dst_subtype) &&
 	(src_encoding != dst_encoding)) {
       // TODO: Change encoding & precision if necessary
-    } else if ((src_subtype != dst_subtype ||
-		src_precision != dst_precision) &&
-	       canTruncate((YggSubType)src_subtype, src_precision,
-			   (const unsigned char*)str,
-			   (YggSubType)dst_subtype, dst_precision,
-			   nelements)) {
+      modified = true;
+    }
+    // Subtype and/or precision
+    if ((src_subtype != dst_subtype ||
+	 src_precision != dst_precision) &&
+	canTruncate((YggSubType)src_subtype, src_precision,
+		    (const unsigned char*)str,
+		    (YggSubType)dst_subtype, dst_precision,
+		    nelements)) {
+      modified = true;
       SizeType src_size = sizeOfSubtype((YggSubType)src_subtype, src_precision);
       SizeType dst_size = sizeOfSubtype((YggSubType)dst_subtype, dst_precision);
       RAPIDJSON_ASSERT(src_nbytes == (nelements * src_size));
@@ -2048,7 +2063,23 @@ public:
 	str = (Ch*)dst;
 	length = dst_nbytes / (SizeType)sizeof(Ch);
       }
-    } else {
+    }
+    // Units
+    if (src_Units != dst_Units) {
+      modified = true;
+      if (src_Units.is_compatible(dst_Units)) {
+	changeUnits((YggSubType)dst_subtype, dst_precision,
+		    (unsigned char*)str, src_Units,
+		    (unsigned char*)(&(str[0])), dst_Units,
+		    length * (SizeType)sizeof(Ch), nelements);
+      } else if (!src_Units.is_dimensionless()) {
+	// reset to src_units so that they are invalidated
+	dst_units = src_units;
+	dst_units_len = src_units_len;
+	dst_Units = src_Units;
+      }
+    }
+    if (!modified) {
       return true;
     }
     if (valueSchema == NULL) {
@@ -2072,6 +2103,14 @@ public:
 				      true).Move(),
 			       SValue((SizeType)(dst_nbytes)).Move(),
 			       GetAllocator());
+      if (!dst_Units.is_dimensionless()) {
+	newValueSchema.AddMember(SValue(schema.GetUnitsString(),
+					GetAllocator(),
+					true).Move(),
+				 SValue(dst_units, dst_units_len,
+					GetAllocator()).Move(),
+				 GetAllocator());
+      }
       if (dst_encoding != SchemaType::kYggNullSchemaEncodingType) {
 	newValueSchema.AddMember(SValue(schema.GetEncodingString(),
 					GetAllocator(),
@@ -2091,6 +2130,20 @@ public:
       }
       if (src_precision != dst_precision) {
 	(*valueSchema)[SchemaType::GetPrecisionString()].SetUint(dst_precision);
+      }
+      if (src_Units != dst_Units) {
+	if (valueSchema->FindMember(SchemaType::GetUnitsString()) == valueSchema->MemberEnd()) {
+	  typename YggSchemaValueType::ValueType new_units(dst_units,
+							   dst_units_len,
+							   valueSchema->GetAllocator());
+	  valueSchema->AddMember(YggSchemaValueType::GetUnitsString(),
+				 new_units,
+				 valueSchema->GetAllocator());
+	} else {
+	  (*valueSchema)[SchemaType::GetUnitsString()].SetString(dst_units,
+								 dst_units_len,
+								 valueSchema->GetAllocator());
+	}
       }
       if (src_encoding != dst_encoding) {
 	const typename SchemaType::ValueType& encoding_str = schema.EncodingType2String(dst_encoding);
@@ -2187,6 +2240,12 @@ public:
 	encoding = schema.GetEncodingType(typename SchemaType::ValueType(encodingV->value.GetString(), encodingV->value.GetStringLength()).Move());
       }
       SizeType precision = (SizeType)(precisionV->value.GetUint64());
+      const Ch* units_str = NULL;
+      SizeType units_str_len = 0;
+      if (unitsV != valueSchema.MemberEnd()) {
+	units_str = unitsV->value.GetString();
+	units_str_len = unitsV->value.GetStringLength();
+      }
       SizeType nelements = 0;
       if (typeV->value == YggSchemaValueType::GetScalarString())
 	nelements = 1;
@@ -2195,38 +2254,11 @@ public:
 	for (typename YggSchemaValueType::ConstValueIterator v = shapeV->value.Begin(); v != shapeV->value.End(); ++v)
 	  nelements *= static_cast<SizeType>(v->GetUint64());
       }
-      // Subtype & precision
+      // Subtype, precision & units
       if (!NormScalar(context, schema, str, length, subtype, precision,
+		      units_str, units_str_len,
 		      encoding, nelements, &valueSchema))
 	return false;
-      // Units
-      if (unitsV != valueSchema.MemberEnd()) {
-	if (schema.units_.IsString() && (unitsV->value != schema.units_.IsString())) {
-	  UnitsType src_units(unitsV->value.GetString(),
-			      unitsV->value.GetStringLength(),
-			      false);
-	  UnitsType dst_units(schema.units_.GetString(),
-			      schema.units_.GetStringLength(),
-			      false);
-	  if (src_units != dst_units) {
-	    if (src_units.is_compatible(dst_units)) {
-	      RecordModified(kModificationTypeValue, false);
-	      changeUnits((YggSubType)subtype, precision,
-			  (unsigned char*)str, src_units,
-			  (unsigned char*)(&(str[0])), dst_units,
-			  length * (SizeType)sizeof(Ch), nelements);
-	      valueSchema[SchemaType::GetUnitsString()].SetString(schema.units_.GetString(),
-								  schema.units_.GetStringLength(),
-								  valueSchema.GetAllocator());
-	    } else if (src_units.is_dimensionless()) {
-	      RecordModified(kModificationTypeValue, false);
-	      valueSchema[SchemaType::GetUnitsString()].SetString(schema.units_.GetString(),
-								  schema.units_.GetStringLength(),
-								  valueSchema.GetAllocator());
-	    }
-	  }
-	}
-      }
       // Allow normalization of scalar string to regular string
       if ((subtype == SchemaType::kYggStringSchemaSubType) &&
 	  (schema.type_ & (1 << SchemaType::kStringSchemaType)) &&
