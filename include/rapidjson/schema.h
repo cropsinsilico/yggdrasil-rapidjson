@@ -2208,16 +2208,22 @@ public:
 	  UnitsType dst_units(schema.units_.GetString(),
 			      schema.units_.GetStringLength(),
 			      false);
-	  if ((src_units != dst_units) && (src_units.is_compatible(dst_units))) {
-	    RecordModified(kModificationTypeValue, false);
-	    changeUnits((YggSubType)subtype, precision,
-			(unsigned char*)str, src_units,
-			(unsigned char*)(&(str[0])), dst_units,
-			length * (SizeType)sizeof(Ch), nelements);
-	    valueSchema[SchemaType::GetUnitsString()].SetString(schema.units_.GetString(),
-								schema.units_.GetStringLength(),
-								valueSchema.GetAllocator());
-								
+	  if (src_units != dst_units) {
+	    if (src_units.is_compatible(dst_units)) {
+	      RecordModified(kModificationTypeValue, false);
+	      changeUnits((YggSubType)subtype, precision,
+			  (unsigned char*)str, src_units,
+			  (unsigned char*)(&(str[0])), dst_units,
+			  length * (SizeType)sizeof(Ch), nelements);
+	      valueSchema[SchemaType::GetUnitsString()].SetString(schema.units_.GetString(),
+								  schema.units_.GetStringLength(),
+								  valueSchema.GetAllocator());
+	    } else if (src_units.is_dimensionless()) {
+	      RecordModified(kModificationTypeValue, false);
+	      valueSchema[SchemaType::GetUnitsString()].SetString(schema.units_.GetString(),
+								  schema.units_.GetStringLength(),
+								  valueSchema.GetAllocator());
+	    }
 	  }
 	}
       }
