@@ -3814,7 +3814,8 @@ public:
     }
     return out;
   }
-  bool SetPythonObjectRaw(PyObject* x, Allocator* allocator = 0) {
+  bool SetPythonObjectRaw(PyObject* x, Allocator* allocator = 0,
+			  bool skipTitle=false) {
     RAPIDJSON_ASSERT(isPythonInitialized());
     if (!isPythonInitialized())
       return false;
@@ -3967,9 +3968,12 @@ public:
       if (desc == NULL)
 	return false;
       if (PyDataType_HASFIELDS(desc)) {
-	SetArray();
-	ResetSchema(allocator);
-	Reserve((SizeType)PyDict_Size(desc->fields), schema_->GetAllocator());
+	bool single = (PyDict_Size(desc->fields) == 1);
+	if (!single) {
+	  SetArray();
+	  ResetSchema(allocator);
+	  Reserve((SizeType)PyDict_Size(desc->fields), schema_->GetAllocator());
+	}
 	PyObject *kw_key, *kw_val;
 	Py_ssize_t kw_pos = 0;
 	while (PyDict_Next(desc->fields, &kw_pos, &kw_key, &kw_val)) {
@@ -3996,11 +4000,22 @@ public:
 					     (int)offset);
 	  if (field == NULL)
 	    return false;
-	  ValueType field_name(kw_keyS, kw_keyS_len, schema_->GetAllocator());
-	  ValueType pyField(field);
-	  Py_DECREF(field);
-	  pyField.AddSchemaMember(GetTitleString(), field_name);
-	  PushBack(pyField, schema_->GetAllocator());
+	  if (single) {
+	    if (!SetPythonObjectRaw(field))
+	      return false;
+	    if (!skipTitle) {
+	      ValueType field_name(kw_keyS, kw_keyS_len, schema_->GetAllocator());
+	      AddSchemaMember(GetTitleString(), field_name);
+	    }
+	  } else {
+	    ValueType pyField(field);
+	    Py_DECREF(field);
+	    if (!skipTitle) {
+	      ValueType field_name(kw_keyS, kw_keyS_len, schema_->GetAllocator());
+	      pyField.AddSchemaMember(GetTitleString(), field_name);
+	    }
+	    PushBack(pyField, schema_->GetAllocator());
+	  }
 	}
 	return true;
       }
@@ -4045,7 +4060,7 @@ public:
     } else if (PyObject_IsInstanceString(x, "pandas.core.frame.DataFrame")) {
       bool error = false;
       PyObject *column_dtypes = NULL, *columns = NULL, *dtypes = NULL,
-	*key = NULL, *itype = NULL, *val = NULL,
+	*key = NULL, *itype = NULL, *val = NULL, *skipTitleObject = NULL,
 	*vtype = NULL, *vv = NULL;
       PyObject *method = NULL, *args = NULL, *kwargs = NULL, *arr = NULL;
       PyObject* new_itype = NULL;
@@ -4060,6 +4075,14 @@ public:
 	error = true;
 	goto cleanup;
       }
+      skipTitleObject = PyObject_GetAttrString(columns, "is_monotonic");
+      if (skipTitleObject == NULL) {
+	error = true;
+	goto cleanup;
+      }
+      if (skipTitleObject == Py_True)
+	skipTitle = true;
+      Py_DECREF(skipTitleObject);
       dtypes = PyObject_GetAttrString(x, "dtypes");
       if (dtypes == NULL || !PyMapping_Check(dtypes)) {
 	error = true;
@@ -4165,7 +4188,7 @@ public:
 	error = true;
 	goto cleanup;
       }
-      error = !SetPythonObjectRaw(arr, allocator);
+      error = !SetPythonObjectRaw(arr, allocator, skipTitle);
     cleanup:
       Py_XDECREF(column_dtypes);
       Py_XDECREF(columns);
