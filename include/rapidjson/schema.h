@@ -2038,12 +2038,32 @@ public:
     if ((src_subtype == SchemaType::kYggStringSchemaSubType) &&
 	(src_subtype == dst_subtype) &&
 	(src_encoding != dst_encoding)) {
-      // TODO: Change encoding & precision if necessary
-      modified = true;
+      void* tmp = 0;
+      if (TranslateEncoding(str, src_nbytes, schema.EncodingType2String(src_encoding).GetString(),
+			    tmp, dst_nbytes, schema.EncodingType2String(dst_encoding).GetString(),
+			    GetAllocator(), (nelements > 1))) {
+	modified = true;
+	unsigned char* dst = (unsigned char*)(&(str[0]));
+	if (dst_nbytes > src_nbytes) {
+	  dst = (unsigned char*)SetTemporary(dst_nbytes);
+	}
+	memcpy(dst, tmp, dst_nbytes);
+	GetAllocator().Free(tmp);
+	length = dst_nbytes / (SizeType)sizeof(Ch);
+	if (dst_nbytes > src_nbytes) {
+	  str = (Ch*)dst;
+	}
+	dst_precision = dst_nbytes / nelements;
+      } else {
+	dst_encoding = src_encoding;
+      }
+    } else {
+      dst_encoding = src_encoding;
     }
     // Subtype and/or precision
     if ((src_subtype != dst_subtype ||
 	 src_precision != dst_precision) &&
+	src_subtype != SchemaType::kYggStringSchemaSubType &&
 	canTruncate((YggSubType)src_subtype, src_precision,
 		    (const unsigned char*)str,
 		    (YggSubType)dst_subtype, dst_precision,
@@ -2059,20 +2079,26 @@ public:
       }
       truncateCast((YggSubType)src_subtype, src_precision, (const unsigned char*)str,
 		   (YggSubType)dst_subtype, dst_precision, dst, nelements);
+      length = dst_nbytes / (SizeType)sizeof(Ch);
       if (dst_size > src_size) {
 	str = (Ch*)dst;
-	length = dst_nbytes / (SizeType)sizeof(Ch);
       }
+    } else {
+      dst_subtype = src_subtype;
+      if (src_subtype != SchemaType::kYggStringSchemaSubType)
+	dst_precision = src_precision;
     }
     // Units
     if (src_Units != dst_Units) {
-      modified = true;
       if (src_Units.is_compatible(dst_Units)) {
+	modified = true;
 	changeUnits((YggSubType)dst_subtype, dst_precision,
 		    (unsigned char*)str, src_Units,
 		    (unsigned char*)(&(str[0])), dst_Units,
 		    length * (SizeType)sizeof(Ch), nelements);
-      } else if (!src_Units.is_dimensionless()) {
+      } else if (src_Units.is_dimensionless()) {
+	modified = true;
+      } else {
 	// reset to src_units so that they are invalidated
 	dst_units = src_units;
 	dst_units_len = src_units_len;
@@ -2124,29 +2150,31 @@ public:
       exit_after_normalize_ = true;
       return NormYggdrasilString(context, schema, str, length, true, newValueSchema);
     } else {
+#define ADD_PROPERTY_(member)			\
+      if (valueSchema->FindMember(SchemaType::Get ## member ## String()) == valueSchema->MemberEnd()) {	\
+	typename YggSchemaValueType::ValueType new_value;		\
+	valueSchema->AddMember(YggSchemaValueType::Get ## member ## String(), \
+			       new_value,				\
+			       valueSchema->GetAllocator());		\
+      }
       if (src_subtype != dst_subtype) {
+	ADD_PROPERTY_(SubType)
 	const typename SchemaType::ValueType& subtype_str = schema.SubType2String(dst_subtype);
 	(*valueSchema)[SchemaType::GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), valueSchema->GetAllocator());
       }
       if (src_precision != dst_precision) {
+	ADD_PROPERTY_(Precision)
 	(*valueSchema)[SchemaType::GetPrecisionString()].SetUint(dst_precision);
       }
       if (src_Units != dst_Units) {
-	if (valueSchema->FindMember(SchemaType::GetUnitsString()) == valueSchema->MemberEnd()) {
-	  typename YggSchemaValueType::ValueType new_units(dst_units,
-							   dst_units_len,
-							   valueSchema->GetAllocator());
-	  valueSchema->AddMember(YggSchemaValueType::GetUnitsString(),
-				 new_units,
-				 valueSchema->GetAllocator());
-	} else {
-	  (*valueSchema)[SchemaType::GetUnitsString()].SetString(dst_units,
-								 dst_units_len,
-								 valueSchema->GetAllocator());
-	}
+	ADD_PROPERTY_(Units)
+	(*valueSchema)[SchemaType::GetUnitsString()].SetString(dst_units,
+							       dst_units_len,
+							       valueSchema->GetAllocator());
       }
       if (src_encoding != dst_encoding) {
 	const typename SchemaType::ValueType& encoding_str = schema.EncodingType2String(dst_encoding);
+	ADD_PROPERTY_(Encoding)
 	(*valueSchema)[SchemaType::GetEncodingString()].SetString(encoding_str.GetString(), encoding_str.GetStringLength(), valueSchema->GetAllocator());
       }
       src_subtype = dst_subtype;
@@ -5860,6 +5888,7 @@ public:
 	    case kValidateErrorPrecision:               return GetPrecisionString();
 	    case kValdiateErrorUnits:                   return GetUnitsString();
 	    case kValidateErrorShape:                   return GetShapeString();
+	    case kValidateErrorEncoding:                return GetEncodingString();
 	    case kValidateErrorPythonImport:            return GetPythonClassString();
 	    case kValidateErrorPythonClass:             return GetPythonClassString();
 	    case kValidateErrorInvalidSchema:           return GetSchemaString();
@@ -5957,6 +5986,8 @@ public:
     RAPIDJSON_STRING_(ASCIIEncoding, 'A', 'S', 'C', 'I', 'I')
     RAPIDJSON_STRING_(UCS4Encoding, 'U', 'C', 'S', '4')
     RAPIDJSON_STRING_(UTF8Encoding, 'U', 'T', 'F', '8')
+    RAPIDJSON_STRING_(UTF16Encoding, 'U', 'T', 'F', '1', '6')
+    RAPIDJSON_STRING_(UTF32Encoding, 'U', 'T', 'F', '3', '2')
     RAPIDJSON_STRING_(Args, 'a', 'r', 'g', 's')
     RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
     RAPIDJSON_STRING_(Aliases, 'a', 'l', 'i', 'a', 's', 'e', 's')
@@ -6027,6 +6058,8 @@ protected:
       kYggNullSchemaEncodingType,
       kYggASCIISchemaEncodingType,
       kYggUTF8SchemaEncodingType,
+      kYggUTF16SchemaEncodingType,
+      kYggUTF32SchemaEncodingType,
       kYggUCS4SchemaEncodingType
     };
 #endif // RAPIDJSON_YGGDRASIL
@@ -6324,6 +6357,8 @@ protected:
     if      (encoding == GetNullEncodingString() ) return kYggNullSchemaEncodingType;
     else if (encoding == GetASCIIEncodingString()) return kYggASCIISchemaEncodingType;
     else if (encoding == GetUTF8EncodingString() ) return kYggUTF8SchemaEncodingType;
+    else if (encoding == GetUTF16EncodingString() ) return kYggUTF16SchemaEncodingType;
+    else if (encoding == GetUTF32EncodingString() ) return kYggUTF32SchemaEncodingType;
     else if (encoding == GetUCS4EncodingString() ) return kYggUCS4SchemaEncodingType;
     return kYggNullSchemaEncodingType;
   }
@@ -6332,6 +6367,8 @@ protected:
     case (kYggNullSchemaEncodingType): return GetNullEncodingString();
     case (kYggASCIISchemaEncodingType): return GetASCIIEncodingString();
     case (kYggUTF8SchemaEncodingType): return GetUTF8EncodingString();
+    case (kYggUTF16SchemaEncodingType): return GetUTF16EncodingString();
+    case (kYggUTF32SchemaEncodingType): return GetUTF32EncodingString();
     case (kYggUCS4SchemaEncodingType): return GetUCS4EncodingString();
     default:
       const ValueType& out = GetNullString();

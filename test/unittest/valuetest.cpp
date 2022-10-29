@@ -14,6 +14,7 @@
 
 #include "unittest.h"
 #include "rapidjson/document.h"
+#include "rapidjson/writer.h"
 #include <algorithm>
 
 #ifdef __clang__
@@ -1463,6 +1464,26 @@ YGGDRASIL_1D_ARRAY_TEST_UNITS(Float, 4, float, 12.34f);
 YGGDRASIL_1D_ARRAY_TEST_UNITS(Int, 8, int64_t, 12u);
 YGGDRASIL_1D_ARRAY_TEST(Complex, 8, std::complex<float>,
 			std::complex<float>(2.2f, 3.4f));
+TEST(Value, OneDArrayString) {
+  Value::AllocatorType allocator;
+  char arr[3][6];
+  strcpy(arr[0], "red");
+  strcpy(arr[1], "green");
+  strcpy(arr[2], "blue");
+  Value x(arr);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.Is1DArray());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(kYggStringSubType, x.GetSubTypeCode());
+  char* cpy = NULL;
+  SizeType len_cpy = 0;
+  SizeType prec_cpy = 0;
+  x.Get1DArray(cpy, len_cpy, prec_cpy, allocator);
+  EXPECT_EQ(3u, len_cpy);
+  EXPECT_EQ(6u, prec_cpy);
+  for (SizeType i = 0; i < len_cpy; i++)
+    EXPECT_TRUE(strncmp(arr[i], cpy + (i * prec_cpy), prec_cpy) == 0);
+}
 
 // ND arrays
 YGGDRASIL_ND_ARRAY_TEST(Uint, 1, uint8_t, 12u);
@@ -1470,6 +1491,37 @@ YGGDRASIL_ND_ARRAY_TEST_UNITS(Float, 4, float, 12.34f);
 YGGDRASIL_ND_ARRAY_TEST_UNITS(Int, 8, int64_t, 12u);
 YGGDRASIL_ND_ARRAY_TEST(Complex, 8, std::complex<float>,
 			std::complex<float>(2.2f, 3.4f));
+TEST(Value, NDArrayString) {
+  Value::AllocatorType allocator;
+  char arr[3][2][6];
+  SizeType shape[] = {3, 2};
+  strcpy(arr[0][0], "red");
+  strcpy(arr[1][0], "green");
+  strcpy(arr[2][0], "blue");
+  strcpy(arr[0][1], "brown");
+  strcpy(arr[1][1], "grey");
+  strcpy(arr[2][1], "black");
+  Value x(arr);
+  EXPECT_TRUE(x.IsYggdrasil());
+  EXPECT_TRUE(x.IsNDArray());
+  EXPECT_EQ(kStringType, x.GetType());
+  EXPECT_EQ(kYggStringSubType, x.GetSubTypeCode());
+  char* cpy = NULL;
+  SizeType* shape_cpy = NULL;
+  SizeType ndim_cpy = 0;
+  SizeType prec_cpy = 0;
+  x.GetNDArray(cpy, shape_cpy, ndim_cpy, prec_cpy, allocator);
+  EXPECT_EQ(6u, prec_cpy);
+  EXPECT_EQ(2u, ndim_cpy);
+  for (SizeType i = 0; i < ndim_cpy; i++)
+    EXPECT_EQ(shape[i], shape_cpy[i]);
+  for (SizeType i = 0; i < shape[0]; i++) {
+    for (SizeType j = 0; j < shape[1]; j++) {
+      EXPECT_TRUE(strncmp(arr[i][j], cpy + i*shape[1]*prec_cpy + j*prec_cpy, prec_cpy) == 0);
+    }
+  }
+  DISPLAY_STRING("array", (arr));
+}
 
 #define ARRAYS_3D(zero)						\
   double vertices_ ## zero[8][3] =				\

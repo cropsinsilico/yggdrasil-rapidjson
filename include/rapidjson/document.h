@@ -2855,6 +2855,8 @@ public:
   RAPIDJSON_STRING_(ASCIIEncoding, 'A', 'S', 'C', 'I', 'I')
   RAPIDJSON_STRING_(UCS4Encoding, 'U', 'C', 'S', '4')
   RAPIDJSON_STRING_(UTF8Encoding, 'U', 'T', 'F', '8')
+  RAPIDJSON_STRING_(UTF16Encoding, 'U', 'T', 'F', '1', '6')
+  RAPIDJSON_STRING_(UTF32Encoding, 'U', 'T', 'F', '3', '2')
     
   // Subtypes
   RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
@@ -2862,6 +2864,7 @@ public:
   RAPIDJSON_STRING_(FloatSubType, 'f', 'l', 'o', 'a', 't')
   RAPIDJSON_STRING_(ComplexSubType, 'c', 'o', 'm', 'p', 'l', 'e', 'x')
   RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'g')
+  RAPIDJSON_STRING_(NullSubType, 'n', 'u', 'l', 'l')
 
 #undef RAPIDJSON_STRING_
 
@@ -2892,9 +2895,8 @@ public:
   bool AcceptYggdrasil(Handler& handler, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<Handler,SchemaValueType>))) const {
     return Accept(handler, true); }
 
-  template <typename T>
-  static const ValueType& YggSubTypeString() {
-    switch (GetYggSubType<T>()) {
+  static const ValueType& YggSubTypeString(enum YggSubType subtype) {
+    switch (subtype) {
     case kYggUintSubType:
       return GetUintSubTypeString();
     case kYggIntSubType:
@@ -2905,13 +2907,15 @@ public:
       return GetComplexSubTypeString();
     case kYggStringSubType:
       return GetStringSubTypeString();
-    case kYggNullSubType:
-      RAPIDJSON_ASSERT(false);
     default:
-      RAPIDJSON_ASSERT(false);
+      RAPIDJSON_ASSERT(subtype == kYggNullSubType);
+      return GetNullSubTypeString();
     }
-    RAPIDJSON_ASSERT(false);
-    return GetSubTypeString();
+  }
+  
+  template <typename T>
+  static const ValueType& YggSubTypeString() {
+    return YggSubTypeString(GetYggSubType<T>());
   }
 
   //! Constructors for strings w/ schema
@@ -3146,7 +3150,21 @@ public:
 			const SizeType nelements, Allocator& allocator)
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT {
     SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, precision, shape, 1, nullptr, 0, &allocator);
+    SetNDArrayRaw(x, shape, 1, nullptr, 0, &allocator, kYggStringSubType, precision);
+  }
+  template <SizeType M, SizeType N>
+  explicit GenericValue(const Ch (&x)[M][N])
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  {
+    SizeType shape[] = {M};
+    SetNDArrayRaw(&(x[0][0]), shape, 1, nullptr, 0, 0, kYggStringSubType, N);
+  }
+  template <SizeType M, SizeType N>
+  explicit GenericValue(const Ch (&x)[M][N], Allocator& allocator)
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  {
+    SizeType shape[] = {M};
+    SetNDArrayRaw(&(x[0][0]), shape, 1, nullptr, 0, &allocator, kYggStringSubType, N);
   }
   // Explicit 2D array
   template <typename T, SizeType M, SizeType N>
@@ -3238,7 +3256,21 @@ public:
   explicit GenericValue(const Ch* x, const SizeType precision,
 			const SizeType shape[], const SizeType ndim,
 			Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, precision, shape, ndim, nullptr, 0, &allocator); }
+  { SetNDArrayRaw(x, shape, ndim, nullptr, 0, &allocator, kYggStringSubType, precision); }
+  template <SizeType L, SizeType M, SizeType N>
+  explicit GenericValue(const Ch (&x)[L][M][N])
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  {
+    SizeType shape[] = {L, M};
+    SetNDArrayRaw(&(x[0][0][0]), shape, 2, nullptr, 0, 0, kYggStringSubType, N);
+  }
+  template <SizeType L, SizeType M, SizeType N>
+  explicit GenericValue(const Ch (&x)[L][M][N], Allocator& allocator)
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  {
+    SizeType shape[] = {L, M};
+    SetNDArrayRaw(&(x[0][0][0]), shape, 2, nullptr, 0, &allocator, kYggStringSubType, N);
+  }
   // Other types with dedicated classes
   explicit GenericValue(PyObject* x) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetPythonObjectRaw(x); }
@@ -3549,18 +3581,22 @@ public:
   bool SetNDArrayRaw(const T* data,
 		     const SizeType* shape, const SizeType& ndim,
 		     const Ch* units_str=nullptr, const SizeType units_len=0,
-		     Allocator* allocator = 0, RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
-    // TODO: Set precision for bytes
+		     Allocator* allocator = 0,
+		     enum YggSubType subtype = kYggNullSubType,
+		     SizeType precision = 0,
+		     RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
     ResetSchema(allocator);
-    // SizeType length = 0;
     SizeType nbytes = 0;
-    nbytes = sizeof(T);
+    if (precision == 0)
+      precision = (SizeType)sizeof(T);
+    nbytes = precision;
     ValueType shape_array(kArrayType);
     for (SizeType i = 0; i < ndim; i++) {
       nbytes = nbytes * shape[i];
       shape_array.PushBack(shape[i], schema_->GetAllocator());
     }
-    SetStringRaw(StringRef(reinterpret_cast<const Ch*>(data), nbytes),
+    SetStringRaw(StringRef(reinterpret_cast<const Ch*>(data),
+			   nbytes / sizeof(Ch)),
 		 schema_->GetAllocator());
     // Update schema
     schema_->MemberReserve(5, schema_->GetAllocator());
@@ -3569,8 +3605,12 @@ public:
     } else {
       AddSchemaMember(GetTypeString(), GetNDArrayString());
     }
-    AddSchemaMember(GetSubTypeString(), YggSubTypeString<T>());
-    AddSchemaMember(GetPrecisionString(), static_cast<unsigned int>(sizeof(T)));
+    if (subtype == kYggNullSubType) {
+      AddSchemaMember(GetSubTypeString(), YggSubTypeString<T>());
+    } else {
+      AddSchemaMember(GetSubTypeString(), YggSubTypeString(subtype));
+    }
+    AddSchemaMember(GetPrecisionString(), static_cast<unsigned int>(precision));
     if (units_str) {
       if (!SetUnits(units_str, units_len)) return false;
     }
@@ -3578,14 +3618,6 @@ public:
       AddSchemaMember(GetShapeString(), shape_array);
     }
     return true;
-  }
-  bool SetNDArrayRaw(const Ch* data, const SizeType precision,
-		     const SizeType* shape, const SizeType ndim,
-		     const Ch* units_str=nullptr, const SizeType units_len=0,
-		     Allocator* allocator = 0) {
-    bool out = SetNDArrayRaw(data, shape, ndim, units_str, units_len, allocator);
-    schema_->FindMember(GetPrecisionString())->Set(precision);
-    return out;
   }
   bool GetPythonObjectClassName(PyObject* x, Ch*& mod_cls, SizeType& mod_cls_siz,
 				Allocator& allocator) {
@@ -3780,11 +3812,22 @@ public:
 	  np_shape[i] = (npy_intp)shape[i];
 	schema_->GetAllocator().Free(shape);
 	// don't use allocator so that python array is responsible for freeing
+	bool free_data = false;
 	void* data = (void*)GetString();
-	if (typenum == NPY_UNICODE && enc != GetUCS4EncodingString()) {
-	  std::cerr << "CHANGE THE ENCODING" << std::endl;
-	  // TODO: Change precison/size to match encoding
-	  // desc->elsize = 
+	if (typenum == NPY_UNICODE && (!(enc == GetUCS4EncodingString() ||
+					 enc == GetUTF32EncodingString()))) {
+	  void* tmp = 0;
+	  SizeType tmp_nbytes = 0;
+	  if (!TranslateEncoding(GetString(), GetStringLength() * (SizeType)sizeof(Ch), enc.GetString(),
+				 tmp, tmp_nbytes, GetUTF32EncodingString().GetString(),
+				 schema_->GetAllocator(), true)) {
+	    Py_DECREF(desc);
+	    return NULL;
+	  }
+	  std::cerr << "CHANGING THE ENCODING" << std::endl;
+	  free_data = true;
+	  data = tmp;
+	  desc->elsize = tmp_nbytes / GetNElements();
 	}
 	PyObject* tmp = PyArray_NewFromDescr(&PyArray_Type, desc,
 					     (int)ndim, np_shape,
@@ -3793,6 +3836,8 @@ public:
 	  out = PyArray_NewCopy((PyArrayObject*)tmp, NPY_CORDER);
 	  Py_DECREF(tmp);
 	}
+	if (free_data)
+	  schema_->GetAllocator().Free(data);
 	schema_->GetAllocator().Free(np_shape);
 	return out;
       }
@@ -3948,7 +3993,7 @@ public:
       PyArray_CastScalarToCtype(scalar, data, desc);
       Py_DECREF(scalar);
       Py_INCREF(desc);
-      SetStringRaw(StringRef(static_cast<Ch*>(data), precision),
+      SetStringRaw(StringRef(static_cast<Ch*>(data), precision / sizeof(Ch)),
 		   schema_->GetAllocator());
       schema_->GetAllocator().Free(data);
       if (desc->type_num == NPY_UNICODE && encoding == GetUTF8EncodingString()) {
@@ -4737,14 +4782,15 @@ public:
   template <typename T>
   void GetArrayValueBase(T*& data, SizeType& ndim, SizeType*& shape,
 			 Allocator& allocator) const {
-    RAPIDJSON_ASSERT(YggSubTypeString<T>() == GetSubType());
+    RAPIDJSON_ASSERT(GetSubType() == GetStringSubTypeString() ||
+		     YggSubTypeString<T>() == GetSubType());
     size_t length = 0;
     unsigned char* decoded_bytes = GetDecodedString(length, allocator);
     RAPIDJSON_ASSERT((SizeType)length == GetNBytes());
     shape = GetShape(ndim, allocator);
     RAPIDJSON_ASSERT(shape);
     SizeType nelements = GetNElements();
-    if (sizeof(T) != GetPrecision()) {
+    if (sizeof(T) != GetPrecision() && GetSubType() != GetStringSubTypeString()) {
       unsigned char* old_decoded_bytes = decoded_bytes;
       decoded_bytes = (unsigned char*)ChangePrecision<T>(decoded_bytes,
 							 nelements,
@@ -4802,7 +4848,8 @@ public:
   // 1D array access
   template <typename T>
   void Get1DArray(T*& data, SizeType& nelements, Allocator& allocator,
-		  const UnitsType data_units = UnitsType()) const {
+		  const UnitsType data_units = UnitsType(),
+		  RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
     units::GenericQuantityArray<T, EncodingType> x;
     GetArrayQuantity(&x, allocator, data_units);
     nelements = x.nelements();
@@ -4828,12 +4875,28 @@ public:
   T* Get1DArray(SizeType& nelements, Allocator& allocator,
 		const Ch* units_str) const {
     return Get1DArray<T>(nelements, allocator, UnitsType(units_str)); }
+  // 1D string array access
+  void Get1DArray(Ch*& data, SizeType& nelements, SizeType& precision,
+		  Allocator& allocator) const {
+    SizeType ndim = 0;
+    SizeType* shape = nullptr;
+    GetNDArray(data, shape, ndim, precision, allocator);
+    nelements = GetNElements();
+    allocator.Free(shape);
+  }
+  Ch* Get1DArray(SizeType& nelements, SizeType& precision,
+		 Allocator& allocator) const {
+    Ch* data = nullptr;
+    Get1DArray(data, nelements, precision, allocator);
+    return data;
+  }
   
   // ND array access
   template <typename T>
   void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
 		  Allocator& allocator,
-		  const UnitsType data_units = UnitsType()) const {
+		  const UnitsType data_units = UnitsType(),
+		  RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
     SizeType nelements = 1;
     units::GenericQuantityArray<T, EncodingType> x;
     GetArrayQuantity<T>(&x, allocator, data_units);
@@ -4871,6 +4934,18 @@ public:
   T* GetNDArray(SizeType*& shape, SizeType& ndim, Allocator& allocator,
 		const Ch* units_str) const {
     return GetNDArray<T>(shape, ndim, allocator, UnitsType(units_str)); }
+  // ND string array access
+  void GetNDArray(Ch*& data, SizeType*& shape, SizeType& ndim,
+		  SizeType& precision, Allocator& allocator) const {
+    GetArrayValueBase(data, ndim, shape, allocator);
+    precision = GetPrecision();
+  }
+  Ch* GetNDArray(SizeType*& shape, SizeType& ndim, SizeType& precision,
+		 Allocator& allocator) const {
+    Ch* data = nullptr;
+    GetNDArray(data, shape, ndim, precision, allocator);
+    return data;
+  }
   
   template <typename T>
   T* Get(SizeType** shape, SizeType& ndim, Allocator& allocator) const {
@@ -5747,6 +5822,87 @@ private:
     ValueType& value_;
 };
 
+#ifdef RAPIDJSON_YGGDRASIL
+  
+#define ENCODING_STRING_(name, ...)			\
+  const Ch name ## String[] = { __VA_ARGS__, '\0' }
+#define COMPARE_(x, dec)						\
+  (std::basic_string<Ch>(x) == std::basic_string<Ch>(dec ## String))
+#define SWITCH_(x, CASE_)						\
+  CASE_(x, ASCII, ASCII)						\
+  else CASE_(x, ASCII, Null)						\
+  else CASE_(x, UTF8, UTF8)						\
+  else CASE_(x, UTF16, UTF16)						\
+  else CASE_(x, UTF32, UTF32)						\
+  else CASE_(x, UTF32, UCS4)						\
+  else {								\
+    return false;							\
+  }
+template <typename SourceEncoding, typename DestEncoding,
+	  typename Ch, typename AllocatorType>
+inline bool TranslateEncoding_inner(const void* src, SizeType srcNbytes, const Ch* srcEncoding,
+				    void*& dst, SizeType& dstNbytes, const Ch* dstEncoding,
+				    AllocatorType& allocator,
+				    bool requireFixedWidth = false) {
+  if (requireFixedWidth && (!DestEncoding::fixedWidth || !SourceEncoding::fixedWidth))
+    return false;
+  SizeType srcLength = srcNbytes / ((SizeType)sizeof(typename SourceEncoding::Ch));
+  GenericStringStream<SourceEncoding> is((const typename SourceEncoding::Ch*)src);
+  GenericStringBuffer<DestEncoding> os;
+  while (RAPIDJSON_LIKELY(is.Tell() < srcLength)) {
+    Transcoder<SourceEncoding, DestEncoding>::Transcode(is, os);
+  }
+  dstNbytes = (SizeType)os.GetLength() * (SizeType)sizeof(typename DestEncoding::Ch);
+  dst = allocator.Malloc(dstNbytes);
+  if (!dst) return false;
+  memcpy(dst, os.GetString(), dstNbytes);
+  return true;
+}
+template <typename SourceEncoding, typename Ch, typename AllocatorType>
+inline bool TranslateEncoding_outer(const void* src, SizeType srcNbytes, const Ch* srcEncoding,
+				    void*& dst, SizeType& dstNbytes, const Ch* dstEncoding,
+				    AllocatorType& allocator,
+				    bool requireFixedWidth = false) {
+  ENCODING_STRING_(ASCII, 'A', 'S', 'C', 'I', 'I');
+  ENCODING_STRING_(UTF8, 'U', 'T', 'F', '8');
+  ENCODING_STRING_(UTF16, 'U', 'T', 'F', '1', '6');
+  ENCODING_STRING_(UTF32, 'U', 'T', 'F', '3', '2');
+  ENCODING_STRING_(UCS4, 'U', 'C', 'S', '4');
+  ENCODING_STRING_(Null, 'n', 'u', 'l', 'l');
+#define INNER_CASE_(x, dec, decS)					\
+  if (COMPARE_(x, decS)) {						\
+    return TranslateEncoding_inner<SourceEncoding, dec<>>(src, srcNbytes, srcEncoding, dst, dstNbytes, dstEncoding, allocator, requireFixedWidth); \
+  }
+  SWITCH_(dstEncoding, INNER_CASE_)
+  return false;
+}
+template <typename Ch, typename AllocatorType>
+inline bool TranslateEncoding(const void* src, SizeType srcNbytes, const Ch* srcEncoding,
+			      void*& dst, SizeType& dstNbytes, const Ch* dstEncoding,
+			      AllocatorType& allocator,
+			      bool requireFixedWidth = false) {
+  ENCODING_STRING_(ASCII, 'A', 'S', 'C', 'I', 'I');
+  ENCODING_STRING_(UTF8, 'U', 'T', 'F', '8');
+  ENCODING_STRING_(UTF16, 'U', 'T', 'F', '1', '6');
+  ENCODING_STRING_(UTF32, 'U', 'T', 'F', '3', '2');
+  ENCODING_STRING_(UCS4, 'U', 'C', 'S', '4');
+  ENCODING_STRING_(Null, 'n', 'u', 'l', 'l');
+#define OUTER_CASE_(x, dec, decS)					\
+  if (COMPARE_(x, decS)) {						\
+    return TranslateEncoding_outer<dec<>>(src, srcNbytes, srcEncoding, dst, dstNbytes, dstEncoding, allocator, requireFixedWidth); \
+  }
+  SWITCH_(srcEncoding, OUTER_CASE_)
+  return true;
+}
+#undef SWITCH_
+#undef OUTER_CASE_
+#undef INNER_CASE_
+#undef COMPARE_
+#undef ENCODING_STRING_
+
+
+#endif // RAPIDJSON_YGGDRASIL
+  
 RAPIDJSON_NAMESPACE_END
 RAPIDJSON_DIAG_POP
 

@@ -102,6 +102,9 @@ struct UTF8 {
     typedef CharType Ch;
 
     enum { supportUnicode = 1 };
+#ifdef RAPIDJSON_YGGDRASIL
+    enum { fixedWidth = 0 };
+#endif // RAPIDJSON_YGGDRASIL
 
     template<typename OutputStream>
     static void Encode(OutputStream& os, unsigned codepoint) {
@@ -276,6 +279,9 @@ struct UTF16 {
     RAPIDJSON_STATIC_ASSERT(sizeof(Ch) >= 2);
 
     enum { supportUnicode = 1 };
+#ifdef RAPIDJSON_YGGDRASIL
+    enum { fixedWidth = 0 };
+#endif // RAPIDJSON_YGGDRASIL
 
     template<typename OutputStream>
     static void Encode(OutputStream& os, unsigned codepoint) {
@@ -425,6 +431,9 @@ struct UTF32 {
     RAPIDJSON_STATIC_ASSERT(sizeof(Ch) >= 4);
 
     enum { supportUnicode = 1 };
+#ifdef RAPIDJSON_YGGDRASIL
+    enum { fixedWidth = 1 };
+#endif // RAPIDJSON_YGGDRASIL
 
     template<typename OutputStream>
     static void Encode(OutputStream& os, unsigned codepoint) {
@@ -548,6 +557,9 @@ struct ASCII {
     typedef CharType Ch;
 
     enum { supportUnicode = 0 };
+#ifdef RAPIDJSON_YGGDRASIL
+    enum { fixedWidth = 1 };
+#endif // RAPIDJSON_YGGDRASIL
 
     template<typename OutputStream>
     static void Encode(OutputStream& os, unsigned codepoint) {
@@ -621,6 +633,9 @@ struct AutoUTF {
     typedef CharType Ch;
 
     enum { supportUnicode = 1 };
+#ifdef RAPIDJSON_YGGDRASIL
+    enum { fixedWidth = 0 };
+#endif // RAPIDJSON_YGGDRASIL
 
 #define RAPIDJSON_ENCODINGS_FUNC(x) UTF8<Ch>::x, UTF16LE<Ch>::x, UTF16BE<Ch>::x, UTF32LE<Ch>::x, UTF32BE<Ch>::x
 

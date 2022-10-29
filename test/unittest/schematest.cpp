@@ -4601,25 +4601,25 @@ TEST(SchemaCompare, Shape) {
 TEST(SchemaCompare, Encoding) {
   COMPARE("{"
 	  "  \"type\": \"scalar\","
-	  "  \"subtype\": \"float\","
+	  "  \"subtype\": \"string\","
 	  "  \"precision\": 8,"
 	  "  \"encoding\": \"UTF8\""
 	  "}",
 	  "{"
 	  "  \"type\": \"scalar\","
-	  "  \"subtype\": \"float\","
+	  "  \"subtype\": \"string\","
 	  "  \"precision\": 8,"
 	  "  \"encoding\": \"UTF8\""
 	  "}");
   INVALID_COMPARE("{"
 		  "  \"type\": \"scalar\","
-		  "  \"subtype\": \"float\","
+		  "  \"subtype\": \"string\","
 		  "  \"precision\": 8,"
 		  "  \"encoding\": \"UTF8\""
 		  "}",
 		  "{"
 		  "  \"type\": \"scalar\","
-		  "  \"subtype\": \"float\","
+		  "  \"subtype\": \"string\","
 		  "  \"precision\": 8"
 		  "}",
 		  "{ \"compare\": {"

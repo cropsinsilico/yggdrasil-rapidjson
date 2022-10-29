@@ -1100,6 +1100,69 @@ TEST(SchemaNormalizer, AliasNestedConflicting) {
 		     "}}");
 }
 
+TEST(SchemaNormalizer, Encoding) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": \"string\","
+	"  \"encoding\": \"UCS4\""
+	"}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "\"hello\"",
+	      true,
+	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InN0cmluZyIsInByZWNpc2lvbiI6MjAsImVuY29kaW5nIjoiVUNTNCJ9-YGG-aAAAAGUAAABsAAAAbAAAAG8AAAA=-YGG-\"");
+}
+TEST(SchemaNormalizer, EncodingBackwards) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": \"string\","
+	"  \"encoding\": \"UTF8\""
+	"}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InN0cmluZyIsInByZWNpc2lvbiI6MjAsImVuY29kaW5nIjoiVUNTNCJ9-YGG-aAAAAGUAAABsAAAAbAAAAG8AAAA=-YGG-\"",
+	      true,
+	      "\"hello\"");
+}
+TEST(SchemaNormalizer, EncodingArray) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"ndarray\","
+	"  \"subtype\": \"string\","
+	"  \"encoding\": \"UCS4\""
+	"}");
+    SchemaDocument s(sd);
+    NORMALIZE(s,
+	      "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJzdHJpbmciLCJwcmVjaXNpb24iOjYsInNoYXBlIjpbM119-YGG-cmVkAPj4Z3JlZW4AYmx1ZQAA-YGG-\"",
+	      true,
+	      "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJzdHJpbmciLCJwcmVjaXNpb24iOjIxLCJzaGFwZSI6WzNdLCJlbmNvZGluZyI6IlVDUzQifQ==-YGG-cgAAAGUAAABkAAAAAAAAAGcAAAByAAAAZQAAAGUAAABuAAAAAAAAAGIAAABsAAAAdQAAAGUAAAAAAAAAAAAAAA==-YGG-\"");
+}
+TEST(SchemaNormalizer, EncodingArrayFailure) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"ndarray\","
+	"  \"subtype\": \"string\","
+	"  \"encoding\": \"UTF8\""
+	"}");
+    SchemaDocument s(sd);
+    FAILED_NORMALIZE(s,
+		     "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJzdHJpbmciLCJwcmVjaXNpb24iOjIxLCJzaGFwZSI6WzNdLCJlbmNvZGluZyI6IlVDUzQifQ==-YGG-cgAAAGUAAABkAAAAAAAAAGcAAAByAAAAZQAAAGUAAABuAAAAAAAAAGIAAABsAAAAdQAAAGUAAAAAAAAAAAAAAA==-YGG-\"",
+		     "", "encoding", "",
+		     "{ \"encoding\": {"
+		     "    \"errorCode\": 31,"
+		     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		     "    \"expected\": \"UTF8\","
+		     "    \"actual\": \"UCS4\""
+		     "}}");
+		     
+}
+
 TEST(SchemaNormalizer, Units) {
     Document sd;
     sd.Parse(
