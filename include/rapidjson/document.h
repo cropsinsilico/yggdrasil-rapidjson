@@ -4120,7 +4120,8 @@ public:
 	error = true;
 	goto cleanup;
       }
-      skipTitleObject = PyObject_GetAttrString(columns, "is_monotonic");
+      skipTitleObject = PyObject_CallMethod(columns, "is_integer", NULL);
+      // skipTitleObject = PyObject_GetAttrString(columns, "is_monotonic");
       if (skipTitleObject == NULL) {
 	error = true;
 	goto cleanup;
@@ -5838,10 +5839,9 @@ private:
   else {								\
     return false;							\
   }
-template <typename SourceEncoding, typename DestEncoding,
-	  typename Ch, typename AllocatorType>
-inline bool TranslateEncoding_inner(const void* src, SizeType srcNbytes, const Ch* srcEncoding,
-				    void*& dst, SizeType& dstNbytes, const Ch* dstEncoding,
+template <typename SourceEncoding, typename DestEncoding, typename AllocatorType>
+inline bool TranslateEncoding_inner(const void* src, SizeType srcNbytes,
+				    void*& dst, SizeType& dstNbytes,
 				    AllocatorType& allocator,
 				    bool requireFixedWidth = false) {
   if (requireFixedWidth && (!DestEncoding::fixedWidth || !SourceEncoding::fixedWidth))
@@ -5859,7 +5859,7 @@ inline bool TranslateEncoding_inner(const void* src, SizeType srcNbytes, const C
   return true;
 }
 template <typename SourceEncoding, typename Ch, typename AllocatorType>
-inline bool TranslateEncoding_outer(const void* src, SizeType srcNbytes, const Ch* srcEncoding,
+inline bool TranslateEncoding_outer(const void* src, SizeType srcNbytes,
 				    void*& dst, SizeType& dstNbytes, const Ch* dstEncoding,
 				    AllocatorType& allocator,
 				    bool requireFixedWidth = false) {
@@ -5871,7 +5871,7 @@ inline bool TranslateEncoding_outer(const void* src, SizeType srcNbytes, const C
   ENCODING_STRING_(Null, 'n', 'u', 'l', 'l');
 #define INNER_CASE_(x, dec, decS)					\
   if (COMPARE_(x, decS)) {						\
-    return TranslateEncoding_inner<SourceEncoding, dec<>>(src, srcNbytes, srcEncoding, dst, dstNbytes, dstEncoding, allocator, requireFixedWidth); \
+    return TranslateEncoding_inner<SourceEncoding, dec<>>(src, srcNbytes, dst, dstNbytes, allocator, requireFixedWidth); \
   }
   SWITCH_(dstEncoding, INNER_CASE_)
   return false;
@@ -5889,7 +5889,7 @@ inline bool TranslateEncoding(const void* src, SizeType srcNbytes, const Ch* src
   ENCODING_STRING_(Null, 'n', 'u', 'l', 'l');
 #define OUTER_CASE_(x, dec, decS)					\
   if (COMPARE_(x, decS)) {						\
-    return TranslateEncoding_outer<dec<>>(src, srcNbytes, srcEncoding, dst, dstNbytes, dstEncoding, allocator, requireFixedWidth); \
+    return TranslateEncoding_outer<dec<>>(src, srcNbytes, dst, dstNbytes, dstEncoding, allocator, requireFixedWidth); \
   }
   SWITCH_(srcEncoding, OUTER_CASE_)
   return true;
