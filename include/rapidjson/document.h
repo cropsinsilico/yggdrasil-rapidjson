@@ -3860,7 +3860,12 @@ public:
     return out;
   }
   bool SetPythonObjectRaw(PyObject* x, Allocator* allocator = 0,
-			  bool skipTitle=false) {
+#ifdef RAPIDJSON_DONT_IMPORT_NUMPY
+			  bool=false
+#else // RAPIDJSON_DONT_IMPORT_NUMPY
+			  bool skipTitle=false
+#endif // RAPIDJSON_DONT_IMPORT_NUMPY
+			  ) {
     RAPIDJSON_ASSERT(isPythonInitialized());
     if (!isPythonInitialized())
       return false;
@@ -4121,7 +4126,6 @@ public:
 	goto cleanup;
       }
       skipTitleObject = PyObject_CallMethod(columns, "is_integer", NULL);
-      // skipTitleObject = PyObject_GetAttrString(columns, "is_monotonic");
       if (skipTitleObject == NULL) {
 	error = true;
 	goto cleanup;
