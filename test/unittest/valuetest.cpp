@@ -14,7 +14,6 @@
 
 #include "unittest.h"
 #include "rapidjson/document.h"
-#include "rapidjson/writer.h"
 #include <algorithm>
 
 #ifdef __clang__
@@ -1520,7 +1519,6 @@ TEST(Value, NDArrayString) {
       EXPECT_TRUE(strncmp(arr[i][j], cpy + i*shape[1]*prec_cpy + j*prec_cpy, prec_cpy) == 0);
     }
   }
-  DISPLAY_STRING("array", (arr));
 }
 
 #define ARRAYS_3D(zero)						\
