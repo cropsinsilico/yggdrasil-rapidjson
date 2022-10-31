@@ -5878,7 +5878,6 @@ inline bool TranslateEncoding_outer(const void* src, SizeType srcNbytes,
     return TranslateEncoding_inner<SourceEncoding, dec<>>(src, srcNbytes, dst, dstNbytes, allocator, requireFixedWidth); \
   }
   SWITCH_(dstEncoding, INNER_CASE_)
-  return false;
 }
 template <typename Ch, typename AllocatorType>
 inline bool TranslateEncoding(const void* src, SizeType srcNbytes, const Ch* srcEncoding,
@@ -5896,7 +5895,6 @@ inline bool TranslateEncoding(const void* src, SizeType srcNbytes, const Ch* src
     return TranslateEncoding_outer<dec<>>(src, srcNbytes, dst, dstNbytes, dstEncoding, allocator, requireFixedWidth); \
   }
   SWITCH_(srcEncoding, OUTER_CASE_)
-  return true;
 }
 #undef SWITCH_
 #undef OUTER_CASE_
