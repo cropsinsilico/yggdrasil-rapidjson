@@ -1815,6 +1815,25 @@ public:
     if (!element_set) return 0;
     return element_set->elements.size();
   }
+  //! \brief Get a mapping of element types in the group and counts of that
+  //!   type of element.
+  //! \return Map between element type and count.
+  std::map<std::string,size_t> element_counts() const {
+    std::map<std::string,size_t> idx;
+    for (std::map<std::string,PlyElementSet>::const_iterator it = elements.begin();
+	 it != elements.end(); it++) {
+      idx.insert({it->first, it->second.elements.size()});
+    }
+    return idx;
+  }
+  //! \brief Get a string representation of the element.
+  //! \return String representation.
+  std::string as_string() const {
+    std::string out;
+    std::stringstream ss(out);
+    write(ss);
+    return out;
+  }
   //! \brief Get an element set.
   //! \param name0 Name of the element set to get.
   //! \returns The element set of the requested type if it exists and NULL

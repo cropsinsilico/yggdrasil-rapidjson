@@ -4334,6 +4334,7 @@ public:
 	precision_(),
 	units_(),
 	shape_(),
+	ndim_(0),
 	encoding_(),
 	class_(),
 	isMetaschema_(isMetaschema),
@@ -4704,6 +4705,11 @@ public:
 	        shape_.CopyFrom(*v, *allocator_);
 	    }
 	}
+	if (const ValueType* v = GetMember(value, GetNDimString())) {
+	    if (v->IsUint()) {
+	        ndim_ = v->GetUint();
+	    }
+	}
 	if (const ValueType* v = GetMember(value, GetEncodingString())) {
 	    encoding_ = kYggNullSchemaEncodingType;
 	    if (v->IsString())
@@ -4815,8 +4821,14 @@ public:
 	if (units_ != rhs.units_)
 	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetUnitsString(), units_, rhs.units_);
       }
-      if (((!shape_.IsNull()) && (!rhs.shape_.IsNull())) && (shape_ != rhs.shape_))
+      if ((!shape_.IsNull()) && (!rhs.shape_.IsNull()) && (shape_ != rhs.shape_))
 	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetShapeString(), shape_, rhs.shape_);
+      if (ndim_ != 0 && rhs.ndim_ != 0 && ndim_ != rhs.ndim_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(ndim_).Move(), SValue(rhs.ndim_).Move());
+      if (ndim_ != 0 && (!rhs.shape_.IsNull()) && ndim_ != rhs.shape_.Size())
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(ndim_).Move(), SValue(rhs.shape_.Size()).Move());
+      if ((!shape_.IsNull()) && rhs.ndim_ != 0 && shape_.Size() != rhs.ndim_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(shape_.Size()).Move(), SValue(rhs.ndim_).Move());
       if (encoding_ != rhs.encoding_) {
 	const ValueType& lhs_encoding = EncodingType2String(encoding_);
 	const ValueType& rhs_encoding = EncodingType2String(rhs.encoding_);
@@ -5981,6 +5993,7 @@ public:
     RAPIDJSON_STRING_(Units, 'u', 'n', 'i', 't', 's')
     RAPIDJSON_STRING_(Length, 'l', 'e', 'n', 'g', 't', 'h')
     RAPIDJSON_STRING_(Shape, 's', 'h', 'a', 'p', 'e')
+    RAPIDJSON_STRING_(NDim, 'n', 'd', 'i', 'm')
     RAPIDJSON_STRING_(Encoding, 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g')
     RAPIDJSON_STRING_(NullEncoding, 'n', 'u', 'l', 'l')
     RAPIDJSON_STRING_(ASCIIEncoding, 'A', 'S', 'C', 'I', 'I')
@@ -6845,14 +6858,22 @@ protected:
     RAPIDJSON_ASSERT(schema.IsObject());
     if (!CheckRequiredSchemaProperty(context, schema, GetShapeString()))
       return false;
-    if (shape_.IsNull())
+    if (shape_.IsNull() && ndim_ == 0) {
       return true;
+    }
     SValue actual(kArrayType);
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetShapeString());
     for (typename YggSchemaValueType::ConstValueIterator v = vs->value.Begin(); v != vs->value.End(); ++v)
       actual.PushBack(static_cast<SizeType>(v->GetUint()), *allocator_);
     if (!shape_.IsNull() && (shape_ != actual)) {
       context.error_handler.IncorrectShape(actual, shape_);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorShape);
+    } else if (ndim_ != 0 && actual.Size() != ndim_) {
+      SValue expected(kArrayType);
+      for (SizeType i = 0; i < ndim_; i++) {
+	expected.PushBack(SValue(kNullType).Move(), *allocator_);
+      }
+      context.error_handler.IncorrectShape(actual, expected);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorShape);
     }
     return true;
@@ -8291,6 +8312,7 @@ protected:
     SValue precision_;
     SValue units_;
     SValue shape_;
+    SizeType ndim_;
     YggSchemaEncodingType encoding_;
     SValue class_;
     bool isMetaschema_;

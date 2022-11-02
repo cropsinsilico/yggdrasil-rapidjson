@@ -2059,6 +2059,26 @@ TEST(SchemaValidator, Shape) { // 30
 	       "    \"expected\": [2, 3], \"actual\": [2, 4]"
 	       "}}");
 }
+TEST(SchemaValidator, NDim) { // 30
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"ndarray\","
+	"  \"subtype\": \"uint\","
+	"  \"precision\": 2,"
+	"  \"units\": \"g\","
+	"  \"ndim\": 2"
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAECAwQF-YGG-\"", true);
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzNdfQ==-YGG-AAEC-YGG-\"",
+	       "", "shape", "",
+	       "{ \"shape\" : {"
+	       "    \"errorCode\": 30,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+	       "    \"expected\": [null, null], \"actual\": [3]"
+	       "}}");
+}
 TEST(SchemaValidator, InvalidSchema) {
   { // scalar
     Document sd;
@@ -4596,6 +4616,61 @@ TEST(SchemaCompare, Shape) {
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"shape\","
 		  "    \"expected\": [2, 3], \"actual\": [4, 5]"
+		  "}}");
+}
+TEST(SchemaCompare, NDim) {
+  COMPARE("{"
+	  "  \"type\": \"ndarray\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"ndim\": 2"
+	  "}",
+	  "{"
+	  "  \"type\": \"ndarray\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"ndim\": 2"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"ndarray\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"ndim\": 2"
+	  "}",
+	  "{"
+	  "  \"type\": \"ndarray\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"ndarray\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"ndim\": 2"
+	  "}",
+	  "{"
+	  "  \"type\": \"ndarray\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 8,"
+	  "  \"shape\": [2, 3]"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"ndarray\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 8,"
+		  "  \"ndim\": 2"
+		  "}",
+		  "{"
+		  "  \"type\": \"ndarray\","
+		  "  \"subtype\": \"float\","
+		  "  \"precision\": 8,"
+		  "  \"ndim\": 3"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"ndim\","
+		  "    \"expected\": 2, \"actual\": 3"
 		  "}}");
 }
 TEST(SchemaCompare, Encoding) {

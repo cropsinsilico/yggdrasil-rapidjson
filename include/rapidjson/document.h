@@ -2839,6 +2839,7 @@ public:
   RAPIDJSON_STRING_(PythonFunction, 'f', 'u', 'n', 'c', 't', 'i', 'o', 'n')
   RAPIDJSON_STRING_(PythonInstance, 'i', 'n', 's', 't', 'a', 'n', 'c', 'e')
   RAPIDJSON_STRING_(Obj, 'o', 'b', 'j')
+  RAPIDJSON_STRING_(ObjWavefront, 'o', 'b', 'j')
   RAPIDJSON_STRING_(Ply, 'p', 'l', 'y')
   RAPIDJSON_STRING_(Schema, 's', 'c', 'h', 'e', 'm', 'a')
   RAPIDJSON_STRING_(Any, 'a', 'n', 'y')
@@ -5079,37 +5080,59 @@ public:
   }
   Object GetSchema() { RAPIDJSON_ASSERT(IsSchema()); return GetObject(); }
 
+  // Methods from provided schema
+  template <typename SourceAllocator>
+  GenericValue& SetYggdrasilString(const Ch* s, SizeType length, Allocator& allocator,
+				   const GenericValue<Encoding,SourceAllocator>& schema) {
+    this->~GenericValue();
+    new (this) GenericValue(s, length, allocator, schema);
+    return *this; }
+
   template<typename T>
-  GenericValue& SetScalar(T x, const Ch* units_str=nullptr,
+  GenericValue& SetScalar(const T x, const Ch* units_str=nullptr,
 			  const SizeType units_len=0,
 			  Allocator* allocator = 0) {
     this->~GenericValue();
-    new (this) GenericValue(x, units_str, units_len, allocator);
+    if (allocator)
+      new (this) GenericValue(x, units_str, units_len, *allocator);
+    else
+      new (this) GenericValue(x, units_str, units_len);
     return *this; }
   template<typename T>
-  GenericValue& Set1DArray(T* x, SizeType nelements,
+  GenericValue& Set1DArray(const T* x, SizeType nelements,
 			   const Ch* units_str=nullptr,
 			   const SizeType units_len=0,
 			   Allocator* allocator = 0) {
     this->~GenericValue();
-    new (this) GenericValue(x, nelements, units_str, units_len, allocator);
+    if (allocator)
+      new (this) GenericValue(x, nelements, units_str, units_len, *allocator);
+    else
+      new (this) GenericValue(x, nelements, units_str, units_len);
     return *this; }
   template<typename T>
-  GenericValue& SetNDArray(T* x, SizeType shape[], SizeType ndim,
+  GenericValue& SetNDArray(const T* x, SizeType shape[], SizeType ndim,
 			   const Ch* units_str=nullptr,
 			   const SizeType units_len=0,
 			   Allocator* allocator = 0) {
     this->~GenericValue();
-    new (this) GenericValue(x, shape, ndim, units_str, units_len, allocator);
+    if (allocator)
+      new (this) GenericValue(x, shape, ndim, units_str, units_len, *allocator);
+    else
+      new (this) GenericValue(x, shape, ndim, units_str, units_len);
     return *this; }
   GenericValue& SetPythonInstance(PyObject* x, Allocator* allocator = 0) {
+    this->~GenericValue();
+    if (allocator)
+      new (this) GenericValue(x, *allocator);
+    else
+      new (this) GenericValue(x);
+    return *this; }
+  GenericValue& SetObjWavefront(ObjWavefront x, Allocator* allocator = 0) {
     this->~GenericValue();
     new (this) GenericValue(x, allocator);
     return *this; }
   GenericValue& SetObj(ObjWavefront x, Allocator* allocator = 0) {
-    this->~GenericValue();
-    new (this) GenericValue(x, allocator);
-    return *this; }
+    return SetObjWavefront(x, allocator); }
   GenericValue& SetPly(Ply x, Allocator* allocator = 0) {
     this->~GenericValue();
     new (this) GenericValue(x, allocator);

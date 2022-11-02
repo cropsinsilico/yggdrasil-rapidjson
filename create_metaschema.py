@@ -279,6 +279,11 @@ if __name__ == "__main__":
             },
             "type": "array"
         },
+        "ndim": {
+            "description": "Number of dimensions in the ND array.",
+            "minimum": 1,
+            "type": "integer"
+        },
         "subtype": {
             "description": "The base type for each item.",
             "enum": [
