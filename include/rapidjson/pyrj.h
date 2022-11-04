@@ -121,13 +121,14 @@ void init_python_API() {
       goto done;
     }
     init_numpy_API();
+  done:
+#if PY_MAJOR_VERSION > 3 ||			\
+  (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8)
+    PyConfig_Clear(&config);
+#endif
   }
 #ifdef _OPENMP
   }
-#endif
-  done:
-#ifdef PyConfig
-    PyConfig_Clear(&config);
 #endif
   if (err.length() > 0)
     throw std::runtime_error(err); // GCOVR_EXCL_LINE
