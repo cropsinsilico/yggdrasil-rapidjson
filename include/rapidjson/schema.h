@@ -10019,9 +10019,16 @@ RAPIDJSON_MULTILINEMACRO_END
       PopSchema();
       return out;
     }
+    bool Compare(const SchemaDocumentType& rhs) {
+      GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator> rhs_v(rhs);
+      return Compare(rhs_v);
+    }
     // //! Generate data according to a schema
     // bool Generate(ValueType& data) {
-      
+    // PushSchema(root_);
+    // bool out = root_.Generate(data, CurrentContext());
+    // PopSchema();
+    // return out;
     // }
 #endif // RAPIDJSON_YGGDRASIL
 

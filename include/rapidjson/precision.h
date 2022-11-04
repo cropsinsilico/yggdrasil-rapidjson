@@ -311,7 +311,7 @@ bool canTruncate(const T1& x,
 				     YGGDRASIL_IS_FLOAT_TYPE(T1),
 				     internal::OrExpr<
 				     YGGDRASIL_IS_INT_TYPE(T2),
-				     YGGDRASIL_IS_UINT_TYPE(T2)>>))) {
+				     YGGDRASIL_IS_UINT_TYPE(T2)> >))) {
   T1 x_int = floor(x);
   if (!internal::values_eq(x_int, x))
     return false;
@@ -325,10 +325,10 @@ bool canTruncate(const T1& x,
 				     YGGDRASIL_IS_INT_TYPE(T1),
 				     YGGDRASIL_IS_UINT_TYPE(T1)>,
 				     internal::NotExpr<
-				     YGGDRASIL_IS_COMPLEX_TYPE(T2)>>,
+				     YGGDRASIL_IS_COMPLEX_TYPE(T2)> >,
 				     internal::AndExpr<
 				     YGGDRASIL_IS_FLOAT_TYPE(T1),
-				     YGGDRASIL_IS_FLOAT_TYPE(T2)>>))) {
+				     YGGDRASIL_IS_FLOAT_TYPE(T2)> >))) {
   return COMPARE_LIMITS_(x);
 }
 template <typename T1, typename T2>
@@ -352,7 +352,7 @@ bool canTruncate(const T1& x,
 		 RAPIDJSON_ENABLEIF((internal::AndExpr<
 				     YGGDRASIL_IS_COMPLEX_TYPE(T1),
 				     internal::NotExpr<
-				     YGGDRASIL_IS_COMPLEX_TYPE(T2)>>))) {
+				     YGGDRASIL_IS_COMPLEX_TYPE(T2)> >))) {
   if (!internal::values_eq(x.imag(), 0))
     return false;
   return canTruncate<typename T1::value_type, T2>(x.imag());
@@ -397,7 +397,7 @@ T2 truncateCast(const T1& x,
 				    internal::NotExpr<
 				    YGGDRASIL_IS_COMPLEX_TYPE(T1)>,
 				    internal::NotExpr<
-				    YGGDRASIL_IS_COMPLEX_TYPE(T2)>>)))
+				    YGGDRASIL_IS_COMPLEX_TYPE(T2)> >)))
 { return static_cast<const T2>(x); }
 template <typename T1, typename T2>
 T2 truncateCast(const T1& x,
@@ -411,7 +411,7 @@ T2 truncateCast(const T1& x,
 		RAPIDJSON_ENABLEIF((internal::AndExpr<
 				    YGGDRASIL_IS_COMPLEX_TYPE(T1),
 				    internal::NotExpr<
-				    YGGDRASIL_IS_COMPLEX_TYPE(T2)>>)))
+				    YGGDRASIL_IS_COMPLEX_TYPE(T2)> >)))
 { return truncateCast<typename T1::value_type, T2>(x.real()); }
 template <typename T1, typename T2>
 T2 truncateCast(const T1& x,

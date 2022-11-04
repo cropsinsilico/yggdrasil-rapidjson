@@ -5898,7 +5898,7 @@ inline bool TranslateEncoding_outer(const void* src, SizeType srcNbytes,
   ENCODING_STRING_(Null, 'n', 'u', 'l', 'l');
 #define INNER_CASE_(x, dec, decS)					\
   if (COMPARE_(x, decS)) {						\
-    return TranslateEncoding_inner<SourceEncoding, dec<>>(src, srcNbytes, dst, dstNbytes, allocator, requireFixedWidth); \
+    return TranslateEncoding_inner<SourceEncoding, dec<> >(src, srcNbytes, dst, dstNbytes, allocator, requireFixedWidth); \
   }
   SWITCH_(dstEncoding, INNER_CASE_)
 }
@@ -5915,7 +5915,7 @@ inline bool TranslateEncoding(const void* src, SizeType srcNbytes, const Ch* src
   ENCODING_STRING_(Null, 'n', 'u', 'l', 'l');
 #define OUTER_CASE_(x, dec, decS)					\
   if (COMPARE_(x, decS)) {						\
-    return TranslateEncoding_outer<dec<>>(src, srcNbytes, dst, dstNbytes, dstEncoding, allocator, requireFixedWidth); \
+    return TranslateEncoding_outer<dec<> >(src, srcNbytes, dst, dstNbytes, dstEncoding, allocator, requireFixedWidth); \
   }
   SWITCH_(srcEncoding, OUTER_CASE_)
 }

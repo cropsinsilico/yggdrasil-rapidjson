@@ -172,9 +172,17 @@ public:
     kDoubleFlag     = 0x0400,
     kListFlag       = 0x0800
   };
+#if !RAPIDJSON_HAS_CXX11
+  PlyElement& operator=(const PlyElement& other) {
+    new (this) PlyElement(other);
+    return *this;
+  }
+#endif // RAPIDJSON_HAS_CXX11
 private:
+#if RAPIDJSON_HAS_CXX11
   //! Disable copy assignment for elements.
   PlyElement& operator=(const PlyElement& other);
+#endif // RAPIDJSON_HAS_CXX11
   void init_from_parent_();
   struct Number {
     int64_t i64;
@@ -1785,7 +1793,14 @@ public:
   bool add_element_set_colors(const std::string& name,
 			      const T* arr, SizeType M, SizeType N) {
     if (N == 3) {
+#if RAPIDJSON_HAS_CXX11
       std::vector<std::string> property_colors({"red", "green", "blue"});
+#else // RAPIDJSON_HAS_CXX11
+      std::vector<std::string> property_colors(3);
+      property_colors[0].assign("red");
+      property_colors[1].assign("green");
+      property_colors[2].assign("blue");
+#endif // RAPIDJSON_HAS_CXX11
       return add_element_set_colors(name, arr, M, N, property_colors);
     }
     return false;
@@ -1822,7 +1837,7 @@ public:
     std::map<std::string,size_t> idx;
     for (std::map<std::string,PlyElementSet>::const_iterator it = elements.begin();
 	 it != elements.end(); it++) {
-      idx.insert({it->first, it->second.elements.size()});
+      idx[it->first] = it->second.elements.size();
     }
     return idx;
   }
@@ -1923,7 +1938,13 @@ public:
   //! \brief Get the minimum bounds of the structure in 3D.
   //! \return Minimum extend of structure in x, y, z.
   std::vector<double> minimums() const {
+#if RAPIDJSON_HAS_CXX11
     std::vector<double> out = {NAN, NAN, NAN};
+#else // RAPIDJSON_HAS_CXX11
+    std::vector<double> out(3);
+    for (size_t i = 0; i < 3; i++)
+      out[i] = NAN;
+#endif // RAPIDJSON_HAS_CXX11
     const PlyElementSet* elementSet = get_element_set("vertex");
     if (elementSet) {
       std::vector<PlyElement>::const_iterator it = elementSet->elements.begin();
@@ -1941,7 +1962,13 @@ public:
   //! \brief Get the maximum bounds of the structure in 3D.
   //! \return Maximum extend of structure in x, y, z.
   std::vector<double> maximums() const {
+#if RAPIDJSON_HAS_CXX11
     std::vector<double> out = {NAN, NAN, NAN};
+#else // RAPIDJSON_HAS_CXX11
+    std::vector<double> out(3);
+    for (size_t i = 0; i < 3; i++)
+      out[i] = NAN;
+#endif // RAPIDJSON_HAS_CXX11
     const PlyElementSet* elementSet = get_element_set("vertex");
     if (elementSet) {
       std::vector<PlyElement>::const_iterator it = elementSet->elements.begin();
@@ -1975,8 +2002,8 @@ public:
   //! \brief Get the mesh for the structure.
   //! \return Structure mesh with each row representing a face with vertex
   //!    information provided in sequence for each face.
-  std::vector<std::vector<double>> mesh() const {
-    std::vector<std::vector<double>> out;
+  std::vector<std::vector<double> > mesh() const {
+    std::vector<std::vector<double> > out;
     const PlyElementSet* faces = get_element_set("face");
     const PlyElementSet* vertices = get_element_set("vertex");
     if (!(faces && vertices)) return out;

@@ -294,7 +294,7 @@ public:
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			      COMPATIBLE_WITH_SURF(T)>>), (bool))
+			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     set(const std::vector<T>& val, bool inc=false);
   //! \brief Set the property value.
   //! \tparam T Type of source valuue.
@@ -304,7 +304,7 @@ public:
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			      COMPATIBLE_WITH_SURF(T)>>), (bool))
+			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     set(const T& val, bool inc=false);
   //! \brief Copy values into a vector of a desired type if possible.
   //! \tparam T Desired type.
@@ -314,7 +314,7 @@ public:
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			      COMPATIBLE_WITH_SURF(T)>>), (bool))
+			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     get(std::vector<T>& out, bool dec=false) const;
   //! \brief Copy value into a scalar of a desired type.
   //! \tparam T Desired type.
@@ -324,7 +324,7 @@ public:
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			      COMPATIBLE_WITH_SURF(T)>>), (bool))
+			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     get(T& out, bool dec=false) const;
   //! \brief Append a value to a vector property.
   //! \param val Value to append.
@@ -334,7 +334,7 @@ public:
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			      COMPATIBLE_WITH_SURF(T)>>), (bool))
+			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     append(const T& val, int index, bool inc=false);
   //! \brief Index into a vector property.
   //! \param index Index
@@ -344,7 +344,7 @@ public:
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			      COMPATIBLE_WITH_SURF(T)>>), (bool))
+			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     index(const size_t index, T& out, bool dec=false) const;
   PROPERTY_TYPE_(std::string, ObjTypeString);
   PROPERTY_TYPE_(ObjRefCurve, ObjTypeCurve);
@@ -592,9 +592,14 @@ public:
   ObjPropertyElement() : ObjBase() {}
   template<typename T>
   ObjPropertyElement(T* mem, const std::string name, uint16_t flag) : ObjBase() {
+#if RAPIDJSON_HAS_CXX11
     const ObjPropertiesMap pairs = {
       ObjPropertyType(mem, name, flag)
     };
+#else // RAPIDJSON_HAS_CXX11
+    ObjPropertiesMap pairs;
+    pairs.push_back(ObjPropertyType(mem, name, flag));
+#endif // RAPIDJSON_HAS_CXX11
     this->properties = pairs;
   }
 };
@@ -650,11 +655,17 @@ public:
     this->_init_properties();
   }
   void _init_properties() OVERRIDE_CXX11 {
+#if RAPIDJSON_HAS_CXX11
     this->properties = {
       ObjPropertyType(&v, "vertex_index", ObjTypeRef),
       ObjPropertyType(&vt, "texture_index", (ObjTypeRef | ObjTypeOpt)),
       ObjPropertyType(&vn, "normal_index", (ObjTypeRef | ObjTypeOpt))
     };
+#else // RAPIDJSON_HAS_CXX11
+    this->properties.push_back(ObjPropertyType(&v, "vertex_index", ObjTypeRef));
+    this->properties.push_back(ObjPropertyType(&vt, "texture_index", (ObjTypeRef | ObjTypeOpt)));
+    this->properties.push_back(ObjPropertyType(&vn, "normal_index", (ObjTypeRef | ObjTypeOpt)));
+#endif // RAPIDJSON_HAS_CXX11
   }
   int8_t get_Nparam() const {
     int8_t Nparam0 = Nparam;
@@ -820,11 +831,17 @@ public:
     this->_init_properties();
   }
   void _init_properties() OVERRIDE_CXX11 {
+#if RAPIDJSON_HAS_CXX11
     this->properties = {
       ObjPropertyType(&u0, "u0", ObjTypeFloat),
       ObjPropertyType(&u1, "u1", ObjTypeFloat),
       ObjPropertyType(&curv2d, "curve_index", ObjTypeRef)
     };
+#else // RAPIDJSON_HAS_CXX11
+    this->properties.push_back(ObjPropertyType(&u0, "u0", ObjTypeFloat));
+    this->properties.push_back(ObjPropertyType(&u1, "u1", ObjTypeFloat));
+    this->properties.push_back(ObjPropertyType(&curv2d, "curve_index", ObjTypeRef));
+#endif // RAPIDJSON_HAS_CXX11
   }
   //! \brief Write the curve to an output stream.
   //! \param out Output stream.
@@ -933,12 +950,19 @@ public:
     this->_init_properties();
   }
   void _init_properties() OVERRIDE_CXX11 {
+#if RAPIDJSON_HAS_CXX11
     this->properties = {
       ObjPropertyType(&surf, "surface_index", ObjTypeFloat),
       ObjPropertyType(&q0, "q0", ObjTypeFloat),
       ObjPropertyType(&q1, "q1", ObjTypeFloat),
       ObjPropertyType(&curv2d, "curve_index", ObjTypeRef)
     };
+#else // RAPIDJSON_HAS_CXX11
+    this->properties.push_back(ObjPropertyType(&surf, "surface_index", ObjTypeFloat));
+    this->properties.push_back(ObjPropertyType(&q0, "q0", ObjTypeFloat));
+    this->properties.push_back(ObjPropertyType(&q1, "q1", ObjTypeFloat));
+    this->properties.push_back(ObjPropertyType(&curv2d, "curve_index", ObjTypeRef));
+#endif // RAPIDJSON_HAS_CXX11
   }
   //! \brief Write the surface to an output stream.
   //! \param out Output stream.
@@ -1150,7 +1174,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
 template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			    COMPATIBLE_WITH_SURF(T)>>), (bool))
+			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::set(const std::vector<T>& val, bool inc) {
   if ((!mem) || !(second & ObjTypeList)) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_SET_)
@@ -1159,7 +1183,7 @@ ObjPropertyType::set(const std::vector<T>& val, bool inc) {
 template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			    COMPATIBLE_WITH_SURF(T)>>), (bool))
+			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::set(const T& val, bool inc) {
   if ((!mem) || second & ObjTypeList) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_SET_)
@@ -1168,7 +1192,7 @@ ObjPropertyType::set(const T& val, bool inc) {
 template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			    COMPATIBLE_WITH_SURF(T)>>), (bool))
+			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::get(std::vector<T>& out, bool dec) const {
   if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_GET_)
@@ -1177,7 +1201,7 @@ ObjPropertyType::get(std::vector<T>& out, bool dec) const {
 template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			    COMPATIBLE_WITH_SURF(T)>>), (bool))
+			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::get(T& out, bool dec) const {
   if ((!mem) || second & ObjTypeList) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_GET_)
@@ -1186,7 +1210,7 @@ ObjPropertyType::get(T& out, bool dec) const {
 template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			    COMPATIBLE_WITH_SURF(T)>>), (bool))
+			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::append(const T& val, int index, bool inc) {
   if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_APPEND_)
@@ -1195,7 +1219,7 @@ ObjPropertyType::append(const T& val, int index, bool inc) {
 template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
-			    COMPATIBLE_WITH_SURF(T)>>), (bool))
+			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::index(const size_t index, T& out, bool dec) const {
   if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_INDEX_)
@@ -1482,6 +1506,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   }									\
   /*! \copydoc ObjElement::copy() */					\
   cls* copy() const OVERRIDE_CXX11 { return new cls(*this); }
+#if RAPIDJSON_HAS_CXX11
 #define GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, init, props)	\
   /*! \brief Empty constructor. */					\
   /*! \param parent0 The element's parent group. */			\
@@ -1495,6 +1520,22 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
       UNPACK_MACRO props						\
     };									\
   }
+#else // RAPIDJSON_HAS_CXX11
+#define GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, init, props)	\
+  /*! \brief Empty constructor. */					\
+  /*! \param parent0 The element's parent group. */			\
+  cls(const ObjGroupBase* parent0 = nullptr) :				\
+    base(#codeS, parent0) UNPACK_MACRO init {				\
+    this->_init_properties();						\
+  }									\
+  GENERIC_CONSTRUCTOR_COPY(cls, base, init, props);			\
+  void _init_properties() OVERRIDE_CXX11 {				\
+    ObjPropertyType tmp[] = {						\
+      UNPACK_MACRO props						\
+    };									\
+    this->properties.assign(&tmp[0], &tmp[(sizeof(tmp) / sizeof(ObjPropertyType)) - 1]); \
+  }
+#endif // RAPIDJSON_HAS_CXX11
 
 #define GENERIC_COPY_MEMBERS(cls)					\
   /*! \brief Copy element specific members from another instance. */	\
@@ -1547,7 +1588,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   cls(const T&,								\
       const ObjGroupBase* parent0 = nullptr,				\
       RAPIDJSON_DISABLEIF((internal::OrExpr<COMPATIBLE_WITH_TYPE(T, type),\
-			   internal::IsPointer<T>>))) :			\
+			   internal::IsPointer<T> >))) :			\
     base(#code, parent0), value(def) {					\
     RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from" #type ".")); \
   }
@@ -2633,7 +2674,7 @@ public:
 	 it != elements.end(); it++) {
       if (stop && stop == *it) break;
       if (idx.find((*it)->code) == idx.end())
-	idx.insert({(*it)->code, 0});
+	idx[(*it)->code] = 0;
       idx[(*it)->code]++;
       if ((*it)->is_group())
 	(dynamic_cast<ObjGroupBase*>(*it))->element_counts(idx, this);
@@ -2646,7 +2687,7 @@ public:
       if (!(*it)->is_valid_idx(idx)) return false;
       std::map<std::string,size_t>::iterator x = idx.find((*it)->code);
       if (x == idx.end()) {
-	idx.insert({(*it)->code, 0});
+	idx[(*it)->code] = 0;
 	x = idx.find((*it)->code);
       }
       x->second++;
@@ -2973,7 +3014,7 @@ public:
   //! \return New element.
   template<typename T>
   RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
-			      internal::IsSame<T,std::string>>), (ObjElement*))
+			      internal::IsSame<T,std::string> >), (ObjElement*))
     add_element(std::string name, const T& value);
   
   //! \brief Add a scalar string group element.
@@ -3527,7 +3568,7 @@ public:
   ObjGroup(const T &,
 	   const ObjGroupBase* parent0 = nullptr,
 	   RAPIDJSON_DISABLEIF((internal::OrExpr<COMPATIBLE_WITH_TYPE(T, std::string),
-				internal::IsPointer<T>>))) :
+				internal::IsPointer<T> >))) :
     ObjGroupBase("g", parent0), values() {
     ASSERT_COMPATIBLE(T, std::string);
   }
@@ -3919,7 +3960,13 @@ public:
   //! \brief Get the minimum bounds of the structure in 3D.
   //! \return Minimum extend of structure in x, y, z.
   std::vector<double> minimums() const {
+#if RAPIDJSON_HAS_CXX11
     std::vector<double> out = {NAN, NAN, NAN};
+#else // RAPIDJSON_HAS_CXX11
+    std::vector<double> out(3);
+    for (size_t i = 0; i < 3; i++)
+      out[i] = NAN;
+#endif // RAPIDJSON_HAS_CXX11
     bool first = true;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
       if ((*it)->code == "v") {
@@ -3939,7 +3986,13 @@ public:
   //! \brief Get the maximum bounds of the structure in 3D.
   //! \return Maximum extend of structure in x, y, z.
   std::vector<double> maximums() const {
+#if RAPIDJSON_HAS_CXX11
     std::vector<double> out = {NAN, NAN, NAN};
+#else // RAPIDJSON_HAS_CXX11
+    std::vector<double> out(3);
+    for (size_t i = 0; i < 3; i++)
+      out[i] = NAN;
+#endif // RAPIDJSON_HAS_CXX11
     bool first = true;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
       if ((*it)->code == "v") {
@@ -3959,8 +4012,8 @@ public:
   //! \brief Get the mesh for the structure.
   //! \return Structure mesh with each row representing a face with vertex
   //!    information provided in sequence for each face.
-  std::vector<std::vector<double>> mesh() const {
-    std::vector<std::vector<double>> out;
+  std::vector<std::vector<double> > mesh() const {
+    std::vector<std::vector<double> > out;
     std::vector<size_t> vert_idx;
     size_t i = 0, iFace = 0;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++, i++) {
@@ -4203,7 +4256,7 @@ ObjElement* ObjGroupBase::add_element(std::string name, std::string direction,
 }
 template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
-			    internal::IsSame<T,std::string>>), (ObjElement*))
+			    internal::IsSame<T,std::string> >), (ObjElement*))
   ObjGroupBase::add_element(std::string name, const T& value) {
   ObjElement* x = nullptr;
   if      (name == "s"         ) x = new ObjSmoothingGroup(value, this);

@@ -292,7 +292,7 @@ inline bool values_eq(const Ta& a, const Tb& b,
 					   YGGDRASIL_IS_FLOAT_TYPE(Tb),
 					   internal::OrExpr<
 					   YGGDRASIL_IS_COMPLEX_TYPE(Ta),
-					   YGGDRASIL_IS_COMPLEX_TYPE(Tb)>>>))) {
+					   YGGDRASIL_IS_COMPLEX_TYPE(Tb)> > >))) {
   return a == static_cast<Ta>(b);
 }
   

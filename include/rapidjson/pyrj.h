@@ -86,7 +86,8 @@ void init_python_API() {
     _putenv_s("CONDA_PY_ALLOW_REG_PATHS", "1");
 #endif // WIN32
     char *name = getenv("YGG_PYTHON_EXEC");
-#ifdef PyConfig
+#if PY_MAJOR_VERSION > 3 ||			\
+  (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8)
     PyStatus status;
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
