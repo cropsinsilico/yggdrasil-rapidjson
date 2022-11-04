@@ -86,25 +86,47 @@ void init_python_API() {
     _putenv_s("CONDA_PY_ALLOW_REG_PATHS", "1");
 #endif // WIN32
     char *name = getenv("YGG_PYTHON_EXEC");
+#ifdef PyConfig
+    PyStatus status;
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+    if (name != NULL) {
+      status = PyConfig_SetBytesString(&config, &config.program_name, name);
+      if (PyStatus_Exception(status)) {
+	err = "Failed to set program name"; // GCOVR_EXCL_LINE
+	goto done;
+      }
+    }
+    status = Py_InitializeFromConfig(&config);
+    if (PyStatus_Exception(status)) {
+      err = "Failed to initialize Python"; // GCOVR_EXCL_LINE
+      goto done;
+    }
+#else
     if (name != NULL) {
       wchar_t *wname = Py_DecodeLocale(name, NULL);
       if (wname == NULL) {
 	err = "Error decoding YGG_PYTHON_EXEC"; // GCOVR_EXCL_LINE
+	goto done;
       } else {
 	Py_SetProgramName(wname);
 	PyMem_RawFree(wname);
       }
     }
-    if (err.length() == 0) {
-      Py_Initialize();
-      if (!(Py_IsInitialized()))
-	err = "Failed to initialize Python"; // GCOVR_EXCL_LINE
-      else
-	init_numpy_API();
+    Py_Initialize();
+#endif // Py_Config
+    if (!(Py_IsInitialized())) {
+      err = "Failed to initialize Python"; // GCOVR_EXCL_LINE
+      goto done;
     }
+    init_numpy_API();
   }
 #ifdef _OPENMP
   }
+#endif
+  done:
+#ifdef PyConfig
+    PyConfig_Clear(&config);
 #endif
   if (err.length() > 0)
     throw std::runtime_error(err); // GCOVR_EXCL_LINE
