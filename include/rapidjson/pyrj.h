@@ -125,6 +125,8 @@ void init_python_API() {
 #if PY_MAJOR_VERSION > 3 ||			\
   (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8)
     PyConfig_Clear(&config);
+#else
+    {}
 #endif
   }
 #ifdef _OPENMP
