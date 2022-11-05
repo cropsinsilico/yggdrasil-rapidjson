@@ -709,9 +709,14 @@ public:
     v = 0;
     vt = 0;
     vn = 0;
-    Nparam = 0;
+    Nparam = 1;
+    for (size_t i = 0; i < word.size(); i++) {
+      if (word[i] == '/')
+	Nparam++;
+    }
     // v
     if (!std::getline(ss_word, token, '/')) {
+      Nparam = 0;
       return in;
     }
     {
@@ -720,7 +725,6 @@ public:
     }
     // vt
     if (!std::getline(ss_word, token, '/')) {
-      Nparam = 1;
       return in;
     }
     {
@@ -729,13 +733,11 @@ public:
     }
     // vn
     if (!std::getline(ss_word, token, '/')) {
-      Nparam = 2;
       return in;
     }
     {
       std::istringstream ss_token(token);
       ss_token >> vn;
-      Nparam = 3;
     }
     return in;
   }
@@ -3583,7 +3585,7 @@ public:
   }
   //! \copydoc ObjElement::write_suffix
   bool write_suffix(std::ostream &) const OVERRIDE_CXX11 {
-    // No new line as last grouup element will be terminated
+    // No new line as last group element will be terminated
     return true;
   }
   //! \copydoc ObjElement::is_equal
@@ -3914,6 +3916,11 @@ public:
   //! \copydoc ObjGroupBase::write_group_header
   bool write_group_header(std::ostream &) const OVERRIDE_CXX11 {
     return true; // Don't write a header for the start of the file
+  }
+  //! \copydoc ObjElement::write_suffix
+  bool write_suffix(std::ostream &) const OVERRIDE_CXX11 {
+    // No new line as last group element will be terminated
+    return true;
   }
   //! \brief Determine if a structure is valid and there are vertexes for
   //!   all those referenced in faces and edges.
