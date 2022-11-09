@@ -169,7 +169,7 @@ public:
     std::cerr << name << ": " << buffer.GetString() << std::endl;	\
   }
 #define CREATE_PYTHON_INSTANCE(cls, var)				\
-  PyObject* var;							\
+  PyObject* var = NULL;							\
   {									\
     PyObject* pyclass = import_python_class("example_python", #cls);	\
     RAPIDJSON_ASSERT(pyclass);						\
