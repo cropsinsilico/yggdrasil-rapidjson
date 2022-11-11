@@ -497,11 +497,11 @@ public:
       for (SizeType i = 0; i < localPropertyCount; i++)
 	localProperties[i].~SharedPropertyType();
       AllocatorType::Free(localProperties);
-      localProperties = 0;
+      localProperties = NULL;
     }
     if (otherProperties) {
       AllocatorType::Free(otherProperties);
-      otherProperties = 0;
+      otherProperties = NULL;
     }
   }
   void AddLocalProperty(SchemaType* schema, const SValue& key,
@@ -801,13 +801,15 @@ class TemporaryMemory {
 public:
   TemporaryMemory(NormalizedDocument* doc=0) : doc_(doc), mem_() {}
   ~TemporaryMemory() {
-    if (doc_ && mem_)
+    if (doc_ && mem_) {
       doc_->GetAllocator().Free(mem_);
+      mem_ = NULL;
+    }
   }
   void stealMemory() {
     RAPIDJSON_ASSERT(!mem_);
     mem_ = doc_->temporary_memory_;
-    doc_->temporary_memory_ = nullptr;
+    doc_->temporary_memory_ = NULL;
   }
   NormalizedDocument* doc_;
   void* mem_;
@@ -920,7 +922,7 @@ public:
     //   GetAllocator().Free(temporary_memory_);
     //   temporary_memory_ = nullptr;
     // }
-    if (parent_)
+    if (parent_ != NULL)
       parent_->RemoveChild(this);
   }
 
@@ -943,18 +945,20 @@ public:
   struct ModificationEntry;
   struct ValueEntry {
     ValueEntry(ValueType& value) :
-      val(&value), ptr(), flags(0),
-      singular(nullptr), child_singular(nullptr) {}
+      val(&value), ptr(), flags(0), singular(-1), child_singular(-1) {}
+      
     ValueEntry(ValueType& value, const PointerType& p, unsigned flags0,
 	       AllocatorType& allocator) :
       val(&value), ptr(p, &allocator), flags(flags0),
-      singular(nullptr), child_singular(nullptr) {
+      singular(-1), child_singular(-1) {
       if (flags & (1 << kValueFlagTemp))
 	val = new ValueType(value, allocator, true);
     }
     ~ValueEntry() {
-      if (val && (flags & (1 << kValueFlagTemp)))
+      if (val && (flags & (1 << kValueFlagTemp))) {
 	delete val;
+	val = NULL;
+      }
     }
     bool replaced() const {
       return (flags & (1 << kValueFlagReplaced));
@@ -968,8 +972,8 @@ public:
     ValueType* val;
     PointerType ptr;
     unsigned flags;
-    ModificationEntry* singular;
-    ModificationEntry* child_singular;
+    int singular;
+    int child_singular;
   };
   enum ModificationType {
     kModificationTypeAny,
@@ -1679,13 +1683,13 @@ public:
   }
 
   void ClearChildren() {
-    while (!childStack_.Empty() && !childStack_.template Top<GenericNormalizedDocument*>())
+    while (!childStack_.Empty() && (*childStack_.template Top<GenericNormalizedDocument*>() == NULL))
       PopChild();
   }
   void RemoveChild(GenericNormalizedDocument* child) {
     for (GenericNormalizedDocument** ref = childStack_.template Bottom<GenericNormalizedDocument*>();
 	 ref != childStack_.template End<GenericNormalizedDocument*>(); ref++) {
-      if (!ref[0]) continue;
+      if (*ref == NULL) continue;
       if (*ref == child) {
 	ref[0] = 0;
 	return;
@@ -1697,7 +1701,10 @@ public:
     ref[0] = child;
   }
   void PopChild() {
-    childStack_.template Pop<GenericNormalizedDocument*>(1);
+    GenericNormalizedDocument** child = childStack_.template Pop<GenericNormalizedDocument*>(1);
+    if (*child != NULL) {
+      child[0]->parent_ = NULL;
+    }
   }
   GenericNormalizedDocument* FindChild(unsigned index) {
     GenericNormalizedDocument* out = nullptr;
@@ -2038,10 +2045,10 @@ public:
   template <typename YggSchemaValueType>
   bool NormScalar(Context& context, const SchemaType& schema,
 		  const Ch*& str, SizeType& length,
-		  typename SchemaType::YggSchemaValueSubType& src_subtype,
+		  typename SchemaType::YggSchemaValueSubType src_subtype,
 		  SizeType& src_precision,
 		  const Ch* src_units, SizeType src_units_len,
-		  typename SchemaType::YggSchemaEncodingType& src_encoding,
+		  typename SchemaType::YggSchemaEncodingType src_encoding,
 		  SizeType nelements,
 		  YggSchemaValueType* valueSchema) {
     typename SchemaType::YggSchemaValueSubType dst_subtype = src_subtype;
@@ -2068,7 +2075,7 @@ public:
     if ((src_subtype == SchemaType::kYggStringSchemaSubType) &&
 	(src_subtype == dst_subtype) &&
 	(src_encoding != dst_encoding)) {
-      void* tmp = 0;
+      void* tmp = NULL;
       if (TranslateEncoding(str, src_nbytes, schema.EncodingType2String(src_encoding).GetString(),
 			    tmp, dst_nbytes, schema.EncodingType2String(dst_encoding).GetString(),
 			    GetAllocator(), (nelements > 1))) {
@@ -2076,12 +2083,12 @@ public:
 	unsigned char* dst = (unsigned char*)SetTemporary(dst_nbytes);
 	memcpy(dst, tmp, dst_nbytes);
 	GetAllocator().Free(tmp);
+	tmp = NULL;
 	length = dst_nbytes / (SizeType)sizeof(Ch);
 	str = (Ch*)dst;
 	dst_precision = dst_nbytes / nelements;
       } else {
-	dst_encoding = src_encoding;
-	// return true; // Allow validation to fail
+	return true; // Allow validation to fail
       }
     } else {
       dst_encoding = src_encoding;
@@ -2107,10 +2114,7 @@ public:
 	length = dst_nbytes / (SizeType)sizeof(Ch);
 	str = (Ch*)dst;
       } else {
-	// return true; // Allow validation to fail
-	dst_subtype = src_subtype;
-	if (src_subtype != SchemaType::kYggStringSchemaSubType)
-	  dst_precision = src_precision;
+	return true; // Allow validation to fail
       }
     } else {
       dst_subtype = src_subtype;
@@ -2128,10 +2132,7 @@ public:
       } else if (src_Units.is_dimensionless()) {
 	modified = true;
       } else {
-	dst_units = src_units;
-	dst_units_len = src_units_len;
-	dst_Units = src_Units;
-	// return true; // Allow validation to fail
+	return true; // Allow validation to fail
       }
     }
     if (!modified) {
@@ -2180,6 +2181,7 @@ public:
       exit_after_normalize_ = true;
       bool out = NormYggdrasilString(context, schema, str, length, true, *newValueSchema);
       delete newValueSchema;
+      newValueSchema = NULL;
       return out;
     } else {
       YggSchemaValueType* newValueSchema = valueSchema;
@@ -2210,9 +2212,6 @@ public:
 	ADD_PROPERTY_(Encoding)
 	(*newValueSchema)[newValueSchema->GetEncodingString()].SetString(encoding_str.GetString(), encoding_str.GetStringLength(), newValueSchema->GetAllocator());
       }
-      src_subtype = dst_subtype;
-      src_precision = dst_precision;
-      src_encoding = dst_encoding;
     }
     RecordModified(kModificationTypeValue, false);
     return true;
@@ -2282,7 +2281,7 @@ public:
     NORM_VALUE_(String, (str, length, true));
   }
   template <typename YggSchemaValueType>
-  bool NormYggdrasilString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool, YggSchemaValueType& valueSchema) {
+  bool NormYggdrasilString(Context& context, const SchemaType& schema, const Ch*& str, SizeType& length, bool, YggSchemaValueType& valueSchema) {
     NORM_BEGIN_(YggdrasilString);
     // Scalar
     RAPIDJSON_ASSERT(valueSchema.IsObject());
@@ -2477,10 +2476,10 @@ public:
     PointerType iS = context.schemaPointerAbs;
     if (baseSchemaSet) {
       if (schema.isSingular_ == kSingularValue) {
-	ModificationEntry* match = FindValueModified(iP, true,
-						     kCheckModifiedAfter,
-						     kModificationTypeSingularObject,
-						     true);
+	ModificationEntry* match = GetModified(FindValueModified(iP, true,
+								 kCheckModifiedAfter,
+								 kModificationTypeSingularObject,
+								 true));
 	if (match) match->visited = true;
       }
       iP = iP.Pop(1, &GetAllocator());
@@ -2799,10 +2798,10 @@ public:
     NORM_BEGIN_STUB_(EndArray);
     if (schema.isSingular_ == kSingularItem && baseSchema) {
       PointerType iP = GetInstancePointer(false, true);
-      ModificationEntry* match = FindValueModified(iP, true,
-						   kCheckModifiedAfter,
-						   kModificationTypeSingularArray,
-						   true);
+      ModificationEntry* match = GetModified(FindValueModified(iP, true,
+							       kCheckModifiedAfter,
+							       kModificationTypeSingularArray,
+							       true));
       if (match) match->visited = true;
     }
     NORM_BODY_(EndArray, (elementCount));
@@ -2898,10 +2897,11 @@ public:
       RAPIDJSON_ASSERT(!valueStack_.Empty());
       if (valueStack_.Empty())
 	return false;
-      ModificationEntry* match = FindValueModified(*valueStack_.template Top<ValueEntry>()->child_singular);
+      ModificationEntry* child_singular = extend_child_->GetModified(valueStack_.template Top<ValueEntry>()->child_singular);
+      ModificationEntry* match = GetModified(FindValueModified(*child_singular));
       if (match)
 	match->visited = true;
-      valueStack_.template Top<ValueEntry>()->child_singular->visited = true;
+      child_singular->visited = true;
     }
     if ((!dont_recurse) && !CurrentReplaced() &&
 	CurrentSingular() && !CurrentChildSingular() &&
@@ -2948,7 +2948,7 @@ public:
   }									\
   if (current && current->IsObject() && CurrentKey() &&			\
       (!current->HasMember(CurrentKey()->GetString()))) {		\
-    if (FindValueModified(CurrentPointer().Append(*CurrentKey()), true, kCheckModifiedBefore, kModificationTypeRemoved)) { \
+    if (FindValueModified(CurrentPointer().Append(*CurrentKey()), true, kCheckModifiedBefore, kModificationTypeRemoved) >= 0) { \
       ValueType vtmp args;						\
       PushValue(vtmp, *CurrentKey(), true, false, 1 << kValueFlagTemp); \
       skipPush = true;							\
@@ -3241,8 +3241,10 @@ public:
 		      bool inherited=false, bool setStack=false) {
     bool out = false;
     internal::Stack<StackAllocatorType>* stack = &modifiedStack_;
-    ModificationEntry* ref = FindValueModified(before, after, true, true, type, true);
+    int ref_idx = FindValueModified(before, after, true, true, type, true);
+    ModificationEntry* ref = GetModified(ref_idx);
     if (!ref) {
+      ref_idx = (int)(stack->GetSize() / sizeof(ModificationEntry));
       ref = stack->template Push<ModificationEntry>();
       new (ref) ModificationEntry(type, inherited,
 				  before, after, GetAllocator());
@@ -3252,7 +3254,7 @@ public:
       ValueEntry* last = valueStack_.template Top<ValueEntry>();
       last->flags |= (1 << kValueFlagParentModified);
       if (ref->isSingular())
-	last->singular = ref;
+	last->singular = ref_idx;
     }
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     std::cerr << "RecordModified[";
@@ -3354,16 +3356,16 @@ private:
       replaced[0] = true;
     return q;
   }
-  PointerType ReplaceSingular(const PointerType p,
-			      ModificationEntry** last = 0) {
+  PointerType ReplaceSingular(const PointerType p, int* last = 0) {
     if (modifiedStack_.Empty()) return p;
     PointerType q(p, &GetAllocator());
     bool replaced = false;
+    int idx = 0;
     for (ModificationEntry* it = modifiedStack_.template Bottom<ModificationEntry>();
-	 it != modifiedStack_.template End<ModificationEntry>(); it++) {
+	 it != modifiedStack_.template End<ModificationEntry>(); it++, idx++) {
       if (it->modifiesPath()) {
 	q = ReplacePrefix(q, it->before, it->after, &replaced);
-	if (last && replaced) last[0] = it;
+	if (last && replaced) last[0] = idx;
       }
     }
     return q;
@@ -3443,28 +3445,21 @@ private:
     ModificationEntry* ref = modifiedStack_.template Pop<ModificationEntry>(1);
     ref->~ModificationEntry();
   }
-  const ModificationEntry*
-  FindValueModified(const PointerType& p,
-		    bool exact=false,
-		    ModificationFlag checkFlag=kCheckModifiedBoth,
-		    ModificationType type=kModificationTypeAny,
-		    bool reverseSearch=false) const {
-    return const_cast<GenericNormalizedDocument&>(*this).FindValueModified(p, exact, checkFlag, type, reverseSearch);
-  }
-  ModificationEntry*
-  FindValueModified(const PointerType& p,
-		    bool exact=false,
-		    ModificationFlag checkFlag=kCheckModifiedBoth,
-		    ModificationType type=kModificationTypeAny,
-		    bool reverseSearch=false) {
-    if (modifiedStack_.Empty()) return 0;
-    ModificationEntry* start = modifiedStack_.template Bottom<ModificationEntry>();
-    ModificationEntry* stop = modifiedStack_.template Top<ModificationEntry>();
+  int FindValueModified(const PointerType& p,
+			bool exact=false,
+			ModificationFlag checkFlag=kCheckModifiedBoth,
+			ModificationType type=kModificationTypeAny,
+			bool reverseSearch=false) const {
+    if (modifiedStack_.Empty()) return -1;
+    const ModificationEntry* start = modifiedStack_.template Bottom<const ModificationEntry>();
+    const ModificationEntry* stop = modifiedStack_.template Top<const ModificationEntry>();
+    int idx = 0;
     if (reverseSearch) {
-      start = modifiedStack_.template Top<ModificationEntry>();
-      stop = modifiedStack_.template Bottom<ModificationEntry>();
+      idx = (int)(modifiedStack_.GetSize() / sizeof(ModificationEntry)) - 1;
+      start = modifiedStack_.template Top<const ModificationEntry>();
+      stop = modifiedStack_.template Bottom<const ModificationEntry>();
     }
-    ModificationEntry* it = start;
+    const ModificationEntry* it = start;
     while (true) {
       if ((type == kModificationTypeAny || type == it->type ||
 	   (type == kModificationTypeSingular && it->isSingular() &&
@@ -3474,72 +3469,75 @@ private:
 	    PointerStartsWith(it->before, p, exact)) ||
 	   (checkFlag >= kCheckModifiedBoth &&
 	    PointerStartsWith(it->after, p, exact)))) {
-	return it;
+	return idx;
       }
       if (it == stop) break;
-      if (reverseSearch)
+      if (reverseSearch) {
 	it--;
-      else
+	idx--;
+      } else {
 	it++;
+	idx++;
+      }
     }
-    return 0;
+    return -1;
   }
-  const ModificationEntry*
-  FindValueModified(const ModificationEntry& x, bool reverseSearch=false) const {
-    return const_cast<GenericNormalizedDocument&>(*this).FindValueModified(x, reverseSearch);
-  }
-  ModificationEntry*
-  FindValueModified(const ModificationEntry& x, bool reverseSearch=false) {
+  int FindValueModified(const ModificationEntry& x, bool reverseSearch=false) const {
     return FindValueModified(x.before, x.after, true, true, x.type,
 			     reverseSearch);
   }
-  const ModificationEntry*
-  FindValueModified(const PointerType& pBefore, const PointerType& pAfter,
-		    bool exactBefore, bool exactAfter,
-		    ModificationType type=kModificationTypeAny,
-		    bool reverseSearch=false) const {
-    return const_cast<GenericNormalizedDocument&>(*this).FindValueModified(pBefore, pAfter, exactBefore, exactAfter, type, reverseSearch);
-  }
-  ModificationEntry*
-  FindValueModified(const PointerType& pBefore, const PointerType& pAfter,
-		    bool exactBefore, bool exactAfter,
-		    ModificationType type=kModificationTypeAny,
-		    bool reverseSearch=false) {
-    if (modifiedStack_.Empty()) return 0;
-    ModificationEntry* start = modifiedStack_.template Bottom<ModificationEntry>();
-    ModificationEntry* stop = modifiedStack_.template Top<ModificationEntry>();
+  int FindValueModified(const PointerType& pBefore, const PointerType& pAfter,
+			bool exactBefore, bool exactAfter,
+			ModificationType type=kModificationTypeAny,
+			bool reverseSearch=false) const {
+    if (modifiedStack_.Empty()) return -1;
+    const ModificationEntry* start = modifiedStack_.template Bottom<const ModificationEntry>();
+    const ModificationEntry* stop = modifiedStack_.template Top<const ModificationEntry>();
+    int idx = 0;
     if (reverseSearch) {
-      start = modifiedStack_.template Top<ModificationEntry>();
-      stop = modifiedStack_.template Bottom<ModificationEntry>();
+      idx = (int)(modifiedStack_.GetSize() / sizeof(ModificationEntry)) - 1;
+      start = modifiedStack_.template Top<const ModificationEntry>();
+      stop = modifiedStack_.template Bottom<const ModificationEntry>();
     }
-    ModificationEntry* it = start;
+    const ModificationEntry* it = start;
     while (true) {
       if ((type == kModificationTypeAny || type == it->type ||
 	   (type == kModificationTypeSingular && it->isSingular())) &&
 	  PointerStartsWith(it->before, pBefore, exactBefore) &&
 	  PointerStartsWith(it->after, pAfter, exactAfter))
-	return it;
+	return idx;
       if (it == stop) break;
-      if (reverseSearch)
+      if (reverseSearch) {
 	it--;
-      else
+	idx--;
+      } else {
 	it++;
+	idx++;
+      }
     }
-    return 0;
+    return -1;
+  }
+  ModificationEntry* GetModified(int idx) {
+    if (idx < 0 ||
+	idx >= (int)(modifiedStack_.GetSize() / sizeof(ModificationEntry)))
+      return nullptr;
+    ModificationEntry* it = modifiedStack_.template Bottom<ModificationEntry>();
+    for (int i = 0; i < idx; i++)
+      it++;
+    return it;
   }
   bool isValueSingular(const PointerType& p,
-		       const ModificationEntry** match=nullptr,
+		       int* match=nullptr,
 		       bool appended=true) const {
     return isValueModified(p, appended, kCheckModifiedAfter, match,
 			   kModificationTypeSingular);
   }
   bool isValueModified(const PointerType& p, bool exact=false,
 		       ModificationFlag checkFlag=kCheckModifiedBoth,
-		       const ModificationEntry** match=nullptr,
+		       int* match=nullptr,
 		       ModificationType type=kModificationTypeAny) const {
-    const ModificationEntry* match0 = FindValueModified(p, exact, checkFlag,
-							type);
-    if (match0) {
+    int match0 = FindValueModified(p, exact, checkFlag, type);
+    if (match0 >= 0) {
       if (match) match[0] = match0;
       return true;
     }
@@ -3547,12 +3545,11 @@ private:
   }
   bool isValueModified(const PointerType& pBefore, const PointerType& pAfter,
 		       bool exactBefore, bool exactAfter,
-		       const ModificationEntry** match=nullptr,
+		       int* match=nullptr,
 		       ModificationType type=kModificationTypeAny) const {
-    const ModificationEntry* match0 = FindValueModified(pBefore, pAfter,
-							exactBefore, exactAfter,
-							type);
-    if (match0) {
+    int match0 = FindValueModified(pBefore, pAfter, exactBefore, exactAfter,
+				   type);
+    if (match0 >= 0) {
       if (match) match[0] = match0;
       return true;
     }
@@ -3606,9 +3603,9 @@ private:
   }
   bool CurrentSingular(ValueType* out = 0) {
     if (extending_ && !appending_ && !valueStack_.Empty() &&
-	valueStack_.template Top<ValueEntry>()->singular) {
+	valueStack_.template Top<ValueEntry>()->singular >= 0) {
       if (out) {
-	ModificationEntry* key_mod = valueStack_.template Top<ValueEntry>()->singular;
+	ModificationEntry* key_mod = GetModified(valueStack_.template Top<ValueEntry>()->singular);
 	typename PointerType::Token key_token = key_mod->after.GetTokens()[key_mod->after.GetTokenCount() - 1];
 	if (key_token.index != kPointerInvalidIndex)
 	  out->SetUint(key_token.index);
@@ -3621,9 +3618,9 @@ private:
   }
   bool CurrentChildSingular(ValueType* out = 0) {
     if (extending_ && !appending_ && !valueStack_.Empty() &&
-	valueStack_.template Top<ValueEntry>()->child_singular) {
+	valueStack_.template Top<ValueEntry>()->child_singular >= 0) {
       if (out) {
-	const ModificationEntry* key_mod = valueStack_.template Top<ValueEntry>()->child_singular;
+	const ModificationEntry* key_mod = extend_child_->GetModified(valueStack_.template Top<ValueEntry>()->child_singular);
 	typename PointerType::Token key_token = key_mod->after.GetTokens()[key_mod->after.GetTokenCount() - 1];
 	if (key_token.index != kPointerInvalidIndex)
 	  out->SetUint(key_token.index);
@@ -3642,34 +3639,38 @@ private:
   void PushValue(ValueType& value, const PointerType& p, bool appended=false,
 		 bool modified = false, bool child_modified = false,
 		 unsigned flags = 0) {
-    ModificationEntry* last = 0;
-    PointerType pParent = ReplaceSingular(p, &last);
+    int last_idx = -1;
+    PointerType pParent = ReplaceSingular(p, &last_idx);
+    ModificationEntry* last = GetModified(last_idx);
     if (CurrentReplaced())
       flags = flags | (1 << kValueFlagReplaced);
     ValueEntry* ref = valueStack_.template Push<ValueEntry>();
     new (ref) ValueEntry(value, p, flags, GetAllocator());
     if (appended && pParent.GetTokenCount() == p.GetTokenCount() + 1 &&
 	last && last->isSingular())
-      ref->singular = last;
+      ref->singular = last_idx;
     else
       ref->singular = FindValueModified(pParent, false, kCheckModifiedAfter,
 					kModificationTypeSingular, true);
-    if (ref->singular || modified || isValueModified(pParent))
+    if (ref->singular >= 0 || modified || isValueModified(pParent))
       ref->flags |= (1 << kValueFlagParentModified);
     if (extend_child_) {
       PointerType pChild(pParent);
+      int child_last_idx = -1;
       ModificationEntry* child_last = 0;
       if (appended && pParent.GetTokenCount() == p.GetTokenCount() + 1 &&
-	  last && last->isSingular())
-	child_last = extend_child_->FindValueModified(*last, true);
+	  last && last->isSingular()) {
+	child_last_idx = extend_child_->FindValueModified(*last, true);
+	child_last = extend_child_->GetModified(child_last_idx);
+      }
       if (child_last)
-	ref->child_singular = child_last;
+	ref->child_singular = child_last_idx;
       else
 	ref->child_singular = extend_child_->FindValueModified(pChild, false,
 							       kCheckModifiedAfter,
 							       kModificationTypeSingular,
 							       true);
-      if (ref->child_singular || child_modified || extend_child_->isValueModified(pChild))
+      if (ref->child_singular >= 0 || child_modified || extend_child_->isValueModified(pChild))
 	ref->flags = (ref->flags | (1 << kValueFlagChildModified));
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       std::cerr << "PushValue (" << appended << "): ";
@@ -3709,10 +3710,10 @@ private:
     std::cerr << std::endl;
     DisplayStack(true);
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-    if (ref->singular)
-      ref->singular->visited = true;
-    if (ref->child_singular)
-      ref->child_singular->visited = true;
+    if (ref->singular >= 0)
+      GetModified(ref->singular)->visited = true;
+    if (ref->child_singular >= 0)
+      extend_child_->GetModified(ref->child_singular)->visited = true;
     ref->~ValueEntry();
   }
   size_t ValueCount() const {
@@ -3795,12 +3796,18 @@ private:
     std::cerr << std::endl;
     DisplayStack(true);
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-    if (ref->key)
+    if (ref->key) {
       delete ref->key;
-    if (ref->idx)
+      ref->key = NULL;
+    }
+    if (ref->idx) {
       delete ref->idx;
-    if (ref->aliased)
+      ref->idx = NULL;
+    }
+    if (ref->aliased) {
       delete ref->aliased;
+      ref->aliased = NULL;
+    }
   }
   size_t KeyCount() const {
     return keyStack_.GetSize() / sizeof(KeyEntry);
@@ -4796,8 +4803,10 @@ public:
         }
 #endif
 #ifdef RAPIDJSON_YGGDRASIL
-	if (sharedProperties_)
+	if (sharedProperties_) {
 	  delete sharedProperties_;
+	  sharedProperties_ = NULL;
+	}
 #endif // RAPIDJSON_YGGDRASIL
     }
 
@@ -5585,47 +5594,52 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
   template <typename YggSchemaValueType>
   bool YggdrasilString(Context& context, const Ch* str, SizeType length, bool copy, const YggSchemaValueType& schema0) const {
-    YggSchemaValueType schema;
-    schema0.Accept(schema);
-    schema.FinalizeFromStack();
-    RAPIDJSON_ASSERT(schema.IsObject());
-    RAPIDJSON_NORMALIZER_(YggdrasilString, str, length, copy, schema);
-    typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetTypeString());
-    RAPIDJSON_ASSERT(vs != schema.MemberEnd());
+    YggSchemaValueType* schema = const_cast<YggSchemaValueType*>(&schema0);
+    if (context.normalized) {
+      schema = new YggSchemaValueType();
+      schema0.Accept(*schema);
+      schema->FinalizeFromStack();
+    }
+#define CLEANUP_				\
+    if (context.normalized) delete schema
+    RAPIDJSON_ASSERT(schema->IsObject());
+    RAPIDJSON_NORMALIZER_(YggdrasilString, str, length, copy, *schema);
+    typename YggSchemaValueType::ConstMemberIterator vs = schema->FindMember(GetTypeString());
+    RAPIDJSON_ASSERT(vs != schema->MemberEnd());
     const ValueType v(vs->value.GetString(), vs->value.GetStringLength());
     if ((v == GetScalarString()) &&
 	(yggtype_ & (1 << kYggScalarSchemaType))) {
-      if (!CheckSubType(context, schema))
+      if (!(CheckSubType(context, *schema) &&
+	    CheckPrecision(context, *schema) &&
+	    CheckUnits(context, *schema) &&
+	    CheckEncoding(context, *schema))) {
+	CLEANUP_;
 	return false;
-      if (!CheckPrecision(context, schema))
-	return false;
-      if (!CheckUnits(context, schema))
-	return false;
-      if (!CheckEncoding(context, schema))
-	return false;
+      }
     } else if (((v == Get1DArrayString()) || (v == GetNDArrayString())) &&
 	       (yggtype_ & (1 << kYggNDArraySchemaType))) {
-      if (!CheckSubType(context, schema))
+      if (!(CheckSubType(context, *schema) &&
+	    CheckPrecision(context, *schema) &&
+	    CheckUnits(context, *schema) &&
+	    CheckEncoding(context, *schema) &&
+	    CheckShape(context, *schema))) {
+	CLEANUP_;
 	return false;
-      if (!CheckPrecision(context, schema))
-	return false;
-      if (!CheckUnits(context, schema))
-	return false;
-      if (!CheckEncoding(context, schema))
-	return false;
-      if (!CheckShape(context, schema))
-	return false;
+      }
     } else if (((v == GetPythonClassString()) ||
 		(v == GetPythonFunctionString())) &&
 	       (yggtype_ & (1 << kYggPythonImportSchemaType))) {
-      if (!CheckPythonImport(context, str, length))
+      if (!CheckPythonImport(context, str, length)) {
+	CLEANUP_;
 	return false;
+      }
     } else if ((v == GetPlyString()) &&
 	       (yggtype_ & (1 << kYggPlySchemaType))) {
       Ply x;
       std::stringstream ss;
       ss.str((char*)str);
       if ((!x.read(ss)) || (!x.is_valid())) {
+	CLEANUP_;
 	context.error_handler.InvalidPly(str, length);
 	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPly);
       }
@@ -5635,23 +5649,26 @@ public:
       std::stringstream ss;
       ss.str((char*)str);
       if ((!x.read(ss)) || (!x.is_valid())) {
+	CLEANUP_;
 	context.error_handler.InvalidObjWavefront(str, length);
 	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorObjWavefront);
       }
     } else if ((v == GetScalarString() || v == GetStringString()) &&
 	       (type_ & (1 << kStringSchemaType)) &&
 	       (yggtype_ == 0)) {
-      typename YggSchemaValueType::ConstMemberIterator vsub = schema.FindMember(GetSubTypeString());
+      typename YggSchemaValueType::ConstMemberIterator vsub = schema->FindMember(GetSubTypeString());
       if ((v == GetStringString()) ||
-	  (vsub != schema.MemberEnd() && vsub->value == YggSchemaValueType::GetStringSubTypeString())) {
+	  (vsub != schema->MemberEnd() && vsub->value == YggSchemaValueType::GetStringSubTypeString())) {
         if (minLength_ != 0 || maxLength_ != SizeType(~0)) {
 	  SizeType count;
 	  if (internal::CountStringCodePoint<EncodingType>(str, length, &count)) {
 	    if (count < minLength_) {
+	      CLEANUP_;
 	      context.error_handler.TooShort(str, length, minLength_);
 	      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinLength);
 	    }
 	    if (count > maxLength_) {
+	      CLEANUP_;
 	      context.error_handler.TooLong(str, length, maxLength_);
 	      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxLength);
 	    }
@@ -5659,17 +5676,22 @@ public:
         }
 
         if (pattern_ && !IsPatternMatch(pattern_, str, length)) {
+	    CLEANUP_;
             context.error_handler.DoesNotMatch(str, length);
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPattern);
         }
       } else {
+	CLEANUP_;
 	DisallowedType(context, v);
 	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
       }
     } else {
+      CLEANUP_;
       DisallowedType(context, v);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
+    CLEANUP_;
+#undef CLEANUP_
     return CreateParallelValidator(context);
   }
   template <typename YggSchemaValueType>
@@ -6222,8 +6244,10 @@ protected:
 	singularPtr_ = q;
       }
     }
-    if (deleteV)
+    if (deleteV) {
       delete v;
+      v = NULL;
+    }
   }
   void AssignSingularIfExistObject(SchemaDocumentType& schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document,
 				   const ValueType* prop0=nullptr) {
@@ -7106,6 +7130,7 @@ protected:
 	  for (SizeType i = 0; i < propertyCount; i++)
 	    (properties + i)->~PropertyEntry();
 	  AllocatorType::Free(properties);
+	  properties = NULL;
 	}
       }
       struct PropertyEntry {
@@ -8585,6 +8610,8 @@ public:
 	if ((metaschema_) && (!isMetaschema_)) {
 	  delete metaschema_;
 	  delete metaschema_doc_;
+	  metaschema_ = NULL;
+	  metaschema_doc_ = NULL;
 	}
 	while (!instanceMap_.Empty())
 	  instanceMap_.template Pop<InstanceSchemaEntry>(1)->~InstanceSchemaEntry();
@@ -9709,17 +9736,17 @@ public:
   void MissingRequiredSchemaProperty(const typename SchemaType::ValueType& name) {
     currentError_.SetObject();
     currentError_.AddMember(GetMissingString(),
-			    ValueType(name, GetStateAllocator()).Move(),
+			    ValueType(name, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     AddCurrentError(kValidateErrorPythonImport, true);
   }
   void IncorrectSubType(const typename SchemaType::ValueType& actual, const typename SchemaType::ValueType& expected) {
     currentError_.SetObject();
     currentError_.AddMember(GetExpectedString(),
-			    ValueType(expected, GetStateAllocator()).Move(),
+			    ValueType(expected, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     currentError_.AddMember(GetActualString(),
-			    ValueType(actual, GetStateAllocator()).Move(),
+			    ValueType(actual, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     AddCurrentError(kValidateErrorSubType, true);
   }
@@ -9730,30 +9757,30 @@ public:
   void IncorrectUnits(const typename SchemaType::ValueType& actual, const SValue& expected) {
     currentError_.SetObject();
     currentError_.AddMember(GetExpectedString(),
-			    ValueType(expected, GetStateAllocator()).Move(),
+			    ValueType(expected, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     currentError_.AddMember(GetActualString(),
-			    ValueType(actual, GetStateAllocator()).Move(),
+			    ValueType(actual, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     AddCurrentError(kValdiateErrorUnits, true);
   }
   void IncorrectShape(const SValue& actual, const SValue& expected) {
     currentError_.SetObject();
     currentError_.AddMember(GetExpectedString(),
-			    ValueType(expected, GetStateAllocator()).Move(),
+			    ValueType(expected, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     currentError_.AddMember(GetActualString(),
-			    ValueType(actual, GetStateAllocator()).Move(),
+			    ValueType(actual, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     AddCurrentError(kValidateErrorShape, true);
   }
   void IncorrectEncoding(const typename SchemaType::ValueType& actual, const typename SchemaType::ValueType& expected) {
     currentError_.SetObject();
     currentError_.AddMember(GetExpectedString(),
-			    ValueType(expected, GetStateAllocator()).Move(),
+			    ValueType(expected, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     currentError_.AddMember(GetActualString(),
-			    ValueType(actual, GetStateAllocator()).Move(),
+			    ValueType(actual, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     AddCurrentError(kValidateErrorEncoding, true);
   }
@@ -9765,7 +9792,7 @@ public:
   void InvalidPythonClass(const Ch* str, SizeType len, const SValue& expected) {
     currentError_.SetObject();
     currentError_.AddMember(GetExpectedString(),
-			    ValueType(expected, GetStateAllocator()).Move(),
+			    ValueType(expected, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     currentError_.AddMember(GetActualString(),
 			    ValueType(str, len, GetStateAllocator()).Move(),

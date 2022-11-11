@@ -3329,6 +3329,7 @@ public:
       Allocator::Free(schema_);
       RAPIDJSON_DELETE(schema_allocator);
       schema_ = NULL;
+      schema_allocator = NULL;
     }
   }
   void ResetSchema(Allocator* allocator = 0) {
@@ -3576,6 +3577,7 @@ public:
 			     static_cast<SizeType>(units_str.size()),
 			     allocator);
     free(temp);
+    temp = NULL;
     return out;
   }
   template <typename T>
@@ -3656,6 +3658,8 @@ public:
     mod_cls[mod_len + cls_len + 1] = '\0';
     allocator.Free(mod);
     allocator.Free(cls);
+    mod = NULL;
+    cls = NULL;
     return true;
   }
   bool GetPythonObjectClassAttr(PyObject* x, const char* attr,
@@ -3806,12 +3810,14 @@ public:
 	npy_intp* np_shape = (npy_intp*)(schema_->GetAllocator().Malloc(sizeof(npy_intp) * ndim));
 	if (!np_shape) {
 	  schema_->GetAllocator().Free(shape);
+	  shape = NULL;
 	  Py_DECREF(desc);
 	  return NULL;
 	}
 	for (SizeType i = 0; i < ndim; i++)
 	  np_shape[i] = (npy_intp)shape[i];
 	schema_->GetAllocator().Free(shape);
+	shape = NULL;
 	// don't use allocator so that python array is responsible for freeing
 	bool free_data = false;
 	void* data = (void*)GetString();
@@ -3837,9 +3843,12 @@ public:
 	  out = PyArray_NewCopy((PyArrayObject*)tmp, NPY_CORDER);
 	  Py_DECREF(tmp);
 	}
-	if (free_data)
+	if (free_data) {
 	  schema_->GetAllocator().Free(data);
+	  data = NULL;
+	}
 	schema_->GetAllocator().Free(np_shape);
+	np_shape = NULL;
 	return out;
       }
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
@@ -3963,6 +3972,7 @@ public:
 	AddSchemaMember(GetTypeString(), GetPythonFunctionString());
       SetStringRaw(StringRefType(mod_cls, mod_cls_siz), schema_->GetAllocator());
       schema_->GetAllocator().Free(mod_cls);
+      mod_cls = NULL;
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
     } else if (PyArray_CheckScalar(x)) {
       ResetSchema(allocator);
@@ -4002,6 +4012,7 @@ public:
       SetStringRaw(StringRef(static_cast<Ch*>(data), precision / sizeof(Ch)),
 		   schema_->GetAllocator());
       schema_->GetAllocator().Free(data);
+      data = NULL;
       if (desc->type_num == NPY_UNICODE && encoding == GetUTF8EncodingString()) {
 	Py_DECREF(desc);
 	return true;
@@ -4277,6 +4288,7 @@ public:
 	return false;
       ValueType mod_cls(mod_cls_ref, mod_cls_siz, schema_->GetAllocator());
       schema_->GetAllocator().Free(mod_cls_ref);
+      mod_cls_ref = NULL;
       AddMember(GetPythonClassString(), mod_cls, schema_->GetAllocator());
       ValueType args;
       ValueType kwargs;
@@ -4802,10 +4814,13 @@ public:
 							 nelements,
 							 allocator);
       allocator.Free(old_decoded_bytes);
+      old_decoded_bytes = NULL;
       length = sizeof(T) * nelements;
     }
-    if (data != nullptr)
+    if (data != NULL) {
       free(data);
+      data = NULL;
+    }
     data = reinterpret_cast<T*>(decoded_bytes);
   }
   template <typename T>
@@ -4834,6 +4849,8 @@ public:
     }
     allocator.Free(value);
     allocator.Free(shape);
+    value = NULL;
+    shape = NULL;
   }
   template <typename T>
   void GetArrayQuantity(units::GenericQuantityArray<T, EncodingType>* data,
@@ -4889,6 +4906,7 @@ public:
     GetNDArray(data, shape, ndim, precision, allocator);
     nelements = GetNElements();
     allocator.Free(shape);
+    shape = NULL;
   }
   Ch* Get1DArray(SizeType& nelements, SizeType& precision,
 		 Allocator& allocator) const {
@@ -4907,16 +4925,20 @@ public:
     units::GenericQuantityArray<T, EncodingType> x;
     GetArrayQuantity<T>(&x, allocator, data_units);
     ndim = x.ndim();
-    if (shape != nullptr)
+    if (shape != nullptr) {
       free(shape);
+      shape = NULL;
+    }
     shape = (SizeType*)allocator.Malloc(ndim * sizeof(SizeType));
     RAPIDJSON_ASSERT(shape);
     for (SizeType i = 0; i < ndim; i++) {
       shape[i] = x.shape()[i];
       nelements = nelements * shape[i];
     }
-    if (data != nullptr)
+    if (data != nullptr) {
       free(data);
+      data = NULL;
+    }
     data = (T*)allocator.Malloc(nelements * sizeof(T));
     RAPIDJSON_ASSERT(data);
     for (SizeType i = 0; i < nelements; i++)
