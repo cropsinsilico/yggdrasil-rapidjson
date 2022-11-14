@@ -322,6 +322,7 @@ public:
   virtual void GenericError(const char* str) = 0;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
   virtual void IncompatibleSchemas(const typename SchemaType::ValueType& key, const SValue& expected, const SValue& actual, typename SchemaType::PointerType ptr1, typename SchemaType::PointerType ptr2, bool existingValues = false) = 0;
+  virtual void ResetError() = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -4906,6 +4907,12 @@ public:
       RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a.GetString(), a.GetStringLength()).Move(), SValue(b.GetString(), b.GetStringLength()).Move())
 #define RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(key, a, b)	\
       RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, (bool)(a), (bool)(b))
+#define CHECK_INCOMPATIBLE_IF_SET(key, err, def)	\
+      if (key != def && rhs.key != def && key != rhs.key)	\
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), SValue(key).Move(), SValue(rhs.key).Move())
+#define CHECK_INCOMPATIBLE_IF_PRESENT(key, err) \
+      if (!key.IsNull() && !rhs.key.IsNull() && key != rhs.key)	\
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), key, rhs.key)
       if (this == &rhs) return true;
       // Type
       if (!(((type_ || rhs.type_) && (type_ & rhs.type_)) ||
@@ -4914,44 +4921,36 @@ public:
 	rhs.DisallowedTypeKey(context, true);
 	RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
       }
-      if (((subtype_ != kYggNullSubType) || (rhs.subtype_ != kYggNullSubType))
+      if (((subtype_ != kYggNullSubType && rhs.type_ != ((1 << kTotalSchemaType) - 1)) ||
+	   (rhs.subtype_ != kYggNullSubType && type_ != ((1 << kTotalSchemaType) - 1)))
 	  && (subtype_ != rhs.subtype_)) {
 	const ValueType& lhs_subtype = SubType2String(subtype_);
 	const ValueType& rhs_subtype = SubType2String(rhs.subtype_);
 	RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetSubTypeString(), lhs_subtype, rhs_subtype);
       }
       // Number properties
-      if (minimum_ != rhs.minimum_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetMinimumString(), minimum_, rhs.minimum_);
-      if (maximum_ != rhs.maximum_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetMaximumString(), maximum_, rhs.maximum_);
-      if (multipleOf_ != rhs.multipleOf_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetMultipleOfString(), multipleOf_, rhs.multipleOf_);
+      CHECK_INCOMPATIBLE_IF_PRESENT(minimum_, Minimum);
+      CHECK_INCOMPATIBLE_IF_PRESENT(maximum_, Maximum);
+      CHECK_INCOMPATIBLE_IF_PRESENT(multipleOf_, MultipleOf);
       // String properties
-      if (patternStr_ != rhs.patternStr_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPatternString(), patternStr_, rhs.patternStr_);
-      if (minLength_ != rhs.minLength_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinLengthString(), minLength_, rhs.minLength_);
-      if (maxLength_ != rhs.maxLength_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxLengthString(), maxLength_, rhs.maxLength_);
+      CHECK_INCOMPATIBLE_IF_PRESENT(patternStr_, Pattern);
+      CHECK_INCOMPATIBLE_IF_SET(minLength_, MinLength, 0);
+      CHECK_INCOMPATIBLE_IF_SET(maxLength_, MaxLength, ~SizeType(0));
       // Scalar properties
       if (precision_ != rhs.precision_) {
 	if (!((yggtype_ & (1 << kYggScalarSchemaType)) &&
 	      subtype_ == kYggStringSchemaSubType))
 	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPrecisionString(), precision_, rhs.precision_);
       }
-      if (units_.IsString() && rhs.units_.IsString()) {
-	// This version allows the units to be compatible
-	// UnitsType lhs_units(units_.GetString(), units_.GetStringLength(), false);
-	// UnitsType rhs_units(rhs.units_.GetString(), rhs.units_.GetStringLength(), false);
-	// if (!lhs_units.is_compatible(rhs_units))
-	if (units_ != rhs.units_)
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetUnitsString(), units_, rhs.units_);
-      }
-      if ((!shape_.IsNull()) && (!rhs.shape_.IsNull()) && (shape_ != rhs.shape_))
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetShapeString(), shape_, rhs.shape_);
-      if (ndim_ != 0 && rhs.ndim_ != 0 && ndim_ != rhs.ndim_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(ndim_).Move(), SValue(rhs.ndim_).Move());
+      CHECK_INCOMPATIBLE_IF_PRESENT(units_, Units);
+      // This version allows the units to be compatible
+      // if (units_.IsString() && rhs.units_.IsString()) {
+      // 	UnitsType lhs_units(units_.GetString(), units_.GetStringLength(), false);
+      // 	UnitsType rhs_units(rhs.units_.GetString(), rhs.units_.GetStringLength(), false);
+      // 	if (!lhs_units.is_compatible(rhs_units))
+      // }
+      CHECK_INCOMPATIBLE_IF_PRESENT(shape_, Shape);
+      CHECK_INCOMPATIBLE_IF_SET(ndim_, NDim, 0);
       if (ndim_ != 0 && (!rhs.shape_.IsNull()) && ndim_ != rhs.shape_.Size())
 	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(ndim_).Move(), SValue(rhs.shape_.Size()).Move());
       if ((!shape_.IsNull()) && rhs.ndim_ != 0 && shape_.Size() != rhs.ndim_)
@@ -4975,40 +4974,80 @@ public:
         foundEnum:;
       }
       // Schema logic
-      if (not_ || rhs.not_) {
-	if (!(not_ && rhs.not_))
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetNotString(), not_, rhs.not_);
-	if (!(not_->Compare(*rhs.not_, context))) return false;
+      if (not_) {
+	if (not_->Compare(rhs, context)) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetNotString(), false, true);
+	}
+	context.error_handler.ResetError();
+      } else if (rhs.not_) {
+	if (Compare(*(rhs.not_), context)) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetNotString(), false, true);
+	}
+	context.error_handler.ResetError();
       }
-      if (allOf_.schemas || rhs.allOf_.schemas) {
-	if (!(allOf_.schemas && rhs.allOf_.schemas))
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAllOfString(), allOf_.schemas, rhs.allOf_.schemas);
-	if (allOf_.count != rhs.allOf_.count)
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetAllOfString(), allOf_.count, rhs.allOf_.count);
+      if (allOf_.schemas) {
 	for (SizeType i = 0; i < allOf_.count; i++) {
-	  if (!allOf_.schemas[i]->Compare(*rhs.allOf_.schemas[i], context))
+	  if (!allOf_.schemas[i]->Compare(rhs, context))
+	    return false;
+	}
+      } else if (rhs.allOf_.schemas) {
+	for (SizeType i = 0; i < rhs.allOf_.count; i++) {
+	  if (!Compare(*(rhs.allOf_.schemas[i]), context))
 	    return false;
 	}
       }
-      if (anyOf_.schemas || rhs.anyOf_.schemas) {
-	if (!(anyOf_.schemas && rhs.anyOf_.schemas))
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAnyOfString(), anyOf_.schemas, rhs.anyOf_.schemas);
-	if (anyOf_.count != rhs.anyOf_.count)
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetAnyOfString(), anyOf_.count, rhs.anyOf_.count);
+      if (anyOf_.schemas) {
+	bool match = false;
 	for (SizeType i = 0; i < anyOf_.count; i++) {
-	  if (!anyOf_.schemas[i]->Compare(*rhs.anyOf_.schemas[i], context))
-	    return false;
+	  if (anyOf_.schemas[i]->Compare(rhs, context))
+	    match = true;
+	  context.error_handler.ResetError();
+	}
+	if (!match) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAnyOfString(), true, false);
+	}
+      } else if (rhs.anyOf_.schemas) {
+	bool match = false;
+	for (SizeType i = 0; i < rhs.anyOf_.count; i++) {
+	  if (Compare(*(rhs.anyOf_.schemas[i]), context))
+	    match = true;
+	  context.error_handler.ResetError();
+	}
+	if (!match) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAnyOfString(), true, false);
 	}
       }
-      if (oneOf_.schemas || rhs.oneOf_.schemas) {
-	if (!(oneOf_.schemas && rhs.oneOf_.schemas))
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetOneOfString(), oneOf_.schemas, rhs.oneOf_.schemas);
-	if (oneOf_.count != rhs.oneOf_.count)
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetOneOfString(), oneOf_.count, rhs.oneOf_.count);
+      if (oneOf_.schemas) {
+	int matches = 0;
 	for (SizeType i = 0; i < oneOf_.count; i++) {
-	  if (!oneOf_.schemas[i]->Compare(*rhs.oneOf_.schemas[i], context))
-	    return false;
+	  if (oneOf_.schemas[i]->Compare(rhs, context))
+	    matches++;
+	  context.error_handler.ResetError();
 	}
+	if (matches != 1) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetOneOfString(), 1, matches);
+	}
+      } else if (rhs.oneOf_.schemas) {
+	int matches = 0;
+	for (SizeType i = 0; i < rhs.oneOf_.count; i++) {
+	  if (Compare(*(rhs.oneOf_.schemas[i]), context))
+	    matches++;
+	  context.error_handler.ResetError();
+	}
+	if (matches != 1) {
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetOneOfString(), 1, matches);
+	}
+      }
+      if (allowSingularSchema_.schemas) {
+	if (allowSingularSchema_.schemas[1]->Compare(rhs, context))
+	  return true;
+	context.error_handler.ResetError();
+	return allowSingularSchema_.schemas[0]->Compare(rhs, context);
+      } else if (rhs.allowSingularSchema_.schemas) {
+	if (Compare(*(rhs.allowSingularSchema_.schemas[1]), context))
+	  return true;
+	context.error_handler.ResetError();
+	return Compare(*(rhs.allowSingularSchema_.schemas[0]), context);
       }
       // Properties
       if (properties_) {
@@ -5180,10 +5219,15 @@ public:
         maxItemsMatch:;
       }
       return true;
+#undef CHECK_INCOMPATIBLE_IF_SET
+#undef CHECK_INCOMPATIBLE_IF_PRESENT
 #undef RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL
 #undef RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP
 #undef RAPIDJSON_INCOMPATIBLE_SCHEMA
     }
+    // bool Generate(ValueType& data, Context& context) const {
+    // TODO: boolean, string, number, integer, scalar, ndarray, array, object
+    // }
 #endif // RAPIDJSON_YGGDRASIL
 
     const SValue& GetURI() const {
@@ -6510,7 +6554,6 @@ protected:
     case (kYggStringSchemaSubType): return GetStringSubTypeString();
     default:
       const ValueType& out = GetNullString();
-      RAPIDJSON_ASSERT(out != GetNullString());
       return out;
     }
   }

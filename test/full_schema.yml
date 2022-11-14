@@ -31,7 +31,8 @@ definitions:
           type: string
         datatype:
           default:
-            type: bytes
+            subtype: string
+            type: scalar
           description: 'JSON schema (with expanded core types defined by |yggdrasil|)
             that constrains the type of data that should be sent/received by this
             object. Defaults to {''type'': ''bytes''}. Additional information on specifying
@@ -142,7 +143,8 @@ definitions:
             properties:
               datatype:
                 default:
-                  type: bytes
+                  subtype: string
+                  type: scalar
                 type: schema
               name:
                 type: string
@@ -901,7 +903,8 @@ definitions:
             properties:
               datatype:
                 default:
-                  type: bytes
+                  subtype: string
+                  type: scalar
                 type: schema
               name:
                 type: string

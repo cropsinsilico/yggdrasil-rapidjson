@@ -4758,10 +4758,23 @@ TEST(SchemaCompare, Enum) {
 }
 TEST(SchemaCompare, Not) {
   COMPARE("{"
+	  "  \"type\": \"boolean\""
+	  "}",
+	  "{"
+	  "  \"not\": { \"type\": \"string\" }"
+	  "}");
+  COMPARE("{"
 	  "  \"not\": { \"type\": \"string\" }"
 	  "}",
 	  "{"
 	  "  \"not\": { \"type\": \"string\" }"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"schema\","
+	  "  \"not\": { \"type\": \"string\" }"
+	  "}",
+	  "{"
+	  "  \"type\": \"schema\""
 	  "}");
   INVALID_COMPARE("{"
 		  "  \"not\": { \"type\": \"string\" }"
@@ -4771,25 +4784,21 @@ TEST(SchemaCompare, Not) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 44,"
-		  "    \"instanceRef\": \"#/not\", \"schemaRef\": \"#/not\","
-		  "    \"property\": \"type\","
-		  "    \"expected\": [\"string\"], \"actual\": [\"schema\"]"
-		  "}}");
-  INVALID_COMPARE("{"
-		  "  \"type\": \"schema\","
-		  "  \"not\": { \"type\": \"string\" }"
-		  "}",
-		  "{"
-		  "  \"type\": \"schema\""
-		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"not\","
-		  "    \"expected\": true, \"actual\": false"
+		  "    \"expected\": false, \"actual\": true"
 		  "}}");
 }
 TEST(SchemaCompare, AllOf) {
+  COMPARE("{"
+	  "  \"type\": \"string\""
+	  "}",
+	  "{"
+	  "  \"allOf\": ["
+	  "    { \"type\": \"string\" },"
+	  "    { \"maxLength\": 5 }"
+	  "  ]"
+	  "}");
   COMPARE("{"
 	  "  \"allOf\": ["
 	  "    { \"type\": \"string\" },"
@@ -4810,14 +4819,16 @@ TEST(SchemaCompare, AllOf) {
 		  "}",
 		  "{"
 		  "  \"allOf\": ["
-		  "    { \"type\": \"string\" }"
+		  "    { \"type\": \"string\","
+		  "      \"maxLength\": 3 }"
 		  "  ]"
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 44,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-		  "    \"property\": \"allOf\","
-		  "    \"expected\": 2, \"actual\": 1"
+		  "    \"instanceRef\": \"#/allOf/0\","
+		  "    \"schemaRef\": \"#/allOf/1\","
+		  "    \"property\": \"maxLength\","
+		  "    \"expected\": 5, \"actual\": 3"
 		  "}}");
   INVALID_COMPARE("{"
 		  "  \"allOf\": ["
@@ -4841,6 +4852,15 @@ TEST(SchemaCompare, AllOf) {
 }
 TEST(SchemaCompare, AnyOf) {
   COMPARE("{"
+	  "  \"type\": \"string\""
+	  "}",
+	  "{"
+	  "  \"anyOf\": ["
+	  "    { \"type\": \"string\" },"
+	  "    { \"maxLength\": 5 }"
+	  "  ]"
+	  "}");
+  COMPARE("{"
 	  "  \"anyOf\": ["
 	  "    { \"type\": \"string\" },"
 	  "    { \"maxLength\": 5 }"
@@ -4854,52 +4874,44 @@ TEST(SchemaCompare, AnyOf) {
 	  "}");
   INVALID_COMPARE("{"
 		  "  \"anyOf\": ["
-		  "    { \"type\": \"string\" },"
-		  "    { \"maxLength\": 5 }"
+		  "    { \"type\": \"boolean\" },"
+		  "    { \"type\": \"string\","
+		  "      \"maxLength\": 5 }"
 		  "  ]"
 		  "}",
 		  "{"
 		  "  \"anyOf\": ["
-		  "    { \"type\": \"string\" }"
+		  "    { \"type\": \"string\","
+		  "      \"maxLength\": 3 }"
 		  "  ]"
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 44,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"anyOf\","
-		  "    \"expected\": 2, \"actual\": 1"
-		  "}}");
-  INVALID_COMPARE("{"
-		  "  \"anyOf\": ["
-		  "    { \"type\": \"string\" },"
-		  "    { \"maxLength\": 5 }"
-		  "  ]"
-		  "}",
-		  "{"
-		  "  \"anyOf\": ["
-		  "    { \"type\": \"string\" },"
-		  "    { \"maxLength\": 3 }"
-		  "  ]"
-		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
-		  "    \"schemaRef\": \"#/anyOf/1\","
-		  "    \"instanceRef\": \"#/anyOf/1\","
-		  "    \"property\": \"maxLength\","
-		  "    \"expected\": 5, \"actual\": 3"
+		  "    \"expected\": true, \"actual\": false"
 		  "}}");
 }
 TEST(SchemaCompare, OneOf) {
   COMPARE("{"
-	  "  \"oneOf\": ["
-	  "    { \"type\": \"string\" },"
+	  "  \"type\": \"string\""
+	  "}",
+	  "{"
+	  "  \"anyOf\": ["
+	  "    { \"type\": \"boolean\" },"
 	  "    { \"maxLength\": 5 }"
+	  "  ]"
+	  "}");
+  COMPARE("{"
+	  "  \"oneOf\": ["
+	  "    { \"type\": \"boolean\" },"
+	  "    { \"type\": \"string\", \"maxLength\": 5 }"
 	  "  ]"
 	  "}",
 	  "{"
 	  "  \"oneOf\": ["
-	  "    { \"type\": \"string\" },"
-	  "    { \"maxLength\": 5 }"
+	  "    { \"type\": \"boolean\" },"
+	  "    { \"type\": \"string\", \"maxLength\": 3 }"
 	  "  ]"
 	  "}");
   INVALID_COMPARE("{"
@@ -4917,26 +4929,7 @@ TEST(SchemaCompare, OneOf) {
 		  "    \"errorCode\": 44,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"oneOf\","
-		  "    \"expected\": 2, \"actual\": 1"
-		  "}}");
-  INVALID_COMPARE("{"
-		  "  \"oneOf\": ["
-		  "    { \"type\": \"string\" },"
-		  "    { \"maxLength\": 5 }"
-		  "  ]"
-		  "}",
-		  "{"
-		  "  \"oneOf\": ["
-		  "    { \"type\": \"string\" },"
-		  "    { \"maxLength\": 3 }"
-		  "  ]"
-		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
-		  "    \"schemaRef\": \"#/oneOf/1\","
-		  "    \"instanceRef\": \"#/oneOf/1\","
-		  "    \"property\": \"maxLength\","
-		  "    \"expected\": 5, \"actual\": 3"
+		  "    \"expected\": 1, \"actual\": 2"
 		  "}}");
 }
 TEST(SchemaCompare, Properties) {
@@ -6462,6 +6455,61 @@ TEST(SchemaCompare, String) {
 		  "    \"property\": \"pattern\","
 		  "    \"expected\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\","
 		  "    \"actual\": \"^[0-9]{3}-[0-9]{4}$\""
+		  "}}");
+}
+TEST(SchemaCompare, AllowSingular) {
+  COMPARE("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": {"
+	  "    \"type\": \"string\""
+	  "  },"
+	  "  \"allowSingular\": true"
+	  "}",
+	  "{"
+	  "  \"type\": \"string\""
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"array\","
+		  "  \"items\": {"
+		  "    \"type\": \"boolean\""
+		  "  },"
+		  "  \"allowSingular\": true"
+		  "}",
+		  "{"
+		  "  \"type\": \"string\""
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"array\"], \"actual\": [\"string\"]"
+		  "}}");
+  COMPARE("{"
+	  "  \"type\": \"object\","
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"string\"}"
+	  "  },"
+	  "  \"allowSingular\": \"a\""
+	  "}",
+	  "{"
+	  "  \"type\": \"string\""
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"boolean\"}"
+		  "  },"
+		  "  \"allowSingular\": \"a\""
+		  "}",
+		  "{"
+		  "  \"type\": \"string\""
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"object\"], \"actual\": [\"string\"]"
 		  "}}");
 }
 #endif // RAPIDJSON_YGGDRASIL
