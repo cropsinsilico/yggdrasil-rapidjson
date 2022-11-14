@@ -2347,7 +2347,7 @@ public:
     NORM_BODY_(YggdrasilStartObject, (valueSchema));
     return true;
   }
-  bool NormSchema(Context& context, const SchemaType& schema) {
+  bool NormSchema(Context&, const SchemaType&) {
     ValueType* obj = document_.StackTop();
     if (obj && obj->IsSchema()) {
       if (obj->HasMember(SchemaType::GetTypeString())) {
