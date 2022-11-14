@@ -2347,9 +2347,60 @@ public:
     NORM_BODY_(YggdrasilStartObject, (valueSchema));
     return true;
   }
+  bool NormSchema(Context& context, const SchemaType& schema) {
+    ValueType* obj = document_.StackTop();
+    if (obj && obj->IsSchema()) {
+      if (obj->HasMember(SchemaType::GetTypeString())) {
+	typename DocumentType::MemberIterator it = obj->FindMember(SchemaType::GetTypeString());
+	if (it->value == SchemaType::GetBytesString() ||
+	    it->value == SchemaType::GetUnicodeString() ||
+	    it->value == SchemaType::GetIntSubTypeString() ||
+	    it->value == SchemaType::GetUintSubTypeString() ||
+	    it->value == SchemaType::GetFloatSubTypeString() ||
+	    it->value == SchemaType::GetComplexSubTypeString()) {
+	  obj->AddMember(ValueType(SchemaType::GetSubTypeString().GetString(),
+				   SchemaType::GetSubTypeString().GetStringLength(),
+				   document_.GetAllocator()).Move(),
+			 ValueType(it->value,
+				   document_.GetAllocator(), true).Move(),
+			 document_.GetAllocator());
+	  (*obj)[SchemaType::GetTypeString()].SetString(SchemaType::GetScalarString().GetString(),
+							SchemaType::GetScalarString().GetStringLength(),
+							document_.GetAllocator());
+	  RecordModified(kModificationTypeValue);
+	}
+      }
+      if (obj->HasMember(SchemaType::GetSubTypeString())) {
+	typename DocumentType::MemberIterator it = obj->FindMember(SchemaType::GetSubTypeString());
+	if (it->value == SchemaType::GetBytesString()) {
+	  it->value.SetString(SchemaType::GetStringString().GetString(),
+			      SchemaType::GetStringString().GetStringLength(),
+			      document_.GetAllocator());
+	  RecordModified(kModificationTypeValue);
+	} else if (it->value == SchemaType::GetUnicodeString()) {
+	  it->value.SetString(SchemaType::GetStringString().GetString(),
+			      SchemaType::GetStringString().GetStringLength(),
+			      document_.GetAllocator());
+	  if (!obj->HasMember(SchemaType::GetEncodingString())) {
+	    obj->AddMember(ValueType(SchemaType::GetEncodingString().GetString(),
+				     SchemaType::GetEncodingString().GetStringLength(),
+				     document_.GetAllocator()),
+			   ValueType(SchemaType::GetUTF8EncodingString().GetString(),
+				     SchemaType::GetUTF8EncodingString().GetStringLength(),
+				     document_.GetAllocator()).Move(),
+			   document_.GetAllocator());
+	  }
+	  RecordModified(kModificationTypeValue);
+	}
+      }
+    }
+    return true;
+  }
   bool NormYggdrasilEndObject(Context& context, const SchemaType& schema, SizeType memberCount) {
     NORM_BEGIN_STUB_(YggdrasilEndObject);
     NORM_BODY_(YggdrasilEndObject, (memberCount));
+    out = NormSchema(context, schema);
+    CHECK_RESULT;
     PointerType iP = GetInstancePointer(false, true);
     PointerType iS = context.schemaPointerAbs;
     out = FinalizeShared(context, schema, iP, iS);
@@ -2517,6 +2568,8 @@ public:
       }
     }
     NORM_BODY_(EndObject, (memberCount));
+    out = NormSchema(context, schema);
+    CHECK_RESULT;
     out = FinalizeShared(context, *baseSchema, iP, iS);
     CHECK_RESULT;
     // Do EndObject
@@ -6368,6 +6421,7 @@ protected:
 	} else if (type == GetUnicodeString()) {
 	  yggtype_ |= 1 << kYggScalarSchemaType;
 	  subtype_ = kYggStringSchemaSubType;
+	  encoding_ = kYggUTF8SchemaEncodingType;
 	} else {
 	  YggSchemaValueSubType subT = GetSubType(type);
 	  if (subT != kYggNullSubType) {

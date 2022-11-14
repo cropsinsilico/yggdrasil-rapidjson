@@ -32,6 +32,7 @@ def get_ygg_tests():
             x['properties']['name']['pattern'] = x['properties']['name']['pattern'].replace('\\', '\\\\')
         except KeyError:
             pass
+    default_datatype = "-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InN0cmluZyJ9-YGG-"
     test_yaml = (
         {'models': [
             {'name': 'fortran_modelA',
@@ -122,7 +123,7 @@ def get_ygg_tests():
              'outputs': [
                  {'name': 'outputA',
                   'commtype': 'default',
-                  "datatype": "-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-",
+                  "datatype": default_datatype,
                   'driver': 'OutputDriver',
                   'args': 'A_to_B'}]},
             {'name': 'fortran_modelB',
@@ -132,7 +133,7 @@ def get_ygg_tests():
              'inputs': [
                  {'name': 'inputA',
                   'commtype': 'default',
-                  "datatype": "-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-",
+                  "datatype": default_datatype,
                   'driver': 'InputDriver',
                   'args': 'A_to_B'}],
              'outputs': [
@@ -146,12 +147,12 @@ def get_ygg_tests():
              'language': 'python',
              'args': ['model.py', '-v'],
              'inputs': [{'commtype': 'default',
-                         'datatype': '-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-',
+                         'datatype': default_datatype,
                          'is_default': True,
                          'name': 'input'}],
              'outputs': [{'name': 'outputA',
                           'commtype': 'default',
-                          'datatype': '-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-',
+                          'datatype': default_datatype,
                           'filter': {
                               'function': '-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9maWx0ZXI=-YGG-'},
                           'field_names': ['a', 'b'],
@@ -163,23 +164,23 @@ def get_ygg_tests():
              'function': 'fake',
              'is_server': {'input': 'A', 'output': 'B'},
              'inputs': [{'commtype': 'default',
-                         'datatype': '-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-',
+                         'datatype': default_datatype,
                          'is_default': True,
                          'name': 'input'}],
              'outputs': [{'name': 'B',
                           'commtype': 'default',
-                          'datatype': '-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-'}],
+                          'datatype': default_datatype}],
              'working_dir': os.getcwd()},
             {'args': ['./src/modelA.c'],
              'driver': 'GCCModelDriver',
              'inputs': [{'name': 'inputA',
                          'commtype': 'default',
-                         'datatype': '-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-'}],
+                         'datatype': default_datatype}],
              'name': 'modelA',
              'language': 'c',
              'outputs': [{'name': 'outputA',
                           'commtype': 'default',
-                          'datatype': '-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-'}],
+                          'datatype': default_datatype}],
              'working_dir': os.getcwd()},
             {'name': 'modelA',
              'args': ['./src/modelA.c'],
@@ -207,12 +208,12 @@ def get_ygg_tests():
                           'args': 'A_to_B',
                           'onexit': 'printStatus',
                           'transform': ['-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-dGVzdHMudGVzdF95YW1sZmlsZTpkaXJlY3RfdHJhbnNsYXRl-YGG-'],
-                          'datatype': '-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-',
+                          'datatype': default_datatype,
                           'commtype': 'default'}]}],
          'connections': [
              {'inputs': [
                  {'name': 'outputA',
-                  'datatype': '-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-',
+                  'datatype': default_datatype,
                   'commtype': 'default',
                   'working_dir': os.getcwd()}],
               'outputs': [
@@ -227,12 +228,12 @@ def get_ygg_tests():
                           'working_dir': os.getcwd()}],
               'outputs': [{'name': 'inputA',
                            'commtype': 'default',
-                           'datatype': '-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-'}],
+                           'datatype': default_datatype}],
               'working_dir': os.getcwd(),
               'read_meth': 'all'},
              {'inputs': [{'name': 'outputA',
                           'commtype': 'default',
-                          'datatype': '-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiYnl0ZXMifQ==-YGG-',
+                          'datatype': default_datatype,
                           'working_dir': os.getcwd()}],
               'outputs': [{'name': 'output.txt',
                            'filetype': 'binary',
