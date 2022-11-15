@@ -163,10 +163,10 @@ TEST(Writer, ScalarComplex) {
   TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImNvbXBsZXgiLCJwcmVjaXNpb24iOjE2LCJ1bml0cyI6ImcifQ==-YGG-AAAAAAAAKEAAAAAAAAAAAA==-YGG-\"");
 }
 TEST(Writer, OneDArrayUInt) {
-  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiTmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzNdfQ==-YGG-AAEC-YGG-\"");
+  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzNdfQ==-YGG-AAEC-YGG-\"");
 }
 TEST(Writer, NDArrayUInt) {
-  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiTmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAECAwQF-YGG-\"");
+  TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAECAwQF-YGG-\"");
 }
 TEST(Writer, PythonClass) {
   TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"");
@@ -188,6 +188,54 @@ TEST(Writer, ObjWavefront) {
   TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoib2JqIn0=-YGG-diAwIDAgMAp2IDAgMCAxCnYgMCAxIDEKdiAwIDEgMAp2IDEgMCAwCnYgMSAwIDEKdiAxIDEgMQp2IDEgMSAwCmYgNCAxIDIKZiA0IDEgMwpsIDEgMgpsIDIgMwpsIDMgNApsIDQgMQpsIDMgMQoK-YGG-\"");
 }
 
+#define TEST_READABLE_ROUNDTRIP(json, readable)	\
+    { \
+      { TEST_ROUNDTRIP(json); }	\
+        StringStream s(json); \
+        StringBuffer buffer; \
+        Writer<StringBuffer> writer(buffer); \
+	writer.SetYggdrasilMode(true); \
+	Document d; \
+	d.ParseStream(s); \
+	d.Accept(writer); \
+        EXPECT_STREQ(readable, buffer.GetString()); \
+        EXPECT_TRUE(writer.IsComplete()); \
+    }
+
+TEST(ReadableWriter, ScalarUInt) {
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\"", "12");
+}
+TEST(ReadableWriter, ScalarInt) {
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6MSwidW5pdHMiOiJnIn0=-YGG-DA==-YGG-\"", "12");
+}
+TEST(ReadableWriter, ScalarComplex) {
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImNvbXBsZXgiLCJwcmVjaXNpb24iOjE2LCJ1bml0cyI6ImcifQ==-YGG-AAAAAAAAKEAAAAAAAAAAAA==-YGG-\"", "[12.0,0.0]");
+}
+TEST(ReadableWriter, OneDArrayUInt) {
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzNdfQ==-YGG-AAEC-YGG-\"", "[0,1,2]");
+}
+TEST(ReadableWriter, NDArrayUInt) {
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAECAwQF-YGG-\"", "[[0,1,2],[3,4,5]]");
+}
+TEST(ReadableWriter, PythonClass) {
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", "\"example_python:ExampleClass\"");
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9mdW5jdGlvbg==-YGG-\"", "\"example_python:example_function\"");
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", "{\"class\":\"example_python:ExampleClass\",\"args\":[\"hello\",0.5],\"kwargs\":{\"a\":\"world\",\"b\":1}}");
+}
+TEST(ReadableWriter, PythonInstance) {
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", "{\"class\":\"example_python:ExampleSubClass\",\"args\":[\"hello\",0.5],\"kwargs\":{\"a\":\"world\",\"b\":1}}");
+}
+TEST(ReadableWriter, Schema) {
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"", "{\"type\":\"int\",\"precision\":8}");
+}
+
+TEST(ReadableWriter, Ply) {
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoicGx5In0=-YGG-cGx5CmZvcm1hdCBhc2NpaSAxLjAKZWxlbWVudCB2ZXJ0ZXggOApwcm9wZXJ0eSBkb3VibGUgeApwcm9wZXJ0eSBkb3VibGUgeQpwcm9wZXJ0eSBkb3VibGUgegplbGVtZW50IGZhY2UgMgpwcm9wZXJ0eSBsaXN0IHVjaGFyIGludCB2ZXJ0ZXhfaW5kZXgKZWxlbWVudCBlZGdlIDUKcHJvcGVydHkgaW50IHZlcnRleDEKcHJvcGVydHkgaW50IHZlcnRleDIKZW5kX2hlYWRlcgowIDAgMAowIDAgMQowIDEgMQowIDEgMAoxIDAgMAoxIDAgMQoxIDEgMQoxIDEgMAozIDMgMCAxCjMgMyAwIDIKMCAxCjEgMgoyIDMKMyAwCjIgMAo=-YGG-\"", "\"ply\\nformat ascii 1.0\\nelement vertex 8\\nproperty double x\\nproperty double y\\nproperty double z\\nelement face 2\\nproperty list uchar int vertex_index\\nelement edge 5\\nproperty int vertex1\\nproperty int vertex2\\nend_header\\n0 0 0\\n0 0 1\\n0 1 1\\n0 1 0\\n1 0 0\\n1 0 1\\n1 1 1\\n1 1 0\\n3 3 0 1\\n3 3 0 2\\n0 1\\n1 2\\n2 3\\n3 0\\n2 0\\n\"");
+}
+
+TEST(ReadableWriter, ObjWavefront) {
+  TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoib2JqIn0=-YGG-diAwIDAgMAp2IDAgMCAxCnYgMCAxIDEKdiAwIDEgMAp2IDEgMCAwCnYgMSAwIDEKdiAxIDEgMQp2IDEgMSAwCmYgNCAxIDIKZiA0IDEgMwpsIDEgMgpsIDIgMwpsIDMgNApsIDQgMQpsIDMgMQoK-YGG-\"", "\"v 0 0 0\\nv 0 0 1\\nv 0 1 1\\nv 0 1 0\\nv 1 0 0\\nv 1 0 1\\nv 1 1 1\\nv 1 1 0\\nf 4 1 2\\nf 4 1 3\\nl 1 2\\nl 2 3\\nl 3 4\\nl 4 1\\nl 3 1\\n\\n\"");
+}
 #endif // RAPIDJSON_YGGDRASIL
 
 // UTF8 -> TargetEncoding -> UTF8

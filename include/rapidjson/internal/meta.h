@@ -37,6 +37,140 @@ RAPIDJSON_DIAG_OFF(6334)
 
 //@cond RAPIDJSON_INTERNAL
 RAPIDJSON_NAMESPACE_BEGIN
+
+#ifdef RAPIDJSON_YGGDRASIL
+//  Produce value of bit n.  n must be less than 32.
+#define Bit_(n, p)  ((uint ## p ## _t) 1 << (n))
+//  Create a mask of n bits in the low bits.  n must be less than 32.
+#define Mask_(n, p) (Bit_(n, p) - 1)
+//  Produce value of bit n.  n must be less than 32.
+#define Bit(n)  ((uint32_t) 1 << (n))
+//  Create a mask of n bits in the low bits.  n must be less than 32.
+#define Mask(n) (Bit(n) - 1)
+
+typedef struct float16_t {
+  uint16_t mem;
+  // float16_t(const double x) : mem(0) {
+  //   float y = static_cast<float>(x);
+  //   from_float(y);
+  // }
+  // float16_t(const float x) : mem(0) {
+  //   from_float(x);
+  // }
+  template <typename T>
+  float16_t(const T x) {
+    float y = static_cast<float>(x);
+    from_float(y);
+  }
+  void from_float(const float& x) {
+    union { uint32_t enc; float  value; } tmp;
+    tmp.value = x;
+    uint16_t s = tmp.enc >> 31;
+    if ((tmp.enc >> 23 & Mask( 8)) != 255) {
+      // Use float arithmetic to ensure values are properly rounded
+#if RAPIDJSON_HAS_CXX17
+      tmp.value = (tmp.value * (1.0f + 0x1p-13f) - tmp.value) * 0x1p13f;
+      tmp.value *= 0x1p112f;
+      tmp.value *= 0x1p-112f;
+      tmp.value *= 0x1p-112f;
+#else // RAPIDJSON_HAS_CXX17
+      float p13 = pow(2.0, 13), pn13 = pow(2.0, -13),
+	p122 = pow(2.0, 122), pn122 = pow(2.0, -122);
+      tmp.value = (tmp.value * (1.0f + pn13) - tmp.value) * p13;
+      tmp.value *= p122;
+      tmp.value *= pn122;
+      tmp.value *= pn122;
+#endif // RAPIDJSON_HAS_CXX17
+    }
+    mem = static_cast<uint16_t>(s << 15u) | static_cast<uint16_t>((tmp.enc >> 13u) & Mask_(15u, 16));
+    // uint32_t e = tmp.enc >> 23 & Mask( 8);
+    // uint32_t f = tmp.enc       & Mask(23);
+    // f >>= 23 - 10;
+    // f &= Mask(10);
+    // switch (e) {
+    // case 0:
+    //   if (f != 0) {
+    // 	e = 1 + (15 - 127);
+    // 	while (f > Bit(10)) {
+    // 	  f >>= 1;
+    // 	  e += 1;
+    // 	}
+    // 	f &= Mask(10);
+    //   }
+    //   break;
+    // default:
+    //   e += 15 - 127;
+    //   break;
+    // case 255:
+    //   e = 31;
+    //   break;
+    // }
+    // if (e == 255) {
+    //   mem = s << 15 | 31 << 10 | f;
+    // } else {
+    //   mem = s << 15 | e << 10 | f;
+    // }
+  }
+  operator float() const {
+    union { uint32_t enc; float  value; } tmp;
+    uint32_t s = mem >> 15;
+    uint32_t e = mem >> 10 & Mask( 5);
+    uint32_t f = mem       & Mask(10);
+    f <<= 23 - 10;
+    // switch (e) {
+    // case 0:
+    //   if (f != 0) {
+    // 	e = 1 + (127 - 15);
+    // 	while (f < Bit(23)) {
+    // 	  f <<= 1;
+    // 	  e -= 1;
+    // 	}
+    // 	f &= Mask(23);
+    //   }
+    //   break;
+    // default:
+    //   e += 127 - 15;
+    //   break;
+    // case 31:
+    //   e = 255;
+    //   break;
+    // }
+    if (e == 31) {
+      tmp.enc = s << 31 | 255 << 23 | f;
+    } else {
+      tmp.enc = s << 31 | e << 23 | f;
+#if RAPIDJSON_HAS_CXX17
+      tmp.value *= 0x1p112f;
+#else // RAPIDJSON_HAS_CXX17
+      tmp.value *= pow(2.0, 112);
+#endif // RAPIDJSON_HAS_CXX17
+    }
+    return tmp.value;
+  }
+#define OP_(type)				\
+  operator type() const {			\
+    float tmp = float(*this);			\
+    return static_cast<type>(tmp);		\
+  }
+  OP_(double);
+  OP_(int8_t);
+  OP_(int16_t);
+  OP_(int32_t);
+  OP_(int64_t);
+  OP_(uint8_t);
+  OP_(uint16_t);
+  OP_(uint32_t);
+  OP_(uint64_t);
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+  OP_(long double);
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#undef OP_
+} float16_t;
+
+#undef Bit
+#undef Mask
+#endif // RAPIDJSON_YGGDRASIL
+
 namespace internal {
 
 // Helper to wrap/convert arbitrary types to void, useful for arbitrary type matching
@@ -233,14 +367,16 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
 #define UNPACK_MACRO(...) __VA_ARGS__
 
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-#define YGGDRASIL_IS_COMPLEX_TYPE(T)				\
-    internal::OrExpr<internal::IsSame<T,std::complex<float> >,	\
+  
+#define YGGDRASIL_IS_COMPLEX_TYPE(T)					\
+  internal::OrExpr<internal::IsSame<T,std::complex<float> >,		\
     internal::OrExpr<internal::IsSame<T,std::complex<double> >,	\
 		     internal::IsSame<T,std::complex<long double> > > >
 #define YGGDRASIL_IS_FLOAT_TYPE(T)				\
-  internal::OrExpr<internal::IsSame<T,float>,			\
+  internal::OrExpr<internal::IsSame<T,float16_t>,		\
+    internal::OrExpr<internal::IsSame<T,float>,			\
     internal::OrExpr<internal::IsSame<T,double>,		\
-    internal::IsSame<T,long double> > >
+    internal::IsSame<T,long double> > > >
 #define YGGDRASIL_IS_SCALAR_TYPE(T)				\
   internal::OrExpr<internal::IsSame<T,uint8_t>,			\
     internal::OrExpr<internal::IsSame<T,uint16_t>,		\
@@ -253,8 +389,9 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
     internal::OrExpr<internal::IsSame<T,std::complex<float> >,	\
 		     internal::IsSame<T,std::complex<double> > >
 #define YGGDRASIL_IS_FLOAT_TYPE(T)				\
-  internal::OrExpr<internal::IsSame<T,float>,			\
-    internal::IsSame<T, double> >
+  internal::OrExpr<internal::IsSame<T,float16_t>,		\
+    internal::OrExpr<internal::IsSame<T,float>,			\
+    internal::IsSame<T, double> > >
 #define YGGDRASIL_IS_SCALAR_TYPE(T)				\
   internal::OrExpr<internal::IsSame<T,uint8_t>,			\
     internal::OrExpr<internal::IsSame<T,uint16_t>,		\

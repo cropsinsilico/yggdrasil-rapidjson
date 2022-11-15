@@ -39,6 +39,7 @@ RAPIDJSON_NAMESPACE_BEGIN
 #define CASE_FLOAT_SUBTYPE(precision, function, param, args, error)	\
   case kYggFloatSubType: {						\
     switch (precision) {						\
+    CASE_SUBTYPE_PRECISION(float16_t, function, param, args)		\
     CASE_SUBTYPE_PRECISION(float, function, param, args)	       	\
     CASE_SUBTYPE_PRECISION(double, function, param, args)	       	\
     CASE_SUBTYPE_PRECISION((long double), function, param, args)	\
@@ -58,6 +59,7 @@ RAPIDJSON_NAMESPACE_BEGIN
 #define CASE_FLOAT_SUBTYPE(precision, function, param, args, error)	\
   case kYggFloatSubType: {						\
     switch (precision) {						\
+    CASE_SUBTYPE_PRECISION(float16_t, function, param, args)		\
     CASE_SUBTYPE_PRECISION(float, function, param, args)       	        \
     CASE_SUBTYPE_PRECISION(double, function, param, args)	        \
     default: { error; }							\
@@ -280,6 +282,7 @@ MIN_MAX_U_(uint8_t, UINT8)
 MIN_MAX_U_(uint16_t, UINT16)
 MIN_MAX_U_(uint32_t, UINT32)
 MIN_MAX_U_(uint64_t, UINT64)
+MIN_MAX_(float16_t, -65504, 65504)
 MIN_MAX_F_(float, FLT)
 MIN_MAX_F_(double, DBL)
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
@@ -312,7 +315,7 @@ bool canTruncate(const T1& x,
 				     internal::OrExpr<
 				     YGGDRASIL_IS_INT_TYPE(T2),
 				     YGGDRASIL_IS_UINT_TYPE(T2)> >))) {
-  T1 x_int = floor(x);
+  T1 x_int = internal::value_floor(x); // std::floor(x);
   if (!internal::values_eq(x_int, x))
     return false;
   return COMPARE_LIMITS_(x_int);

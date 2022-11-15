@@ -26,6 +26,8 @@
 #include <new>      // placement new
 #ifdef RAPIDJSON_YGGDRASIL
 #include "base64.h"
+#include "precision.h"
+#include "rapidjson.h"
 #endif // RAPIDJSON_YGGDRASIL
 
 #if defined(RAPIDJSON_SIMD) && defined(_MSC_VER)
@@ -108,21 +110,21 @@ public:
     explicit
     Writer(OutputStream& os, StackAllocator* stackAllocator = 0, size_t levelDepth = kDefaultLevelDepth) :
 #ifdef RAPIDJSON_YGGDRASIL
-        w64p_(0),
+        w64p_(0), yggdrasilMode_(false),
 #endif // RAPIDJSON_YGGDRASIL
         os_(&os), level_stack_(stackAllocator, levelDepth * sizeof(Level)), maxDecimalPlaces_(kDefaultMaxDecimalPlaces), hasRoot_(false) {}
 
     explicit
     Writer(StackAllocator* allocator = 0, size_t levelDepth = kDefaultLevelDepth) :
 #ifdef RAPIDJSON_YGGDRASIL
-        w64p_(0),
+        w64p_(0), yggdrasilMode_(false),
 #endif // RAPIDJSON_YGGDRASIL
         os_(0), level_stack_(allocator, levelDepth * sizeof(Level)), maxDecimalPlaces_(kDefaultMaxDecimalPlaces), hasRoot_(false) {}
 
 #if RAPIDJSON_HAS_CXX11_RVALUE_REFS
     Writer(Writer&& rhs) :
 #ifdef RAPIDJSON_YGGDRASIL
-        w64p_(0),
+        w64p_(0), yggdrasilMode_(false),
 #endif // RAPIDJSON_YGGDRASIL
         os_(rhs.os_), level_stack_(std::move(rhs.level_stack_)), maxDecimalPlaces_(rhs.maxDecimalPlaces_), hasRoot_(rhs.hasRoot_) {
         rhs.os_ = 0;
@@ -216,6 +218,17 @@ public:
     void SetMaxDecimalPlaces(int maxDecimalPlaces) {
         maxDecimalPlaces_ = maxDecimalPlaces;
     }
+
+#ifdef RAPIDJSON_YGGDRASIL
+    //! Sets the mode used to write yggdrasil extension types
+    /*! 
+      If true, yggdrasil extension types will be written in a readable form
+       and will not be base64 encoded.
+    */
+    void SetYggdrasilMode(bool readable) {
+        yggdrasilMode_ = readable;
+    }
+#endif // RAPIDJSON_YGGDRASIL
 
     /*!@name Implementation of Handler
         \see Handler
@@ -336,6 +349,7 @@ public:
 
 #ifdef RAPIDJSON_YGGDRASIL
   Base64Pair* w64p_;
+  bool yggdrasilMode_;
 
 private:
 
@@ -379,21 +393,127 @@ public:
   template <typename SchemaValueType>
   bool YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>))) {
     RAPIDJSON_ASSERT(str != 0);
-    if (w64p_) return String(str, length, copy);
-    if (!WriteYggdrasilPrefix(schema)) return false;
-    // Body
-    if (!w64_()->WriteRawBytes(str, length)) return false;
-    if (!WriteYggdrasilSuffix()) return false;
+    if (yggdrasilMode_) {
+      typename SchemaValueType::MemberIterator type = schema.FindMember(SchemaValueType::GetTypeString());
+      if (type == schema.MemberEnd())
+	return false;
+      if (type->value == SchemaValueType::GetScalarString()) {
+	typename SchemaValueType::MemberIterator subtype = schema.FindMember(SchemaValueType::GetSubTypeString());
+	if (subtype == schema.MemberEnd())
+	  return false;
+	YggSubType src_subtype;
+	SizeType src_precision = schema[SchemaValueType::GetPrecisionString()].GetUint();
+#define CASE0_(name, type, call)					\
+	if (subtype->value == SchemaValueType::Get ## name ## SubTypeString()) { \
+	  src_subtype = kYgg ## name ## SubType;			\
+	  type tmp;							\
+	  changePrecision(src_subtype, src_precision, (const unsigned char*)str, &tmp, 1); \
+	  call;								\
+	}
+#define CASE_(name, type, call)			\
+	CASE0_(name, type, return call(tmp))
+	CASE_(Int, int64_t, Int64)
+	else CASE_(Uint, uint64_t, Uint64)
+	else CASE_(Float, double, Double)
+	else CASE0_(Complex, std::complex<double>, if (!StartArray()) return false; if (!Double(tmp.real())) return false; if (!Double(tmp.imag())) return false; return EndArray(2))
+	else if (subtype->value == SchemaValueType::GetStringSubTypeString()) {
+	  return String(str, length, true);
+	}
+	else
+	  return false;
+#undef CASE_
+#undef CASE0_
+      } else if (type->value == SchemaValueType::Get1DArrayString() ||
+		 type->value == SchemaValueType::GetNDArrayString()) {
+	size_t nelements = 1;
+	typename SchemaValueType::MemberIterator subtype = schema.FindMember(SchemaValueType::GetSubTypeString());
+	if (subtype == schema.MemberEnd())
+	  return false;
+	std::vector<size_t> shape;
+	if (schema.HasMember(SchemaValueType::GetShapeString())) {
+	  for (typename SchemaValueType::ValueIterator it = schema[SchemaValueType::GetShapeString()].Begin();
+	       it != schema[SchemaValueType::GetShapeString()].End(); it++) {
+	    nelements *= it->GetUint();
+	    shape.push_back(it->GetUint());
+	  }
+	} else if (schema.HasMember(SchemaValueType::GetLengthString())) {
+	  nelements = schema[SchemaValueType::GetLengthString()].GetUint();
+	  shape.push_back(nelements);
+	}
+	YggSubType src_subtype;
+	SizeType src_precision = schema[SchemaValueType::GetPrecisionString()].GetUint();
+	typename SchemaValueType::AllocatorType allocator;
+#define CASE0_(name, mkTmp, freeTmp, call)				\
+	if (subtype->value == SchemaValueType::Get ## name ## SubTypeString()) { \
+	  src_subtype = kYgg ## name ## SubType;			\
+	  mkTmp;							\
+	  size_t total_prod = 1;					\
+	  for (size_t j = 0; j < shape.size(); j++) {			\
+	    total_prod *= shape[j];					\
+	  }								\
+	  for (size_t i = 0; i < nelements; i++) {			\
+	    size_t rem = i;						\
+	    size_t prod = total_prod;					\
+	    size_t do_begin = 0, do_end = 0;				\
+	    for (size_t j = 0; j < shape.size(); j++) {			\
+	      if (rem == 0)						\
+		do_begin++;						\
+	      else if (rem == prod - 1)					\
+		do_end++;						\
+	      prod /= shape[j];						\
+	      rem -= (static_cast<size_t>(std::floor(rem / prod)) * prod); \
+            }								\
+	    for (size_t j = 0; j < do_begin; j++) {			\
+	      if (!StartArray()) return false;				\
+	    }								\
+	    call;							\
+	    for (size_t j = 0; j < do_end; j++) {			\
+	      if (!EndArray()) return false;				\
+	    }								\
+	  }								\
+	  freeTmp;							\
+	  return true;							\
+	}
+	
+#define CASE0_S_(name, type, call)					\
+	CASE0_(name, type* tmp = (type*)(allocator.Malloc(nelements * sizeof(type))); changePrecision(src_subtype, src_precision, (const unsigned char*)str, tmp, (SizeType)nelements), allocator.Free(tmp), call)
+#define CASE_(name, type, call)			\
+	CASE0_S_(name, type, if (!call(tmp[i])) return false)
+	CASE_(Int, int64_t, Int64)
+	else CASE_(Uint, uint64_t, Uint64)
+	else CASE_(Float, double, Double)
+	else CASE0_S_(Complex, std::complex<double>, if (!StartArray()) return false; if (!Double(tmp[i].real())) return false; if (!Double(tmp[i].imag())) return false; if (!EndArray(2)) return false)
+	else CASE0_(String, const Ch* tmp = str, tmp = NULL, if (!String(tmp + (i * src_precision / sizeof(Ch)), src_precision / sizeof(Ch), true)) return false)
+	else
+	  return false;
+#undef CASE_
+#undef CASE0_S_
+#undef CASE0_
+      } else {
+	return String(str, length, copy);
+      }
+    } else {
+      if (w64p_) return String(str, length, copy);
+      if (!WriteYggdrasilPrefix(schema)) return false;
+      // Body
+      if (!w64_()->WriteRawBytes(str, length)) return false;
+      if (!WriteYggdrasilSuffix()) return false;
+    }
     return true;
   }
   template <typename SchemaValueType>
   bool YggdrasilStartObject(SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>))) {
-    if (!WriteYggdrasilPrefix(schema)) return false;
+    if (!yggdrasilMode_) {
+      if (!WriteYggdrasilPrefix(schema)) return false;
+    }
     return StartObject();
   }
   bool YggdrasilEndObject(SizeType memberCount = 0) {
     if (!EndObject(memberCount)) return false;
-    return WriteYggdrasilSuffix();
+    if (!yggdrasilMode_) {
+      return WriteYggdrasilSuffix();
+    }
+    return true;
   }
 #endif // RAPIDJSON_YGGDRASIL
 

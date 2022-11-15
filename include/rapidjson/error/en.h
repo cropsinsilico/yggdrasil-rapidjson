@@ -112,9 +112,9 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
         case kValidateErrorRequiredSchema:              return RAPIDJSON_ERROR_STRING("Schema is missing a required property.");
         case kValidateErrorSubType:                     return RAPIDJSON_ERROR_STRING("Property has a subtype '%actual' that is not allowed by the schema subtype '%expected'.");
         case kValidateErrorPrecision:                   return RAPIDJSON_ERROR_STRING("Property has a precision of %actual that is incompatible with the schema precision %expected.");
-        case kValdiateErrorUnits:                       return RAPIDJSON_ERROR_STRING("Property has units that are not compatible with the schema.");
-        case kValidateErrorShape:                       return RAPIDJSON_ERROR_STRING("Property has a shape that does not match the schema.");
-        case kValidateErrorEncoding:                    return RAPIDJSON_ERROR_STRING("Property has an encoding that does not match the schema.");
+        case kValdiateErrorUnits:                       return RAPIDJSON_ERROR_STRING("Property has units '%actual' that are not compatible with the schema '%expected'.");
+        case kValidateErrorShape:                       return RAPIDJSON_ERROR_STRING("Property has a shape %actual that does not match the schema %expected.");
+        case kValidateErrorEncoding:                    return RAPIDJSON_ERROR_STRING("Property has an encoding '%actual' that does not match the schema '%expected'.");
         case kValidateErrorPythonImport:                return RAPIDJSON_ERROR_STRING("Property is not an importable Python object.");
         case kValidateErrorPythonClass:                 return RAPIDJSON_ERROR_STRING("Property is not a Python instance of the class specified in the schema.");
         case kValidateErrorInvalidSchema:               return RAPIDJSON_ERROR_STRING("Property is not a valid JSON schema.");
