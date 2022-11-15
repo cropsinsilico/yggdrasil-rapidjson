@@ -442,7 +442,7 @@ public:
 #define CALL_SCALAR_WRAP_(call) call;
 
 	CASES_(MKTMP_SCALAR_, CALL_SCALAR_WRAP_, tmp = NULL,
-	       if (!String(str, length, true, true)) return false);
+	       if (!String(tmp, length, true, true)) return false);
 
 #undef CALL_SCALAR_WRAP_
 #undef MKTMP_SCALAR_
@@ -490,7 +490,7 @@ public:
 	  }
 
 	CASES_(MKTMP_ARRAY_, CALL_ARRAY_WRAP_, allocator.Free(tmp),
-	       if (!String(tmp + (i * src_precision / sizeof(Ch)), src_precision / sizeof(Ch), true, true)));
+	       if (!String(tmp + (i * src_precision / sizeof(Ch)), src_precision / sizeof(Ch), true, true)) return false);
 
 #undef CALL_ARRAY_WRAP_
 #undef MKTMP_ARRAY_
