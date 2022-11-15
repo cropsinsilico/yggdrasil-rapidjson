@@ -413,40 +413,41 @@ public:
 	return false;
       YggSubType src_subtype;
       SizeType src_precision = schema[SchemaValueType::GetPrecisionString()].GetUint();
-#define CALL_COMPLEX_(v)			\
-      if (!StartArray()) return false; if (!Double(v.real())) return false; if (!Double(v.imag())) return false; if (!EndArray(2)) return false
+      size_t nelements = 1, i = 0;
+#define CALL_COMPLEX_							\
+      if (!StartArray()) return false; if (!Double(tmp[i].real())) return false; if (!Double(tmp[i].imag())) return false; if (!EndArray(2)) return false
 #define CASE_BASE_(name, mkTmp, call, freeTmp)	\
       if (subtype->value == SchemaValueType::Get ## name ## SubTypeString()) { \
 	src_subtype = kYgg ## name ## SubType;				\
 	mkTmp;								\
-	call;								\
+	call								\
 	freeTmp;							\
 	return true;							\
       }
-#define CALL_BASE_(call, v)			\
-	if (!call(v)) return false
-#define CASES_(mkTmpBase, callWrap, freeTmpBase, mkTmpStr, callStr, freeTmpStr, v) \
-      CASE_BASE_(Int, mkTmpBase(int64_t), callWrap(CALL_BASE_(Int64, v)), freeTmpBase) \
-      else CASE_BASE_(Uint, mkTmpBase(uint64_t), callWrap(CALL_BASE_(Uint64, v)), freeTmpBase) \
-      else CASE_BASE_(Float, mkTmpBase(double), callWrap(CALL_BASE_(Double, v)), freeTmpBase) \
-      else CASE_BASE_(Complex, mkTmpBase(std::complex<double>), callWrap(CALL_COMPLEX_(v)), freeTmpBase) \
-      else CASE_BASE_(String, mkTmpStr, callWrap(callStr), freeTmpStr) \
+#define CALL_BASE_(call)			\
+	if (!call(tmp[i])) return false
+#define CASES_(mkTmpBase, callWrap, freeTmpBase, callStr)		\
+      CASE_BASE_(Int, mkTmpBase(int64_t), callWrap(CALL_BASE_(Int64)), freeTmpBase) \
+      else CASE_BASE_(Uint, mkTmpBase(uint64_t), callWrap(CALL_BASE_(Uint64)), freeTmpBase) \
+      else CASE_BASE_(Float, mkTmpBase(double), callWrap(CALL_BASE_(Double)), freeTmpBase) \
+      else CASE_BASE_(Complex, mkTmpBase(std::complex<double>), callWrap(CALL_COMPLEX_), freeTmpBase) \
+      else CASE_BASE_(String, const Ch* tmp = str, callWrap(callStr), tmp = NULL) \
       else return false
       
       if (isScalar) {
-#define MKTMP_SCALAR_(type)			\
-	type tmp;				\
-	changePrecision(src_subtype, src_precision, (const unsigned char*)str, &tmp, 1)
-#define CALL_SCALAR_WRAP_(call) call
+#define MKTMP_SCALAR_(type)						\
+	type tmp0;							\
+	type* tmp = &tmp0;						\
+	changePrecision(src_subtype, src_precision, (const unsigned char*)str, tmp, 1)
+#define CALL_SCALAR_WRAP_(call) call;
 
-	CASES_(MKTMP_SCALAR_, CALL_SCALAR_WRAP_, ,
-	       , if (!String(str, length, true, true)) return false, , tmp);
+	CASES_(MKTMP_SCALAR_, CALL_SCALAR_WRAP_, tmp = NULL,
+	       if (!String(str, length, true, true)) return false);
 
 #undef CALL_SCALAR_WRAP_
 #undef MKTMP_SCALAR_
 
       } else {
-	size_t nelements = 1;
 	std::vector<size_t> shape;
 	if (schema.HasMember(SchemaValueType::GetShapeString())) {
 	  for (typename SchemaValueType::ValueIterator it = schema[SchemaValueType::GetShapeString()].Begin();
@@ -467,7 +468,7 @@ public:
 	  for (size_t j = 0; j < shape.size(); j++) {			\
 	    total_prod *= shape[j];					\
 	  }								\
-	  for (size_t i = 0; i < nelements; i++) {			\
+	  for (i = 0; i < nelements; i++) {				\
 	    size_t rem = i;						\
 	    size_t prod = total_prod;					\
 	    size_t do_begin = 0, do_end = 0;				\
@@ -489,7 +490,7 @@ public:
 	  }
 
 	CASES_(MKTMP_ARRAY_, CALL_ARRAY_WRAP_, allocator.Free(tmp),
-	       const Ch* tmp = str, if (!String(tmp + (i * src_precision / sizeof(Ch)), src_precision / sizeof(Ch), true, true)), tmp = NULL, tmp[i]);
+	       if (!String(tmp + (i * src_precision / sizeof(Ch)), src_precision / sizeof(Ch), true, true)));
 
 #undef CALL_ARRAY_WRAP_
 #undef MKTMP_ARRAY_
@@ -504,7 +505,7 @@ public:
     return true;
   }
   template <typename SchemaValueType>
-  bool YggdrasilStartObject(SchemaValueType& schema) {
+  bool YggdrasilStartObject(SchemaValueType&) {
     return StartObject();
   }
   bool YggdrasilEndObject(SizeType memberCount = 0) {
