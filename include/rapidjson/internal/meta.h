@@ -65,7 +65,7 @@ typedef struct float16_t {
   void from_float(const float& x) {
     union { uint32_t enc; float  value; } tmp;
     tmp.value = x;
-    uint16_t s = tmp.enc >> 31;
+    uint16_t s = static_cast<uint16_t>(tmp.enc >> 31);
     if ((tmp.enc >> 23 & Mask( 8)) != 255) {
       // Use float arithmetic to ensure values are properly rounded
 #if RAPIDJSON_HAS_CXX17
@@ -74,8 +74,10 @@ typedef struct float16_t {
       tmp.value *= 0x1p-112f;
       tmp.value *= 0x1p-112f;
 #else // RAPIDJSON_HAS_CXX17
-      float p13 = pow(2.0, 13), pn13 = pow(2.0, -13),
-	p122 = pow(2.0, 122), pn122 = pow(2.0, -122);
+      float p13 = static_cast<float>(pow(2.0, 13)),
+	pn13 = static_cast<float>(pow(2.0, -13)),
+	p122 = static_cast<float>(pow(2.0, 122)),
+	pn122 = static_cast<float>(pow(2.0, -122));
       tmp.value = (tmp.value * (1.0f + pn13) - tmp.value) * p13;
       tmp.value *= p122;
       tmp.value *= pn122;
@@ -113,9 +115,9 @@ typedef struct float16_t {
   }
   operator float() const {
     union { uint32_t enc; float  value; } tmp;
-    uint32_t s = mem >> 15;
-    uint32_t e = mem >> 10 & Mask( 5);
-    uint32_t f = mem       & Mask(10);
+    uint32_t s = static_cast<uint32_t>(mem >> 15);
+    uint32_t e = static_cast<uint32_t>(mem >> 10) & Mask( 5);
+    uint32_t f = static_cast<uint32_t>(mem)       & Mask(10);
     f <<= 23 - 10;
     // switch (e) {
     // case 0:
@@ -142,7 +144,7 @@ typedef struct float16_t {
 #if RAPIDJSON_HAS_CXX17
       tmp.value *= 0x1p112f;
 #else // RAPIDJSON_HAS_CXX17
-      tmp.value *= pow(2.0, 112);
+      tmp.value *= static_cast<float>(pow(2.0, 112));
 #endif // RAPIDJSON_HAS_CXX17
     }
     return tmp.value;

@@ -3647,8 +3647,8 @@ public:
     RAPIDJSON_ASSERT((mod != NULL) && (cls != NULL));
     if ((mod == NULL) || (cls == NULL))
       return false;
-    mod_cls_siz = mod_len + cls_len + 2;
-    mod_cls = static_cast<Ch*>(allocator.Malloc(mod_cls_siz * sizeof(Ch)));
+    mod_cls_siz = mod_len + cls_len + 1;
+    mod_cls = static_cast<Ch*>(allocator.Malloc((mod_cls_siz + 1) * sizeof(Ch)));
     RAPIDJSON_ASSERT(mod_cls);
     if (!mod_cls)
       return false;

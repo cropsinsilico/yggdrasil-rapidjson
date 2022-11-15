@@ -13,6 +13,7 @@
 
 #include "encodings.h"
 #include "stream.h"
+#include "precision.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -359,6 +360,158 @@ private:
   size_t pos_;
   size_t buffer_pos_;
   
+};
+
+template <typename HandlerType>
+class JSONCoreWrapper {
+public:
+  typedef typename HandlerType::Ch Ch;
+  JSONCoreWrapper(HandlerType& handler) :
+    handler_(&handler) {}
+#define WRAP_CORE_(method, arg)			\
+  return handler_->method arg
+  bool Null()                 { WRAP_CORE_(Null, ()); }
+  bool Bool(bool b)           { WRAP_CORE_(Bool, (b)); }
+  bool Int(int i)             { WRAP_CORE_(Int, (i)); }
+  bool Uint(unsigned u)       { WRAP_CORE_(Uint, (u)); }
+  bool Int64(int64_t i64)     { WRAP_CORE_(Int64, (i64)); }
+  bool Uint64(uint64_t u64)   { WRAP_CORE_(Uint64, (u64)); }
+  bool Double(double d)       { WRAP_CORE_(Double, (d)); }
+  bool StartObject()
+  { WRAP_CORE_(StartObject, ()); }
+  bool EndObject(SizeType memberCount = 0)
+  { WRAP_CORE_(EndObject, (memberCount)); }
+  bool StartArray()
+  { WRAP_CORE_(StartArray, ()); }
+  bool EndArray(SizeType elementCount = 0)
+  { WRAP_CORE_(EndArray, (elementCount)); }
+  bool Key(const Ch* str, SizeType length, bool copy = false)
+  { WRAP_CORE_(Key, (str, length, copy)); }
+  bool String(const Ch* str, SizeType length, bool copy = false, bool addNull = false) {
+    if (!addNull)
+      return handler_->String(str, length, copy);
+    CrtAllocator allocator;
+    Ch* tmp = (Ch*)allocator.Malloc(length + 1);
+    memcpy(tmp, str, length * sizeof(Ch));
+    tmp[length] = '\0';
+    bool out = handler_->String(tmp, length, true);
+    allocator.Free(tmp);
+    return out;
+  }
+#undef WRAP_CORE_ 
+  template <typename SchemaValueType>
+  bool YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType& schema) {
+    typename SchemaValueType::MemberIterator type = schema.FindMember(SchemaValueType::GetTypeString());
+    if (type == schema.MemberEnd())
+      return false;
+    bool isScalar = (type->value == SchemaValueType::GetScalarString());
+    if (isScalar ||
+	type->value == SchemaValueType::Get1DArrayString() ||
+	type->value == SchemaValueType::GetNDArrayString()) {
+      typename SchemaValueType::MemberIterator subtype = schema.FindMember(SchemaValueType::GetSubTypeString());
+      if (subtype == schema.MemberEnd())
+	return false;
+      YggSubType src_subtype;
+      SizeType src_precision = schema[SchemaValueType::GetPrecisionString()].GetUint();
+#define CALL_COMPLEX_(v)			\
+      if (!StartArray()) return false; if (!Double(v.real())) return false; if (!Double(v.imag())) return false; if (!EndArray(2)) return false
+#define CASE_BASE_(name, mkTmp, call, freeTmp)	\
+      if (subtype->value == SchemaValueType::Get ## name ## SubTypeString()) { \
+	src_subtype = kYgg ## name ## SubType;				\
+	mkTmp;								\
+	call;								\
+	freeTmp;							\
+	return true;							\
+      }
+#define CALL_BASE_(call, v)			\
+	if (!call(v)) return false
+#define CASES_(mkTmpBase, callWrap, freeTmpBase, mkTmpStr, callStr, freeTmpStr, v) \
+      CASE_BASE_(Int, mkTmpBase(int64_t), callWrap(CALL_BASE_(Int64, v)), freeTmpBase) \
+      else CASE_BASE_(Uint, mkTmpBase(uint64_t), callWrap(CALL_BASE_(Uint64, v)), freeTmpBase) \
+      else CASE_BASE_(Float, mkTmpBase(double), callWrap(CALL_BASE_(Double, v)), freeTmpBase) \
+      else CASE_BASE_(Complex, mkTmpBase(std::complex<double>), callWrap(CALL_COMPLEX_(v)), freeTmpBase) \
+      else CASE_BASE_(String, mkTmpStr, callWrap(callStr), freeTmpStr) \
+      else return false
+      
+      if (isScalar) {
+#define MKTMP_SCALAR_(type)			\
+	type tmp;				\
+	changePrecision(src_subtype, src_precision, (const unsigned char*)str, &tmp, 1)
+#define CALL_SCALAR_WRAP_(call) call
+
+	CASES_(MKTMP_SCALAR_, CALL_SCALAR_WRAP_, ,
+	       , if (!String(str, length, true, true)) return false, , tmp);
+
+#undef CALL_SCALAR_WRAP_
+#undef MKTMP_SCALAR_
+
+      } else {
+	size_t nelements = 1;
+	std::vector<size_t> shape;
+	if (schema.HasMember(SchemaValueType::GetShapeString())) {
+	  for (typename SchemaValueType::ValueIterator it = schema[SchemaValueType::GetShapeString()].Begin();
+	       it != schema[SchemaValueType::GetShapeString()].End(); it++) {
+	    nelements *= it->GetUint();
+	    shape.push_back(it->GetUint());
+	  }
+	} else if (schema.HasMember(SchemaValueType::GetLengthString())) {
+	  nelements = schema[SchemaValueType::GetLengthString()].GetUint();
+	  shape.push_back(nelements);
+	}
+	typename SchemaValueType::AllocatorType allocator;
+#define MKTMP_ARRAY_(type)						\
+	type* tmp = (type*)(allocator.Malloc(nelements * sizeof(type))); \
+	changePrecision(src_subtype, src_precision, (const unsigned char*)str, tmp, (SizeType)nelements)
+#define CALL_ARRAY_WRAP_(call)						\
+	  size_t total_prod = 1;					\
+	  for (size_t j = 0; j < shape.size(); j++) {			\
+	    total_prod *= shape[j];					\
+	  }								\
+	  for (size_t i = 0; i < nelements; i++) {			\
+	    size_t rem = i;						\
+	    size_t prod = total_prod;					\
+	    size_t do_begin = 0, do_end = 0;				\
+	    for (size_t j = 0; j < shape.size(); j++) {			\
+	      if (rem == 0)						\
+		do_begin++;						\
+	      else if (rem == prod - 1)					\
+		do_end++;						\
+	      prod /= shape[j];						\
+	      rem -= (static_cast<size_t>(std::floor(rem / prod)) * prod); \
+	    }								\
+	    for (size_t j = 0; j < do_begin; j++) {			\
+	      if (!StartArray()) return false;				\
+	    }								\
+	    call;							\
+	    for (size_t j = 0; j < do_end; j++) {			\
+	      if (!EndArray()) return false;				\
+	    }								\
+	  }
+
+	CASES_(MKTMP_ARRAY_, CALL_ARRAY_WRAP_, allocator.Free(tmp),
+	       const Ch* tmp = str, if (!String(tmp + (i * src_precision / sizeof(Ch)), src_precision / sizeof(Ch), true, true)), tmp = NULL, tmp[i]);
+
+#undef CALL_ARRAY_WRAP_
+#undef MKTMP_ARRAY_
+      }
+#undef CASES_
+#undef CASE_BASE_
+#undef CALL_BASE_
+#undef CALL_COMPLEX_
+    } else {
+      return String(str, length, copy, true);
+    }
+    return true;
+  }
+  template <typename SchemaValueType>
+  bool YggdrasilStartObject(SchemaValueType& schema) {
+    return StartObject();
+  }
+  bool YggdrasilEndObject(SizeType memberCount = 0) {
+    return EndObject(memberCount);
+  }
+private:
+  HandlerType* handler_;
 };
 
 //! Output stream wrapper that will encode character bytes as base64.
