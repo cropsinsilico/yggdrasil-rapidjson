@@ -490,7 +490,7 @@ public:
 	  }
 
 	CASES_(MKTMP_ARRAY_, CALL_ARRAY_WRAP_, allocator.Free(tmp),
-	       if (!String(tmp + (i * src_precision / sizeof(Ch)), src_precision / sizeof(Ch), true, true)) return false);
+	       if (!String(tmp + (i * src_precision / sizeof(Ch)), (SizeType)(src_precision / sizeof(Ch)), true, true)) return false);
 
 #undef CALL_ARRAY_WRAP_
 #undef MKTMP_ARRAY_
@@ -502,7 +502,6 @@ public:
     } else {
       return String(str, length, copy, true);
     }
-    return true;
   }
   template <typename SchemaValueType>
   bool YggdrasilStartObject(SchemaValueType&) {
