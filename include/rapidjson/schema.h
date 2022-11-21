@@ -2385,13 +2385,25 @@ public:
 	  if (!obj->HasMember(SchemaType::GetEncodingString())) {
 	    obj->AddMember(ValueType(SchemaType::GetEncodingString().GetString(),
 				     SchemaType::GetEncodingString().GetStringLength(),
-				     document_.GetAllocator()),
+				     document_.GetAllocator()).Move(),
 			   ValueType(SchemaType::GetUTF8EncodingString().GetString(),
 				     SchemaType::GetUTF8EncodingString().GetStringLength(),
 				     document_.GetAllocator()).Move(),
 			   document_.GetAllocator());
 	  }
 	  RecordModified(kModificationTypeValue);
+	} else if (it->value != SchemaType::GetStringString()) {
+	  unsigned prec = 8;
+	  if (it->value == SchemaType::GetComplexSubTypeString())
+	    prec = 16;
+	  if (!obj->HasMember(SchemaType::GetPrecisionString())) {
+	    obj->AddMember(ValueType(SchemaType::GetPrecisionString().GetString(),
+				     SchemaType::GetPrecisionString().GetStringLength(),
+				     document_.GetAllocator()).Move(),
+			   ValueType(prec).Move(),
+			   document_.GetAllocator());
+	    RecordModified(kModificationTypeValue);
+	  }
 	}
       }
     }
@@ -5225,9 +5237,412 @@ public:
 #undef RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP
 #undef RAPIDJSON_INCOMPATIBLE_SCHEMA
     }
-    // bool Generate(ValueType& data, Context& context) const {
-    // TODO: boolean, string, number, integer, scalar, ndarray, array, object
-    // }
+    template<typename VT>
+    bool GenerateData(VT& data, Context& context,
+		      typename VT::AllocatorType& allocator,
+		      bool* data_set = NULL, bool isNot = false) const {
+      const Ch letters[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
+	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+	'w', 'x', 'y', 'z'};
+      SizeType Nletters = 26;
+#define AFTER_SET_							\
+      data_set[0] = true;						\
+      goto cleanup
+      bool data_set0 = true;
+      if (data_set == NULL)
+	data_set = &data_set0;
+      if (enumCount_ > 0) {
+	GenericDocument<typename VT::EncodingType, typename VT::AllocatorType> tmp;
+	enumValues_.Accept(tmp);
+	data.CopyFrom(*((VT*)(&tmp)), allocator, true);
+	AFTER_SET_;
+      }
+#define GET_VALUE__(name, type, def, offset)				\
+      type name = def;							\
+      if (!multipleOf_.IsNull()) {					\
+	if (!maximum_.IsNull()) {					\
+	  name = static_cast<type>(multipleOf_.GetDouble() * internal::value_floor((maximum_.GetDouble() - (double)0.01) / multipleOf_.GetDouble())); \
+	} else if (!minimum_.IsNull()) {				\
+	  name = static_cast<type>(multipleOf_.GetDouble() * (internal::value_floor(minimum_.GetDouble() / multipleOf_.GetDouble()) + (double)1)); \
+	} else {							\
+	  name = static_cast<type>(multipleOf_.GetDouble() * (double)5); \
+	}								\
+      } else if (!minimum_.IsNull()) {					\
+	if (!maximum_.IsNull()) {					\
+	  name = static_cast<type>((minimum_.GetDouble() + maximum_.GetDouble()) / (double)2.0); \
+	} else {							\
+	  name = static_cast<type>(minimum_.GetDouble() + (double)offset); \
+	}								\
+      } else if (!maximum_.IsNull()) {					\
+	name = static_cast<type>(maximum_.GetDouble() - (double)offset); \
+      }
+#define GET_VALUE_(type, def, offset)				\
+      GET_VALUE__(value, type, def, offset)
+#define TYPE_CHECK_(name)					\
+      (((type_ & (1 << k ## name ## SchemaType)) && !isNot) ||	\
+       (!(type_ & (1 << k ## name ## SchemaType)) && isNot))
+#define YGGTYPE_CHECK_(name)						\
+      (((yggtype_ & (1 << kYgg ## name ## SchemaType)) && !isNot) ||	\
+       (!(yggtype_ & (1 << kYgg ## name ## SchemaType)) && isNot))
+#define BODY_PREC_(get, set, type, def, offset)		\
+      GET_VALUE__(__val, type, def, offset)		\
+      get(type);					\
+      set;						\
+      AFTER_SET_
+#define CASE_PREC_(get, set, type, def, offset)		\
+      case (sizeof(type)): {				\
+	BODY_PREC_(get, set, type, def, offset);	\
+      }
+#define BODY_PREC_COMPLEX_(get, set, subT, def, offset)			\
+      GET_VALUE__(__sub_val, subT, def, offset)				\
+      std::complex<subT> __val(__sub_val, __sub_val);			\
+      get(std::complex<subT>);						\
+      set;								\
+      AFTER_SET_
+#define CASE_PREC_COMPLEX_(get, set, subT, def, offset)			\
+      case (2 * sizeof(subT)): {					\
+	BODY_PREC_COMPLEX_(get, set, subT, def, offset);		\
+      }
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#define CASE_PREC_LONG_DOUBLE_(get, set, subT, def, offset)	\
+      CASE_PREC_(get, set, subT, def, offset)
+#define CASE_PREC_COMPLEX_LONG_DOUBLE_(get, set, subT, def, offset)	\
+      CASE_PREC_COMPLEX_(get, set, subT, def, offset)
+#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#define CASE_PREC_LONG_DOUBLE_(get, set, subT, def, offset)
+#define CASE_PREC_COMPLEX_LONG_DOUBLE_(get, set, subT, def, offset)
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#define SWITCH_SUBTYPE_(get, set, strCase)				\
+      SizeType prec = 0;						\
+      const Ch* units_str = NULL;					\
+      SizeType units_len = 0;						\
+      if (!precision_.IsNull())						\
+	prec = precision_.GetUint();					\
+      if (units_.IsString()) {						\
+	units_str = units_.GetString();					\
+	units_len = units_.GetStringLength();				\
+      }									\
+      switch (subtype_) {						\
+      case (kYggIntSchemaSubType): {					\
+	switch (prec) {							\
+	  CASE_PREC_(get, set, int8_t, 0, 1)				\
+	  CASE_PREC_(get, set, int16_t, 0, 1)				\
+	  CASE_PREC_(get, set, int32_t, 0, 1)				\
+	  CASE_PREC_(get, set, int64_t, 0, 1)				\
+	default: {							\
+	  BODY_PREC_(get, set, int, 0, 1);				\
+	  }								\
+	}								\
+      }									\
+      case (kYggUintSchemaSubType): {					\
+	switch (prec) {							\
+	  CASE_PREC_(get, set, uint8_t, 0, 1)				\
+	  CASE_PREC_(get, set, uint16_t, 0, 1)				\
+	  CASE_PREC_(get, set, uint32_t, 0, 1)				\
+	  CASE_PREC_(get, set, uint64_t, 0, 1)				\
+	default: {							\
+	    BODY_PREC_(get, set, unsigned, 0, 1);			\
+	  }								\
+	}								\
+      }									\
+      case (kYggFloatSchemaSubType): {					\
+	switch (prec) {							\
+	  CASE_PREC_(get, set, float16_t, 0, 0.5)			\
+	  CASE_PREC_(get, set, float, 0, 0.5)				\
+	  CASE_PREC_(get, set, double, 0, 0.5)				\
+	  CASE_PREC_LONG_DOUBLE_(get, set, long double, 0, 0.5)	\
+	default: {							\
+	    BODY_PREC_(get, set, double, 0.0, 0.5);			\
+	  }								\
+	}								\
+      }									\
+      case (kYggComplexSchemaSubType): {				\
+	switch (prec) {							\
+	  CASE_PREC_COMPLEX_(get, set, float, 0.0, 0.5)			\
+	  CASE_PREC_COMPLEX_(get, set, double, 0.0, 0.5)		\
+	  CASE_PREC_COMPLEX_LONG_DOUBLE_(get, set, long double, 0.0, 0.5) \
+	default: {							\
+	    BODY_PREC_COMPLEX_(get, set, double, 0.0, 0.5);		\
+	  }								\
+	}								\
+      }									\
+      case (kYggStringSchemaSubType): {					\
+	const Ch* encoding_str = 0;					\
+	SizeType encoding_len = 0;					\
+	if (encoding_ != kYggNullSchemaEncodingType) {			\
+	  const ValueType& encoding = EncodingType2String(encoding_);	\
+	  encoding_str = encoding.GetString();				\
+	  encoding_len = encoding.GetStringLength();			\
+	}								\
+	strCase;							\
+	AFTER_SET_;							\
+      }									\
+      default: {							\
+	BODY_PREC_(get, set, int, 0, 1);				\
+      }									\
+      }
+#define ARRAYS_3D(zero)						\
+      double vertices[8][3] =					\
+	{{0.0, 0.0, 0.0},					\
+	 {0.0, 0.0, 1.0},					\
+	 {0.0, 1.0, 1.0},					\
+	 {0.0, 1.0, 0.0},					\
+	 {1.0, 0.0, 0.0},					\
+	 {1.0, 0.0, 1.0},					\
+	 {1.0, 1.0, 1.0},					\
+	 {1.0, 1.0, 0.0}};					\
+      int faces[2][3] =						\
+	{{3 + zero, 0 + zero, 1 + zero},			\
+	 {3 + zero, 0 + zero, 2 + zero}};			\
+      int edges[5][2] =						\
+	{{0 + zero, 1 + zero},					\
+	 {1 + zero, 2 + zero},					\
+	 {2 + zero, 3 + zero},					\
+	 {3 + zero, 0 + zero},					\
+	 {2 + zero, 0 + zero}}
+      if (TYPE_CHECK_(Null)) {
+	data.SetNull();
+	AFTER_SET_;
+      } else if (TYPE_CHECK_(Boolean)) {
+	data.SetBool(true);
+	AFTER_SET_;
+      } else if (TYPE_CHECK_(Object)) {
+	data.SetObject();
+	SizeType Nprop = propertyCount_;
+	if (Nprop > maxProperties_)
+	  return false;
+	if (Nprop < minProperties_)
+	  Nprop = minProperties_ + 1;
+	else if (additionalPropertiesSchema_)
+	  Nprop++;
+	if (Nprop == 0) {
+	  AFTER_SET_;
+	}
+	if ((Nprop - propertyCount_) > Nletters)
+	  return false;
+	data.MemberReserve(Nprop, allocator);
+	if (propertyCount_ > 0) {
+	  for (SizeType i = 0; i < propertyCount_; i++) {
+	    VT prop;
+	    if (!properties_[i].schema->GenerateData(prop, context, allocator))
+	      return false;
+	    data.AddMember(VT(properties_[i].name.GetString(),
+			      properties_[i].name.GetStringLength(),
+			      allocator).Move(),
+			   prop, allocator);
+	  }
+	}
+	SizeType iSkip = 0, dummy = 0;
+	for (SizeType i = 0; i < (Nprop - propertyCount_); i++) {
+	  VT prop;
+	  if (additionalPropertiesSchema_) {
+	    if (!additionalPropertiesSchema_->GenerateData(prop, context, allocator))
+	      return false;
+	  }
+	  while ((i + iSkip) < Nletters &&
+		 FindPropertyIndex(&letters[i + iSkip], 1, &dummy))
+	    iSkip++;
+	  if ((i + iSkip) >= Nletters)
+	    return false;
+	  data.AddMember(VT(&letters[i + iSkip], 1, allocator).Move(),
+			 prop, allocator);
+	}
+	// TODO: Pattern properties?
+	AFTER_SET_;
+      } else if (TYPE_CHECK_(Array)) {
+	data.SetArray();
+	SizeType Nitem = itemsTupleCount_;
+	if (Nitem < minItems_)
+	  Nitem = minItems_ + 1;
+	else if (itemsList_)
+	  Nitem++;
+	if (Nitem == 0) {
+	  AFTER_SET_;
+	}
+	if (Nitem > maxItems_)
+	  return false;
+	data.Reserve(Nitem, allocator);
+	for (SizeType i = 0; i < itemsTupleCount_; i++) {
+	  VT item;
+	  if (!itemsTuple_[i]->GenerateData(item, context, allocator))
+	    return false;
+	  data.PushBack(item, allocator);
+	}
+	for (SizeType i = 0; i < (Nitem - itemsTupleCount_); i++) {
+	  VT item;
+	  if (itemsList_) {
+	    if (!itemsList_->GenerateData(item, context, allocator))
+	      return false;
+	  }
+	  data.PushBack(item, allocator);
+	}
+	AFTER_SET_;
+      } else if (TYPE_CHECK_(String)) {
+	SizeType length = 5;
+	if (minLength_ != 0) {
+	  if (maxLength_ != SizeType(~0))
+	    length = (SizeType)((minLength_ + maxLength_) / 2);
+	  else
+	    length = minLength_ + 1;
+	} else if (maxLength_ != SizeType(~0)) {
+	  length = maxLength_ - 1;
+	}
+	data.SetString(&letters[0], length, allocator);
+	// TODO: pattern?
+	AFTER_SET_;
+      } else if (TYPE_CHECK_(Number)) {
+	GET_VALUE_(double, 0.0, 0.5)
+	data.SetDouble(value);
+	AFTER_SET_;
+      } else if (TYPE_CHECK_(Integer)) {
+	GET_VALUE_(int, 0, 1)
+	data.SetInt(value);
+	AFTER_SET_;
+      } else if (YGGTYPE_CHECK_(Scalar)) {
+#define GET_SCALAR_(type)			\
+	type value = __val
+#define SET_SCALAR_					\
+	data.SetScalar(value, units_str, units_len)
+#define STRING_SCALAR_							\
+	Ch* value = (Ch*)(allocator.Malloc(sizeof(Ch) * prec));		\
+	memcpy(value, letters, prec);					\
+	data.SetScalar(value, prec, allocator, encoding_str, encoding_len); \
+	allocator.Free(value)
+	SWITCH_SUBTYPE_(GET_SCALAR_, SET_SCALAR_, STRING_SCALAR_)
+#undef GET_SCALAR_
+#undef SET_SCALAR_
+#undef STRING_SCALAR_
+      } else if (YGGTYPE_CHECK_(NDArray)) {
+	SizeType ndim = 0;
+	std::vector<SizeType> shape;
+	SizeType nelements = 1;
+	if (!shape_.IsNull()) {
+	  ndim = shape_.Size();
+	  for (SizeType i = 0; i < ndim; i++) {
+	    shape.push_back((SizeType)(shape_[i].GetUint()));
+	    nelements *= (SizeType)(shape_[i].GetUint());
+	  }
+	} else if (ndim_ != 0) {
+	  ndim = ndim_;
+	} else {
+	  ndim = 2;
+	}
+	if (shape.size() == 0) {
+	  for (SizeType i = 0; i < ndim; i++) {
+	    shape.push_back(2);
+	    nelements *= 2;
+	  }
+	}
+#define GET_ARRAY_(type)						\
+	type* value = (type*)(allocator.Malloc(nelements * sizeof(type))); \
+	std::fill(value, value + nelements, __val)
+#define SET_ARRAY_							\
+	data.SetNDArray(value, shape.data(), ndim, units_str, units_len, &allocator); \
+	allocator.Free(value)
+#define STRING_ARRAY_							\
+	Ch* value = (Ch*)(allocator.Malloc(nelements * sizeof(Ch) * prec)); \
+	memset(value, 0, nelements * sizeof(Ch) * prec);		\
+	for (SizeType i = 0; i < nelements; i++) {			\
+	  memcpy(value + (i * prec), letters, prec);			\
+	}								\
+	data.SetNDArray(value, prec, shape.data(), ndim, allocator, encoding_str, encoding_len); \
+	allocator.Free(value)
+	SWITCH_SUBTYPE_(GET_ARRAY_, SET_ARRAY_, STRING_ARRAY_)
+#undef GET_ARRAY_
+#undef SET_ARRAY_
+#undef STRING_ARRAY_
+      } else if (YGGTYPE_CHECK_(PythonImport)) {
+	if (context.python_disabled)
+	  return false;
+	PyObject* pyobj = import_python_object("collections:OrderedDict",
+					       "GenerateData", true);
+	if (pyobj == NULL)
+	  return false;
+	data.SetPythonInstance(pyobj);
+	AFTER_SET_;
+      } else if (YGGTYPE_CHECK_(PythonInstance)) {
+	if (context.python_disabled)
+	  return false;
+	PyObject* pycls = NULL;
+	if (class_.IsPythonClass() || class_.IsString()) {
+	  pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
+				       "GenerateData", true);
+	} else {
+	  pycls = import_python_object("collections:OrderedDict",
+				       "GenerateData", true);
+	}
+	if (pycls == NULL)
+	  return false;
+	PyObject* args = PyTuple_New(0);
+	if (args == NULL) {
+	  Py_DECREF(pycls);
+	  return false;
+	}
+	PyObject* pyobj = PyObject_Call(pycls, args, NULL);
+	Py_DECREF(pycls);
+	Py_DECREF(args);
+	if (pyobj == NULL)
+	  return false;
+	data.SetPythonInstance(pyobj);
+	AFTER_SET_;
+      } else if (YGGTYPE_CHECK_(Obj)) {
+	ARRAYS_3D(1);
+	ObjWavefront x(vertices, faces, edges);
+	if (!x.is_valid())
+	  return false;
+	data.SetObjWavefront(x, &allocator);
+	AFTER_SET_;
+      } else if (YGGTYPE_CHECK_(Ply)) {
+	ARRAYS_3D(0);
+	Ply x(vertices, faces, edges);
+	if (!x.is_valid())
+	  return false;
+	data.SetPly(x, &allocator);
+	AFTER_SET_;
+      } else if (YGGTYPE_CHECK_(Schema)) {
+	data.SetObject();
+	data.AddMember(VT(GetTypeString().GetString(),
+			  GetTypeString().GetStringLength(),
+			  allocator).Move(),
+		       VT(GetIntSubTypeString().GetString(),
+			  GetIntSubTypeString().GetStringLength(),
+			  allocator).Move(),
+		       allocator);
+	AFTER_SET_;
+      }
+    cleanup:
+      if (anyOf_.schemas) {
+	if (!anyOf_.schemas[0]->GenerateData(data, context, allocator, data_set, isNot))
+	  return false;
+      }
+      if (oneOf_.schemas) {
+	if (!oneOf_.schemas[0]->GenerateData(data, context, allocator, data_set, isNot))
+	  return false;
+      }
+      if (allOf_.schemas) {
+	for (SizeType i = 0; i < allOf_.count; i++) {
+	  if (!allOf_.schemas[i]->GenerateData(data, context, allocator, data_set, isNot))
+	    return false;
+	}
+      }
+      if (not_) {
+	if (!not_->GenerateData(data, context, allocator, data_set, !isNot))
+	  return false;
+      }
+      return true;
+#undef GET_VALUE_
+#undef GET_VALUE__
+#undef AFTER_SET_
+#undef TYPE_CHECK_
+#undef YGGTYPE_CHECK_
+#undef SWITCH_SUBTYPE_
+#undef CASE_PREC_
+#undef BODY_PREC_
+#undef CASE_PREC_COMPLEX_
+#undef BODY_PREC_COMPLEX_
+#undef CASE_PREC_LONG_DOUBLE_
+#undef CASE_PREC_COMPLEX_LONG_DOUBLE_
+    }
 #endif // RAPIDJSON_YGGDRASIL
 
     const SValue& GetURI() const {
@@ -5727,6 +6142,12 @@ public:
 		(v == GetPythonFunctionString())) &&
 	       (yggtype_ & (1 << kYggPythonImportSchemaType))) {
       if (!CheckPythonImport(context, str, length)) {
+	CLEANUP_;
+	return false;
+      }
+    } else if ((v == GetPythonInstanceString()) &&
+	       (yggtype_ & (1 << kYggPythonInstanceSchemaType))) {
+      if (!CheckPythonPickle(context, str, length)) {
 	CLEANUP_;
 	return false;
       }
@@ -7102,6 +7523,30 @@ protected:
     if (class_.IsPythonClass() || class_.IsString()) {
       PyObject* pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
 					     "CheckPythonImport", true);
+      if (pycls && (PyObject_IsSubclass(pyobj, pycls) <= 0)) {
+	Py_DECREF(pyobj);
+	Py_DECREF(pycls);
+	context.error_handler.InvalidPythonClass(str, length, class_);
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonClass);
+      }
+      Py_XDECREF(pycls);
+    }
+    Py_DECREF(pyobj);
+    return true;
+  }
+  bool CheckPythonPickle(Context& context, const Ch* str, SizeType length) const {
+    if (context.python_disabled)
+      return true;
+    PyObject* pyobj = unpickle_python_object(reinterpret_cast<const char*>(str),
+					     (size_t)(length * sizeof(Ch)),
+					     "CheckPythonPickle", true);
+    if (!(pyobj)) {
+      context.error_handler.InvalidPythonImport(str, length);
+      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonImport);
+    }
+    if (class_.IsPythonClass() || class_.IsString()) {
+      PyObject* pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
+					     "CheckPythonPickle", true);
       if (pycls && (PyObject_IsSubclass(pyobj, pycls) <= 0)) {
 	Py_DECREF(pyobj);
 	Py_DECREF(pycls);
@@ -10222,13 +10667,15 @@ RAPIDJSON_MULTILINEMACRO_END
       SchemaDocumentType rhs_sd(rhs);
       return Compare(rhs_sd);
     }
-    // //! Generate data according to a schema
-    // bool Generate(ValueType& data) {
-    // PushSchema(root_);
-    // bool out = root_.Generate(data, CurrentContext());
-    // PopSchema();
-    // return out;
-    // }
+    //! Generate data according to a schema
+    template<typename VT>
+    bool GenerateData(VT& data) {
+      PushSchema(root_);
+      typename VT::ValueType& dataV = *((typename VT::ValueType*)(&data));
+      bool out = root_.GenerateData(dataV, CurrentContext(), data.GetAllocator());
+      PopSchema();
+      return out;
+    }
 #endif // RAPIDJSON_YGGDRASIL
 
 private:

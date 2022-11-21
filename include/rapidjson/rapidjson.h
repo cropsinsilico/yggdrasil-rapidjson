@@ -767,6 +767,140 @@ enum YggEncodingType {
 };
 
 
+//  Produce value of bit n.  n must be less than 32.
+#define Bit_(n, p)  ((uint ## p ## _t) 1 << (n))
+//  Create a mask of n bits in the low bits.  n must be less than 32.
+#define Mask_(n, p) (Bit_(n, p) - 1)
+//  Produce value of bit n.  n must be less than 32.
+#define Bit(n)  ((uint32_t) 1 << (n))
+//  Create a mask of n bits in the low bits.  n must be less than 32.
+#define Mask(n) (Bit(n) - 1)
+
+typedef struct float16_t {
+  uint16_t mem;
+  // float16_t(const double x) : mem(0) {
+  //   float y = static_cast<float>(x);
+  //   from_float(y);
+  // }
+  // float16_t(const float x) : mem(0) {
+  //   from_float(x);
+  // }
+  template <typename T>
+  float16_t(const T x) {
+    float y = static_cast<float>(x);
+    from_float(y);
+  }
+  void from_float(const float& x) {
+    union { uint32_t enc; float  value; } tmp;
+    tmp.value = x;
+    uint16_t s = static_cast<uint16_t>(tmp.enc >> 31);
+    if ((tmp.enc >> 23 & Mask( 8)) != 255) {
+      // Use float arithmetic to ensure values are properly rounded
+#if RAPIDJSON_HAS_CXX17
+      tmp.value = (tmp.value * (1.0f + 0x1p-13f) - tmp.value) * 0x1p13f;
+      tmp.value *= 0x1p112f;
+      tmp.value *= 0x1p-112f;
+      tmp.value *= 0x1p-112f;
+#else // RAPIDJSON_HAS_CXX17
+      float p13 = static_cast<float>(pow(2.0, 13)),
+	pn13 = static_cast<float>(pow(2.0, -13)),
+	p122 = static_cast<float>(pow(2.0, 122)),
+	pn122 = static_cast<float>(pow(2.0, -122));
+      tmp.value = (tmp.value * (1.0f + pn13) - tmp.value) * p13;
+      tmp.value *= p122;
+      tmp.value *= pn122;
+      tmp.value *= pn122;
+#endif // RAPIDJSON_HAS_CXX17
+    }
+    mem = static_cast<uint16_t>(s << 15u) | static_cast<uint16_t>((tmp.enc >> 13u) & Mask_(15u, 16));
+    // uint32_t e = tmp.enc >> 23 & Mask( 8);
+    // uint32_t f = tmp.enc       & Mask(23);
+    // f >>= 23 - 10;
+    // f &= Mask(10);
+    // switch (e) {
+    // case 0:
+    //   if (f != 0) {
+    // 	e = 1 + (15 - 127);
+    // 	while (f > Bit(10)) {
+    // 	  f >>= 1;
+    // 	  e += 1;
+    // 	}
+    // 	f &= Mask(10);
+    //   }
+    //   break;
+    // default:
+    //   e += 15 - 127;
+    //   break;
+    // case 255:
+    //   e = 31;
+    //   break;
+    // }
+    // if (e == 255) {
+    //   mem = s << 15 | 31 << 10 | f;
+    // } else {
+    //   mem = s << 15 | e << 10 | f;
+    // }
+  }
+  operator float() const {
+    union { uint32_t enc; float  value; } tmp;
+    uint32_t s = static_cast<uint32_t>(mem >> 15);
+    uint32_t e = static_cast<uint32_t>(mem >> 10) & Mask( 5);
+    uint32_t f = static_cast<uint32_t>(mem)       & Mask(10);
+    f <<= 23 - 10;
+    // switch (e) {
+    // case 0:
+    //   if (f != 0) {
+    // 	e = 1 + (127 - 15);
+    // 	while (f < Bit(23)) {
+    // 	  f <<= 1;
+    // 	  e -= 1;
+    // 	}
+    // 	f &= Mask(23);
+    //   }
+    //   break;
+    // default:
+    //   e += 127 - 15;
+    //   break;
+    // case 31:
+    //   e = 255;
+    //   break;
+    // }
+    if (e == 31) {
+      tmp.enc = s << 31 | 255 << 23 | f;
+    } else {
+      tmp.enc = s << 31 | e << 23 | f;
+#if RAPIDJSON_HAS_CXX17
+      tmp.value *= 0x1p112f;
+#else // RAPIDJSON_HAS_CXX17
+      tmp.value *= static_cast<float>(pow(2.0, 112));
+#endif // RAPIDJSON_HAS_CXX17
+    }
+    return tmp.value;
+  }
+#define OP_(type)				\
+  operator type() const {			\
+    float tmp = float(*this);			\
+    return static_cast<type>(tmp);		\
+  }
+  OP_(double);
+  OP_(int8_t);
+  OP_(int16_t);
+  OP_(int32_t);
+  OP_(int64_t);
+  OP_(uint8_t);
+  OP_(uint16_t);
+  OP_(uint32_t);
+  OP_(uint64_t);
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+  OP_(long double);
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#undef OP_
+} float16_t;
+
+#undef Bit
+#undef Mask
+
+
 template <typename T> inline enum YggSubType GetYggSubType() { return kYggNullSubType; }
 template<> inline enum YggSubType GetYggSubType<uint8_t>() { return kYggUintSubType; }
 template<> inline enum YggSubType GetYggSubType<uint16_t>() { return kYggUintSubType; }
@@ -776,6 +910,7 @@ template<> inline enum YggSubType GetYggSubType<int8_t>() { return kYggIntSubTyp
 template<> inline enum YggSubType GetYggSubType<int16_t>() { return kYggIntSubType; }
 template<> inline enum YggSubType GetYggSubType<int32_t>() { return kYggIntSubType; }
 template<> inline enum YggSubType GetYggSubType<int64_t>() { return kYggIntSubType; }
+template<> inline enum YggSubType GetYggSubType<float16_t>() { return kYggFloatSubType; }
 template<> inline enum YggSubType GetYggSubType<float>() { return kYggFloatSubType; }
 template<> inline enum YggSubType GetYggSubType<double>() { return kYggFloatSubType; }
 template<> inline enum YggSubType GetYggSubType<std::complex<float> >() { return kYggComplexSubType; }

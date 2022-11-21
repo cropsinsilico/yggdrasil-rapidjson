@@ -3080,7 +3080,11 @@ public:
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetNDArrayRaw(&x, nullptr, 0, units_str, units_len, &allocator); }
-  
+  // Scalar string
+  explicit GenericValue(const Ch* x, const SizeType precision,
+			const Ch* encoding, const SizeType encoding_len,
+			Allocator& allocator)
+  { SetNDArrayRaw(x, nullptr, 0, 0, 0, &allocator, kYggStringSubType, precision, encoding, encoding_len); }
   // Explicit 1D Array
   template <typename T, SizeType N>
   explicit GenericValue(const T (&x)[N],
@@ -3148,24 +3152,27 @@ public:
   { SetNDArrayRaw(x, &nelements, 1, units_str, units_len, &allocator); }
   // 1D array of strings
   explicit GenericValue(const Ch* x, const SizeType precision,
-			const SizeType nelements, Allocator& allocator)
+			const SizeType nelements, Allocator& allocator,
+			const Ch* encoding=0, const SizeType encoding_len=0)
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT {
     SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, shape, 1, nullptr, 0, &allocator, kYggStringSubType, precision);
+    SetNDArrayRaw(x, shape, 1, nullptr, 0, &allocator, kYggStringSubType, precision, encoding, encoding_len);
   }
   template <SizeType M, SizeType N>
-  explicit GenericValue(const Ch (&x)[M][N])
+  explicit GenericValue(const Ch (&x)[M][N],
+			const Ch* encoding=0, const SizeType encoding_len=0)
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {M};
-    SetNDArrayRaw(&(x[0][0]), shape, 1, nullptr, 0, 0, kYggStringSubType, N);
+    SetNDArrayRaw(&(x[0][0]), shape, 1, nullptr, 0, 0, kYggStringSubType, N, encoding, encoding_len);
   }
   template <SizeType M, SizeType N>
-  explicit GenericValue(const Ch (&x)[M][N], Allocator& allocator)
+  explicit GenericValue(const Ch (&x)[M][N], Allocator& allocator,
+			const Ch* encoding=0, const SizeType encoding_len=0)
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {M};
-    SetNDArrayRaw(&(x[0][0]), shape, 1, nullptr, 0, &allocator, kYggStringSubType, N);
+    SetNDArrayRaw(&(x[0][0]), shape, 1, nullptr, 0, &allocator, kYggStringSubType, N, encoding, encoding_len);
   }
   // Explicit 2D array
   template <typename T, SizeType M, SizeType N>
@@ -3256,21 +3263,25 @@ public:
   // ND array of strings
   explicit GenericValue(const Ch* x, const SizeType precision,
 			const SizeType shape[], const SizeType ndim,
-			Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, shape, ndim, nullptr, 0, &allocator, kYggStringSubType, precision); }
+			Allocator& allocator,
+			const Ch* encoding=0, const SizeType encoding_len=0)
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  { SetNDArrayRaw(x, shape, ndim, nullptr, 0, &allocator, kYggStringSubType, precision, encoding, encoding_len); }
   template <SizeType L, SizeType M, SizeType N>
-  explicit GenericValue(const Ch (&x)[L][M][N])
+  explicit GenericValue(const Ch (&x)[L][M][N],
+			const Ch* encoding=0, const SizeType encoding_len=0)
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {L, M};
-    SetNDArrayRaw(&(x[0][0][0]), shape, 2, nullptr, 0, 0, kYggStringSubType, N);
+    SetNDArrayRaw(&(x[0][0][0]), shape, 2, nullptr, 0, 0, kYggStringSubType, N, encoding, encoding_len);
   }
   template <SizeType L, SizeType M, SizeType N>
-  explicit GenericValue(const Ch (&x)[L][M][N], Allocator& allocator)
+  explicit GenericValue(const Ch (&x)[L][M][N], Allocator& allocator,
+			const Ch* encoding=0, const SizeType encoding_len=0)
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {L, M};
-    SetNDArrayRaw(&(x[0][0][0]), shape, 2, nullptr, 0, &allocator, kYggStringSubType, N);
+    SetNDArrayRaw(&(x[0][0][0]), shape, 2, nullptr, 0, &allocator, kYggStringSubType, N, encoding, encoding_len);
   }
   // Other types with dedicated classes
   explicit GenericValue(PyObject* x) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
@@ -3587,6 +3598,8 @@ public:
 		     Allocator* allocator = 0,
 		     enum YggSubType subtype = kYggNullSubType,
 		     SizeType precision = 0,
+		     const Ch* encoding_str = nullptr,
+		     const SizeType encoding_len = 0,
 		     RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
     ResetSchema(allocator);
     SizeType nbytes = 0;
@@ -3619,6 +3632,9 @@ public:
     }
     if (ndim > 0) {
       AddSchemaMember(GetShapeString(), shape_array);
+    }
+    if (encoding_len > 0) {
+      AddSchemaMember(GetEncodingString(), ValueType(encoding_str, encoding_len, schema_->GetAllocator()).Move());
     }
     return true;
   }
@@ -3751,6 +3767,8 @@ public:
 	return GetPythonClass();
       else if (IsPythonFunction())
 	return GetPythonFunction();
+      else if (IsPythonInstance())
+	return GetPythonInstance();
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
       else if (IsScalar()) {
 	ValueType enc;
@@ -3871,11 +3889,11 @@ public:
   }
   bool SetPythonObjectRaw(PyObject* x, Allocator* allocator = 0,
 #ifdef RAPIDJSON_DONT_IMPORT_NUMPY
-			  bool=false
+			  bool=false,
 #else // RAPIDJSON_DONT_IMPORT_NUMPY
-			  bool skipTitle=false
+			  bool skipTitle=false,
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
-			  ) {
+			  bool allowPickle=true) {
     RAPIDJSON_ASSERT(isPythonInitialized());
     if (!isPythonInitialized())
       return false;
@@ -4289,7 +4307,6 @@ public:
       ValueType mod_cls(mod_cls_ref, mod_cls_siz, schema_->GetAllocator());
       schema_->GetAllocator().Free(mod_cls_ref);
       mod_cls_ref = NULL;
-      AddMember(GetPythonClassString(), mod_cls, schema_->GetAllocator());
       ValueType args;
       ValueType kwargs;
       char args_keys[6][50] = {"input_arguments",
@@ -4312,8 +4329,10 @@ public:
 	if (GetPythonObjectClassAttr(x, kwargs_keys[i], schema_->GetAllocator(), kwargs, true))
 	  break;
       }
-      if (args.IsNull() && kwargs.IsNull())
-	return false;
+      if (args.IsNull() && kwargs.IsNull()) {
+	goto pickle;
+      }
+      AddMember(GetPythonClassString(), mod_cls, schema_->GetAllocator());
       if (!(args.IsNull())) {
 	AddMember(GetArgsString(), args, schema_->GetAllocator());
 	if (args.HasSchemaNested())
@@ -4328,6 +4347,22 @@ public:
       }
     }
     return out;
+  pickle:
+    if (!allowPickle)
+      return false;
+    PyObject* py_str = pickle_python_object(x, "SetPythonObjectRaw", true);
+    if (py_str == NULL)
+      return false;
+    char* buffer = NULL;
+    Py_ssize_t buffer_len = 0;
+    if (PyBytes_AsStringAndSize(py_str, &buffer, &buffer_len) < 0) {
+      Py_DECREF(py_str);
+      return false;
+    }
+    SetStringRaw(StringRef((Ch*)buffer, (SizeType)((size_t)buffer_len / sizeof(Ch))),
+		 schema_->GetAllocator());
+    Py_DECREF(py_str);
+    return true;
   }
   void SetObjRaw(const ObjWavefront& x, Allocator* allocator = 0) {
     std::stringstream ss;
@@ -4987,50 +5022,70 @@ public:
     return decoded_bytes;
   }
 
-  PyObject* GetPythonClass() const {
+  PyObject* GetPythonClass(bool allowFunc = false) const {
     const char *mod_class;
     if (IsPythonInstance()) {
-      ConstMemberIterator m = FindMember(GetPythonClassString());
-      RAPIDJSON_ASSERT(m != MemberEnd());
-      mod_class = reinterpret_cast<const char*>(m->value.GetString());
-    } else {
+      if (IsObject()) {
+	ConstMemberIterator m = FindMember(GetPythonClassString());
+	RAPIDJSON_ASSERT(m != MemberEnd());
+	mod_class = reinterpret_cast<const char*>(m->value.GetString());
+      } else if (IsString()) {
+	PyObject* py_inst = GetPythonInstance();
+	if (py_inst == NULL)
+	  return NULL;
+	PyObject* py_cls = PyObject_Type(py_inst);
+	Py_DECREF(py_inst);
+	return py_cls;
+      } else {
+	return NULL;
+      }
+    } else if (IsPythonClass() || (allowFunc && IsPythonFunction())) {
       mod_class = reinterpret_cast<const char*>(GetString());
+    } else {
+      return NULL;
     }
     PyObject* py_class = import_python_object(mod_class, "GetPythonClass");
-    RAPIDJSON_ASSERT(py_class);
     return py_class;
   }
-  PyObject* GetPythonFunction() const { return GetPythonClass(); }
+  PyObject* GetPythonFunction() const { return GetPythonClass(true); }
   PyObject* GetPythonInstance() const {
-    PyObject* py_class = GetPythonClass();
-    PyObject* py_args = NULL;
-    PyObject* py_kwargs = NULL;
-    // Args
-    ConstMemberIterator ma = FindMember(GetArgsString());
-    if (ma != MemberEnd()) {
-      PyObject* py_args_list = ma->value.GetPythonObjectRaw();
-      py_args = PyList_AsTuple(py_args_list);
-      Py_DECREF(py_args_list);
+    if (IsObject()) {
+      PyObject* py_class = GetPythonClass();
+      PyObject* py_args = NULL;
+      PyObject* py_kwargs = NULL;
+      // Args
+      ConstMemberIterator ma = FindMember(GetArgsString());
+      if (ma != MemberEnd()) {
+	PyObject* py_args_list = ma->value.GetPythonObjectRaw();
+	py_args = PyList_AsTuple(py_args_list);
+	Py_DECREF(py_args_list);
     } else {
-      py_args = PyTuple_New(0);
-    }
-    // Kwargs
-    ConstMemberIterator mk = FindMember(GetKwargsString());
-    if (mk != MemberEnd()) {
-      py_kwargs = mk->value.GetPythonObjectRaw();
+	py_args = PyTuple_New(0);
+      }
+      // Kwargs
+      ConstMemberIterator mk = FindMember(GetKwargsString());
+      if (mk != MemberEnd()) {
+	py_kwargs = mk->value.GetPythonObjectRaw();
+      } else {
+	py_kwargs = PyDict_New();
+      }
+      RAPIDJSON_ASSERT(py_class);
+      RAPIDJSON_ASSERT(py_args);
+      RAPIDJSON_ASSERT(py_kwargs);
+      PyObject* py_inst = NULL;
+      if (py_class && py_args && py_kwargs)
+	py_inst = PyObject_Call(py_class, py_args, py_kwargs);
+      Py_XDECREF(py_class);
+      Py_XDECREF(py_args);
+      Py_XDECREF(py_kwargs);
+      return py_inst;
+    } else if (IsString()) {
+      return unpickle_python_object((char*)GetString(),
+				    (size_t)(GetStringLength() * sizeof(Ch)),
+				    "GetPythonInstance", true);
     } else {
-      py_kwargs = PyDict_New();
+      return NULL;
     }
-    RAPIDJSON_ASSERT(py_class);
-    RAPIDJSON_ASSERT(py_args);
-    RAPIDJSON_ASSERT(py_kwargs);
-    PyObject* py_inst = NULL;
-    if (py_class && py_args && py_kwargs)
-      py_inst = PyObject_Call(py_class, py_args, py_kwargs);
-    Py_XDECREF(py_class);
-    Py_XDECREF(py_args);
-    Py_XDECREF(py_kwargs);
-    return py_inst;
   }
   void GetObjWavefront(ObjWavefront &o) const {
     if (IsObjWavefront()) {
@@ -5120,6 +5175,11 @@ public:
     else
       new (this) GenericValue(x, units_str, units_len);
     return *this; }
+  GenericValue& SetScalar(const Ch* x, SizeType precision, Allocator& allocator,
+			  const Ch* encoding=nullptr, SizeType encoding_len=0) {
+    this->~GenericValue();
+    new (this) GenericValue(x, precision, encoding, encoding_len, allocator);
+    return *this; }
   template<typename T>
   GenericValue& Set1DArray(const T* x, SizeType nelements,
 			   const Ch* units_str=nullptr,
@@ -5141,6 +5201,14 @@ public:
       new (this) GenericValue(x, shape, ndim, units_str, units_len, *allocator);
     else
       new (this) GenericValue(x, shape, ndim, units_str, units_len);
+    return *this; }
+  GenericValue& SetNDArray(const Ch* x, SizeType precision,
+			   SizeType shape[], SizeType ndim,
+			   Allocator& allocator,
+			   const Ch* encoding=nullptr,
+			   SizeType encoding_len=0) {
+    this->~GenericValue();
+    new (this) GenericValue(x, precision, shape, ndim, allocator, encoding, encoding_len);
     return *this; }
   GenericValue& SetPythonInstance(PyObject* x, Allocator* allocator = 0) {
     this->~GenericValue();
@@ -5539,7 +5607,9 @@ public:
 	os_body.GetString(), (SizeType)(os_body.GetLength()),
 	GetAllocator(),
 	os_schema.GetString(), (SizeType)(os_schema.GetLength()));
-    if (x->IsPythonInstance() || x->IsSchema()) {
+    if ((x->IsPythonInstance() || x->IsSchema()) &&
+	(os_body.GetLength() > 0) &&
+	(os_body.GetString()[0] == '{')) {
       GenericDocument x_obj(&GetAllocator());
       x_obj.Parse(os_body.GetString());
       x->SetObjectRaw(x_obj.GetMembersPointer(), x_obj.MemberCount(), GetAllocator());

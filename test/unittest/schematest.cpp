@@ -6512,6 +6512,385 @@ TEST(SchemaCompare, AllowSingular) {
 		  "    \"expected\": [\"object\"], \"actual\": [\"string\"]"
 		  "}}");
 }
+
+
+#define GENERATE(schema, s_expected)					\
+  {									\
+    Document sd, expected, actual;					\
+    sd.Parse(schema);							\
+    expected.Parse(s_expected);						\
+    SchemaDocument s(sd);						\
+    SchemaValidator validator(s);					\
+    bool result = validator.GenerateData(actual);			\
+    EXPECT_TRUE(result);						\
+    EXPECT_TRUE(validator.IsValid());					\
+    ValidateErrorCode code = validator.GetInvalidSchemaCode();		\
+    EXPECT_TRUE(code == kValidateErrorNone);				\
+    EXPECT_TRUE(validator.GetInvalidSchemaKeyword() == 0);		\
+    if (!result) {							\
+      StringBuffer sb;							\
+      PrettyWriter<StringBuffer> w(sb);					\
+      validator.GetError().Accept(w);					\
+      printf("Comparison error: %s\n", sb.GetString());			\
+    }									\
+    if (actual != expected) {						\
+      StringBuffer sb;							\
+      PrettyWriter<StringBuffer> w(sb);					\
+      actual.Accept(w);							\
+      StringBuffer sb0;							\
+      PrettyWriter<StringBuffer> w0(sb0);				\
+      expected.Accept(w0);						\
+      printf("GenerateData() Expected: %s Actual: %s\n", sb0.GetString(), sb.GetString()); \
+      ADD_FAILURE();							\
+    }									\
+  }
+#define INVALID_GENERATE(schema, error)					\
+  {									\
+    Document sd, actual;						\
+    sd.Parse(schema);							\
+    SchemaDocument s(sd);						\
+    SchemaValidator validator(s);					\
+    bool result = validator.GenerateData(actual);			\
+    EXPECT_FALSE(result);						\
+    Document e;								\
+    e.Parse(error);							\
+    RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;			\
+    Value e_msg;							\
+    if (!validator.GetErrorMsg(e_msg, error_msg_allocator)) {		\
+      StringBuffer sb_t;						\
+      PrettyWriter<StringBuffer> w_t(sb_t);				\
+      printf("ErrorMsg = %s\n", sb_t.GetString());			\
+      StringBuffer sb;							\
+      PrettyWriter<StringBuffer> w(sb);					\
+      validator.GetError().Accept(w);					\
+      printf("GetError(): %s", sb.GetString());				\
+      ADD_FAILURE();							\
+    }									\
+    if (validator.GetError() != e) {					\
+      StringBuffer sb;							\
+      PrettyWriter<StringBuffer> w(sb);					\
+      validator.GetError().Accept(w);					\
+      StringBuffer sb_e;						\
+      PrettyWriter<StringBuffer> w_e(sb_e);				\
+      e.Accept(w_e);							\
+      printf("GetError() Expected: %s Actual: %s\n", sb_e.GetString(), sb.GetString()); \
+      ADD_FAILURE();							\
+    }									\
+  }
+
+TEST(SchemaGenerateData, Null) {
+  GENERATE("{"
+	   "  \"type\": \"null\""
+	   "}",
+	   "null");
+}
+  
+TEST(SchemaGenerateData, Boolean) {
+  GENERATE("{"
+	   "  \"type\": \"boolean\""
+	   "}",
+	   "true");
+}
+  
+TEST(SchemaGenerateData, Integer) {
+  GENERATE("{"
+	   "  \"type\": \"integer\""
+	   "}",
+	   "0");
+  GENERATE("{"
+	   "  \"type\": \"integer\","
+	   "  \"minimum\": 3"
+	   "}",
+	   "4");
+  GENERATE("{"
+	   "  \"type\": \"integer\","
+	   "  \"maximum\": 3"
+	   "}",
+	   "2");
+  GENERATE("{"
+	   "  \"type\": \"integer\","
+	   "  \"minimum\": 1,"
+	   "  \"maximum\": 3"
+	   "}",
+	   "2");
+  GENERATE("{"
+	   "  \"type\": \"integer\","
+	   "  \"multipleOf\": 3"
+	   "}",
+	   "15");
+  GENERATE("{"
+	   "  \"type\": \"integer\","
+	   "  \"minimum\": 1,"
+	   "  \"multipleOf\": 3"
+	   "}",
+	   "3");
+  GENERATE("{"
+	   "  \"type\": \"integer\","
+	   "  \"minimum\": 1,"
+	   "  \"maximum\": 10,"
+	   "  \"multipleOf\": 3"
+	   "}",
+	   "9");
+}
+  
+TEST(SchemaGenerateData, Number) {
+  GENERATE("{"
+	   "  \"type\": \"number\""
+	   "}",
+	   "0.0");
+  GENERATE("{"
+	   "  \"type\": \"number\","
+	   "  \"minimum\": 3"
+	   "}",
+	   "3.5");
+  GENERATE("{"
+	   "  \"type\": \"number\","
+	   "  \"maximum\": 3"
+	   "}",
+	   "2.5");
+  GENERATE("{"
+	   "  \"type\": \"number\","
+	   "  \"minimum\": 1.5,"
+	   "  \"maximum\": 3.5"
+	   "}",
+	   "2.5");
+  GENERATE("{"
+	   "  \"type\": \"number\","
+	   "  \"multipleOf\": 2.5"
+	   "}",
+	   "12.5");
+  GENERATE("{"
+	   "  \"type\": \"number\","
+	   "  \"minimum\": 1.5,"
+	   "  \"multipleOf\": 1.3"
+	   "}",
+	   "2.6");
+  GENERATE("{"
+	   "  \"type\": \"number\","
+	   "  \"minimum\": 1.5,"
+	   "  \"maximum\": 10,"
+	   "  \"multipleOf\": 1.3"
+	   "}",
+	   "9.1");
+}
+TEST(SchemaGenerateData, String) {
+  GENERATE("{"
+	   "  \"type\": \"string\""
+	   "}",
+	   "\"abcde\"");
+  GENERATE("{"
+	   "  \"type\": \"string\","
+	   "  \"minLength\": 3"
+	   "}",
+	   "\"abcd\"");
+  GENERATE("{"
+	   "  \"type\": \"string\","
+	   "  \"maxLength\": 3"
+	   "}",
+	   "\"ab\"");
+  GENERATE("{"
+	   "  \"type\": \"string\","
+	   "  \"minLength\": 2,"
+	   "  \"maxLength\": 4"
+	   "}",
+	   "\"abc\"");
+}
+TEST(SchemaGenerateData, Object) {
+  GENERATE("{"
+	   "  \"type\": \"object\""
+	   "}",
+	   "{}");
+  GENERATE("{"
+	   "  \"type\": \"object\","
+	   "  \"properties\": {"
+	   "    \"a\": {"
+	   "       \"type\": \"integer\""
+	   "    }"
+	   "  }"
+	   "}",
+	   "{"
+	   "  \"a\": 0"
+	   "}");
+  GENERATE("{"
+	   "  \"type\": \"object\","
+	   "  \"additionalProperties\": {"
+	   "     \"type\": \"integer\""
+	   "  }"
+	   "}",
+	   "{"
+	   "  \"a\": 0"
+	   "}");
+  GENERATE("{"
+	   "  \"type\": \"object\","
+	   "  \"properties\": {"
+	   "    \"a\": {"
+	   "       \"type\": \"integer\""
+	   "    }"
+	   "  },"
+	   "  \"additionalProperties\": {"
+	   "     \"type\": \"integer\""
+	   "  }"
+	   "}",
+	   "{"
+	   "  \"a\": 0,"
+	   "  \"b\": 0"
+	   "}");
+  GENERATE("{"
+	   "  \"type\": \"object\","
+	   "  \"properties\": {"
+	   "    \"a\": {"
+	   "       \"type\": \"integer\""
+	   "    }"
+	   "  },"
+	   "  \"additionalProperties\": {"
+	   "     \"type\": \"integer\""
+	   "  },"
+	   "  \"minProperties\": 3"
+	   "}",
+	   "{"
+	   "  \"a\": 0,"
+	   "  \"b\": 0,"
+	   "  \"c\": 0,"
+	   "  \"d\": 0"
+	   "}");
+  GENERATE("{"
+	   "  \"type\": \"object\","
+	   "  \"properties\": {"
+	   "    \"a\": {"
+	   "       \"type\": \"integer\""
+	   "    }"
+	   "  },"
+	   "  \"minProperties\": 3"
+	   "}",
+	   "{"
+	   "  \"a\": 0,"
+	   "  \"b\": null,"
+	   "  \"c\": null,"
+	   "  \"d\": null"
+	   "}");
+}
+TEST(SchemaGenerateData, Array) {
+  GENERATE("{"
+	   "  \"type\": \"array\""
+	   "}",
+	   "[]");
+  GENERATE("{"
+	   "  \"type\": \"array\","
+	   "  \"items\": ["
+	   "    {"
+	   "      \"type\": \"integer\""
+	   "    }"
+	   "  ]"
+	   "}",
+	   "[0]");
+  GENERATE("{"
+	   "  \"type\": \"array\","
+	   "  \"items\": {"
+	   "    \"type\": \"integer\""
+	   "  }"
+	   "}",
+	   "[0]");
+  GENERATE("{"
+	   "  \"type\": \"array\","
+	   "  \"items\": {"
+	   "    \"type\": \"integer\""
+	   "  },"
+	   "  \"minItems\": 3"
+	   "}",
+	   "[0, 0, 0, 0]");
+  GENERATE("{"
+	   "  \"type\": \"array\","
+	   "  \"minItems\": 3"
+	   "}",
+	   "[null, null, null, null]");
+}
+
+#define MAKE_TEST_SCALAR_(subT, prec, result_scalar, result_array)	\
+  TEST(SchemaGenerateData, Scalar_ ## subT ## prec) {			\
+    GENERATE("{"							\
+	     "  \"type\": \"scalar\","					\
+	     "  \"subtype\": \"" #subT "\","				\
+	     "  \"precision\": " #prec					\
+	     "}",							\
+	     "\"" result_scalar "\"");					\
+  }									\
+  TEST(SchemaGenerateData, NDArray_ ## subT ## prec) {			\
+    GENERATE("{"							\
+	     "  \"type\": \"ndarray\","					\
+	     "  \"subtype\": \"" #subT "\","				\
+	     "  \"precision\": " #prec ","				\
+	     "  \"shape\": [2, 3]"					\
+	     "}",							\
+	     "\"" result_array "\"");					\
+  }
+MAKE_TEST_SCALAR_(int, 1, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6MX0=-YGG-AA==-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJpbnQiLCJwcmVjaXNpb24iOjEsInNoYXBlIjpbMiwzXX0=-YGG-AAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(int, 2, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6Mn0=-YGG-AAA=-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJpbnQiLCJwcmVjaXNpb24iOjIsInNoYXBlIjpbMiwzXX0=-YGG-AAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(int, 4, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6NH0=-YGG-AAAAAA==-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJpbnQiLCJwcmVjaXNpb24iOjQsInNoYXBlIjpbMiwzXX0=-YGG-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(int, 8, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6OH0=-YGG-AAAAAAAAAAA=-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJpbnQiLCJwcmVjaXNpb24iOjgsInNoYXBlIjpbMiwzXX0=-YGG-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(uint, 1, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjF9-YGG-AA==-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJzaGFwZSI6WzIsM119-YGG-AAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(uint, 2, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjJ9-YGG-AAA=-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoyLCJzaGFwZSI6WzIsM119-YGG-AAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(uint, 4, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjR9-YGG-AAAAAA==-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjo0LCJzaGFwZSI6WzIsM119-YGG-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(uint, 8, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjh9-YGG-AAAAAAAAAAA=-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjo4LCJzaGFwZSI6WzIsM119-YGG-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(float, 2, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjoyfQ==-YGG-AAA=-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6Miwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(float, 4, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo0fQ==-YGG-AAAAAA==-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(float, 8, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4fQ==-YGG-AAAAAAAAAAA=-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(complex, 8, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImNvbXBsZXgiLCJwcmVjaXNpb24iOjh9-YGG-AAAAAAAAAAA=-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJjb21wbGV4IiwicHJlY2lzaW9uIjo4LCJzaGFwZSI6WzIsM119-YGG-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(complex, 16, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImNvbXBsZXgiLCJwcmVjaXNpb24iOjE2fQ==-YGG-AAAAAAAAAAAAAAAAAAAAAA==-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJjb21wbGV4IiwicHJlY2lzaW9uIjoxNiwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-YGG-")
+MAKE_TEST_SCALAR_(string, 5, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InN0cmluZyIsInByZWNpc2lvbiI6NX0=-YGG-YWJjZGU=-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJzdHJpbmciLCJwcmVjaXNpb24iOjUsInNoYXBlIjpbMiwzXX0=-YGG-YWJjZGVhYmNkZWFiY2RlYWJjZGVhYmNkZWFiY2Rl-YGG-")
+#undef MAKE_TEST_SCALAR_
+
+#define MAKE_TEST_SCALAR_FULL_(subT, prec, result_scalar, result_array)	\
+  TEST(SchemaGenerateData, FullScalar_ ## subT ## prec) {		\
+    GENERATE("{"							\
+	     "  \"type\": \"scalar\","					\
+	     "  \"subtype\": \"" #subT "\","				\
+	     "  \"precision\": " #prec ","				\
+	     "  \"units\": \"cm\","					\
+	     "  \"minimum\": 1.5,"					\
+	     "  \"maximum\": 10,"					\
+	     "  \"multipleOf\": 1.3"					\
+	     "}",							\
+	     "\"" result_scalar "\"");					\
+  }									\
+  TEST(SchemaGenerateData, FullNDArray_ ## subT ## prec) {		\
+    GENERATE("{"							\
+	     "  \"type\": \"ndarray\","					\
+	     "  \"subtype\": \"" #subT "\","				\
+	     "  \"precision\": " #prec ","				\
+	     "  \"units\": \"cm\","					\
+	     "  \"shape\": [2, 3],"					\
+	     "  \"minimum\": 1.5,"					\
+	     "  \"maximum\": 10,"					\
+	     "  \"multipleOf\": 1.3"					\
+	     "}",							\
+	     "\"" result_array "\"");					\
+  }
+MAKE_TEST_SCALAR_FULL_(float, 8, "-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImNtIn0=-YGG-MzMzMzMzIkA=-YGG-", "-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwidW5pdHMiOiJjbSIsInNoYXBlIjpbMiwzXX0=-YGG-MzMzMzMzIkAzMzMzMzMiQDMzMzMzMyJAMzMzMzMzIkAzMzMzMzMiQDMzMzMzMyJA-YGG-")
+#undef MAKE_TEST_SCALAR_FULL_
+TEST(SchemaGenerateData, ObjWavefront) {
+  GENERATE("{"
+	   "  \"type\": \"obj\""
+	   "}",
+	   "\"-YGG-eyJ0eXBlIjoib2JqIn0=-YGG-diAwLjAgMC4wIDAuMAp2IDAuMCAwLjAgMS4wCnYgMC4wIDEuMCAxLjAKdiAwLjAgMS4wIDAuMAp2IDEuMCAwLjAgMC4wCnYgMS4wIDAuMCAxLjAKdiAxLjAgMS4wIDEuMAp2IDEuMCAxLjAgMC4wCmYgNCAxIDIKZiA0IDEgMwpsIDEgMgpsIDIgMwpsIDMgNApsIDQgMQpsIDMgMQo=-YGG-\"");
+}
+TEST(SchemaGenerateData, Ply) {
+  GENERATE("{"
+	   "  \"type\": \"ply\""
+	   "}",
+	   "\"-YGG-eyJ0eXBlIjoicGx5In0=-YGG-cGx5CmZvcm1hdCBhc2NpaSAxLjAKZWxlbWVudCB2ZXJ0ZXggOApwcm9wZXJ0eSBkb3VibGUgeApwcm9wZXJ0eSBkb3VibGUgeQpwcm9wZXJ0eSBkb3VibGUgegplbGVtZW50IGZhY2UgMgpwcm9wZXJ0eSBsaXN0IHVjaGFyIGludCB2ZXJ0ZXhfaW5kZXgKZWxlbWVudCBlZGdlIDUKcHJvcGVydHkgaW50IHZlcnRleDEKcHJvcGVydHkgaW50IHZlcnRleDIKZW5kX2hlYWRlcgowIDAgMAowIDAgMQowIDEgMQowIDEgMAoxIDAgMAoxIDAgMQoxIDEgMQoxIDEgMAozIDMgMCAxCjMgMyAwIDIKMCAxCjEgMgoyIDMKMyAwCjIgMAo=-YGG-\"");
+}
+TEST(SchemaGenerateData, PythonImport) {
+  GENERATE("{"
+	   "  \"type\": \"class\""
+	   "}",
+	   "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-Y29sbGVjdGlvbnM6T3JkZXJlZERpY3Q=-YGG-\"");
+}
+TEST(SchemaGenerateData, PythonInstance) {
+  GENERATE("{"
+	   "  \"type\": \"instance\""
+	   "}",
+	   "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-gANjY29sbGVjdGlvbnMKT3JkZXJlZERpY3QKcQApUnEBLg==-YGG-\"");
+}
 #endif // RAPIDJSON_YGGDRASIL
 
 #if defined(_MSC_VER) || defined(__clang__)

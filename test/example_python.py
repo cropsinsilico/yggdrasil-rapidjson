@@ -1,7 +1,14 @@
+from pickle import PicklingError
+
+
 class FailedClass(object):
+
     def __init__(self, *args, **kwargs):
         self.x = args
         self.y = kwargs
+
+    def __getstate__(self):
+        raise PicklingError
 
 
 class ExampleClass(object):

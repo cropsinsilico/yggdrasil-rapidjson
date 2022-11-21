@@ -182,6 +182,31 @@ void finalize_python(const std::string error_prefix="") {
 #endif // RAPIDJSON_YGGDRASIL_PYTHON
 }
 
+#ifdef RAPIDJSON_YGGDRASIL_PYTHON
+#define PYTHON_ERROR_CLEANUP_(method)				\
+  cleanup:							\
+  if (ignore_error) {						\
+    PyErr_Clear();						\
+  } else {							\
+    if (PyErr_Occurred() != NULL) {				\
+      throw std::runtime_error(error_prefix + #method ": Python error occured"); \
+    }								\
+  }								\
+  return out
+#else // RAPIDJSON_YGGDRASIL_PYTHON
+#define PYTHON_ERROR_CLEANUP_(method)				\
+  cleanup:							\
+  if (ignore_error) {						\
+    PyErr_Clear();						\
+  } else {							\
+    if (PyErr_Occurred() != NULL) {				\
+      PyErr_Print();						\
+      throw std::runtime_error(error_prefix + #method ": Python error occured"); \
+    }								\
+  }								\
+  return out
+#endif // RAPIDJSON_YGGDRASIL_PYTHON
+
 
 /*!
   @brief Try to import a Python module, throw an error if it fails.
@@ -195,20 +220,13 @@ inline
 PyObject* import_python_module(const char* module_name,
 			       const std::string error_prefix="",
 			       const bool ignore_error=false) {
+  PyObject* out = NULL;
   RAPIDJSON_ASSERT(isPythonInitialized());
   if (!isPythonInitialized())
-    return NULL;
-  PyObject* out = PyImport_ImportModule(module_name);
-  if (out == NULL) { // GCOVR_EXCL_START
-#ifndef RAPIDJSON_YGGDRASIL_PYTHON
-    PyErr_Print();
-#endif // RAPIDJSON_YGGDRASIL_PYTHON
-    if (!(ignore_error))
-      throw std::runtime_error(error_prefix + "import_python_module: Failed to import Python model '" + module_name + "'");
-  } // GCOVR_EXCL_STOP
-  return out;
+    goto cleanup;
+  out = PyImport_ImportModule(module_name);
+  PYTHON_ERROR_CLEANUP_(import_python_module);
 }
-
 
 /*!
   @brief Try to import a Python class, throw an error if it fails.
@@ -224,27 +242,22 @@ PyObject* import_python_class(const char* module_name,
 			      const char* class_name,
 			      const std::string error_prefix="",
 			      const bool ignore_error=false) {
+  PyObject* out = NULL;
   PyObject *py_module = import_python_module(module_name,
 					     error_prefix,
 					     ignore_error);
   if (py_module == NULL)
-    return py_module; // GCOVR_EXCL_LINE
-  PyObject *out = PyObject_GetAttrString(py_module, class_name);
+    goto cleanup;
+  out = PyObject_GetAttrString(py_module, class_name);
   Py_DECREF(py_module);
-  if (out == NULL) { // GCOVR_EXCL_START
-#ifndef RAPIDJSON_YGGDRASIL_PYTHON
-    PyErr_Print();
-#endif // RAPIDJSON_YGGDRASIL_PYTHON
-    if (!(ignore_error))
-      throw std::runtime_error(error_prefix + "import_python_class: Failed to import Python class/function/object '" + class_name + "'");
-  } // GCOVR_EXCL_STOP
-  return out;
+  PYTHON_ERROR_CLEANUP_(import_python_class);
 }
 
 inline
 PyObject* import_python_object(const char* mod_class,
 			       const std::string error_prefix="",
 			       const bool ignore_error=false) {
+  PyObject* out = NULL;
   char module_name[256] = "";
   char class_name[100] = "";
   size_t mod_class_len = strlen(mod_class);
@@ -274,69 +287,120 @@ PyObject* import_python_object(const char* mod_class,
   if (is_file) {
     PyObject* path = PyUnicode_FromStringAndSize(module_name, module_name_len - 3);
     if (path == NULL)
-      return NULL;
+      goto cleanup;
     PyObject* os_path = PyImport_ImportModule("os.path");
     if (os_path == NULL) {
       Py_DECREF(path);
-      return NULL;
+      goto cleanup;
     }
     PyObject* path_split = PyObject_GetAttrString(os_path, "split");
     Py_DECREF(os_path);
     if (path_split == NULL) {
       Py_DECREF(path);
-      return NULL;
+      goto cleanup;
     }
     PyObject* split_args = PyTuple_Pack(1, path);
     if (split_args == NULL) {
       Py_DECREF(path);
       Py_DECREF(path_split);
-      return NULL;
+      goto cleanup;
     }
     PyObject* path_parts = PyObject_Call(path_split, split_args, NULL);
     Py_DECREF(split_args);
     Py_DECREF(path);
     Py_DECREF(path_split);
     if (path_parts == NULL) {
-      return NULL;
+      goto cleanup;
     }
     PyObject* path_dir = PyTuple_GetItem(path_parts, 0);
     if (path_dir == NULL) {
       Py_DECREF(path_parts);
-      return NULL;
+      goto cleanup;
     }
     PyObject* path_base = PyTuple_GetItem(path_parts, 1);
     if (path_base == NULL) {
       Py_DECREF(path_parts);
-      return NULL;
+      goto cleanup;
     }
     PyObject* sys_path = PySys_GetObject("path");
     if (sys_path == NULL) {
       Py_DECREF(path_parts);
-      return NULL;
+      goto cleanup;
     }
     if (PyList_Append(sys_path, path_dir) < 0) {
       Py_DECREF(path_parts);
-      return NULL;
+      goto cleanup;
     }
     Py_ssize_t tmp_size = 0;
     const char* tmp = PyUnicode_AsUTF8AndSize(path_base, &tmp_size);
     if ((tmp == NULL) || (tmp_size >= 100)) {
       Py_DECREF(path_parts);
-      return NULL;
+      goto cleanup;
     }
     memcpy(module_name, tmp, (size_t)tmp_size);
     module_name[tmp_size] = '\0';
     Py_DECREF(path_parts);
   }
-  PyObject* out = import_python_class(module_name, class_name, error_prefix, ignore_error);
+  out = import_python_class(module_name, class_name, error_prefix, ignore_error);
   if (is_file) {
     PyObject* sys_path = PySys_GetObject("path");
-    if (sys_path == NULL)
-      return NULL;
+    if (sys_path == NULL) {
+      Py_DECREF(out);
+      out = NULL;
+      goto cleanup;
+    }
     PyObject_CallMethod(sys_path, "pop", "n", Py_SIZE(sys_path) - 1);
   }
-  return out;
+  PYTHON_ERROR_CLEANUP_(import_python_object);
 }
+
+
+inline
+PyObject* pickle_python_object(PyObject* x,
+			       const std::string error_prefix="",
+			       const bool ignore_error=false) {
+  PyObject *out = NULL, *args = NULL;
+  PyObject* pickleMethod = import_python_object("pickle:dumps", "GetPythonInstance", true);
+  if (pickleMethod == NULL)
+    goto cleanup;
+  args = Py_BuildValue("(O)", x);
+  if (args == NULL) {
+    Py_DECREF(pickleMethod);
+    goto cleanup;
+  }
+  out = PyObject_Call(pickleMethod, args, NULL);
+  Py_DECREF(pickleMethod);
+  Py_DECREF(args);
+  PYTHON_ERROR_CLEANUP_(pickle_python_object);
+}
+
+inline
+PyObject* unpickle_python_object(const char* buffer,
+				 size_t buffer_length,
+				 const std::string error_prefix="",
+				 const bool ignore_error=false) {
+  PyObject *out = NULL, *py_str = NULL, *args = NULL;
+  PyObject* pickle = import_python_object("pickle:loads", error_prefix, ignore_error);
+  if (pickle == NULL)
+    goto cleanup;
+  py_str = PyBytes_FromStringAndSize(buffer, (Py_ssize_t)buffer_length);
+  if (py_str == NULL) {
+    Py_DECREF(pickle);
+    goto cleanup;
+  }
+  args = Py_BuildValue("(O)", py_str);
+  Py_DECREF(py_str);
+  if (args == NULL) {
+    Py_DECREF(pickle);
+    goto cleanup;
+  }
+  out = PyObject_Call(pickle, args, NULL);
+  Py_DECREF(pickle);
+  Py_DECREF(args);
+  PYTHON_ERROR_CLEANUP_(unpickle_python_object);
+}
+
+
 inline
 bool PyObject_IsInstanceString(PyObject* x, std::string class_name) {
   if (!PyObject_HasAttrString(x, "__class__"))

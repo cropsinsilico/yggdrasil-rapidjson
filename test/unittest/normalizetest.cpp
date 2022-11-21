@@ -1278,6 +1278,10 @@ TEST(SchemaNormalizer, Schema) {
 	    "{\"type\": \"unicode\"}",
 	    true,
 	    "{\"type\": \"scalar\", \"subtype\": \"string\", \"encoding\": \"UTF8\"}");
+  NORMALIZE(s,
+	    "{\"type\": \"float\"}",
+	    true,
+	    "{\"type\": \"scalar\", \"subtype\": \"float\", \"precision\": 8}");
 }
 
 TEST(SchemaNormalizer, SharedProperties) {
