@@ -1840,13 +1840,15 @@ definitions:
           type: boolean
         args:
           allowSingular: true
+          default: []
           description: The path to the file containing the model program that will
             be run by the driver for the model's language and/or a list of arguments
             that should be passed as input to the model program or language executable
             (e.g. source code or configuration file for a domain specific language).
           items:
-            minLength: 1
-            type: string
+            type:
+            - string
+            - number
           type: array
         builddir:
           description: Directory where the build should be saved. Defaults to <sourcedir>/build.
@@ -3274,6 +3276,18 @@ definitions:
                 - type: string
               type: object
             default: mean
+          args:
+            allowSingular: true
+            default: []
+            description: The path to the file containing the model program that will
+              be run by the driver for the model's language and/or a list of arguments
+              that should be passed as input to the model program or language executable
+              (e.g. source code or configuration file for a domain specific language).
+            items:
+              type:
+              - string
+              - number
+            type: array
           driver:
             deprecated: true
             description: '[DEPRECATED] Name of driver class that should be used.'

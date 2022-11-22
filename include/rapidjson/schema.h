@@ -796,6 +796,17 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Flags during normalization
+enum NormalizerStateFlag {
+  kNormalizerStateNoFlags = 0,             //!< No flags are set
+  kNormalizerStateInSingular = 1 << 0,     //!< In singular schema
+  kNormalizerStateExitAfter = 1 << 1,      //!< Exit after normalization
+  kNormalizerStateExtending = 1 << 2,      //!< Currently extending
+  kNormalizerStateAppending = 1 << 3,      //!< Currently appending
+  kNormalizerStateBasePointerSet = 1 << 4  //!< Base pointer set
+};
+  
+///////////////////////////////////////////////////////////////////////////////
 // Temporary memory
 template <typename NormalizedDocument>
 class TemporaryMemory {
@@ -827,8 +838,9 @@ public:
     return true;
   }
   bool reset() {
-    bool out = this->doc_->exit_after_normalize_;
-    this->doc_->exit_after_normalize_ = false;
+    bool out = (this->doc_->flags_ & kNormalizerStateExitAfter);
+    if (out)
+      this->doc_->flags_ &= ~kNormalizerStateExitAfter;
     this->stealMemory();
     return out;
   }
@@ -861,8 +873,7 @@ public:
 			    StackAllocator* stackAllocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity) :
     document_(allocator, stackCapacity, stackAllocator),
-    parent_(0), index_(0),
-    extending_(false), appending_(false),
+    parent_(0), index_(0), flags_(0),
     extend_context_(nullptr), extend_schema_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
     valueStack_(stackAllocator, stackCapacity),
@@ -871,15 +882,15 @@ public:
     sharedStack_(stackAllocator, stackCapacity),
     tempStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
-    aliases_(kObjectType), inSingular_(false),
-    temporary_memory_(nullptr), exit_after_normalize_(false),
-    extend_child_(nullptr), basePointer_(allocator), basePointerSet_(false),
+    aliases_(kObjectType),
+    temporary_memory_(nullptr),
+    extend_child_(nullptr), basePointer_(allocator),
     core_(0) {}
   GenericNormalizedDocument(GenericNormalizedDocument* parent,
 			    unsigned& index, StackAllocator* stackAllocator = 0,
 			    size_t stackCapacity = kDefaultStackCapacity) :
     document_(&parent->GetAllocator(), stackCapacity, stackAllocator),
-    parent_(parent), index_(index), extending_(false), appending_(false),
+    parent_(parent), index_(index), flags_(0),
     extend_context_(nullptr), extend_schema_(nullptr),
     keyStack_(stackAllocator, stackCapacity),
     valueStack_(stackAllocator, stackCapacity),
@@ -888,10 +899,10 @@ public:
     sharedStack_(stackAllocator, stackCapacity),
     tempStack_(stackAllocator, stackCapacity),
     documentStack_(nullptr),
-    aliases_(kObjectType), inSingular_(false),
-    temporary_memory_(nullptr), exit_after_normalize_(false),
+    aliases_(kObjectType),
+    temporary_memory_(nullptr),
     extend_child_(nullptr),
-    basePointer_(&parent->GetAllocator()), basePointerSet_(false),
+    basePointer_(&parent->GetAllocator()),
     core_(parent->core_) {
     parent->AddChild(this);
     for (ModificationEntry* it = parent->modifiedStack_.template Bottom<ModificationEntry>();
@@ -1857,23 +1868,33 @@ public:
       return CheckSharedPairs(context, schema);
     return true;
   }
+  bool InAppend() const {
+    return (flags_ & kNormalizerStateAppending);
+  }
+  bool InExtend() const {
+    return ((flags_ & kNormalizerStateExtending) && !InAppend());
+  }
+  bool OutsideExtend() const {
+    return (InAppend() || !InExtend());
+  }
   bool Append(Context& context, const SchemaType& schema, const ValueType& document) {
-    appending_ = true;
+    flags_ |= kNormalizerStateAppending;
     bool out = Extend(context, schema, document);
-    appending_ = false;
+    flags_ &= ~kNormalizerStateAppending;
     return out;
   }
 
   bool Extend(Context& context, const SchemaType& schema,
 	      const ValueType& document, const SchemaType* baseSchema=0) {
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-    if (extending_ || extend_context_ || extend_schema_ ||
+    if ((flags_ & kNormalizerStateExtending) ||
+	extend_context_ || extend_schema_ ||
 	document_.WasFinalized() || (document_.StackSize() == 0))
       RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Something is wrong with the state of"
 					" the normalized document at the "
 					" start of an extend call.");
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-    RAPIDJSON_ASSERT(!extending_);
+    RAPIDJSON_ASSERT(!(flags_ & kNormalizerStateExtending));
     RAPIDJSON_ASSERT(!extend_context_);
     RAPIDJSON_ASSERT(!extend_schema_);
     RAPIDJSON_ASSERT(!document_.WasFinalized());
@@ -1887,13 +1908,13 @@ public:
 	baseDocument = &(*baseDocument)[baseSchema->parentKey_];
     }
     PushValue(*baseDocument, pCurrent);
-    extending_ = true;
+    flags_ |= kNormalizerStateExtending;
     extend_context_ = &context;
     extend_schema_ = &schema;
     bool out = document.Accept(*this);
     if (!out)
       return false;
-    extending_ = false;
+    flags_ &= ~kNormalizerStateExtending;
     extend_context_ = nullptr;
     extend_schema_ = nullptr;
     PopValue();
@@ -1954,7 +1975,8 @@ public:
 
   // Methods for normalizing values
   bool BeginNorm(Context& context, const SchemaType& schema) {
-    if (document_.StackSize() == 0 && !basePointerSet_) {
+    if (document_.StackSize() == 0 &&
+	!(flags_ & kNormalizerStateBasePointerSet)) {
       SetBasePointer(GetInstancePointer(false, true));
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       std::cerr << "BeginNorm: FIRST ELEMENT: ";
@@ -2037,7 +2059,7 @@ public:
     if (!NormScalar(context, schema, str, length, subtype, precision,	\
 		    units, 0, encoding, 1, valueSchema))		\
       return false;							\
-    if (exit_after_normalize_) {					\
+    if (flags_ & kNormalizerStateExitAfter) {				\
       return true;							\
     }									\
   }									\
@@ -2179,7 +2201,7 @@ public:
 				  newValueSchema->GetAllocator());
       }
       RecordModified(kModificationTypeValue, false);
-      exit_after_normalize_ = true;
+      flags_ |= kNormalizerStateExitAfter;
       bool out = NormYggdrasilString(context, schema, str, length, true, *newValueSchema);
       delete newValueSchema;
       newValueSchema = NULL;
@@ -2489,7 +2511,7 @@ public:
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       } else if (FindAliasValue(aliases, orig, match)) {
 	ConstMemberIterator existMatch = aliases.MemberEnd();
-	if (extending_ && !appending_ &&
+	if (InExtend() &&
 	    FindAliasValueExisting(aliases, match, existMatch)) {
 	  match = existMatch;
 	  RecordModifiedAlias(match->value, match->name);
@@ -2509,7 +2531,7 @@ public:
       if (match != aliases.MemberEnd()) {
 	if (HasMember(primary)) {
 	  flag |= (1 << kAliasExists);
-	  if ((!extending_) || appending_) {
+	  if (OutsideExtend()) {
 	    // TODO: Check equivalence when the value is added?
 	    //   This would require recording the alias and then checking in
 	    //   subsequent nested calls or retrieving the subsequent value
@@ -2557,7 +2579,7 @@ public:
       iP = iP.Pop(1, &GetAllocator());
       iS = iS.Pop((SizeType)(schema.pointer_.GetTokenCount() - baseSchema->pointer_.GetTokenCount()), &GetAllocator());
     }
-    if ((!extending_) && (baseSchema->hasRequired_)) {
+    if ((!(flags_ & kNormalizerStateExtending)) && (baseSchema->hasRequired_)) {
       for (SizeType index = 0; index < baseSchema->propertyCount_; index++) {
 	if (!baseSchema->properties_[index].required ||
 	    (!baseSchemaSet && context.propertyExist[index]) ||
@@ -3238,7 +3260,7 @@ public:
 
   void SetBasePointer(const PointerType& p) {
     basePointer_ = p;
-    basePointerSet_ = true;
+    flags_ |= kNormalizerStateBasePointerSet;
   }
 
   void* SetTemporary(SizeType size) {
@@ -3293,7 +3315,7 @@ public:
   }
   PointerType GetInstancePointerBase(AllocatorType* allocator = 0) const {
     RAPIDJSON_ASSERT(documentStack_);
-    if (extending_ && !appending_ && !valueStack_.Empty()) {
+    if (InExtend() && !valueStack_.Empty()) {
       return PointerType(CurrentPointer(), allocator);
     } else {
       if (!documentStack_->Empty()) {
@@ -3377,7 +3399,7 @@ private:
 
   void RecordModifiedAlias(const ValueType& primary, const ValueType& alias,
 			   PointerType* ptr_base=nullptr) {
-    bool in_extend = (ptr_base || (extending_ && !appending_));
+    bool in_extend = (ptr_base || InExtend());
     RecordModified(kModificationTypeAlias, alias, primary, !in_extend);
     PointerType p_primary;
     PointerType p_alias;
@@ -3449,7 +3471,7 @@ private:
   }
   void RecordModified(ModificationType type, bool parent=false) {
     RecordModified(type, GetInstancePointer(parent));
-    if (extending_ && !appending_ && !valueStack_.Empty()) {
+    if (InExtend() && !valueStack_.Empty()) {
       if (parent)
 	(valueStack_.template Top<ValueEntry>() - 1)->flags |= (1 << kValueFlagParentModified);
       else
@@ -3647,8 +3669,11 @@ private:
   }
 
   bool ToggleSingular() {
-    inSingular_ = (!inSingular_);
-    return inSingular_;
+    if (flags_ & kNormalizerStateInSingular)
+      flags_ &= ~kNormalizerStateInSingular;
+    else
+      flags_ |= kNormalizerStateInSingular;
+    return (flags_ & kNormalizerStateInSingular);
   }
 
   const ValueType* CurrentValue() const {
@@ -3656,7 +3681,7 @@ private:
   }
   ValueType* CurrentValue() {
     ValueType* out = nullptr;
-    if (extending_ && !appending_) {
+    if (InExtend()) {
       RAPIDJSON_ASSERT(!valueStack_.Empty());
       if (!valueStack_.Empty())
 	out = valueStack_.template Top<ValueEntry>()->val;
@@ -3668,15 +3693,15 @@ private:
     return out;
   }
   bool CurrentModified() {
-    return (extending_ && !appending_ && !valueStack_.Empty() &&
+    return (InExtend() && !valueStack_.Empty() &&
 	    valueStack_.template Top<ValueEntry>()->modified());
   }
   bool CurrentChildModified() {
-    return (extending_ && !appending_ && !valueStack_.Empty() &&
+    return (InExtend() && !valueStack_.Empty() &&
 	    valueStack_.template Top<ValueEntry>()->child_modified());
   }
   bool CurrentSingular(ValueType* out = 0) {
-    if (extending_ && !appending_ && !valueStack_.Empty() &&
+    if (InExtend() && !valueStack_.Empty() &&
 	valueStack_.template Top<ValueEntry>()->singular >= 0) {
       if (out) {
 	ModificationEntry* key_mod = GetModified(valueStack_.template Top<ValueEntry>()->singular);
@@ -3691,7 +3716,7 @@ private:
     return false;
   }
   bool CurrentChildSingular(ValueType* out = 0) {
-    if (extending_ && !appending_ && !valueStack_.Empty() &&
+    if (InExtend() && !valueStack_.Empty() &&
 	valueStack_.template Top<ValueEntry>()->child_singular >= 0) {
       if (out) {
 	const ModificationEntry* key_mod = extend_child_->GetModified(valueStack_.template Top<ValueEntry>()->child_singular);
@@ -3706,7 +3731,7 @@ private:
     return false;
   }
   bool CurrentReplaced() {
-    if (extending_ && !appending_ && !valueStack_.Empty())
+    if (InExtend() && !valueStack_.Empty())
       return valueStack_.template Top<ValueEntry>()->replaced();
     return false;
   }
@@ -3914,7 +3939,7 @@ private:
   // 			key.GetString(), sizeof(Ch) * key.GetStringLength()))
   // 	  return;
   //   }
-  //   if (extending_ && !appending_) {
+  //   if (InExtend()) {
   //     RAPIDJSON_ASSERT(CurrentValue()->IsObject());
   //     CurrentValue()->RemoveMember(key);
   //     return;
@@ -3959,7 +3984,7 @@ private:
   //   }
   // }
   bool HasMember(const ValueType& key) const {
-    if (extending_ && !appending_) {
+    if (InExtend()) {
       RAPIDJSON_ASSERT(CurrentValue()->IsObject());
       if (CurrentValue()->HasMember(key))
 	return true;
@@ -3984,7 +4009,7 @@ private:
     return false;
   }
   // ValueType* GetMember(const ValueType& key, SizeType* memberCount=nullptr) {
-  //   if (extending_ && !appending_) {
+  //   if (InExtend()) {
   //     RAPIDJSON_ASSERT(CurrentValue()->IsObject());
   //     std::cerr << "GetMember: " << key.GetString() << std::endl;
   //     if (CurrentValue()->HasMember(key))
@@ -4146,7 +4171,7 @@ private:
   }
   ValueType& GetAliases() {
     GenericStringBuffer<EncodingType> address;
-    GetInstanceRef(address, ((!extending_) || appending_));
+    GetInstanceRef(address, (OutsideExtend()));
     RAPIDJSON_ASSERT(aliases_.IsObject());
     if (!aliases_.HasMember(address.GetString())) {
       aliases_.AddMember(ValueType(address.GetString(),
@@ -4290,8 +4315,7 @@ public:
   DocumentType document_;
   GenericNormalizedDocument* parent_;
   unsigned index_;
-  bool extending_;
-  bool appending_;
+  int16_t flags_;
   Context* extend_context_;
   const SchemaType* extend_schema_;
   internal::Stack<StackAllocatorType> keyStack_;
@@ -4302,12 +4326,9 @@ public:
   internal::Stack<StackAllocatorType> tempStack_;
   internal::Stack<StackAllocatorType>* documentStack_;
   ValueType aliases_;
-  bool inSingular_;
   void* temporary_memory_;
-  bool exit_after_normalize_;
   GenericNormalizedDocument* extend_child_;
   PointerType basePointer_;
-  bool basePointerSet_;
   GenericNormalizedDocument* core_;
 
 public:
@@ -4315,11 +4336,11 @@ public:
   (Context& context, const SchemaType& schema, __VA_ARGS__)
 #define ADD_NORMALIZE_HANDLER_(method, param, ...)			\
   bool method param {							\
-    RAPIDJSON_ASSERT(extending_);					\
+    RAPIDJSON_ASSERT(flags_ & kNormalizerStateExtending);		\
     return Base ## method(*extend_context_, *extend_schema_, __VA_ARGS__); \
   }									\
   bool Base ## method PARAM_WITH_CONTEXT_ param {			\
-    if ((!extending_) || appending_) {					\
+    if (OutsideExtend()) {						\
       return Norm ## method(context, schema, __VA_ARGS__);		\
     } else {								\
       return Extend ## method(context, __VA_ARGS__);			\
@@ -4327,11 +4348,11 @@ public:
   }
 #define ADD_NORMALIZE_HANDLER_NOARGS_(method)				\
   bool method() {							\
-    RAPIDJSON_ASSERT(extending_);					\
+    RAPIDJSON_ASSERT(flags_ & kNormalizerStateExtending);		\
     return Base ## method(*extend_context_, *extend_schema_);		\
   }									\
   bool Base ## method(Context& context, const SchemaType& schema) {	\
-    if ((!extending_) || appending_) {					\
+    if (OutsideExtend()) {						\
       return Norm ## method(context, schema);				\
     } else {								\
       return Extend ## method(context);					\
@@ -4340,12 +4361,12 @@ public:
 #define ADD_NORMALIZE_HANDLER_TEMPLATE_(method, param, ...)		\
   template <typename YggSchemaValueType>				\
   bool method param {							\
-    RAPIDJSON_ASSERT(extending_);					\
+    RAPIDJSON_ASSERT(flags_ & kNormalizerStateExtending);		\
     return Base ## method(*extend_context_, *extend_schema_, __VA_ARGS__); \
   }									\
   template <typename YggSchemaValueType>				\
   bool Base ## method PARAM_WITH_CONTEXT_ param {			\
-    if ((!extending_) || appending_) {					\
+    if (OutsideExtend()) {						\
       return Norm ## method(context, schema, __VA_ARGS__);		\
     } else {								\
       return Extend ## method(context, __VA_ARGS__);			\
