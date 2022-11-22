@@ -6885,12 +6885,13 @@ TEST(SchemaGenerateData, PythonImport) {
 	   "}",
 	   "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-Y29sbGVjdGlvbnM6T3JkZXJlZERpY3Q=-YGG-\"");
 }
-TEST(SchemaGenerateData, PythonInstance) {
-  GENERATE("{"
-	   "  \"type\": \"instance\""
-	   "}",
-	   "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-gANjY29sbGVjdGlvbnMKT3JkZXJlZERpY3QKcQApUnEBLg==-YGG-\"");
-}
+// Disabled as pickle string varies with python version
+// TEST(SchemaGenerateData, PythonInstance) {
+//   GENERATE("{"
+// 	   "  \"type\": \"instance\""
+// 	   "}",
+// 	   "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-gANjY29sbGVjdGlvbnMKT3JkZXJlZERpY3QKcQApUnEBLg==-YGG-\"");
+// }
 #endif // RAPIDJSON_YGGDRASIL
 
 #if defined(_MSC_VER) || defined(__clang__)
