@@ -7154,8 +7154,8 @@ protected:
         const Ch* str = name.GetString();
 #ifdef RAPIDJSON_YGGDRASIL
 	RAPIDJSON_ASSERT(child_aliases_.IsObject());
-	if (child_aliases_.HasMember(str)) {
-	  SValue orig(str, len, *allocator_);
+	SValue orig(str, len, *allocator_);
+	if (child_aliases_.HasMember(orig)) {
 	  SValue dest;
 	  if (follow_aliases_(child_aliases_, orig, &dest, *allocator_)) {
 	    str = dest.GetString();
