@@ -5059,7 +5059,7 @@ public:
 	PyObject* py_args_list = ma->value.GetPythonObjectRaw();
 	py_args = PyList_AsTuple(py_args_list);
 	Py_DECREF(py_args_list);
-    } else {
+      } else {
 	py_args = PyTuple_New(0);
       }
       // Kwargs

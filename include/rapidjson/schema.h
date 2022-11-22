@@ -2295,8 +2295,8 @@ public:
     if ((typeV != valueSchema.MemberEnd()) &&
 	(subtypeV != valueSchema.MemberEnd()) &&
 	(precisionV != valueSchema.MemberEnd())) {
-      typename SchemaType::YggSchemaValueSubType subtype = schema.GetSubType(typename SchemaType::ValueType(subtypeV->value.GetString(), subtypeV->value.GetStringLength()).Move());
       typename SchemaType::YggSchemaEncodingType encoding = SchemaType::kYggNullSchemaEncodingType;
+      typename SchemaType::YggSchemaValueSubType subtype = schema.GetSubType(typename SchemaType::ValueType(subtypeV->value.GetString(), subtypeV->value.GetStringLength()).Move(), &encoding);
       if (encodingV != valueSchema.MemberEnd()) {
 	encoding = schema.GetEncodingType(typename SchemaType::ValueType(encodingV->value.GetString(), encodingV->value.GetStringLength()).Move());
       }
@@ -2350,60 +2350,68 @@ public:
   }
   bool NormSchema(Context&, const SchemaType&) {
     ValueType* obj = document_.StackTop();
-    if (obj && obj->IsSchema()) {
-      if (obj->HasMember(SchemaType::GetTypeString())) {
-	typename DocumentType::MemberIterator it = obj->FindMember(SchemaType::GetTypeString());
-	if (it->value == SchemaType::GetBytesString() ||
-	    it->value == SchemaType::GetUnicodeString() ||
-	    it->value == SchemaType::GetIntSubTypeString() ||
-	    it->value == SchemaType::GetUintSubTypeString() ||
-	    it->value == SchemaType::GetFloatSubTypeString() ||
-	    it->value == SchemaType::GetComplexSubTypeString()) {
-	  obj->AddMember(ValueType(SchemaType::GetSubTypeString().GetString(),
-				   SchemaType::GetSubTypeString().GetStringLength(),
-				   document_.GetAllocator()).Move(),
-			 ValueType(it->value,
-				   document_.GetAllocator(), true).Move(),
-			 document_.GetAllocator());
-	  (*obj)[SchemaType::GetTypeString()].SetString(SchemaType::GetScalarString().GetString(),
-							SchemaType::GetScalarString().GetStringLength(),
-							document_.GetAllocator());
-	  RecordModified(kModificationTypeValue);
-	}
+    if (!(obj && obj->IsSchema()))
+      return true;
+    if (obj->HasMember(SchemaType::GetTypeString())) {
+      typename DocumentType::MemberIterator it = obj->FindMember(SchemaType::GetTypeString());
+      if (it->value == SchemaType::GetBytesString() ||
+	  it->value == SchemaType::GetUnicodeString() ||
+	  it->value == SchemaType::GetIntSubTypeString() ||
+	  it->value == SchemaType::GetUintSubTypeString() ||
+	  it->value == SchemaType::GetFloatSubTypeString() ||
+	  it->value == SchemaType::GetComplexSubTypeString()) {
+	obj->AddMember(ValueType(SchemaType::GetSubTypeString().GetString(),
+				 SchemaType::GetSubTypeString().GetStringLength(),
+				 document_.GetAllocator()).Move(),
+		       ValueType(it->value,
+				 document_.GetAllocator(), true).Move(),
+		       document_.GetAllocator());
+	(*obj)[SchemaType::GetTypeString()].SetString(SchemaType::GetScalarString().GetString(),
+						      SchemaType::GetScalarString().GetStringLength(),
+						      document_.GetAllocator());
+	RecordModified(kModificationTypeValue);
       }
-      if (obj->HasMember(SchemaType::GetSubTypeString())) {
-	typename DocumentType::MemberIterator it = obj->FindMember(SchemaType::GetSubTypeString());
-	if (it->value == SchemaType::GetBytesString()) {
-	  it->value.SetString(SchemaType::GetStringString().GetString(),
-			      SchemaType::GetStringString().GetStringLength(),
-			      document_.GetAllocator());
-	  RecordModified(kModificationTypeValue);
-	} else if (it->value == SchemaType::GetUnicodeString()) {
-	  it->value.SetString(SchemaType::GetStringString().GetString(),
-			      SchemaType::GetStringString().GetStringLength(),
-			      document_.GetAllocator());
-	  if (!obj->HasMember(SchemaType::GetEncodingString())) {
-	    obj->AddMember(ValueType(SchemaType::GetEncodingString().GetString(),
-				     SchemaType::GetEncodingString().GetStringLength(),
-				     document_.GetAllocator()).Move(),
-			   ValueType(SchemaType::GetUTF8EncodingString().GetString(),
-				     SchemaType::GetUTF8EncodingString().GetStringLength(),
-				     document_.GetAllocator()).Move(),
-			   document_.GetAllocator());
-	  }
-	  RecordModified(kModificationTypeValue);
-	} else if (it->value != SchemaType::GetStringString()) {
+    }
+    if (obj->HasMember(SchemaType::GetSubTypeString())) {
+      typename DocumentType::MemberIterator it = obj->FindMember(SchemaType::GetSubTypeString());
+      if (it->value == SchemaType::GetBytesString()) {
+	it->value.SetString(SchemaType::GetStringString().GetString(),
+			    SchemaType::GetStringString().GetStringLength(),
+			    document_.GetAllocator());
+	RecordModified(kModificationTypeValue);
+      } else if (it->value == SchemaType::GetUnicodeString()) {
+	it->value.SetString(SchemaType::GetStringString().GetString(),
+			    SchemaType::GetStringString().GetStringLength(),
+			    document_.GetAllocator());
+	if (!obj->HasMember(SchemaType::GetEncodingString())) {
+	  obj->AddMember(ValueType(SchemaType::GetEncodingString().GetString(),
+				   SchemaType::GetEncodingString().GetStringLength(),
+				   document_.GetAllocator()).Move(),
+			 ValueType(SchemaType::GetUTF8EncodingString().GetString(),
+				   SchemaType::GetUTF8EncodingString().GetStringLength(),
+				   document_.GetAllocator()).Move(),
+			 document_.GetAllocator());
+	}
+	RecordModified(kModificationTypeValue);
+      } else if (it->value != SchemaType::GetStringString()) {
+	typename DocumentType::MemberIterator it_prec = obj->FindMember(SchemaType::GetPrecisionString());
+	bool isComplex = (it->value == SchemaType::GetComplexSubTypeString());
+	if (it_prec == obj->MemberEnd()) {
 	  unsigned prec = 8;
-	  if (it->value == SchemaType::GetComplexSubTypeString())
+	  if (isComplex)
 	    prec = 16;
-	  if (!obj->HasMember(SchemaType::GetPrecisionString())) {
-	    obj->AddMember(ValueType(SchemaType::GetPrecisionString().GetString(),
-				     SchemaType::GetPrecisionString().GetStringLength(),
-				     document_.GetAllocator()).Move(),
-			   ValueType(prec).Move(),
-			   document_.GetAllocator());
+	  obj->AddMember(ValueType(SchemaType::GetPrecisionString().GetString(),
+				   SchemaType::GetPrecisionString().GetStringLength(),
+				   document_.GetAllocator()).Move(),
+			 ValueType(prec).Move(),
+			 document_.GetAllocator());
+	  RecordModified(kModificationTypeValue);
+	} else if (it_prec->value.IsNumber() && it_prec->value.GetInt() > 0) {
+	  int before = it_prec->value.GetInt();
+	  it_prec->value.SetUint(SchemaType::NormPrecision(it_prec->value.GetInt(),
+							   isComplex));
+	  if (it_prec->value.GetInt() != before)
 	    RecordModified(kModificationTypeValue);
-	  }
 	}
       }
     }
@@ -4455,7 +4463,7 @@ public:
 	units_(),
 	shape_(),
 	ndim_(0),
-	encoding_(),
+	encoding_(kYggNullSchemaEncodingType),
 	class_(),
 	isMetaschema_(isMetaschema),
 	inSort_(0),
@@ -4797,15 +4805,11 @@ public:
 	}
 	if (const ValueType* v = GetMember(value, GetPrecisionString())) {
 	    precision_ = 0;
-	    if (v->IsNumber() && v->GetInt() >= 0)
+	    if (v->IsNumber() && v->GetInt() >= 0) {
 	      precision_.CopyFrom(*v, *allocator_);
-	    if (subtype_ != kYggStringSchemaSubType) {
-	      SizeType pval = precision_.GetUint();
-	      if (subtype_ == kYggComplexSchemaSubType) {
-		if (pval == 64 || pval == 128 || pval == 256)
-		  precision_.SetUint(pval / 8);
-	      } else if (pval == 16 || pval == 32 || pval == 64 || pval == 128) {
-		precision_.SetUint(pval / 8);
+	      if (subtype_ != kYggStringSchemaSubType) {
+		precision_.SetUint(NormPrecision(precision_.GetInt(),
+						 (subtype_ == kYggComplexSchemaSubType)));
 	      }
 	    }
 	}
@@ -4877,6 +4881,14 @@ public:
     }
 
 #ifdef RAPIDJSON_YGGDRASIL
+    static unsigned NormPrecision(int prec, bool isComplex=false) {
+      // This method handles backwards compatible precision that were in
+      //   bits rather than bytes
+      if ((isComplex && (prec == 64 || prec == 128 || prec == 256)) ||
+	  ((!isComplex) && (prec == 16 || prec == 32 || prec == 64 || prec == 128)))
+	return (unsigned)(prec / 8);
+      return (unsigned)prec;
+    }
     void CopyValueType(SValue& dst, const ValueType& src) {
       GenericDocument<EncodingType, AllocatorType> tmp;
       src.Accept(tmp);
@@ -6880,15 +6892,8 @@ protected:
 	else if (type == GetAnyString()    ) {
 	  type_ |= ((1 << kTotalSchemaType) - 1);
 	  yggtype_ |= ((1 << kYggTotalSchemaType) - 1);
-	} else if (type == GetBytesString()) {
-	  yggtype_ |= 1 << kYggScalarSchemaType;
-	  subtype_ = kYggStringSchemaSubType;
-	} else if (type == GetUnicodeString()) {
-	  yggtype_ |= 1 << kYggScalarSchemaType;
-	  subtype_ = kYggStringSchemaSubType;
-	  encoding_ = kYggUTF8SchemaEncodingType;
 	} else {
-	  YggSchemaValueSubType subT = GetSubType(type);
+	  YggSchemaValueSubType subT = GetSubType(type, &encoding_);
 	  if (subT != kYggNullSubType) {
 	    yggtype_ |= 1 << kYggScalarSchemaType;
 	    subtype_ = subT;
@@ -6958,12 +6963,18 @@ protected:
 #undef ADD_TYPE
       eh.EndDisallowedTypeKey(actual);
     }
-  YggSchemaValueSubType GetSubType(const ValueType& subtype) const {
+  YggSchemaValueSubType GetSubType(const ValueType& subtype, YggSchemaEncodingType* encoding = NULL) const {
     if      (subtype == GetIntSubTypeString()    ) return kYggIntSchemaSubType;
     else if (subtype == GetUintSubTypeString()   ) return kYggUintSchemaSubType;
     else if (subtype == GetFloatSubTypeString()  ) return kYggFloatSchemaSubType;
     else if (subtype == GetComplexSubTypeString()) return kYggComplexSchemaSubType;
     else if (subtype == GetStringSubTypeString() ) return kYggStringSchemaSubType;
+    else if (subtype == GetBytesString()         ) return kYggStringSchemaSubType;
+    else if (subtype == GetUnicodeString()       ) {
+      if (encoding)
+	encoding[0] = kYggUTF8SchemaEncodingType;
+      return kYggStringSchemaSubType;
+    }
     return kYggNullSubType;
   }
   const ValueType& SubType2String(const YggSchemaValueSubType subtype) const {
@@ -6978,7 +6989,9 @@ protected:
       return out;
     }
   }
-  void AddSubType(const ValueType& subtype) { subtype_ = GetSubType(subtype); }
+  void AddSubType(const ValueType& subtype) {
+    subtype_ = GetSubType(subtype, &encoding_);
+  }
   YggSchemaEncodingType GetEncodingType(const ValueType& encoding) const {
     if      (encoding == GetNullEncodingString() ) return kYggNullSchemaEncodingType;
     else if (encoding == GetASCIIEncodingString()) return kYggASCIISchemaEncodingType;
@@ -7397,19 +7410,25 @@ protected:
   }
   bool CheckScalar(Context& context, const ValueType& subtype_str,
 		   const ValueType& precision) const {
-    if (!(CheckSubType(context, &subtype_str, true)))
+    if (!(CheckSubType(context, &subtype_str, false)))
       return false;
     if (!(CheckPrecision(context, &precision, true)))
       return false;
     return true;
   }
-  bool CheckSubType(Context& context, const ValueType* subtype_str, const bool&) const {
+  bool CheckSubType(Context& context, const ValueType* subtype_str, const bool has_encoding) const {
     if (subtype_ == kYggNullSubType)
       return true;
-    YggSchemaValueSubType subtype_code = GetSubType(*subtype_str);
+    YggSchemaEncodingType encoding_code = kYggNullSchemaEncodingType;
+    YggSchemaValueSubType subtype_code = GetSubType(*subtype_str, &encoding_code);
     if ((subtype_ != subtype_code) && (!((subtype_ == kYggIntSchemaSubType) && (subtype_code == kYggUintSchemaSubType)))) {
       context.error_handler.IncorrectSubType(*subtype_str, SubType2String(subtype_));
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubType);
+    }
+    if (!has_encoding && encoding_code != kYggNullSchemaEncodingType) {
+      const ValueType& encoding_str = EncodingType2String(encoding_code);
+      if (!CheckEncoding(context, &encoding_str, true))
+	return false;
     }
     return true;
   }
@@ -7421,7 +7440,8 @@ protected:
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetSubTypeString());
     ValueType actual(vs->value.GetString(),
 		     vs->value.GetStringLength());
-    return CheckSubType(context, &actual, true);
+    bool has_encoding = schema.HasMember(GetEncodingString());
+    return CheckSubType(context, &actual, has_encoding);
   }
   bool CheckPrecision(Context& context, const ValueType* actual, const bool&) const {
     if (precision_.IsNull())

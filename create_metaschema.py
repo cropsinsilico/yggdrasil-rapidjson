@@ -353,7 +353,9 @@ if __name__ == "__main__":
                 "complex",
                 "float",
                 "int",
-                "uint"
+                "uint",
+                "bytes",
+                "unicode"
             ],
             "type": "string"
         },

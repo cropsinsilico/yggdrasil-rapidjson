@@ -1994,7 +1994,8 @@ definitions:
           default:
           - commtype: default
             datatype:
-              type: bytes
+              subtype: string
+              type: scalar
             is_default: true
             name: input
           description: Zero or more channels carrying input to the model. A full description
@@ -2153,7 +2154,8 @@ definitions:
           default:
           - commtype: default
             datatype:
-              type: bytes
+              subtype: string
+              type: scalar
             is_default: true
             name: output
           description: Zero or more channels carrying output from the model. A full
