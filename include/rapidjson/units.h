@@ -1101,28 +1101,26 @@ public:
     }
     for (typename std::set<size_t>::reverse_iterator it = idx_remove.rbegin(); it != idx_remove.rend(); it++)
       units_.erase(units_.begin() + (int)(*it));
-    if (!internal::values_eq(factor, 1.0)) {
-      typename std::vector<GenericUnit<Encoding> >::iterator nodim = units_.end();
-      for (typename std::vector<GenericUnit<Encoding> >::iterator it = units_.begin(); it != units_.end(); it++) {
-	if (it->is_null()) {
-	  nodim = it;
-	  break;
-	}
+    typename std::vector<GenericUnit<Encoding> >::iterator nodim = units_.end();
+    for (typename std::vector<GenericUnit<Encoding> >::iterator it = units_.begin(); it != units_.end(); it++) {
+      if (it->is_null()) {
+	nodim = it;
+	break;
       }
-      if (nodim == units_.end()) {
-	std::basic_string<Ch> empty;
-#if RAPIDJSON_HAS_CXX11
-	units_.emplace_back(empty);
-#else // RAPIDJSON_HAS_CXX11
-	units_.push_back(GenericUnit<Encoding>(empty));
-#endif // RAPIDJSON_HAS_CXX11
-	nodim = (units_.end() - 1);
-      }
-      RAPIDJSON_ASSERT(internal::values_eq(nodim->power_, 1.0));
-      nodim->factor_ *= factor;
-      if (!nodim->has_factor() && (units_.size() > 1))
-	units_.erase(nodim);
     }
+    if (nodim == units_.end()) {
+      std::basic_string<Ch> empty;
+#if RAPIDJSON_HAS_CXX11
+      units_.emplace_back(empty);
+#else // RAPIDJSON_HAS_CXX11
+      units_.push_back(GenericUnit<Encoding>(empty));
+#endif // RAPIDJSON_HAS_CXX11
+      nodim = (units_.end() - 1);
+    }
+    RAPIDJSON_ASSERT(internal::values_eq(nodim->power_, 1.0));
+    nodim->factor_ *= factor;
+    if (!nodim->has_factor() && (units_.size() > 1))
+      units_.erase(nodim);
     return *this;
   }
   bool has_factor() const {
