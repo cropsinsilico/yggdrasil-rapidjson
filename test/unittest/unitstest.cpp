@@ -95,14 +95,17 @@ TEST(Unit, Base) {
   units::Units(test_units, strlen(test_units), true);
 };
 
-#define UNIT_OPERATOR(au, op, bu, cu)					\
+#define UNIT_OPERATOR_BASE(au, op, bu, cu, factor)			\
   {									\
     units::Quantity<double> a(1.0, #au);				\
     units::Quantity<double> b(1.0, #bu);				\
-    units::Quantity<double> c(1.0, #cu);				\
+    units::Quantity<double> c(factor, #cu);				\
     units::Quantity<double> d = a op b;					\
     CHECK_QUANTITY_EQUIVALENCE(c, d, true);				\
+    CHECK_QUANTITY_DIRECT_EQUALITY(c, d, true);				\
   }
+#define UNIT_OPERATOR(au, op, bu, cu)					\
+  UNIT_OPERATOR_BASE(au, op, bu, cu, 1.0)
 
 TEST(Unit, MultDiv) {
   UNIT_OPERATOR(kg, *, kg, kg**2);
@@ -111,6 +114,7 @@ TEST(Unit, MultDiv) {
   UNIT_OPERATOR(kg, *, cm**-1, kg/cm);
   UNIT_OPERATOR(kg, /, cm**-1, kg*cm);
   UNIT_OPERATOR(cm/s, *, kg, kg*cm/s);
+  UNIT_OPERATOR_BASE(hr, /, day, n/a, 0.041666666666666664);
 };
 
 TEST(Unit, Exponent) {

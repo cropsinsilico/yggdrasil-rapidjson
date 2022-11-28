@@ -1043,9 +1043,15 @@ public:
   bool operator==(const GenericUnits& x) const {
     if (units_.size() != x.units_.size())
       return false;
-    for (size_t i = 0; i < units_.size(); i++)
-      if (units_[i] != x.units_[i])
+    for (size_t i = 0; i < units_.size(); i++) {
+      size_t j = 0;
+      for (j = 0; j < x.units_.size(); j++) {
+	if (units_[i] == x.units_[j])
+	  break;
+      }
+      if (j >= x.units_.size())
 	return false;
+    }
     return true;
   }
   //! \brief Determine if this set of units is not identical to another.
@@ -1061,10 +1067,13 @@ public:
     size_t old_size = units_.size();
     std::set<size_t> idx_remove;
     for (typename std::vector<GenericUnit<Encoding> >::const_iterator it2 = x.units_.begin(); it2 != x.units_.end(); it2++) {
+      if (it2->has_offset())
+	continue;
       size_t i = 0;
-      for (i = 0; i < old_size; i++)
-	if (it2->is_same_base(units_[i]))
+      for (i = 0; i < old_size; i++) {
+	if (!units_[i].has_offset() && it2->dim_ == units_[i].dim_)
 	  break;
+      }
       if (i < old_size) {
 	// (a1*ap*x)**a2 * (b1*bp*x)**b2
 	//     = (a1**a2)*(b1**b2)*(ap**a2)*(bp**b2)*(x**(a2+b2))
@@ -1080,18 +1089,6 @@ public:
 			     it2->power_);
 	  if (internal::values_eq(new_power, 0))
 	    idx_remove.insert(i);
-	//   double factor = std::pow(units_[i].factor_ * units_[i].prefix_.factor, units_[i].power_) * std::pow(it2->factor_ * it2->prefix_.factor, it2->power_);
-	//   std::basic_string<Ch> empty;
-	//   units_[i] = GenericUnit<Encoding>(empty);
-	//   units_[i].factor_ = factor;
-	//   new_power = 1.0;
-	// } else {
-	//   units_[i].factor_ = std::pow(std::pow(units_[i].factor_,
-	// 					units_[i].power_) *
-	// 			       std::pow(it2->factor_ * it2->prefix_.factor / units_[i].prefix_.factor,
-	// 					it2->power_),
-	// 			       1.0 / new_power);
-	// }
 	  units_[i].power_ = new_power;
 	}
       } else {
