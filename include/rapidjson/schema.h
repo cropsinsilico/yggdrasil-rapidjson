@@ -676,7 +676,8 @@ struct SchemaValidationContext {
 	schemaPointerAbs(),
 	valuePointer(),
 	patternPropertiesPointers(0),
-	python_disabled(false)
+	python_disabled(false),
+	relativePathRoot()
 #endif //RAPIDJSON_YGGDRASIL
     {}
 
@@ -739,6 +740,7 @@ struct SchemaValidationContext {
     PointerType valuePointer;
     PointerType* patternPropertiesPointers;
     bool python_disabled;
+    ValueType relativePathRoot;
 #endif //RAPIDJSON_YGGDRASIL
 };
 
@@ -2359,6 +2361,18 @@ public:
 	if (out_string)
 	  RecordModified(kModificationTypeValue);
 	return out_string;
+      }
+    } else if (typeV != valueSchema.MemberEnd() &&
+	       schema.yggtype_ & (1 << SchemaType::kYggPythonImportSchemaType) &&
+	       schema.yggtype_ != (1 << SchemaType::kYggTotalSchemaType) - 1 &&
+	       (typeV->value == YggSchemaValueType::GetPythonClassString() ||
+		typeV->value == YggSchemaValueType::GetPythonFunctionString())) {
+      typename SchemaType::AllocatorType allocator;
+      typename SchemaType::SValue v;
+      if (SchemaType::NormRelativePath(context, str, length, v, allocator)) {
+	RecordModified(kModificationTypeValue);
+	NORM_BODY_(YggdrasilString, (v.GetString(), v.GetStringLength(), true, valueSchema));
+	NORM_END_(YggdrasilString);
       }
     }
     NORM_BODY_(YggdrasilString, (str, length, true, valueSchema));
@@ -7552,9 +7566,37 @@ protected:
     }
     return CheckEncoding(context, &actual, true);
   }
+  static bool IsRelativePath(const Ch* str, SizeType length) {
+    for (SizeType i = 0; i < length; i++) {
+      if (str[i] == '/' || str[i] == '\\') {
+	if (i == 0 || (i > 0 && str[i - 1] == ':'))
+	  return false;
+	return true;
+      }
+    }
+    return true;
+  }
+  static bool NormRelativePath(Context& context, const Ch* str, SizeType length,
+			       SValue& dst, AllocatorType& allocator) {
+    if (!(context.relativePathRoot.IsString() && IsRelativePath(str, length)))
+      return false;
+    dst.SetString(context.relativePathRoot.GetString(),
+		  length + context.relativePathRoot.GetStringLength(),
+		  allocator);
+    memcpy((void*)(dst.GetString() + context.relativePathRoot.GetStringLength()),
+	   (void*)str,
+	   length * sizeof(Ch));
+    return true;
+  }
   bool CheckPythonImport(Context& context, const Ch* str, SizeType length) const {
     if (context.python_disabled)
       return true;
+    AllocatorType allocator;
+    SValue v;
+    if (NormRelativePath(context, str, length, v, allocator)) {
+      str = v.GetString();
+      length = v.GetStringLength();
+    }
     PyObject* pyobj = import_python_object(reinterpret_cast<const char*>(str),
 					   "CheckPythonImport", true);
     if (!(pyobj)) {
@@ -9669,6 +9711,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
 	, warning_(kObjectType),
 	currentWarning_(),
+	relativePathRoot_(),
 	python_disabled_(false)
 #endif // RAPIDJSON_YGGDRASIL
     {
@@ -9706,6 +9749,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
 	, warning_(kObjectType),
 	currentWarning_(),
+	relativePathRoot_(),
 	python_disabled_(false)
 #endif // RAPIDJSON_YGGDRASIL
     {
@@ -9757,6 +9801,32 @@ public:
     const ValueType& GetError() const { return error_; }
 
 #ifdef RAPIDJSON_YGGDRASIL
+
+    void SetRelativePathRoot(const Ch* str, SizeType len) {
+      Ch c = '\0';
+      SizeType Nc = 0;
+      if (!(str[len - 1] == '/' || str[len - 1] == '\\')) {
+	for (SizeType i = 0; i < len; i++) {
+	  if (str[i] == '/') {
+	    c = '/';
+	    Nc = 1;
+	  } else if (str[i] == '\\') {
+	    c = '\\';
+	    Nc = 1;
+	    if ((i + 1) < len && str[i + 1] == '\\')
+	      Nc++;
+	  }
+	}
+      }
+      while (len > 0 && (str[len - 1] == '/' || str[len - 1] == '\\'))
+	len--;
+      if (len > 0) {
+	relativePathRoot_.SetString(str, len + Nc, GetStateAllocator());
+	Ch* tmp = const_cast<Ch*>(relativePathRoot_.GetString());
+	for (SizeType i = 0; i < Nc; i++)
+	  tmp[len + i] = c;
+      }
+    }
 
     void DisablePython() {
       python_disabled_ = true;
@@ -10660,6 +10730,9 @@ RAPIDJSON_MULTILINEMACRO_END
 #ifdef RAPIDJSON_YGGDRASIL
 	if (python_disabled_)
 	  static_cast<GenericSchemaValidator*>(sv)->DisablePython();
+	if (relativePathRoot_.IsString())
+	  static_cast<GenericSchemaValidator*>(sv)->SetRelativePathRoot(relativePathRoot_.GetString(),
+									relativePathRoot_.GetStringLength());
 #endif // RAPIDJSON_YGGDRASIL
         return sv;
     }
@@ -10753,6 +10826,7 @@ private:
 #ifdef RAPIDJSON_YGGDRASIL
 	, warning_(kObjectType),
 	currentWarning_(),
+	relativePathRoot_(),
 	python_disabled_(false)
 #endif // RAPIDJSON_YGGDRASIL
     {
@@ -10818,6 +10892,9 @@ private:
         }
 #ifdef RAPIDJSON_YGGDRASIL
 	CurrentContext().python_disabled = python_disabled_;
+	if (relativePathRoot_.IsString())
+	  CurrentContext().relativePathRoot.SetString(relativePathRoot_.GetString(),
+						      relativePathRoot_.GetStringLength());
 #endif // RAPIDJSON_YGGDRASIL
         return true;
     }
@@ -11037,6 +11114,7 @@ private:
 #ifdef RAPIDJSON_YGGDRASIL
     ValueType warning_;
     ValueType currentWarning_;
+    ValueType relativePathRoot_;
     bool python_disabled_;
 #endif // RAPIDJSON_YGGDRASIL
 };

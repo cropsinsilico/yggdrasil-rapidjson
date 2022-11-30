@@ -376,7 +376,7 @@ private:
     PutUnsafe(*os_, '\"');
     if (!WriteRawValue(ygg, len_ygg)) return false;
     // Schema
-    RAPIDJSON_ASSERT(!(schema.IsYggdrasil()));
+    RAPIDJSON_ASSERT(schema.IsSchema() || !(schema.IsYggdrasil()));
     if (!w64_()->WriteSchema(schema)) return false;
     if (!WriteRawValue(ygg, len_ygg)) return false;
     return true;

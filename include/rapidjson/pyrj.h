@@ -293,20 +293,25 @@ PyObject* import_python_object(const char* mod_class,
       Py_DECREF(path);
       goto cleanup;
     }
+    PyObject* path_abspath = PyObject_GetAttrString(os_path, "abspath");
+    if (path_abspath == NULL) {
+      Py_DECREF(path);
+      Py_DECREF(os_path);
+      goto cleanup;
+    }
+    PyObject* path_abs = PyObject_CallFunction(path_abspath, "(O)", path);
+    Py_DECREF(path_abspath);
+    Py_DECREF(path);
+    path = path_abs;
+    path_abs = NULL;
+    
     PyObject* path_split = PyObject_GetAttrString(os_path, "split");
     Py_DECREF(os_path);
     if (path_split == NULL) {
       Py_DECREF(path);
       goto cleanup;
     }
-    PyObject* split_args = PyTuple_Pack(1, path);
-    if (split_args == NULL) {
-      Py_DECREF(path);
-      Py_DECREF(path_split);
-      goto cleanup;
-    }
-    PyObject* path_parts = PyObject_Call(path_split, split_args, NULL);
-    Py_DECREF(split_args);
+    PyObject* path_parts = PyObject_CallFunction(path_split, "(O)", path);
     Py_DECREF(path);
     Py_DECREF(path_split);
     if (path_parts == NULL) {
@@ -342,15 +347,16 @@ PyObject* import_python_object(const char* mod_class,
     Py_DECREF(path_parts);
   }
   out = import_python_class(module_name, class_name, error_prefix, ignore_error);
-  if (is_file) {
-    PyObject* sys_path = PySys_GetObject("path");
-    if (sys_path == NULL) {
-      Py_DECREF(out);
-      out = NULL;
-      goto cleanup;
-    }
-    PyObject_CallMethod(sys_path, "pop", "n", Py_SIZE(sys_path) - 1);
-  }
+  // Removing added path makes the object un-picklable
+  // if (is_file) {
+  //   PyObject* sys_path = PySys_GetObject("path");
+  //   if (sys_path == NULL) {
+  //     Py_DECREF(out);
+  //     out = NULL;
+  //     goto cleanup;
+  //   }
+  //   PyObject_CallMethod(sys_path, "pop", "n", Py_SIZE(sys_path) - 1);
+  // }
   PYTHON_ERROR_CLEANUP_(import_python_object);
 }
 

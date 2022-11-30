@@ -3645,6 +3645,20 @@ public:
     if (!(PyObject_HasAttrString(x, "__module__") && PyObject_HasAttrString(x, "__name__")))
       return false;
     PyObject *mod_py = PyObject_GetAttrString(x, "__module__");
+    // This version uses the full path, but it will not be portable
+    // PyObject* inspect = PyImport_ImportModule("inspect");
+    // if (inspect == NULL)
+    //   return false;
+    // PyObject* inspect_getfile = PyObject_GetAttrString(inspect, "getfile");
+    // Py_DECREF(inspect);
+    // if (inspect_getfile == NULL)
+    //   return false;
+    // PyObject* mod_py = PyObject_CallFunction(inspect_getfile, "(O)", x);
+    // Py_DECREF(inspect_getfile);
+    // if (mod_py == NULL) {
+    //   PyErr_Clear();
+    //   mod_py = PyObject_GetAttrString(x, "__module__");
+    // }
     RAPIDJSON_ASSERT(mod_py != NULL);
     if (mod_py == NULL)
       return false;
@@ -4447,11 +4461,26 @@ public:
     return false;
   }
   template <typename T>
-  bool IsScalar() const {
+  bool IsScalar(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T)))) const {
     if (!IsScalar())
       return false;
     return (YggSubTypeString<T>() == GetSubType());
   }
+#define IS_BUILTIN_SCALAR_(type, check)					\
+  template <typename T>							\
+  bool IsScalar(RAPIDJSON_ENABLEIF((internal::IsSame<T, type>))) const { \
+    if (!IsScalar()) {							\
+      return Is ## check();						\
+    }									\
+    return (YggSubTypeString<T>() == GetSubType());			\
+  }
+  IS_BUILTIN_SCALAR_(float, Float)
+  IS_BUILTIN_SCALAR_(double, Double)
+  IS_BUILTIN_SCALAR_(int, Int)
+  IS_BUILTIN_SCALAR_(unsigned, Uint)
+  IS_BUILTIN_SCALAR_(int64_t, Int64)
+  IS_BUILTIN_SCALAR_(uint64_t, Uint64)
+#undef IS_BUILTIN_SCALAR_
   bool Is1DArray() const {
     if (!IsYggdrasil()) return false;
     if (GetYggType() == Get1DArrayString())
@@ -4742,7 +4771,7 @@ public:
   void GetScalarQuantity(units::GenericQuantity<T, EncodingType>& data,
 			 const UnitsType data_units = UnitsType()) const {
     T value = data.value();
-    GetScalarValueBase(value);
+    GetScalarValue(value);
     UnitsType new_units = data_units;
     if ((new_units.is_empty()) && (!(data.units().is_empty())))
 	new_units = data.units();
