@@ -1062,7 +1062,6 @@ public:
   //! \param x Units for multiplication.
   //! \return Multiplied units.
   GenericUnits& operator*=(const GenericUnits& x) {
-    RAPIDJSON_ASSERT(!(x.has_offset() || has_offset()));
     double factor = 1.0;
     size_t old_size = units_.size();
     std::set<size_t> idx_remove;
@@ -1071,7 +1070,7 @@ public:
 	continue;
       size_t i = 0;
       for (i = 0; i < old_size; i++) {
-	if (!units_[i].has_offset() && it2->dim_ == units_[i].dim_)
+	if (!units_[i].has_offset() && !it2->has_offset() && it2->dim_ == units_[i].dim_)
 	  break;
       }
       if (i < old_size) {

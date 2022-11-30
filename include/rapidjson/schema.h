@@ -9818,8 +9818,6 @@ public:
 	  }
 	}
       }
-      while (len > 0 && (str[len - 1] == '/' || str[len - 1] == '\\'))
-	len--;
       if (len > 0) {
 	relativePathRoot_.SetString(str, len + Nc, GetStateAllocator());
 	Ch* tmp = const_cast<Ch*>(relativePathRoot_.GetString());
@@ -11376,6 +11374,9 @@ public:
     sv->SetValidateFlags(inheritContinueOnErrors ? this->GetValidateFlags() : this->GetValidateFlags() & ~(unsigned)kValidateContinueOnErrorFlag);
     if (this->python_disabled_)
       static_cast<GenericSchemaNormalizer*>(sv)->DisablePython();
+    if (this->relativePathRoot_.IsString())
+      static_cast<GenericSchemaNormalizer*>(sv)->SetRelativePathRoot(this->relativePathRoot_.GetString(),
+								     this->relativePathRoot_.GetStringLength());
     return sv;
   }
 
