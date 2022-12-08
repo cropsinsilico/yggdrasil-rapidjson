@@ -778,6 +778,7 @@ enum YggEncodingType {
 
 typedef struct float16_t {
   uint16_t mem;
+  float16_t() : mem(0) {}
   template <typename T>
   float16_t(const T x) : mem(0) {
     float y = static_cast<float>(x);

@@ -4769,39 +4769,52 @@ public:
   }
   template <typename T>
   void GetScalarQuantity(units::GenericQuantity<T, EncodingType>& data,
-			 const UnitsType data_units = UnitsType()) const {
+			 const UnitsType data_units) const {
     T value = data.value();
     GetScalarValue(value);
     UnitsType new_units = data_units;
     if ((new_units.is_empty()) && (!(data.units().is_empty())))
 	new_units = data.units();
+    data.set_value(value);
     if (HasUnits()) {
-      units::GenericQuantity<T, EncodingType> prev(value, GetUnits().GetString());
-      if (new_units.is_empty())
-	data = prev;
-      else
-	data = prev.as(new_units);
+      data.set_units(GetUnits().GetString());
+      if (!new_units.is_empty())
+	data.convert_to(new_units);
     } else {
-      data = units::GenericQuantity<T, EncodingType>(value, new_units);
+      data.set_units(new_units);
     }
   }
   template <typename T>
   void GetScalarQuantity(units::GenericQuantity<T, EncodingType>& data,
 			 const Ch* units_str) const {
-    return GetScalarQuantity(data, UnitsType(units_str)); }
+    UnitsType new_units(units_str);
+    return GetScalarQuantity(data, new_units); }
   template <typename T>
-  units::GenericQuantity<T, EncodingType> GetScalarQuantity(const UnitsType data_units = UnitsType()) const {
+  void GetScalarQuantity(units::GenericQuantity<T, EncodingType>& data) const {
+    UnitsType new_units;
+    return GetScalarQuantity(data, new_units); }
+  template <typename T>
+  units::GenericQuantity<T, EncodingType> GetScalarQuantity(const UnitsType data_units) const {
     units::GenericQuantity<T, EncodingType> data;
     GetScalarQuantity(data, data_units);
-    return data;
-  }
+    return data; }
   template <typename T>
   units::GenericQuantity<T, EncodingType> GetScalarQuantity(const Ch* units_str) const {
-    return GetScalarQuantity<T>(UnitsType(units_str)); }
+    units::GenericQuantity<T, EncodingType> data;
+    GetScalarQuantity(data, units_str);
+    return data; }
+  template <typename T>
+  units::GenericQuantity<T, EncodingType> GetScalarQuantity() const {
+    units::GenericQuantity<T, EncodingType> data;
+    GetScalarQuantity(data);
+    return data; }
   
   template <typename T>
-  void GetScalar(T& data,
-		 const UnitsType data_units = UnitsType()) const {
+  void GetScalar(T& data) const {
+    GetScalarValue(data);
+  }
+  template <typename T>
+  void GetScalar(T& data, const UnitsType data_units) const {
     units::GenericQuantity<T, EncodingType> x(data, data_units);
     GetScalarQuantity(x);
     data = x.value();
@@ -4812,14 +4825,26 @@ public:
     GetScalar(data, data_units);
   }
   template <typename T>
-  T GetScalar(const UnitsType data_units = UnitsType(),
+  T GetScalar(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
+    T data = 0;
+    GetScalarValue(data);
+    return data;
+  }
+  template <typename T>
+  T GetScalar(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
+    T data(0, 0);
+    GetScalarValue(data);
+    return data;
+  }
+  template <typename T>
+  T GetScalar(const UnitsType data_units,
 	      RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
     T data = 0;
     GetScalar(data, data_units);
     return data;
   }
   template <typename T>
-  T GetScalar(const UnitsType data_units = UnitsType(),
+  T GetScalar(const UnitsType data_units,
 	      RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
     T data(0, 0);
     GetScalar(data, data_units);
@@ -4898,18 +4923,14 @@ public:
     UnitsType new_units = data_units;
     if ((new_units.is_empty()) && (!(data->units().is_empty())))
 	new_units = data->units();
-    data->~GenericQuantityArray();
+    data->set_value(value, ndim, shape);
     // TODO: Pass allocator to quantity
     if (HasUnits()) {
-      new (data) units::GenericQuantityArray<T, EncodingType>(value, ndim, shape,
-							      GetUnits().GetString());
-      // data = units::GenericQuantityArray<T, EncodingType>(value, ndim, shape,
-      // 			     GetUnits().GetString());
+      data->set_units(GetUnits().GetString());
       if (!new_units.is_empty())
 	data->convert_to(new_units);
     } else {
-      new (data) units::GenericQuantityArray<T, EncodingType>(value, ndim, shape, new_units);
-      // data = units::GenericQuantityArray<T, EncodingType>(value, ndim, shape, new_units);
+      data->set_units(new_units);
     }
     allocator.Free(value);
     allocator.Free(shape);

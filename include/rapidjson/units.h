@@ -45,6 +45,12 @@ RAPIDJSON_NAMESPACE_BEGIN
 
 namespace units {
 
+  enum DeltaFlag {
+    kNoDelta,
+    kInactiveDelta,
+    kActiveDelta
+  };
+
   namespace constants {
     
     // Elementary masses
@@ -305,12 +311,6 @@ template<typename T, typename Encoding>
 class GenericQuantity;
 template<typename T, typename Encoding>
 class GenericQuantityArray;
-#if !RAPIDJSON_HAS_CXX11
-template<typename T>
-class Quantity;
-template<typename T>
-class QuantityArray;
-#endif // RAPIDJSON_HAS_CXX11
 
 class Dimension {
 private:
@@ -360,13 +360,13 @@ public:
       new_powers[i] = powers_.values[i] - x.powers_.values[i];
     return Dimension(new_powers);
   }
-  void inplace_pow(const double x) {
+  void pow_inplace(const double x) {
     for (size_t i = 0; i < 8; i++)
       powers_.values[i] = powers_.values[i] * x;
   }
   Dimension pow(const double x) const {
     Dimension new_dim = Dimension(*this);
-    new_dim.inplace_pow(x);
+    new_dim.pow_inplace(x);
     return new_dim;
   }
   bool operator==(const Dimension& x) const {
@@ -600,18 +600,19 @@ public:
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
   //! \brief Empty constructor.
   GenericUnit() :
-    names_(), abbrs_(), dim_(), factor_(1.0), offset_(0.0), power_(1.0), prefix_() {}
+    names_(), abbrs_(), dim_(), factor_(1.0), offset_(0.0), delta_(0), power_(1.0), prefix_() {}
   //! \brief Constructor from a look-up table.
   //! \param x Base unit.
   //! \param prefix Prefix that should be applied to the base unit.
   GenericUnit(const GenericUnit& x, const GenericUnitPrefix<Encoding>& prefix) :
-    names_(x.names_), abbrs_(x.abbrs_), dim_(x.dim_), factor_(x.factor_), offset_(x.offset_), power_(x.power_), prefix_() {
+    names_(x.names_), abbrs_(x.abbrs_), dim_(x.dim_), factor_(x.factor_), offset_(x.offset_), delta_(x.delta_), power_(x.power_), prefix_() {
     prefix_ = prefix;
-    RAPIDJSON_ASSERT(!(has_power() && has_offset()));
     if (is_null()) {
       factor_ = std::pow(factor_, power_);
       power_ = 1.0;
     }
+    _check_valid();
+    RAPIDJSON_ASSERT(_check_valid());
   }
   //! \brief Construct from a single name/abbreviation.
   //! \param name Name.
@@ -620,15 +621,19 @@ public:
   //! \param factor Scale factor from the base unit system.
   //! \param offset Offset from the zero point of the base unit system.
   //! \param power Power that will be applied to the unit during conversion.
+  //! \param delta Flag indicating if a unit has special handling of
+  //!   differences.
   //! \param prefix Prefix that should be applied to the base unit.
   GenericUnit(const Ch* name, const Ch* abbr, const Dimension dim,
 	      const double factor=1.0, const double offset=0.0,
-	      const double power=1.0,
+	      const int delta=0, const double power=1.0, 
 	      const GenericUnitPrefix<Encoding>& prefix=GenericUnitPrefix<Encoding>()) :
-    names_(), abbrs_(), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
+    names_(), abbrs_(), dim_(dim), factor_(factor), offset_(offset), delta_(delta), power_(power), prefix_(prefix) {
     names_.push_back(std::basic_string<Ch>(name));
     abbrs_.push_back(std::basic_string<Ch>(abbr));
     _add_plural();
+    _check_valid();
+    RAPIDJSON_ASSERT(_check_valid());
   }
   //! \brief Construct from a single name/abbreviation.
   //! \param names Names.
@@ -637,21 +642,25 @@ public:
   //! \param factor Scale factor from the base unit system.
   //! \param offset Offset from the zero point of the base unit system.
   //! \param power Power that will be applied to the unit during conversion.
+  //! \param delta Flag indicating if a unit has special handling of
+  //!   differences.
   //! \param prefix Prefix that should be applied to the base unit.
   //! \param no_plural If true, the plural versions of the names will not be
   //!   added.
   GenericUnit(const std::vector<std::basic_string<Ch> >& names,
 	      const std::vector<std::basic_string<Ch> >& abbrs,
 	      const Dimension dim, const double factor=1.0, const double offset=0.0,
-	      const double power=1.0,
+	      const int delta=0, const double power=1.0,
 	      const GenericUnitPrefix<Encoding>& prefix=GenericUnitPrefix<Encoding>(),
 	      const bool& no_plural=false) :
-    names_(names), abbrs_(abbrs), dim_(dim), factor_(factor), offset_(offset), power_(power), prefix_(prefix) {
+    names_(names), abbrs_(abbrs), dim_(dim), factor_(factor), offset_(offset), delta_(delta), power_(power), prefix_(prefix) {
     if (!no_plural) _add_plural();
     if (is_null()) {
       factor_ = std::pow(factor_, power_);
       power_ = 1.0;
     }
+    _check_valid();
+    RAPIDJSON_ASSERT(_check_valid());
   }
   //! \brief Construct a unit by looking up a string in the tables of
   //!   recognized units.
@@ -659,23 +668,25 @@ public:
   //! \param power Power that should be applied to the located unit.
   //! \param prefix Prefix that should be applied to the base unit.
   GenericUnit(const std::basic_string<Ch> str, const double& power=1.0) :
-    names_(), abbrs_(), dim_(), factor_(1.0), offset_(0.0), power_(1.0), prefix_() {
+    names_(), abbrs_(), dim_(), factor_(1.0), offset_(0.0), delta_(0), power_(1.0), prefix_() {
     bool errorFlag = (!from_table(str));
     (void)errorFlag;
     power_ = power; // Base units do not have powers
-    RAPIDJSON_ASSERT(!(has_power() && has_offset()));
     (void)str;
     if (is_null()) {
       factor_ = std::pow(factor_, power_);
       power_ = 1.0;
     }
+    _check_valid();
+    RAPIDJSON_ASSERT(_check_valid());
   }
   //! \brief Set instance attributes based on an entry from one of the lookup
   //!   tables.
   //! \param found Table entry.
+  //! \param If true, the unit will be marked as a difference.
   //! \param prefix Prefix that should be applied to the base unit.
   //! \return true if the unit could be initialized, false otherwise.
-  bool from_table(const GenericUnit<Encoding>& found,
+  bool from_table(const GenericUnit<Encoding>& found, bool delta,
 		  const GenericUnitPrefix<Encoding>& prefix=GenericUnitPrefix<Encoding>()) {
     RAPIDJSON_ASSERT((found.names_.size() > 0) && (found.abbrs_.size() > 0));
     names_.insert(names_.begin(), found.names_.begin(), found.names_.end());
@@ -684,6 +695,9 @@ public:
     dim_ = found.dim_;
     factor_ = found.factor_;
     offset_ = found.offset_;
+    delta_ = found.delta_;
+    if (delta)
+      delta_ = kActiveDelta;
     prefix_ = prefix;
     return true;
   }
@@ -692,8 +706,10 @@ public:
   void display(std::ostream& os) const {
     RAPIDJSON_ASSERT(names_.size() > 0);
     os << "GenericUnit(\"";
+    if (delta_ == kActiveDelta)
+      os << "Δ";
     if (prefix_.name.size() > 0)
-      convert_chars<Encoding,UTF8<char> >(prefix_.name);
+      os << convert_chars<Encoding,UTF8<char> >(prefix_.name);
     os << convert_chars<Encoding,UTF8<char> >(names_[0]) << "\", " << dim_ << ", "
        << factor_ << ", " << offset_ << ")**" << power_;
   }
@@ -712,6 +728,7 @@ public:
     if (dim_ != x.dim_) return false;
     if (!(internal::values_eq(factor_, x.factor_))) return false;
     if (!(internal::values_eq(offset_, x.offset_))) return false;
+    if (delta_ != x.delta_) return false;
     if (!(internal::values_eq(power_, x.power_))) return false;
     if (prefix_ != x.prefix_) return false;
     return true;
@@ -730,18 +747,19 @@ public:
       names.push_back(convert_chars<Encoding, DestEncoding>(*it));
     for (typename std::vector<std::basic_string<Ch> >::const_iterator it = abbrs_.begin(); it != abbrs_.end(); it++)
       abbrs.push_back(convert_chars<Encoding, DestEncoding>(*it));
-    return GenericUnit<DestEncoding>(names, abbrs, dim_, factor_, offset_, power_,
-			      prefix_.template transcode<DestEncoding>());
+    return GenericUnit<DestEncoding>(names, abbrs, dim_, factor_, offset_, delta_, power_,
+				     prefix_.template transcode<DestEncoding>());
   }
   //! \brief Perform power operation in place.
   //! \param x Power to raise this unit to.
   template<typename T>
-  void inplace_pow(const T x) {
-    RAPIDJSON_ASSERT(!(has_offset() && (!(internal::values_eq(x, 1.0)))));
+  void pow_inplace(const T x) {
     if (is_null())
       factor_ = std::pow(factor_, x);
     else
       power_ = power_ * x;
+    _check_valid();
+    RAPIDJSON_ASSERT(_check_valid());
   }
   //! \brief Raise this unit to a power.
   //! \param x Power to raise this unit to.
@@ -749,7 +767,7 @@ public:
   template<typename T>
   GenericUnit pow(const T x) const {
     GenericUnit new_unit(*this);
-    new_unit.inplace_pow(x);
+    new_unit.pow_inplace(x);
     return new_unit;
   }
   //! \brief Check if this unit and another have the same base unit.
@@ -814,7 +832,8 @@ public:
   }
   //! \brief Check if this unit has a non-zero offset.
   //! \return true if this unit has a non-zero offset.
-  bool has_offset() const { return (!(internal::values_eq(offset_, 0.0))); }
+  bool has_offset() const { return (!is_difference() &&
+				    !(internal::values_eq(offset_, 0.0))); }
   //! \brief Check if this unit has a power other than 1.
   //! \return true if this unit has a power other than 1.
   bool has_power() const { return (!(internal::values_eq(power_, 1.0))); }
@@ -831,6 +850,12 @@ public:
   //! \brief Check if the unit is the dimensionless null unit.
   //! \return true if the unit is null, false otherwise.
   bool is_null() const { return ((names_.size() > 0) && (names_[0].size() == 0)); }
+  //! \brief Check if this unit has a specialized difference unit.
+  //! \return true if this unit has a specialized difference unit.
+  bool has_difference() const { return delta_ == kInactiveDelta; }
+  //! \brief Check if this unit is a specialized difference unit.
+  //! \return true if this unit is a specialized difference unit.
+  bool is_difference() const { return delta_ == kActiveDelta; }
   
   //! \brief Get the conversion factors necessary to convert from this
   //!   unit to another.
@@ -838,20 +863,32 @@ public:
   //! \return Two element vector where the first element is the scale factor
   //!   and the second element is the offset.
   std::vector<double> conversion_factor(const GenericUnit& x) const {
-    RAPIDJSON_ASSERT(dimension() == x.dimension());
-    // [a1 * (x - a2)]**a3 = [b1 * (y - b2)]**b3
-    // y = [a1 * (x - a2)]**(a3/b3) / b1 + b2
-    // v2 = a1 * (v1 - a2)
-    // v3 = (v2 / b1) + b2
-    // v3 = (a1 / b1) * (v1 - a2) + b2
-    // v3 = (a1 / b1) * v1 - (a1 / b1) * a2 + b2
-    // v3 = (a1 / b1) * v1 - ((a1 / b1) * a2 - b2)
+    std::vector<double> out;
+    RAPIDJSON_ASSERT(dimension() == x.dimension() &&
+		     _check_valid() && x._check_valid());
+    if (dimension() != x.dimension() || !_check_valid() || !x._check_valid()) {
+      out.push_back(1);
+      out.push_back(0);
+      return out;
+    }
+    // If offsets == 0
+    // x * a1**p = y * b1**p
+    // y = x * (a1/b2)**p
+    // If power == 1
+    // a1 * (x - a2) = b2 * (x - b2)
+    // y = [a1 * (x - a2)] / b1 + b2
+    // y = (a1 / b1) * x - (a1 / b1) * a2 + b2
+    // y = (a1 / b1) * [x - a2 + (b1 / a1) * b2]
+    // ratio = a1 / b1
+    // y = ratio * [x - (a2 - b2 / ratio)]
     std::vector<double> a = conversion_factor();
     std::vector<double> b = x.conversion_factor();
     double ratio = a[0] / b[0];
-    std::vector<double> out;
     out.push_back(ratio);
-    out.push_back(a[1] - b[1] / ratio);
+    if (is_difference())
+      out.push_back(0.0);
+    else
+      out.push_back(a[1] - b[1] / ratio);
     return out;
   }
   //! \brief Get the conversion factors necessary to convert to/from this
@@ -874,6 +911,7 @@ private:
   Dimension dim_;
   double factor_;
   double offset_;
+  int delta_;
   double power_;
   GenericUnitPrefix<Encoding> prefix_;
 
@@ -886,9 +924,16 @@ private:
       names_.push_back(iname);
     }
   }
+  bool _check_valid() const {
+    return (!(has_power() && has_offset()));
+  }
   static const std::basic_string<Ch> get_whitespace() {
     static const Ch s[] = {' ', '\t', '\f', '\v', '\n', '\r', '\0'};
     return std::basic_string<Ch>(s);
+  }
+  static const std::basic_string<Ch> get_delta() {
+    std::string s = "Δ";
+    return convert_chars<UTF8<char>, Encoding>(s);
   }
   
   friend class GenericUnits<Encoding>;
@@ -899,9 +944,12 @@ template<typename Encoding>
 inline std::ostream & operator << (std::ostream& os, const GenericUnit<Encoding> &x) {
   bool has_factor = x.has_factor();
   bool has_power = x.has_power();
+  bool has_delta = x.is_difference();
   RAPIDJSON_ASSERT(x.abbrs_.size() > 0);
   if (has_factor && (x.abbrs_.size() > 0) && (x.abbrs_[0].size() == 0))
     os << x.factor_;
+  if (has_delta)
+    os << "Δ";
   os << x.prefix_;
   if (x.abbrs_.size() > 0)
     os << convert_chars<Encoding,UTF8<char> >(x.abbrs_[0]);
@@ -959,6 +1007,15 @@ public:
   GenericUnits(const Ch* str, const size_t len, const bool& verbose=false) : units_() {
     GenericUnits<Encoding> new_units = parse_units(str, len, verbose);
     units_.insert(units_.begin(), new_units.units_.begin(), new_units.units_.end());
+  }
+  GenericUnits(const GenericUnits<Encoding>& rhs) : units_() {
+    units_.insert(units_.begin(), rhs.units_.begin(), rhs.units_.end());
+  }
+  GenericUnits<Encoding>& operator=(const GenericUnits<Encoding>& rhs) {
+    units_.clear();
+    this->~GenericUnits();
+    new (this) GenericUnits<Encoding>(rhs);
+    return *this;
   }
   //! \brief Parse a units string.
   //! \param str Units string.
@@ -1081,6 +1138,7 @@ public:
 	//     = (a1*ap)**-b2 * (b1*bp)**b2 * (a1*ap*x)**(a2+b2)
 	if (it2->is_null()) {
 	  factor *= std::pow(it2->factor_, it2->power_);
+	  idx_remove.insert(i);
 	} else {
 	  double new_power = units_[i].power_ + it2->power_;
 	  factor *= std::pow((it2->factor_ * it2->prefix_.factor) /
@@ -1120,6 +1178,7 @@ public:
     nodim->factor_ *= factor;
     if (!nodim->has_factor() && (units_.size() > 1))
       units_.erase(nodim);
+    RAPIDJSON_ASSERT(_check_valid());
     return *this;
   }
   bool has_factor() const {
@@ -1168,9 +1227,9 @@ public:
   //! \brief Raise these units to a power without creating a new instance.
   //! \param x Power.
   template<typename T>
-  void inplace_pow(const T x) {
+  void pow_inplace(const T x) {
     for (typename std::vector<GenericUnit<Encoding> >::iterator it = units_.begin(); it != units_.end(); it++)
-      it->inplace_pow(x);
+      it->pow_inplace(x);
   }
   //! \brief Raise these units to a power.
   //! \param x Power.
@@ -1178,7 +1237,7 @@ public:
   template<typename T>
   GenericUnits pow(const T x) const {
     GenericUnits out(*this);
-    out.inplace_pow(x);
+    out.pow_inplace(x);
     return out;
   }
   //! \brief Check if there are any units in the instance.
@@ -1192,6 +1251,43 @@ public:
 	return true;
     return false;
   }
+  //! \brief Get the number of units with dimensions.
+  //! \return Number of units with dimensions.
+  size_t size() const {
+    size_t out = 0;
+    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++)
+      if (!it->is_null())
+	out++;
+    return out;
+  }
+  //! \brief Check if the units have a specialized difference unit.
+  //! \return true if the units have a difference unit.
+  bool has_difference() const {
+    if (units_.size() != 1)
+      return false;
+    return units_[0].has_difference();
+  }
+  //! \brief Check if the units are a specialized difference unit.
+  //! \return true if the units are a difference unit.
+  bool is_difference() const {
+    if (units_.size() != 1)
+      return false;
+    return units_[0].is_difference();
+  }
+  //! \brief Get the difference flag.
+  //! \return Flag specifying if the unit has or is a difference unit.
+  int get_delta() const {
+    if (units_.size() != 1)
+      return kNoDelta;
+    return units_[0].delta_;
+  }
+  //! \brief Set the difference flag.
+  //! \param delta New difference flag.
+  void set_delta(int delta) {
+    RAPIDJSON_ASSERT(has_difference() || is_difference());
+    if ((has_difference() || is_difference()) && delta > 0)
+      units_[0].delta_ = delta;
+  }
   //! \brief Determine the conversion factors necessary to convert quantities
   //!   with these units to another set of units.
   //! \param x Units that conversion factors should convert to.
@@ -1201,18 +1297,99 @@ public:
   std::vector<double> conversion_factor(const GenericUnits& x) const {
     if ((x.units_.size() == 1) && (units_.size() == 1))
       return units_[0].conversion_factor(x.units_[0]);
-    RAPIDJSON_ASSERT(dimension() == x.dimension());
     std::vector<double> out;
+    bool singular = (x.size() == 1 && size() == 1);
+    RAPIDJSON_ASSERT(dimension() == x.dimension() &&
+		     (is_difference() || !has_offset() || singular));
+    if (!(dimension() == x.dimension() &&
+	  (is_difference() || !has_offset() || singular))) {
+      out.push_back(1);
+      out.push_back(0);
+      return out;
+    }
     out.push_back(1.0);
     out.push_back(0.0);
-    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++)
+    typename std::vector<GenericUnit<Encoding> >::const_iterator x_it, y_it;
+    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++) {
       out[0] = out[0] * it->conversion_factor()[0];
-    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = x.units_.begin(); it != x.units_.end(); it++)
+      if (!it->is_null())
+	x_it = it;
+    }
+    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = x.units_.begin(); it != x.units_.end(); it++) {
       out[0] = out[0] / it->conversion_factor()[0];
+      if (!it->is_null())
+	y_it = it;
+    }
+    if (singular)
+      out[1] = x_it->conversion_factor(*y_it)[1];
     return out;
+  }
+  //! \brief Determine the conversion factors necessary to convert quantities
+  //!   with these units to another set of units and convert these units to
+  //!   the other set of units in place.
+  //! \param x Units that conversion factors should convert to.
+  //! \return Array of conversion factors where the first element is the
+  //!   factor that values should be multiplied by and the second element is
+  //!   the offset between the zero points in this and x.
+  std::vector<double> convert_to(const GenericUnits& x) {
+    int delta = get_delta();
+    std::vector<double> out = conversion_factor(x);
+    units_.clear();
+    units_.insert(units_.begin(), x.units_.begin(), x.units_.end());
+    // units_ = x.units_;
+    if (delta)
+      set_delta(delta);
+    return out;
+  }
+  //! \brief Find the unit in the current unit set that matches a particular
+  //!   dimension at its base (ignoring powers).
+  //! \param d Dimension to find.
+  //! \return Pointer to the unit that matches or NULL if there is not a match.
+  const GenericUnit<Encoding>* find_dimension(const Dimension& d) const {
+    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++) {
+      if (it->dim_ == d)
+	return &(*it);
+    }
+    return NULL;
+  }
+  //! \brief Convert units to the system used by another set of units in place
+  //!   and determine the conversion factors necessary to convert quantities
+  //!   with these units to the new unit system.
+  //! \param x Unit system to convert to.
+  //! \return Array of conversion factors where the first element is the
+  //!   factor that values should be multiplied by and the second element is
+  //!   the offset between the zero points in this and x.
+  std::vector<double> convert_to_units_system(const GenericUnits& x) {
+    if (dimension() == x.dimension())
+      return convert_to(x);
+    std::vector<GenericUnit<Encoding> > new_units;
+    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++) {
+      if (it->is_null())
+	continue;
+      const GenericUnit<Encoding>* x_dim = x.find_dimension(it->dim_);
+      if (x_dim == NULL) {
+	new_units.push_back(*it);
+      } else {
+	GenericUnit<Encoding> tmp(*x_dim);
+	tmp.power_ = it->power_;
+	tmp.delta_ = it->delta_;
+	new_units.push_back(tmp);
+      }
+    }
+    GenericUnits<Encoding> new_Units(new_units);
+    return convert_to(new_Units);
   }
 private:
   std::vector<GenericUnit<Encoding> > units_;
+
+  bool _check_valid() const {
+    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++) {
+      if (!it->_check_valid())
+	return false;
+    }
+    return (!(has_offset() && size() > 1));
+  }
+  
   template<typename Enc2>
   friend std::ostream & operator << (std::ostream &os, const GenericUnits<Enc2> &x);
 };
@@ -1233,11 +1410,13 @@ inline std::ostream & operator << (std::ostream &os, const GenericUnits<Encoding
 
 template<typename Encoding>
 GenericUnits<Encoding> operator*(const GenericUnit<Encoding>& a, const GenericUnit<Encoding>& b) {
-  RAPIDJSON_ASSERT(!(a.has_offset() || b.has_offset()));
-  std::vector<GenericUnit<Encoding> > units;
-  units.push_back(a);
-  units.push_back(b);
-  return GenericUnits<Encoding>(units); }
+  std::vector<GenericUnit<Encoding> > units_a, units_b;
+  units_a.push_back(a);
+  units_b.push_back(b);
+  GenericUnits<Encoding> Units_a = GenericUnits<Encoding>(units_a);
+  GenericUnits<Encoding> Units_b = GenericUnits<Encoding>(units_b);
+  Units_a *= Units_b;
+  return Units_a; }
 template<typename Encoding>
 GenericUnits<Encoding> operator/(const GenericUnit<Encoding>& a, const GenericUnit<Encoding>& b) {
   return a * b.pow(-1); }
@@ -1255,7 +1434,7 @@ typedef GenericUnits<UTF8<char> > Units;
       PACK_UNIT(VSTR("gram", "gramme"), VSTR("g"), dimensions::mass, 1.0e-3),
       PACK_UNIT("second", "s", dimensions::time),
       PACK_UNIT(VSTR("ampere", "amp", "Amp"), VSTR("A"), dimensions::current),
-      PACK_UNIT(VSTR("kelvin", "degree_kelvin"), VSTR("K", "degK"), dimensions::temperature),
+      PACK_UNIT(VSTR("kelvin", "degree_kelvin"), VSTR("K", "degK"), dimensions::temperature, 1, 0, 1),
       PACK_UNIT("mole", "mol", dimensions::number, 1.0 / constants::amu_grams),
       PACK_UNIT("candela", "cd", dimensions::luminous_intensity),
       PACK_UNIT("radian", "rad", dimensions::angle),
@@ -1294,7 +1473,7 @@ typedef GenericUnits<UTF8<char> > Units;
       PACK_UNIT("weber", "Wb", dimensions::magnetic_flux),
       PACK_UNIT("lumen", "lm", dimensions::luminous_flux),
       PACK_UNIT("lux", "lx", dimensions::luminous_flux / dimensions::area),
-      PACK_UNIT(VSTR("celcius", "degree_celsius", "degree_Celsius", "celsius"), VSTR("degC", "°C"), dimensions::temperature, 1.0, constants::celcius_zero_kelvin),
+      PACK_UNIT(VSTR("celcius", "degree_celsius", "degree_Celsius", "celsius"), VSTR("degC", "°C"), dimensions::temperature, 1.0, constants::celcius_zero_kelvin, 1),
       // other
       PACK_UNIT("calorie", "cal", dimensions::energy, 4.184),
       PACK_UNIT("year", "yr", dimensions::time, constants::sec_per_year),
@@ -1314,8 +1493,8 @@ typedef GenericUnits<UTF8<char> > Units;
     PACK_UNIT("yard", "yd", dimensions::length, 0.9144),
     PACK_UNIT("mile", "mi", dimensions::length, 1609.344),
     PACK_UNIT("furlong", "fur", dimensions::length, constants::m_per_ft * 660.0),
-    PACK_UNIT(VSTR("farenheit", "degree_fahrenheit", "degree_Fahrenheit"), VSTR("degF", "°F"), dimensions::temperature, constants::kelvin_per_rankine, constants::farenheit_zero_kelvin),
-    PACK_UNIT(VSTR("rankine", "degree_rankine"), VSTR("degR"), dimensions::temperature, constants::kelvin_per_rankine),
+    PACK_UNIT(VSTR("farenheit", "degree_fahrenheit", "degree_Fahrenheit"), VSTR("degF", "°F"), dimensions::temperature, constants::kelvin_per_rankine, constants::farenheit_zero_kelvin, 1),
+    PACK_UNIT(VSTR("rankine", "degree_rankine"), VSTR("degR"), dimensions::temperature, constants::kelvin_per_rankine, 0, 1),
     PACK_UNIT("pound_force", "lbf", dimensions::force, constants::kg_per_pound * constants::standard_gravity_m_per_s2),
     PACK_UNIT(VSTR("pound", "pound_mass"), VSTR("lb", "lbm"), dimensions::mass, constants::kg_per_pound),
     PACK_UNIT("atmosphere", "atm", dimensions::pressure, constants::pascal_per_atm),
@@ -1335,7 +1514,7 @@ typedef GenericUnits<UTF8<char> > Units;
     PACK_UNIT(VSTR("solar_mass", "solMass", "mass_sun"), VSTR("Msun", "Msol", "msun", "m_sun", "M_sun", "m_Sun"), dimensions::mass, constants::mass_sun_kg),
     PACK_UNIT(VSTR("solar_radius", "solRadius"), VSTR("Rsun", "Rsol", "rsun", "r_sun", "R_sun", "r_Sun"), dimensions::length, constants::m_per_rsun),
     PACK_UNIT(VSTR("solar_luminosity", "solLumin"), VSTR("Lsun", "Lsol", "lsun", "l_sun", "L_sun", "l_Sun"), dimensions::power, constants::luminosity_sun_watts),
-    PACK_UNIT(VSTR("solar_temperature", "solTemperature"), VSTR("Tsun", "Tsol", "tsun", "t_sun", "T_sun", "t_Sun"), dimensions::temperature, constants::temp_sun_kelvin),
+    PACK_UNIT(VSTR("solar_temperature", "solTemperature"), VSTR("Tsun", "Tsol", "tsun", "t_sun", "T_sun", "t_Sun"), dimensions::temperature, constants::temp_sun_kelvin, 0, 1),
     PACK_UNIT(VSTR("solar_metallicity", "solMetallicity"), VSTR("Zsun", "Zsol", "zsun", "z_sun", "Z_sun", "z_Sun"), dimensions::dimensionless, constants::metallicity_sun),
     PACK_UNIT(VSTR("jupiter_mass"), VSTR("Mjup", "m_jup"), dimensions::mass, constants::mass_jupiter_kg),
     PACK_UNIT(VSTR("jupiter_radius"), VSTR("Rjup", "r_jup"), dimensions::length, constants::m_per_rjup),
@@ -1395,29 +1574,37 @@ bool GenericUnit<Encoding>::from_table(const std::basic_string<typename Encoding
   if (idx_end >= str.size())
     idx_end = str.size() - 1;
   std::basic_string<Ch> substr;
-  if (str.size() == 0)
+  bool delta = false;
+  if (str.size() == 0) {
     substr = str;
-  else
+  } else {
+    std::basic_string<Ch> delta_str = get_delta();
+    std::size_t found = str.find(delta_str, idx_beg);
+    if (found != std::string::npos) {
+      delta = true;
+      idx_beg += delta_str.size();
+    }
     substr = str.substr(idx_beg, idx_end + 1);
+  }
+  
   std::vector<const GenericUnit<Encoding>*> possibilities;
   const std::vector<GenericUnit<Encoding> >* prefix_units = _prefixable_units.template get<GenericUnit<Encoding> >();
   for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = prefix_units->begin(); it != prefix_units->end(); it++) {
     if (it->matches(substr))
-      return from_table(*it);
+      return from_table(*it, delta);
     it->prefix_matches(substr, possibilities);
   }
   const std::vector<GenericUnit<Encoding> >* unprefix_units = _unprefixable_units.template get<GenericUnit<Encoding> >();
   for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = unprefix_units->begin(); it != unprefix_units->end(); it++)
     if (it->matches(substr))
-      return from_table(*it);
+      return from_table(*it, delta);
   if (possibilities.size() > 0) {
     const std::vector<GenericUnitPrefix<Encoding> >* prefixes = _unit_prefixes.template get<GenericUnitPrefix<Encoding> >();
     for (typename std::vector<const GenericUnit<Encoding>*>::const_iterator it = possibilities.begin(); it != possibilities.end(); it++)
       for (typename std::vector<GenericUnitPrefix<Encoding> >::const_iterator p = prefixes->begin(); p != prefixes->end(); p++)
 	if ((*it)->matches(substr, *p))
-	  return from_table(**it, *p);
+	  return from_table(**it, delta, *p);
   }
-  // std::cerr << "No units match found for \"" << convert_chars<Encoding,UTF8<char> >(substr) << "\"" << std::endl; // GCOVR_EXCL_LINE
   return false; // GCOVR_EXCL_LINE
 }
 
@@ -1874,486 +2061,229 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
   return out;
 }
 
-#if RAPIDJSON_HAS_CXX11
-#define ADD_QUANTITY_OPERATOR(op)
-#else
-#define ADD_QUANTITY_OPERATOR(op)					\
-  template<typename T2>							\
-  GenericQuantity& operator op (const Quantity<T2>& x) {		\
-    if (internal::IsSame<Encoding,UTF8<char> >::Value)			\
-      return *this op *((GenericQuantity<T2, Encoding>*)(&x));		\
-    return *this op GenericQuantity<T2, Encoding>(x.value(), x.units()); \
+#define DELEGATE_TO_INPLACE_(TMP, CLS, TYP, OP, IOP, IN, ARG)	\
+  TMP								\
+  CLS OP IN const {						\
+    TYP(T) out(*this);						\
+    out.IOP ARG;						\
+    return out;							\
   }
-#endif
-
-#define QUANTITY_OPERATOR_INPLACE(op)					\
+#define DELEGATE_TO_INPLACE_OP_QUANTITY_(TYP, OP, IOP)			\
   template<typename T2>							\
-  GenericQuantity& operator op(const GenericQuantity<T2, Encoding>& x) { \
-    units_ op x.units();						\
-    value_ op castPrecision<T2,T>(x.value());				\
-    value_ *= castPrecision<double,T>(units_.pull_factor());		\
-    return *this;							\
-  }									\
-  ADD_QUANTITY_OPERATOR(op)
-#define QUANTITY_OPERATOR_INPLACE_SCALAR(op)	\
-  QUANTITY_OPERATOR_INPLACE(op)			\
-  template<typename T2>				\
-  GenericQuantity& operator op(const T2& x) {	\
-    value_ op castPrecision<T2,T>(x);		\
-    return *this;				\
+  friend TYP(T) operator OP(TYP(T) lhs, const TYP(T2)& rhs) {		\
+    lhs IOP rhs;							\
+    return lhs;								\
   }
-#define QUANTITY_OPERATOR_INPLACE_COMPAT(op, body)			\
+#define DELEGATE_TO_INPLACE_OP_SCALAR_(TYP, OP, IOP)			\
   template<typename T2>							\
-  GenericQuantity& operator op(const GenericQuantity<T2, Encoding>& x) { \
-    if (units_ != x.units())						\
-      return *this op x.as(units_);					\
-    body;								\
-    return *this;							\
-  }									\
-  ADD_QUANTITY_OPERATOR(op)
-#define QX_MODULO_OPERATOR(cls)					\
-  template<typename T2>						\
-  cls<T, Encoding>& operator%=(const cls<T2, Encoding>& x) {	\
-    cls<T, Encoding> val = *this / x;				\
-    val.floor_inplace();					\
-    val *= x;							\
-    *this -= val;						\
-    return *this;						\
-  }								\
-  template<typename T2>						\
-  friend cls<T, Encoding> operator%(cls<T, Encoding> lhs,	\
-				    const T2& rhs) {		\
-    lhs %= rhs;							\
-    return lhs;							\
+  friend TYP(T) operator OP(TYP(T) lhs, const T2& rhs) {		\
+    lhs IOP rhs;							\
+    return lhs;								\
   }
   
 
-//! Scalar quantity with units.
-//! \tparam T Type of the underlying scalar.
-//! \tparam Encoding Encoding used to store the unit strings.
-template<typename T, typename Encoding>
-class GenericQuantity {
-public:
-  typedef Encoding EncodingType;    //!< Encoding type from template parameter.
-  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
-  typedef GenericUnits<Encoding> UnitsType; //!< Units type.
-  //! \brief Empty constructor.
-  GenericQuantity() : value_(_initialize_value<T>()), units_() {}
-  //! \brief Copy constructor.
-  GenericQuantity(const GenericQuantity& rhs) :
-    value_(rhs.value_), units_(rhs.units_) {}
-  //! \brief Create a quantity without units.
-  //! \param value Scalar value.
-  GenericQuantity(const T& value) :
-    value_(value), units_() {}
-  //! \brief Constructor from units string.
-  //! \param value Scalar value.
-  //! \param units Units string.
-  GenericQuantity(const T& value, const Ch* units) :
-    value_(value), units_(units) {}
-  //! \brief Constructor from units string.
-  //! \param value Scalar value.
-  //! \param units Units instance.
-  GenericQuantity(const T& value, const UnitsType& units) :
-    value_(value), units_(units) {}
-  //! \brief Copy assignment.
-  //! \param other Quantity to copy.
-  //! \return Copy.
-  GenericQuantity<T, Encoding>& operator=(const GenericQuantity<T, Encoding>& rhs) {
-    value_ = rhs.value_;
-    units_ = rhs.units_;
-    return *this;
+#define INHERIT_OP_BASE_INPLACE_(TMP, CLS, TYP, BASE, IOP, IN, ARGBASE)	\
+  TMP									\
+  CLS& IOP IN {								\
+    BASE(T)::IOP ARGBASE;						\
+    return *this;							\
   }
-  //! \brief Print instance information to an output stream.
-  //! \param os Output stream.
-  void display(std::ostream& os) const {
-    os << "Quantity(" << value_ << ", \"";
-    os << units_;
-    os << "\")";
-  }
-  //! \brief Get the quantity as a string.
-  //! \return Quantity string.
-  std::basic_string<Ch> str() const {
-    std::basic_stringstream<Ch> ss;
-    ss << *this;
-    return ss.str();
-  }
-private:
-  template<typename T2>
-  void raw_add_inplace(const GenericQuantity<T2, Encoding>& x, double factor=1.0,
-		       RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
-					   YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) {
-    // Assumes units have already been matched
-    if (factor < 0)
-      value_ -= castPrecision<T2, T>(x.value());
-    else
-      value_ += castPrecision<T2, T>(x.value());
-  }
-  template<typename T2>
-  void raw_add_inplace(const GenericQuantity<T2, Encoding>& x, double factor=1.0,
-		       RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
-					   internal::NotExpr<YGGDRASIL_IS_COMPLEX_TYPE(T2)> >))) {
-    // Assumes units have already been matched
-    value_ += (factor * x.value());
-  }
-  template<typename T1>
-  static T1 _initialize_value(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
-  { return (T1)(0); }
-  template<typename T1>
-  static T1 _initialize_value(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
-  { return T1(0.0, 0.0); }
-public:
-  //! \brief Get the quantity value without units.
-  //! \return Value.
-  T value() const { return value_; }
-  //! \brief Get the units instance.
-  //! \return Units.
-  UnitsType units() const { return units_; }
-  //! \brief Get the units string.
-  //! \return Units string.
-  std::basic_string<Ch> unitsStr() const { return units_.str(); }
-  //! \brief Set the quantity value.
-  //! \param new_value New quantity value.
-  template<typename T2>
-  void set_value(const T2& new_value,
-		 RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, T))))
-  { value_ = castPrecision<T2,T>(new_value); }
-  //! \brief Check if two quantities are identical. The units must be
-  //!   identical, not just compatible.
-  //! \param x Quantity for comparison.
-  //! \return true if the two quantities are identical, false otherwise.
-  template<typename T2>
-  bool operator==(const GenericQuantity<T2, Encoding>& x) const {
-    if (units_ != x.units())
-      return false;
-    return internal::values_eq(value_, x.value());
-  }
-  //! \brief Check if two quantities are not identical.
-  //! \param x Quantity for comparison.
-  //! \return true if the two quantities are not identical, false otherwise.
-  template<typename T2>
-  bool operator!=(const GenericQuantity<T2, Encoding>& x) const { return (!(*this==x)); }
-  //! \brief Less than comparison operator.
-  //! \param x Quantity for comparison.
-  //! \return true if less than, false otherwise.
-  template<typename T2>
-  bool operator<(const GenericQuantity<T2, Encoding>& x) const {
-    if (units_ != x.units())
-      return false;
-    return internal::values_lt(value_, x.value());
-  }
-  //! \brief Greater than comparison operator.
-  //! \param x Quantity for comparison.
-  //! \return true if greater than, false otherwise.
-  template<typename T2>
-  bool operator>(const GenericQuantity<T2, Encoding>& x) const {
-    if (units_ != x.units())
-      return false;
-    return internal::values_gt(value_, x.value());
-  }
-  //! \brief Less than or equal to comparison operator.
-  //! \param x Quantity for comparison.
-  //! \return true if less than or equal to, false otherwise.
-  template<typename T2>
-  bool operator<=(const GenericQuantity<T2, Encoding>& x) const { return (!(*this > x)); }
-  //! \brief Greater than or equal to comparison operator.
-  //! \param x Quantity for comparison.
-  //! \return true if greater than or equal to, false otherwise.
-  template<typename T2>
-  bool operator>=(const GenericQuantity<T2, Encoding>& x) const { return (!(*this < x)); }
-  //! \brief Multiply by a scalar or quantity in place.
-  //! \tparam T2 Scalar or quantity type.
-  //! \param x Scalar or quantity to multiply by.
-  //! \return Result of multiplication.
-  QUANTITY_OPERATOR_INPLACE_SCALAR(*=)
-  //! \brief Multiply by a quantity or scalar.
-  //! \tparam T2 Quantity or scalar type.
-  //! \param x Scalar to multiply by.
-  //! \return Result of multiplication.
-  template<typename T2>
-  friend GenericQuantity<T, Encoding> operator*(GenericQuantity<T, Encoding> lhs,
-						const T2& rhs) {
-    lhs *= rhs;
-    return lhs;
-  }
-  //! \brief Divide by a scalar or quantity in place.
-  //! \tparam T2 Quantity or scalar type.
-  //! \param x Scalar or quantity to divide by.
-  //! \return Result of division.
-  QUANTITY_OPERATOR_INPLACE_SCALAR(/=)
-  //! \brief Divide by a scalar or Quantity.
-  //! \tparam T2 Scalar or Quantity type.
-  //! \param x Scalar or Quantity to divide by.
-  //! \return Result of division.
-  template<typename T2>
-  friend GenericQuantity<T, Encoding> operator/(GenericQuantity<T, Encoding> lhs,
-						const T2& rhs) {
-    lhs /= rhs;
-    return lhs;
-  }
-  //! \brief Modulo by another quantity in place.
-  //! \param x Quantity to modulo by.
-  //! \return Result of modulo.
-  QX_MODULO_OPERATOR(GenericQuantity)
-  //! \brief Modulo by a scalar in place.
-  //! \tparam T2 Scalar type.
-  //! \param x Scalar to modulo by.
-  //! \return Result of division.
-  template<typename T2>
-  GenericQuantity& operator%=(const T2& x) {
-    value_ %= x;
-    return *this;
-  }
-  ADD_QUANTITY_OPERATOR(%=)
-  //! \brief Add a quantity with compatible units to this quantity.
-  //! \param x Quantity to add.
-  //! \return Result of addition.
-  QUANTITY_OPERATOR_INPLACE_COMPAT(+=, raw_add_inplace(x))
-  //! \brief Add a quantity with compatible units.
-  //! \param x Quantity to add.
-  //! \return Result of addition.
-  template<typename T2>
-  friend GenericQuantity<T, Encoding> operator+(GenericQuantity<T, Encoding> lhs,
-						const GenericQuantity<T2, Encoding>& rhs) {
-    lhs += rhs;
-    return lhs;
-  }
-  //! \brief Subtract a quantity with compatible units from this quantity.
-  //! \param x Quantity to subtract.
-  //! \return Result of subtraction.
-  QUANTITY_OPERATOR_INPLACE_COMPAT(-=, raw_add_inplace(x, -1.0))
-  //! \brief Subtract a quantity with compatible units.
-  //! \param lhs Left side of subtraction operation.
-  //! \param rhs Right side of subtraction operation.
-  //! \return Result of subtraction.
-  template<typename T2>
-  friend GenericQuantity<T, Encoding> operator-(GenericQuantity<T, Encoding> lhs,
-						const GenericQuantity<T2, Encoding>& rhs) {
-    lhs -= rhs;
-    return lhs;
-  }
-  //! \brief Perform floor operation in place.
-  //! \return Resulut of floor.
-  GenericQuantity& floor_inplace() {
-    if (YGGDRASIL_IS_FLOAT_TYPE(T)::Value)
-      value_ = internal::value_floor(value_);
-    return *this;
-  }
-  //! \brief Perform floor operation in place.
-  //! \return Resulut of floor.
-  GenericQuantity floor() {
-    GenericQuantity<T, Encoding> cpy(*this);
-    cpy.floor_inplace();
-    return cpy;
-  }
-  //! \brief Perform power operation in place.
-  //! \param x Power to raise this quantity to.
-  template<typename T2>
-  void inplace_pow(const T2& x,
-		   RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
-    value_ = std::pow(value_, x);
-    units_.inplace_pow(x);
-    value_ *= castPrecision<double,T>(units_.pull_factor());
-  }
-  //! \brief Raise this quantity to a power.
-  //! \param x Power to raise this quantity to.
-  //! \return Resulting quantity.
-  template<typename T2>
-  GenericQuantity pow(const T2& x,
-		      RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) const {
-    GenericQuantity out(*this);
-    out.inplace_pow(x);
-    return out;
-  }
-  //! \brief Explicity copy.
-  //! \return Copy.
-  GenericQuantity<T, Encoding>* copy() const {
-    return new GenericQuantity<T, Encoding>(*this);
-  }
-  //! \brief Explicity copy and cast to void pointer.
-  //! \return Copy.
-  void* copy_void() const { return (void*)copy(); }
-  //! \brief Get the dimensions of this quantity's units.
-  //! \return The dimensions of the units.
-  Dimension dimension() const { return units_.dimension(); }
-  //! \brief Determine if the quantity's units are dimensionless.
-  //! \return true if the units are dimensionless, false otherwise.
-  bool is_dimensionless() const { return units_.is_dimensionless(); }
-  //! \brief Check if another quantity has compatible units with the same
-  //!   dimensions.
-  //! \param x Quantity for comparison.
-  //! \return true if the units are compatible, false otherwise.
-  template<typename T2>
-  bool is_compatible(const GenericQuantity<T2, Encoding>& x) const {
-    return (dimension() == x.dimension());
-  }
-  //! \brief Check if a set of units is compatible.
-  //! \param x Units for comparison.
-  //! \return true if the units are compatible, false otherwise.
-  bool is_compatible(const GenericUnits<Encoding>& x) const {
-    return (dimension() == x.dimension());
-  }
-  //! \brief Check if another quantity is equivalent to this one, allowing
-  //!    for the possibility that it has different, but compatible, units.
-  //! \param x Quantity for comparison.
-  //! \return true if the two quantities are equivalent, false otherwise.
-  template<typename T2>
-  bool equivalent_to(const GenericQuantity<T2, Encoding>& x) {
-    if (!(is_compatible(x)))
-      return false;
-    return (*this==x.as(units_));
-  }
-  //! \brief Convert the quantity to a different set of units. The new units
-  //!   must be compatible with the current ones.
-  //! \param units New units.
-  void convert_to(const UnitsType& units) {
-    std::vector<double> factor = units_.conversion_factor(units);
-    value_ = do_conv<T>(value_, factor[0], factor[1]);
-    units_ = UnitsType(units);
-  }
-  //! \brief Create a new quantity by converting this one to a new set of
-  //!   compatible units.
-  //! \param units New units.
-  //! \return New quantity.
-  GenericQuantity as(const char* units0) const {
-    UnitsType units(units0);
-    return as(units);
-  }
-  //! \brief Create a new quantity by converting this one to a new set of
-  //!   compatible units.
-  //! \param units New units.
-  //! \return New quantity.
-  GenericQuantity as(const UnitsType& units) const {
-    GenericQuantity out(*this);
-    out.convert_to(units);
-    return out;
-  }
-private:
-  template<typename T2>
-  static T2 do_conv(const T2& value, const double& factor, const double& offset,
-		    RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
-    return static_cast<T2>((static_cast<double>(value) - offset) * factor);
-  }
-  template<typename T2>
-  static T2 do_conv(const T2& value, const double& factor, const double& offset,
-		    RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
-    T2 offset2(static_cast<typename T2::value_type>(offset), 0);
-    typename T2::value_type factor2 = static_cast<typename T2::value_type>(factor);
-    return (value - offset2) * factor2;
-  }
+#define INHERIT_OP_BASE_(TMP, CLS, TYP, BASE, OP, IOP, IN, ARG, ARGBASE) \
+  INHERIT_OP_BASE_INPLACE_(TMP, CLS, TYP, BASE, IOP, IN, ARGBASE)	\
+  DELEGATE_TO_INPLACE_(TMP, CLS, TYP, OP, IOP, IN, ARG)
+#define INHERIT_OP_BASE_QUANTITY_(CLS, TYP, BASE, OP, IOP)		\
+  INHERIT_OP_BASE_(template<typename T2>, CLS, TYP, BASE, OP, IOP, (const TYP(T2)& x), (x), (*static_cast<const BASE(T2)*>(&x)))
+  // INHERIT_OP_BASE_(template<typename T2>, CLS, TYP, BASE, OP, IOP, (const BASE(T2)& x), (x), (x))
+#define INHERIT_OP_INPLACE_(CLS, TYP, BASE, IOP)			\
+  INHERIT_OP_BASE_INPLACE_(, CLS, TYP, BASE, IOP, (const TYP(T)& x), (*static_cast<const BASE(T)*>(&x)))
+#define INHERIT_OP_BASE_SCALAR_(CLS, TYP, BASE, OP, IOP)	\
+  INHERIT_OP_BASE_(template<typename T2>, CLS, TYP, BASE, OP, IOP, (const T2& x), (x), (x))
+#define INHERIT_OP_(CLS, TYP, BASE, OP, IOP)				\
+  INHERIT_OP_BASE_QUANTITY_(CLS, TYP, BASE, operator OP, operator IOP)
+#define INHERIT_OP_SCALAR_(CLS, TYP, BASE, OP, IOP)			\
+  INHERIT_OP_BASE_QUANTITY_(CLS, TYP, BASE, operator OP, operator IOP)	\
+  INHERIT_OP_BASE_SCALAR_(CLS, TYP, BASE, operator OP, operator IOP)
 
-  T value_;
-  UnitsType units_;
-  template<typename U, typename Encoding2>
-  friend std::ostream & operator << (std::ostream &os, const GenericQuantity<U,Encoding2> &x);
-  friend class GenericQuantityArray<T,Encoding>;
-
-#if !RAPIDJSON_HAS_CXX11
-  friend class Quantity<T>;
-#endif // RAPIDJSON_HAS_CXX11
-};
-template<typename T, typename Encoding>
-inline std::ostream & operator << (std::ostream &os, const GenericQuantity<T, Encoding> &x) {
-    os << x.value_ << " " << x.units_;
-    return os;
-}
-
-#define YGGDRASIL_CREATE_QUANTITY(name, Encoding, prefix)		\
-  template<typename T>							\
-  class name : public prefix GenericQuantity<T, Encoding> {		\
-  public:								\
-    typedef typename prefix GenericQuantity<T, Encoding>::Ch Ch;	\
-    typedef typename prefix GenericQuantity<T, Encoding>::UnitsType UnitsType; \
-    name() : prefix GenericQuantity<T, Encoding>() {}			\
-    name(const T& value) : prefix GenericQuantity<T, Encoding>(value) {} \
-    name(const T& value, const Ch* units) : prefix GenericQuantity<T, Encoding>(value, units) {} \
-    name(const T& value, const UnitsType& units) : prefix GenericQuantity<T, Encoding>(value, units) {} \
-    name(const prefix GenericQuantity<T, Encoding>& other) :		\
-      prefix GenericQuantity<T, Encoding>(other) {}			\
-    name<T>& operator=(const name<T>& other) {				\
-      prefix GenericQuantity<T, Encoding>::operator=(other);		\
-      return *this;							\
-    }									\
-    name<T>& operator=(const prefix GenericQuantity<T, Encoding>& other) { \
-      prefix GenericQuantity<T, Encoding>::operator=(other);		\
-      return *this;							\
-    }									\
-    operator GenericQuantity<T, Encoding>() const {			\
-      return GenericQuantity<T, Encoding>(this->value_, this->units_);	\
-    }									\
+#define INHERIT_CONSTRUCTORS_(CLS, BASE)				\
+  CLS() : BASE(T)() {}							\
+  CLS(const CLS& rhs) : BASE(T)(rhs) {}					\
+  CLS(const T& value) : BASE(T)(value) {}				\
+  CLS(const T& value, const Ch* units) : BASE(T)(value, units) {}	\
+  CLS(const T& value, const UnitsType& units) : BASE(T)(value, units) {}
+#define INHERIT_CONSTRUCTORS_ARRAY_(CLS, BASE)				\
+  INHERIT_CONSTRUCTORS_(CLS, BASE)					\
+  CLS(const T* value, const SizeType& ndim, const SizeType* shape,	\
+      const UnitsType& units = UnitsType()) :				\
+  BASE(T)(value, ndim, shape, units) {}					\
+  CLS(const T* value, const SizeType& len,				\
+      const UnitsType& units = UnitsType()) :				\
+    BASE(T)(value, len, units) {}					\
+  CLS(const T* value, const SizeType& ndim, const SizeType* shape,	\
+      const Ch* units) :						\
+    BASE(T)(value, ndim, shape, units) {}				\
+  template<SizeType N>							\
+  CLS(const T (&value)[N], const UnitsType& units = UnitsType()) :	\
+    BASE(T)(value, units) {}						\
+  template<SizeType N>							\
+  CLS(const T (&value)[N], const Ch* units) :				\
+    BASE(T)(value, units) {}						\
+  template<SizeType N, SizeType M>					\
+  CLS(const T (&value)[N][M], const UnitsType& units = UnitsType()) :	\
+    BASE(T)(value, units) {}						\
+  template<SizeType N, SizeType M>					\
+  CLS(const T (&value)[N][M], const Ch* units) :			\
+    BASE(T)(value, units) {}
+#define INHERIT_OPERATORS_(CLS, TYP, BASE)				\
+  INHERIT_OP_(CLS, TYP, BASE, +, +=)					\
+  INHERIT_OP_(CLS, TYP, BASE, -, -=)					\
+  INHERIT_OP_SCALAR_(CLS, TYP, BASE, *, *=)				\
+  INHERIT_OP_SCALAR_(CLS, TYP, BASE, /, /=)				\
+  INHERIT_OP_SCALAR_(CLS, TYP, BASE, %, %=)				\
+  INHERIT_OP_BASE_SCALAR_(CLS, TYP, BASE, pow, pow_inplace)		\
+  INHERIT_OP_BASE_(, CLS, TYP, BASE, floor, floor_inplace, (), (), ())	\
+  INHERIT_OP_INPLACE_(CLS, TYP, BASE, operator=)			\
+  TYP(T)* copy() const { return new TYP(T)(*this); }			\
+  void* copy_void() const { return (void*)copy(); }			\
+  CLS as(const char* units) const {					\
+    CLS out(*this);							\
+    out.convert_to(units);						\
+    return out;								\
+  }									\
+  CLS as(const UnitsType& units) const {				\
+    CLS out(*this);							\
+    out.convert_to(units);						\
+    return out;								\
+  }									\
+  CLS as_units_system(const UnitsType& units) const {			\
+    CLS out(*this);							\
+    out.convert_to_units_system(units);					\
+    return out;								\
   }
-
-//! GenericQuantity with UTF8 encoding
-#if RAPIDJSON_HAS_CXX11
-template<typename T>
-using Quantity = GenericQuantity<T, UTF8<char> >;
-#else // RAPIDJSON_HAS_CXX11
-YGGDRASIL_CREATE_QUANTITY(Quantity, UTF8<char>, );
-#endif // RAPIDJSON_HAS_CXX11
+  
+#define GENERIC_QUANTITY_ARRAY_TYPE(TT) GenericQuantityArray<TT, Encoding>
+#define GENERIC_QUANTITY_TYPE(TT) GenericQuantity<TT, Encoding>
+#define QUANTITY_ARRAY_TYPE(TT) QuantityArray<TT>
+#define QUANTITY_TYPE(TT) Quantity<TT>
 
 #if RAPIDJSON_HAS_CXX11
-#define ADD_QUANTITY_ARRAY_OPERATOR(op)
+#define ADD_QUANTITY_OPERATOR(TYP, op)
+#define ADD_QUANTITY_ARRAY_OPERATOR(TYP, op)
 #else
-#define ADD_QUANTITY_ARRAY_OPERATOR(op)					\
+template<typename T>
+class Quantity;
+template<typename T>
+class QuantityArray;
+#define ADD_QUANTITY_OPERATOR(TYP, op)					\
   template<typename T2>							\
-  GenericQuantityArray& operator op (const QuantityArray<T2>& x) {	\
+  TYP(T)& operator op (const Quantity<T2>& x) {				\
     if (internal::IsSame<Encoding,UTF8<char> >::Value)			\
-      return *this op *((GenericQuantityArray<T2, Encoding>*)(&x));	\
-    return *this op GenericQuantityArray<T2, Encoding>(x.value(), x.ndim(), x.shape(), x.units()); \
+      return *this op *((TYP(T2)*)(&x));				\
+    return *this op TYP(T2)(x.value(), x.units());			\
+  }
+#define ADD_QUANTITY_ARRAY_OPERATOR(TYP, op)				\
+  template<typename T2>							\
+  TYP(T)& operator op (const QuantityArray<T2>& x) {			\
+    if (internal::IsSame<Encoding,UTF8<char> >::Value)			\
+      return *this op *((TYP(T2)*)(&x));				\
+    return *this op TYP(T2)(x.value(), x.ndim(), x.shape(), x.units());	\
   }
 #endif
 
-#define QUANTITY_ARRAY_OPERATOR_INPLACE(op)				\
-  template<typename T2>							\
-  GenericQuantityArray& operator op(const GenericQuantityArray<T2, Encoding>& x) { \
-    RAPIDJSON_ASSERT(is_same_shape(x) || (nelements() == 1) || (x.nelements() == 1)); \
-    if (nelements() == 1) {						\
-      T value0 = value_[0];						\
-      if (value_ != nullptr) free(value_);				\
-      if (shape_ != nullptr) free(shape_);				\
-      ndim_ = x.ndim();							\
-      _init(x.value(), x.shape());					\
-      for (SizeType i = 0; i < nelements(); i++) {			\
-        value_[i] = value0;						\
-      }									\
-    }									\
-    units_ op x.units();						\
-    double factor = units_.pull_factor();				\
-    SizeType N = nelements();						\
-    if (is_same_shape(x)) {						\
-      for (SizeType i = 0; i < N; i++) {				\
-	value_[i] op castPrecision<T2,T>(x.value()[i]);			\
-	value_[i] *= castPrecision<double,T>(factor);			\
-      }									\
-    } else if (x.nelements() == 1) {					\
-      for (SizeType i = 0; i < N; i++) {				\
-	value_[i] op castPrecision<T2,T>(x.value()[0]);			\
-	value_[i] *= castPrecision<double,T>(factor);			\
-      }									\
-    }									\
-    return *this;							\
-  }									\
-  ADD_QUANTITY_ARRAY_OPERATOR(op)
-#define QUANTITY_ARRAY_OPERATOR_INPLACE_SCALAR(op)	\
-  QUANTITY_ARRAY_OPERATOR_INPLACE(op)			\
-  template<typename T2>					\
-  GenericQuantityArray& operator op(const T2& x) {	\
-    SizeType N = nelements();				\
-    for (SizeType i = 0; i < N; i++) {			\
-      value_[i] op castPrecision<T2,T>(x);		\
-    }							\
-    return *this;					\
+#define METHOD_FACTOR_PULL_(UOP, ARGS)					\
+  double factor = 1.0;							\
+  units_.UOP ARGS;							\
+  factor = units_.pull_factor()
+#define METHOD_FACTOR_APPLY_						\
+  for (SizeType i = 0; i < nelements(); i++) {				\
+    value_[i] *= castPrecision<double,T>(factor);			\
   }
-#define QUANTITY_ARRAY_OPERATOR_INPLACE_COMPAT(op, body)		\
+#define INPLACE_OP_QUANTITY_BASE_(OP)					\
+  RAPIDJSON_ASSERT(is_same_shape(x) || (nelements() == 1) || (x.nelements() == 1)); \
+  SizeType N = nelements();						\
+  if (is_same_shape(x)) {						\
+    for (SizeType i = 0; i < N; i++) {					\
+      value_[i] OP castPrecision<T2,T>(x.value()[i]);			\
+    }									\
+  } else if (N == 1) {							\
+    T value0 = value_[0];						\
+    *this = x;								\
+    N = nelements();							\
+    for (SizeType i = 0; i < N; i++) {					\
+      value_[i] = value0;						\
+    }									\
+    this->operator OP(x);						\
+  } else if (x.nelements() == 1) {					\
+    T2 value0 = x.value()[0];						\
+    GenericQuantityArray<T2, Encoding> x_cpy(*this);			\
+    for (SizeType i = 0; i < N; i++) {					\
+      x_cpy.value_[i] = value0;						\
+    }									\
+    this->operator OP(x_cpy);						\
+  } else {								\
+    return *this;							\
+  }
+#define INPLACE_OP_SCALAR_(OP, IOP)					\
   template<typename T2>							\
-  GenericQuantityArray& operator op(const GenericQuantityArray<T2, Encoding>& x) { \
-    if (units_ != x.units())						\
-      return *this op x.as(units_);					\
-    body;								\
+  GenericQuantityArray& operator IOP(const T2& x) {			\
+    SizeType N = nelements();						\
+    for (SizeType i = 0; i < N; i++) {					\
+      value_[i] IOP castPrecision<T2,T>(x);				\
+    }									\
     return *this;							\
   }									\
-  ADD_QUANTITY_ARRAY_OPERATOR(op)
+  DELEGATE_TO_INPLACE_OP_SCALAR_(GENERIC_QUANTITY_ARRAY_TYPE, OP, IOP)
+#define INPLACE_OP_QUANTITY_CONVERT_(OP, IOP)				\
+  template<typename T2>							\
+  GenericQuantityArray& operator IOP(const GenericQuantityArray<T2, Encoding>& x0) { \
+    GenericQuantityArray<T2, Encoding> x = x0.as_units_system(units_);	\
+    INPLACE_OP_QUANTITY_BASE_(IOP)					\
+    raw_set_delta_from_add(x, #OP);					\
+    return *this;							\
+  }									\
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE, OP, IOP) \
+  ADD_QUANTITY_ARRAY_OPERATOR(GENERIC_QUANTITY_ARRAY_TYPE, IOP)		\
+  ADD_QUANTITY_OPERATOR(GENERIC_QUANTITY_ARRAY_TYPE, IOP)
+#define INPLACE_OP_QUANTITY_COMBINE_(OP, IOP)				\
+  template<typename T2>							\
+  GenericQuantityArray& operator IOP(const GenericQuantityArray<T2, Encoding>& x) { \
+    if (is_same_shape(x)) {						\
+      METHOD_FACTOR_PULL_(operator IOP, (x.units()));			\
+      METHOD_FACTOR_APPLY_						\
+    }									\
+    INPLACE_OP_QUANTITY_BASE_(IOP)					\
+    return *this;							\
+  }									\
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE, OP, IOP) \
+  INPLACE_OP_SCALAR_(OP, IOP)						\
+  ADD_QUANTITY_ARRAY_OPERATOR(GENERIC_QUANTITY_ARRAY_TYPE, IOP)		\
+  ADD_QUANTITY_OPERATOR(GENERIC_QUANTITY_ARRAY_TYPE, IOP)
 
+#if RAPIDJSON_HAS_CXX11
+#define FRIEND_DEFAULT_(CLS)
+#define CREATE_DEFAULT_(CLS, TYP, BASE, BASETYP, ENCODING, CTORS)	\
+  template<typename T>							\
+  using CLS = BASE<T, ENCODING>
+#else // RAPIDJSON_HAS_CXX11
+#define FRIEND_DEFAULT_(CLS)						\
+  friend class CLS<T>;
+#define CREATE_DEFAULT_(CLS, TYP, BASE, BASETYP, ENCODING, CTORS)	\
+  template<typename T>							\
+  class CLS : public BASE<T, ENCODING> {				\
+  public:								\
+    typedef ENCODING Encoding;						\
+    typedef typename BASETYP(T)::Ch Ch;					\
+    typedef typename BASETYP(T)::UnitsType UnitsType;			\
+    CTORS(CLS, BASETYP)							\
+    INHERIT_OPERATORS_(CLS, TYP, BASETYP)				\
+    TYP(T)& operator=(const BASETYP(T)& other) {			\
+      BASETYP(T)::operator=(other);					\
+      return *this;							\
+    }									\
+    operator BASETYP(T)() const {					\
+      return BASETYP(T)(*static_cast<const BASETYP(T)*>(this));		\
+    }									\
+  }
+#endif // RAPIDJSON_HAS_CXX11
 
 //! Array quantity with units.
 //! \tparam T Type of the underlying scalar.
@@ -2365,7 +2295,7 @@ public:
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
   typedef GenericUnits<Encoding> UnitsType; //!< Units type.
   //! \brief Empty constructor.
-  GenericQuantityArray() : value_(nullptr), units_(), ndim_(0), shape_(nullptr) {}
+  GenericQuantityArray() : value_(), units_(), shape_() {}
   //! \brief Create a quantity.
   //! \param value Pointer to an array.
   //! \param ndim Number of dimensions in the array.
@@ -2373,16 +2303,29 @@ public:
   //! \param units Units instance.
   GenericQuantityArray(const T* value, const SizeType& ndim, const SizeType* shape,
 		       const UnitsType& units = UnitsType()) :
-    value_(nullptr), units_(units), ndim_(ndim), shape_(nullptr)
-  { _init(value, shape); }
+    value_(), units_(units), shape_()
+  { _init(value, ndim, shape); }
+  //! \brief Create a scalar quantity.
+  //! \param value Scalar value.
+  //! \param units Units instance.
+  GenericQuantityArray(const T value,
+		       const UnitsType& units = UnitsType()) :
+    value_(), units_(units), shape_()
+  { SizeType len = 1; _init(&value, 1, &len); }
+  //! \brief Create a scalar quantity.
+  //! \param value Scalar value.
+  //! \param units Units string.
+  GenericQuantityArray(const T value, const Ch* units) :
+    value_(), units_(UnitsType(units)), shape_()
+  { SizeType len = 1; _init(&value, 1, &len); }
   //! \brief Create a quantity.
   //! \param value Pointer to an array.
   //! \param len Number of elements in the 1D array.
   //! \param units Units instance.
   GenericQuantityArray(const T* value, const SizeType& len,
 		const UnitsType& units = UnitsType()) :
-    value_(nullptr), units_(units), ndim_(1), shape_(nullptr)
-  { _init(value, &len); }
+    value_(), units_(units), shape_()
+  { _init(value, 1, &len); }
   //! \brief Create a quantity from units string.
   //! \param value Pointer to an array.
   //! \param ndim Number of dimensions in the array.
@@ -2390,24 +2333,24 @@ public:
   //! \param units Units string.
   GenericQuantityArray(const T* value, const SizeType& ndim, const SizeType* shape,
 		const Ch* units) :
-    value_(nullptr), units_(UnitsType(units)), ndim_(ndim), shape_(nullptr)
-  { _init(value, shape); }
+    value_(), units_(UnitsType(units)), shape_()
+  { _init(value, ndim, shape); }
   //! \brief Create a quantity without units.
   //! \tparam N Number of elements in the array.
   //! \param value 1D array.
   //! \param units Units instance.
   template<SizeType N>
   GenericQuantityArray(const T (&value)[N], const UnitsType& units = UnitsType()) :
-    value_(nullptr), units_(units), ndim_(1), shape_(nullptr)
-  { SizeType len = N; _init(&(value[0]), &len); }
+    value_(), units_(units), shape_()
+  { SizeType len = N; _init(&(value[0]), 1, &len); }
   //! \brief Constructor from units string.
   //! \tparam N Number of elements in the array.
   //! \param value 1D array.
   //! \param units Units string.
   template<SizeType N>
   GenericQuantityArray(const T (&value)[N], const Ch* units) :
-    value_(nullptr), units_(UnitsType(units)), ndim_(1), shape_(nullptr)
-  { SizeType len = N; _init(&(value[0]), &len); }
+    value_(), units_(UnitsType(units)), shape_()
+  { SizeType len = N; _init(&(value[0]), 1, &len); }
   //! \brief Create a quantity without units.
   //! \tparam N Number of elements in the array in dimension 1.
   //! \tparam M Number of elements in the array in dimension 2.
@@ -2415,8 +2358,8 @@ public:
   //! \param units Units instance.
   template<SizeType N, SizeType M>
   GenericQuantityArray(const T (&value)[N][M], const UnitsType& units = UnitsType()) :
-    value_(nullptr), units_(units), ndim_(2), shape_(nullptr)
-  { SizeType shape[] = {N, M}; _init(&(value[0][0]), &(shape[0])); }
+    value_(), units_(units), shape_()
+  { SizeType shape[] = {N, M}; _init(&(value[0][0]), 2, &(shape[0])); }
   //! \brief Constructor from units string.
   //! \tparam N Number of elements in the array in dimension 1.
   //! \tparam M Number of elements in the array in dimension 2.
@@ -2424,28 +2367,25 @@ public:
   //! \param units Units string.
   template<SizeType N, SizeType M>
   GenericQuantityArray(const T (&value)[N][M], const Ch* units) :
-    value_(nullptr), units_(UnitsType(units)), ndim_(2), shape_(nullptr)
-  { SizeType shape[] = {N, M}; _init(&(value[0][0]), &(shape[0])); }
+    value_(), units_(UnitsType(units)), shape_()
+  { SizeType shape[] = {N, M}; _init(&(value[0][0]), 2, &(shape[0])); }
   //! \brief Copy constructor.
   //! \param other QuantityArray to copy.
-  GenericQuantityArray(const GenericQuantityArray<T, Encoding>& other) :
-    value_(nullptr), units_(), ndim_(1), shape_(nullptr)
-  { *this = other; }
+  template<typename Encoding2>
+  GenericQuantityArray(const GenericQuantityArray<T, Encoding2>& other) :
+    value_(), units_(other.units_), shape_()
+  { _init(other.value_.data(), other.ndim(), other.shape_); }
   //! \brief Destructor.
   ~GenericQuantityArray() {
-    if (value_ != nullptr) free(value_);
-    if (shape_ != nullptr) free(shape_);
-    ndim_ = 0;
+    value_.clear();
+    shape_.clear();
   }
   //! \brief Copy assignment.
-  //! \param other QuantityArray to copy.
+  //! \param other GenericQuantityArray to copy.
   //! \return Copy.
   GenericQuantityArray<T, Encoding>& operator=(const GenericQuantityArray<T, Encoding>& other) {
-    if (value_ != nullptr) free(value_);
-    if (shape_ != nullptr) free(shape_);
-    ndim_ = other.ndim_;
-    units_ = other.units_;
-    _init(other.value_, other.shape_);
+    this->~GenericQuantityArray();
+    new (this) GenericQuantityArray(other);
     return *this;
   }
   //! \brief Print instance information to an output stream.
@@ -2464,19 +2404,9 @@ public:
     ss << *this;
     return ss.str();
   }
-  //! \brief Get the total number of elements in the array.
-  //! \return The number of elements.
-  SizeType nelements() const {
-    SizeType out = 0;
-    if (ndim_ > 0) {
-      out = 1;
-      for (SizeType i = 0; i < ndim_; i++)
-	out = out * shape_[i];
-    }
-    return out;
-  }
 private:
   std::vector<SizeType> _index(const SizeType idx) const {
+    SizeType ndim_ = ndim();
     RAPIDJSON_ASSERT(ndim_ > 0);
     std::vector<SizeType> out;
     SizeType prev = 0;
@@ -2488,31 +2418,26 @@ private:
     return out;
   }
   template<typename T2>
-  void _init(const T2* value, const SizeType* shape) {
-    RAPIDJSON_ASSERT(ndim_ > 0);
-    _init_shape(shape);
-    _init_value(value);
-  }
-  void _init_shape(const SizeType* shape) {
-    shape_ = (SizeType*)malloc(ndim_ * sizeof(SizeType));
-    RAPIDJSON_ASSERT(shape_);
-    for (SizeType i = 0; i < ndim_; i++)
-      shape_[i] = shape[i];
-  }
-  template<typename T2>
-  void _init_value(const T2*,
-		   RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T2, T)))) {
+  void _init(const T2*, const SizeType, const SizeType*,
+	     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T2, T)))) {
     RAPIDJSON_ASSERT(((YGGDRASIL_IS_CASTABLE(T2, T)::Value)));
   }
   template<typename T2>
-  void _init_value(const T2* value,
-		   RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, T)))) {
+  void _init(const T2* value, const SizeType ndim, const SizeType* shape,
+	     RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, T)))) {
+    RAPIDJSON_ASSERT(ndim > 0);
+    // Shape
+    shape_.resize(ndim);
+    for (SizeType i = 0; i < ndim; i++)
+      shape_[i] = shape[i];
+    // Value
     SizeType N = nelements();
-    value_ = (T*)malloc(N * sizeof(T));
+    value_.resize(N);
     for (SizeType i = 0; i < N; i++)
       value_[i] = castPrecision<T2,T>(value[i]);
   }
   void _write_array(std::ostream& os) const {
+    SizeType ndim_ = ndim();
     SizeType N = nelements();
     std::vector<SizeType> idx;
     for (SizeType i = 0; i < N; i++) {
@@ -2537,96 +2462,63 @@ private:
       os << "]";
   }
   template<typename T2>
-  void raw_add_inplace(const GenericQuantityArray<T2, Encoding>& x, double factor=1.0,
-		       RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
-					   YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) {
-    // Assumes units have already been matched
-    RAPIDJSON_ASSERT(is_same_shape(x) || (nelements() == 1) || (x.nelements() == 1));
-    if (nelements() == 1) {
-      T value0 = value_[0];
-      if (value_ != nullptr) free(value_);
-      if (shape_ != nullptr) free(shape_);
-      ndim_ = x.ndim();
-      _init(x.value(), x.shape());
-      for (SizeType i = 0; i < nelements(); i++)
-	value_[i] = value0;
-    }
-    SizeType N = nelements();
-    if (is_same_shape(x)) {
-      if (factor < 0)
-	for (SizeType i = 0; i < N; i++)
-	  value_[i] -= castPrecision<T2, T>(x.value()[i]);
-      else
-	for (SizeType i = 0; i < N; i++)
-	  value_[i] += castPrecision<T2, T>(x.value()[i]);
-    } else if (x.nelements() == 1) {
-      if (factor < 0)
-	for (SizeType i = 0; i < N; i++)
-	  value_[i] -= castPrecision<T2, T>(x.value()[0]);
-      else
-	for (SizeType i = 0; i < N; i++)
-	  value_[i] += castPrecision<T2, T>(x.value()[0]);
-    }
+  static T2 do_conv(const T2& value, const double& factor, const double& offset,
+		    RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
+    return static_cast<T2>((static_cast<double>(value) - offset) * factor);
   }
   template<typename T2>
-  void raw_add_inplace(const GenericQuantityArray<T2, Encoding>& x, double factor=1.0,
-		       RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_CASTABLE(T2, T),
-					   internal::NotExpr<YGGDRASIL_IS_COMPLEX_TYPE(T2)> >))) {
-    // Assumes units have already been matched
-    RAPIDJSON_ASSERT(is_same_shape(x) || (nelements() == 1) || (x.nelements() == 1));
-    if (nelements() == 1) {
-      T value0 = value_[0];
-      if (value_ != nullptr) free(value_);
-      if (shape_ != nullptr) free(shape_);
-      ndim_ = x.ndim();
-      _init(x.value(), x.shape());
-      for (SizeType i = 0; i < nelements(); i++)
-	value_[i] = value0;
-    }
-    SizeType N = nelements();
-    if (is_same_shape(x)) {
-      for (SizeType i = 0; i < N; i++)
-	value_[i] += (factor * x.value()[i]);
-    } else if (x.nelements() == 1) {
-      for (SizeType i = 0; i < N; i++)
-	value_[i] += (factor * x.value()[0]);
-    }
+  static T2 do_conv(const T2& value, const double& factor, const double& offset,
+		    RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
+    T2 offset2(static_cast<typename T2::value_type>(offset), 0);
+    typename T2::value_type factor2 = static_cast<typename T2::value_type>(factor);
+    return (value - offset2) * factor2;
+  }
+  template<typename T2>
+  void raw_set_delta_from_add(const GenericQuantityArray<T2, Encoding>& x,
+			      std::string op) {
+    // if (op == std::string("%"))
+    //   return;
+    if ((units_.has_difference() && x.units_.is_difference()) ||
+	(units_.is_difference() && x.units_.has_difference()))
+      units_.set_delta(kInactiveDelta);
+    else if (op == std::string("-") && units_.has_difference())
+      units_.set_delta(kActiveDelta);
   }
 public:
   //! \brief Get the quantity value without units.
   //! \return Value.
-  const T* value() const { return value_; }
+  const T* value() const { return value_.data(); }
   //! \brief Get the units instance.
   //! \return Units.
   UnitsType units() const { return units_; }
   //! \brief Get the number of dimensions in the array.
   //! \return Number of dimensions.
-  SizeType ndim() const { return ndim_; }
+  SizeType ndim() const { return static_cast<SizeType>(shape_.size()); }
   //! \brief Get the size of the array in each dimension.
   //! \return Array shape.
-  const SizeType* shape() const { return shape_; }
+  const SizeType* shape() const { return shape_.data(); }
   //! \brief Set the quantity value.
   //! \param new_value New quantity value.
+  //! \brief Get the total number of elements in the array.
+  //! \return The number of elements.
+  SizeType nelements() const {
+    SizeType out = 0;
+    SizeType ndim_ = ndim();
+    if (ndim_ > 0) {
+      out = 1;
+      for (SizeType i = 0; i < ndim_; i++)
+	out = out * shape_[i];
+    }
+    return out;
+  }
   template<typename T2>
   void set_value(const T2* new_value, SizeType ndim, SizeType* shape) {
-    if (value_ != nullptr) free(value_);
-    if (shape_ != nullptr) free(shape_);
-    ndim_ = ndim;
-    _init(new_value, shape);
+    _init(new_value, ndim, shape);
   }
-  //! \brief Return the pointer to the value and then reset it.
-  //! \return Value.
-  T* pop_value() {
-    T* out = value_;
-    value_ = nullptr;
-    return out;
-  }
-  //! \brief Retrun the pointer to the shape and then reset it.
-  //! \return Shape.
-  SizeType* pop_shape() {
-    SizeType* out = shape_;
-    shape_ = nullptr;
-    return out;
+  //! \brief Set the quantity units without conversion.
+  //! \param new_units New quantity units.
+  void set_units(const UnitsType& new_units) {
+    units_ = new_units;
   }
   //! \brief Get the units string.
   //! \return Units string.
@@ -2636,6 +2528,7 @@ public:
   //! \return true if the shapes are equivalent, false otherwise.
   template<typename T2>
   bool is_same_shape(const GenericQuantityArray<T2, Encoding>& x) const {
+    SizeType ndim_ = ndim();
     if (ndim_ != x.ndim()) return false;
     for (SizeType i = 0; i < ndim_; i++)
       if (shape_[i] != x.shape()[i]) return false;
@@ -2693,66 +2586,37 @@ public:
   //! \brief Multiply by a scalar or QuantityArray element by element inplace
   //! \param x Scalar or QuantityArray to multiply by.
   //! \return Result of multiplication.
-  QUANTITY_ARRAY_OPERATOR_INPLACE_SCALAR(*=)
-  //! \brief Multiply by a scalar or another quantity element by element.
-  //! \param x Scalar or QuantityArray to multiply by.
-  //! \return Result of multiplication.
-  template<typename T2>
-  friend GenericQuantityArray<T, Encoding> operator*(GenericQuantityArray<T, Encoding> lhs,
-						     const T2& rhs) {
-    lhs *= rhs;
-    return lhs;
-  }
+  INPLACE_OP_QUANTITY_COMBINE_(*, *=)
   //! \brief Divide by a scalar or QuantityArray element by element inplace.
   //! \param x Scalar or QuantityArray to divide by.
   //! \return Result of division.
-  QUANTITY_ARRAY_OPERATOR_INPLACE_SCALAR(/=)
-  //! \brief Divide by a scalar or QuantityArray element by element.
-  //! \param x Scalar or QuantityArray to divide by.
-  //! \return Result of division.
-  template<typename T2>
-  friend GenericQuantityArray<T, Encoding> operator/(GenericQuantityArray<T, Encoding> lhs,
-						     const T2& rhs) {
-    lhs /= rhs;
-    return lhs;
-  }
+  INPLACE_OP_QUANTITY_COMBINE_(/, /=)
   //! \brief Modulo by another quantity in place element by element.
   //! \param x QuantityArray to modulo by.
   //! \return Result of modulo.
-  QX_MODULO_OPERATOR(GenericQuantityArray)
+  template<typename T2>
+  GenericQuantityArray<T, Encoding>& operator%=(const GenericQuantityArray<T2, Encoding>& x) {
+    GenericQuantityArray<T, Encoding> val = *this / x;
+    val.floor_inplace();
+    val *= x;
+    *this -= val;
+    return *this;
+  }
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE, %, %=)
   //! \brief Modulo by a scalar in place.
   //! \tparam T2 Scalar type.
   //! \param x Scalar to modulo by.
   //! \return Result of division.
-  template<typename T2>
-  GenericQuantityArray& operator%=(const T2& x) {
-    SizeType N = nelements();
-    for (SizeType i = 0; i < N; i++) {
-      value_[i] %= castPrecision<T2,T>(x);
-    }
-    return *this;
-  }
-  ADD_QUANTITY_ARRAY_OPERATOR(%=)
+  INPLACE_OP_SCALAR_(%, %=)
+  ADD_QUANTITY_ARRAY_OPERATOR(GENERIC_QUANTITY_ARRAY_TYPE, %=)
   //! \brief Add a quantity with compatible units.
   //! \param x QuantityArray to add.
   //! \return Result of addition.
-  QUANTITY_ARRAY_OPERATOR_INPLACE_COMPAT(+=, raw_add_inplace(x))
-  template<typename T2>
-  friend GenericQuantityArray<T, Encoding> operator+(GenericQuantityArray<T, Encoding> lhs,
-						     const GenericQuantityArray<T2, Encoding>& rhs) {
-    lhs += rhs;
-    return lhs;
-  }
+  INPLACE_OP_QUANTITY_CONVERT_(+, +=)
   //! \brief Subtract a quantity with compatible units.
   //! \param x QuantityArray to subtract.
   //! \return Result of subtraction.
-  QUANTITY_ARRAY_OPERATOR_INPLACE_COMPAT(-=, raw_add_inplace(x, -1.0))
-  template<typename T2>
-  friend GenericQuantityArray<T, Encoding> operator-(GenericQuantityArray<T, Encoding> lhs,
-						     const GenericQuantityArray<T2, Encoding>& rhs) {
-    lhs -= rhs;
-    return lhs;
-  }
+  INPLACE_OP_QUANTITY_CONVERT_(-, -=)
   //! \brief Perform floor operation in place.
   //! \return Resulut of floor.
   GenericQuantityArray& floor_inplace() {
@@ -2766,34 +2630,29 @@ public:
   }
   //! \brief Perform floor operation in place.
   //! \return Resulut of floor.
-  GenericQuantityArray floor() {
-    GenericQuantityArray<T, Encoding> cpy(*this);
-    cpy.floor_inplace();
-    return cpy;
-  }
+  DELEGATE_TO_INPLACE_(, GenericQuantityArray, GENERIC_QUANTITY_ARRAY_TYPE,
+		       floor, floor_inplace, (), ())
   //! \brief Perform power operation in place.
   //! \param x Power to raise this quantity to.
   template<typename T2>
-  void inplace_pow(const T2& x,
-		   RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
+  GenericQuantityArray& pow_inplace(const T2& x,
+				    RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
+    METHOD_FACTOR_PULL_(pow_inplace, (x));
     SizeType N = nelements();
-    units_.inplace_pow(x);
-    double factor = units_.pull_factor();
     for (SizeType i = 0; i < N; i++) {
       value_[i] = std::pow(value_[i], x);
-      value_[i] *= castPrecision<double,T>(factor);
     }
+    METHOD_FACTOR_APPLY_
+    return *this;
   }
   //! \brief Raise this quantity to a power.
   //! \param x Power to raise this quantity to.
   //! \return Resulting quantity.
-  template<typename T2>
-  GenericQuantityArray pow(const T2& x,
-			   RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) const {
-    GenericQuantityArray out(*this);
-    out.inplace_pow(x);
-    return out;
-  }
+  DELEGATE_TO_INPLACE_(template<typename T2>,
+		       GenericQuantityArray, GENERIC_QUANTITY_ARRAY_TYPE,
+		       pow, pow_inplace,
+		       (const T2& x, RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))),
+		       (x));
   //! \brief Explicity copy.
   //! \return Copy.
   GenericQuantityArray<T, Encoding>* copy() const {
@@ -2814,13 +2673,15 @@ public:
   //! \return true if the units are compatible, false otherwise.
   template<typename T2>
   bool is_compatible(const GenericQuantityArray<T2, Encoding>& x) const {
-    return (dimension() == x.dimension());
+    return (dimension() == x.dimension() &&
+	    units_.get_delta() == x.units_.get_delta());
   }
   //! \brief Check if a set of units is compatible.
   //! \param x Units for comparison.
   //! \return true if the units are compatible, false otherwise.
   bool is_compatible(const GenericUnits<Encoding>& x) const {
-    return (dimension() == x.dimension());
+    return (dimension() == x.dimension() &&
+	    units_.get_delta() == x.get_delta());
   }
   //! \brief Check if another quantity is equivalent to this one, allowing
   //!    for the possibility that it has different, but compatible, units.
@@ -2832,15 +2693,26 @@ public:
       return false;
     return (*this==x.as(units_));
   }
+  //! \brief Apply a conversion factor to each element in the array.
+  //! \param factor Scale and offset to be applied.
+  void apply_conversion_factor(std::vector<double> factor) {
+    SizeType N = nelements();
+    for (SizeType i = 0; i < N; i++)
+      value_[i] = do_conv<T>(value_[i], factor[0], factor[1]);
+  }
   //! \brief Convert the quantity to a different set of units. The new units
   //!   must be compatible with the current ones.
   //! \param units New units.
   void convert_to(const UnitsType& units) {
-    std::vector<double> factor = units_.conversion_factor(units);
-    SizeType N = nelements();
-    for (SizeType i = 0; i < N; i++)
-      value_[i] = GenericQuantity<T,Encoding>::template do_conv<T>(value_[i], factor[0], factor[1]);
-    units_ = UnitsType(units);
+    std::vector<double> factor = units_.convert_to(units);
+    apply_conversion_factor(factor);
+  }
+  //! \brief Convert quantity to the system used by another set of units in
+  //!   place.
+  //! \param units Unit system to convert to.
+  void convert_to_units_system(const UnitsType& units) {
+    std::vector<double> factor = units_.convert_to_units_system(units);
+    apply_conversion_factor(factor);
   }
   //! \brief Create a new quantity by converting this one to a new set of
   //!   compatible units.
@@ -2859,17 +2731,22 @@ public:
     out.convert_to(units);
     return out;
   }
+  //! \brief Create a new quantity by converting to a new units system.
+  //! \param units New unit system.
+  //! \return New quantity.
+  GenericQuantityArray as_units_system(const UnitsType& units) const {
+    GenericQuantityArray out(*this);
+    out.convert_to_units_system(units);
+    return out;
+  }
 private:
-  T* value_;
+  std::vector<T> value_;
   UnitsType units_;
-  SizeType ndim_;
-  SizeType* shape_;
+  std::vector<SizeType> shape_;
   template<typename U, typename Encoding2>
   friend std::ostream & operator << (std::ostream &os, const GenericQuantityArray<U,Encoding2> &x);
   
-#if !RAPIDJSON_HAS_CXX11
-  friend class QuantityArray<T>;
-#endif // RAPIDJSON_HAS_CXX11
+  FRIEND_DEFAULT_(QuantityArray)
 };
 template<typename T, typename Encoding>
 inline std::ostream & operator << (std::ostream &os, const GenericQuantityArray<T, Encoding> &x) {
@@ -2878,54 +2755,85 @@ inline std::ostream & operator << (std::ostream &os, const GenericQuantityArray<
   return os;
 }
 
-#define YGGDRASIL_CREATE_QUANTITY_ARRAY(name, Encoding, prefix)		\
-  template<typename T>							\
-  class name : public prefix GenericQuantityArray<T, Encoding> {	\
-  public:								\
-    typedef typename prefix GenericQuantityArray<T, Encoding>::Ch Ch;	\
-    typedef typename prefix GenericQuantityArray<T, Encoding>::UnitsType UnitsType; \
-    name() : prefix GenericQuantityArray<T, Encoding>() {}		\
-    name(const T* value, const SizeType& ndim, const SizeType* shape,	\
-	 const UnitsType& units = UnitsType()) :			\
-      prefix GenericQuantityArray<T, Encoding>(value, ndim, shape, units) {} \
-    name(const T* value, const SizeType& len,				\
-	 const UnitsType& units = UnitsType()) :			\
-      prefix GenericQuantityArray<T, Encoding>(value, len, units) {}	\
-    name(const T* value, const SizeType& ndim, const SizeType* shape,	\
-	 const Ch* units) :						\
-      prefix GenericQuantityArray<T, Encoding>(value, ndim, shape, units) {} \
-    template<SizeType N>						\
-    name(const T (&value)[N], const UnitsType& units = UnitsType()) :	\
-      prefix GenericQuantityArray<T, Encoding>(value, units) {}		\
-    template<SizeType N>						\
-    name(const T (&value)[N], const Ch* units) :			\
-      prefix GenericQuantityArray<T, Encoding>(value, units) {}		\
-    template<SizeType N, SizeType M>					\
-    name(const T (&value)[N][M], const UnitsType& units = UnitsType()) : \
-      prefix GenericQuantityArray<T, Encoding>(value, units) {}		\
-    template<SizeType N, SizeType M>					\
-    name(const T (&value)[N][M], const Ch* units) :			\
-      prefix GenericQuantityArray<T, Encoding>(value, units) {}		\
-    name(const name<T>& other) : prefix GenericQuantityArray<T, Encoding>(other) {} \
-    name(const prefix GenericQuantityArray<T, Encoding>& other) :	\
-      prefix GenericQuantityArray<T, Encoding>(other) {}		\
-    name<T>& operator=(const name<T>& other) {				\
-      prefix GenericQuantityArray<T, Encoding>::operator=(other);	\
-      return *this;							\
-    }									\
-    name<T>& operator=(const prefix GenericQuantityArray<T, Encoding>& other) { \
-      prefix GenericQuantityArray<T, Encoding>::operator=(other);	\
-      return *this;							\
-    }									\
-  }
-
 //! GenericQuantityArray with UTF8 encoding
-#if RAPIDJSON_HAS_CXX11
-template<typename T>
-using QuantityArray = GenericQuantityArray<T, UTF8<char> >;
-#else // RAPIDJSON_HAS_CXX11
-YGGDRASIL_CREATE_QUANTITY_ARRAY(QuantityArray, UTF8<char>, );
-#endif // RAPIDJSON_HAS_CXX11
+CREATE_DEFAULT_(QuantityArray, QUANTITY_ARRAY_TYPE,
+		GenericQuantityArray, GENERIC_QUANTITY_ARRAY_TYPE,
+		UTF8<char>, INHERIT_CONSTRUCTORS_ARRAY_);
+  
+//! Scalar quantity with units.
+//! \tparam T Type of the underlying scalar.
+//! \tparam Encoding Encoding used to store the unit strings.
+template<typename T, typename Encoding>
+class GenericQuantity : public GenericQuantityArray<T, Encoding> {
+public:
+  typedef GenericQuantityArray<T, Encoding> Base;
+  typedef Encoding EncodingType;    //!< Encoding type from template parameter.
+  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
+  typedef GenericUnits<Encoding> UnitsType; //!< Units type.
+  //! \brief Empty constructor.
+  GenericQuantity() : Base(_initialize_value<T>()) {}
+  //! \brief Copy constructor.
+  GenericQuantity(const GenericQuantity& rhs) :
+    Base(rhs.value(), rhs.units()) {}
+  //! \brief Create a quantity without units.
+  //! \param value Scalar value.
+  GenericQuantity(const T& value) :
+    Base(value) {}
+  //! \brief Constructor from units string.
+  //! \param value Scalar value.
+  //! \param units Units string.
+  GenericQuantity(const T& value, const Ch* units) :
+    Base(value, units) {}
+  //! \brief Constructor from units string.
+  //! \param value Scalar value.
+  //! \param units Units instance.
+  GenericQuantity(const T& value, const UnitsType& units) :
+    Base(value, units) {}
+  //! \brief Print instance information to an output stream.
+  //! \param os Output stream.
+  void display(std::ostream& os) const {
+    os << "Quantity(" << value() << ", \"";
+    os << this->units();
+    os << "\")";
+  }
+private:
+  template<typename T1>
+  static T1 _initialize_value(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
+  { return (T1)(0); }
+  template<typename T1>
+  static T1 _initialize_value(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
+  { return T1(0.0, 0.0); }
+public:
+  //! \brief Get the quantity value without units.
+  //! \return Value.
+  T value() const { return Base::value()[0]; }
+  //! \brief Set the quantity value.
+  //! \param new_value New quantity value.
+  template<typename T2>
+  void set_value(const T2& new_value,
+		 RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, T))))
+  {
+    SizeType N = 1;
+    Base::set_value(&new_value, 1, &N);
+  }
+  //! \brief Arithmetic operators
+  INHERIT_OPERATORS_(GenericQuantity, GENERIC_QUANTITY_TYPE, GENERIC_QUANTITY_ARRAY_TYPE)
+private:
+  template<typename U, typename Encoding2>
+  friend std::ostream & operator << (std::ostream &os, const GenericQuantity<U,Encoding2> &x);
+
+  FRIEND_DEFAULT_(Quantity)
+};
+template<typename T, typename Encoding>
+inline std::ostream & operator << (std::ostream &os, const GenericQuantity<T, Encoding> &x) {
+  os << x.value() << " " << x.units();
+  return os;
+}
+
+//! GenericQuantity with UTF8 encoding
+CREATE_DEFAULT_(Quantity, QUANTITY_TYPE,
+		GenericQuantity, GENERIC_QUANTITY_TYPE,
+		UTF8<char>, INHERIT_CONSTRUCTORS_);
 
   template <typename T, typename Encoding>
   void changeUnits(const unsigned char* src_bytes,
@@ -2961,6 +2869,33 @@ YGGDRASIL_CREATE_QUANTITY_ARRAY(QuantityArray, UTF8<char>, );
 #undef ARRAY_ARRAY_OP
 #undef ARRAY_SCALAR_OP
 #undef PACK_LUT
+#undef DELEGATE_TO_INPLACE_
+#undef DELEGATE_TO_INPLACE_OP_QUANTITY_
+#undef DELEGATE_TO_INPLACE_OP_SCALAR_
+#undef INHERIT_OP_BASE_INPLACE_
+#undef INHERIT_OP_BASE_
+#undef INHERIT_OP_BASE_QUANTITY_
+#undef INHERIT_OP_INPLACE_
+#undef INHERIT_OP_BASE_SCALAR_
+#undef INHERIT_OP_
+#undef INHERIT_OP_SCALAR_
+#undef INHERIT_CONSTRUCTORS_
+#undef INHERIT_CONSTRUCTORS_ARRAY_
+#undef INHERIT_OPERATORS_
+#undef GENERIC_QUANTITY_ARRAY_TYPE
+#undef GENERIC_QUANTITY_TYPE
+#undef QUANTITY_ARRAY_TYPE
+#undef QUANTITY_TYPE
+#undef ADD_QUANTITY_OPERATOR
+#undef ADD_QUANTITY_ARRAY_OPERATOR
+#undef METHOD_FACTOR_PULL_
+#undef METHOD_FACTOR_APPLY_
+#undef INPLACE_OP_QUANTITY_BASE_
+#undef INPLACE_OP_SCALAR_
+#undef INPLACE_OP_QUANTITY_CONVERT_
+#undef INPLACE_OP_QUANTITY_COMBINE_
+#undef FRIEND_DEFAULT_
+#undef CREATE_DEFAULT_
 
 } // namespace units
 

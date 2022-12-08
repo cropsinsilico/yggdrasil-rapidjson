@@ -84,6 +84,8 @@ TEST(Unit, Base) {
   COMPARE_UNITS(0.0, "°C", 273.15, "K", true, false);
   COMPARE_UNITS(32.0, "°F", 0.0, "°C", true, false);
   COMPARE_UNITS(41.0, "°F", 5.0, "°C", true, false);
+  COMPARE_UNITS(1.0, "Δ°C", 1.0, "ΔK", true, false);
+  COMPARE_UNITS(1.0, "Δ°C", 9.0/5.0, "Δ°F", true, false);
   COMPARE_UNITS(1.0, "km s", 1.0, "km*s", true, true);
   COMPARE_UNITS(1.0, "g**(1+1)", 1.0, "g^2", true, true);
   COMPARE_UNITS(1.0, "g**(3-1)", 1.0, "g^2", true, true);
@@ -115,6 +117,15 @@ TEST(Unit, MultDiv) {
   UNIT_OPERATOR(kg, /, cm**-1, kg*cm);
   UNIT_OPERATOR(cm/s, *, kg, kg*cm/s);
   UNIT_OPERATOR_BASE(hr, /, day, n/a, 0.041666666666666664);
+};
+
+TEST(Unit, AddSubtract) {
+  UNIT_OPERATOR_BASE(degC, +, degC, degC, 2);
+  UNIT_OPERATOR_BASE(degC, -, degC, ΔdegC, 0);
+  UNIT_OPERATOR_BASE(degC, +, ΔK, degC, 2);
+  UNIT_OPERATOR_BASE(ΔdegC, +, K, degC, -271.15);
+  UNIT_OPERATOR_BASE(degC, -, K, ΔdegC, 273.15);
+  UNIT_OPERATOR_BASE(K, -, degC, ΔK, -273.15);
 };
 
 TEST(Unit, Exponent) {

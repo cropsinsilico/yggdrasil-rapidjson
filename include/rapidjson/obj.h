@@ -1053,22 +1053,24 @@ inline
 std::istream & operator >> (std::istream &in, ObjRefSurface &p)
 { return p.read(in); }
 
-#define HANDLE_VECTOR_SET_(T, type)					\
+#define HANDLE_VECTOR_SET_(T, type, TN)					\
     std::vector<type>* mem_cast = (std::vector<type>*)mem;		\
     if (inc && is_index) {						\
-      for (typename std::vector<T>::const_iterator v = val.begin();	\
+      for (TN std::vector<T>::const_iterator v = val.begin();		\
 	   v != val.end(); v++) {					\
 	type vv = static_cast<type>(*v);				\
 	_type_inc(vv);							\
 	mem_cast->push_back(vv);					\
       }									\
     } else {								\
-      for (typename std::vector<T>::const_iterator v = val.begin();	\
+      for (TN std::vector<T>::const_iterator v = val.begin();		\
 	   v != val.end(); v++) {					\
 	mem_cast->push_back(static_cast<type>(*v));			\
       }									\
     }									\
     return true
+#define HANDLE_VECTOR_SET_TEMPLATE_(T, type)				\
+    HANDLE_VECTOR_SET_(T, type, typename)
 #define HANDLE_SCALAR_SET_(T, type)					\
     type* mem_cast = nullptr;						\
     if (!_get_scalar_mem(mem_cast, true)) return false;			\
@@ -1129,7 +1131,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
   bool ObjPropertyType::set(const std::vector<T>& val, bool inc) {	\
     if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false; \
     if (second & flag) {						\
-      HANDLE_VECTOR_SET_(T, T);						\
+      HANDLE_VECTOR_SET_(T, T, );					\
     }									\
     return false;							\
   }									\
@@ -1179,7 +1181,7 @@ RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::set(const std::vector<T>& val, bool inc) {
   if ((!mem) || !(second & ObjTypeList)) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_SET_)
+  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_SET_TEMPLATE_)
     return true;
 }
 template<typename T>
@@ -1257,6 +1259,7 @@ bool ObjPropertyType::inc() {
 #undef INC_VECTOR_
   return (T == NULL);
 }
+#undef HANDLE_VECTOR_SET_TEMPLATE_
 #undef HANDLE_VECTOR_SET_
 #undef HANDLE_SCALAR_SET_
 #undef HANDLE_VECTOR_GET_
@@ -1535,7 +1538,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
     ObjPropertyType tmp[] = {						\
       UNPACK_MACRO props						\
     };									\
-    this->properties.assign(&tmp[0], &tmp[(sizeof(tmp) / sizeof(ObjPropertyType)) - 1]); \
+    this->properties.assign(&tmp[0], &tmp[(sizeof(tmp) / sizeof(ObjPropertyType)) - 1] + 1); \
   }
 #endif // RAPIDJSON_HAS_CXX11
 
