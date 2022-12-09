@@ -33,6 +33,7 @@ RAPIDJSON_DIAG_OFF(6334)
 
 #ifdef RAPIDJSON_YGGDRASIL
 #include <cstdarg>
+#include <limits>
 #endif // RAPIDJSON_YGGDRASIL
 
 //@cond RAPIDJSON_INTERNAL

@@ -2652,7 +2652,7 @@ public:
 		       GenericQuantityArray, GENERIC_QUANTITY_ARRAY_TYPE,
 		       pow, pow_inplace,
 		       (const T2& x, RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))),
-		       (x));
+		       (x))
   //! \brief Explicity copy.
   //! \return Copy.
   GenericQuantityArray<T, Encoding>* copy() const {
