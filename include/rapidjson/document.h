@@ -657,6 +657,10 @@ struct TypeHelper<ValueType, typename ValueType::ConstObject> {
 
 #ifdef RAPIDJSON_YGGDRASIL
 
+static void* __StaticNull = NULL;
+static bool __StaticFalse = false;
+static bool __StaticTrue = true;
+
 // Yggdrasil TypeHelper structs
 // uint
 template<typename ValueType>
@@ -4713,8 +4717,91 @@ public:
     return out;
   }
 
+  void* GetDataPtr(bool& requires_freeing) const {
+    switch (GetType()) {
+    case kNullType:     return (void*)(&internal::__StaticNull);
+    case kFalseType:    return (void*)(&internal::__StaticFalse);
+    case kTrueType:     return (void*)(&internal::__StaticTrue);
+    case kStringType: {
+      if (IsObjWavefront()) {
+	requires_freeing = true;
+	ObjWavefront* tmp = new ObjWavefront();
+	GetObjWavefront(*tmp);
+	return (void*)tmp;
+      } else if (IsPly()) {
+	requires_freeing = true;
+	Ply* tmp = new Ply();
+	GetPly(*tmp);
+	return (void*)tmp;
+      } else if (IsPythonFunction()) {
+	requires_freeing = true;
+	return (void*)GetPythonObjectRaw();
+      } else if (IsPythonInstance()) {
+	requires_freeing = true;
+	return (void*)GetPythonObjectRaw();
+      } else {
+	return (void*)(GetString());
+      }
+    }
+    case kNumberType: {
+      if (IsDouble())         return (void*)(&data_.n.d);
+      else if (IsInt())       return (void*)(&data_.n.i.i);
+      else if (IsUint())      return (void*)(&data_.n.u.u);
+      else if (IsInt64())     return (void*)(&data_.n.i64);
+      else                    return (void*)(&data_.n.u64);
+    }
+    // case kObjectType: {
+    // 	if (IsPythonInstance()) {
+    // 	  requires_freeing = true;
+    // 	  return (void*)GetPythonObjectRaw();
+    // 	} else {
+    // 	  return (void*)this;
+    // 	}
+    // }
+    default:
+      return (void*)this;
+    }
+    return NULL;
+  }
+  
   SizeType GetNBytes() const {
-    return GetPrecision() * GetNElements();
+    switch (GetType()) {
+    case kNullType:     return (SizeType)(sizeof(void*));
+    case kFalseType:    return (SizeType)(sizeof(bool));
+    case kTrueType:     return (SizeType)(sizeof(bool));
+    case kStringType: {
+      if (IsScalar() || IsNDArray()) {
+	return GetPrecision() * GetNElements();
+      } else if (IsObjWavefront()) {
+	return (SizeType)(sizeof(ObjWavefront));
+      } else if (IsPly()) {
+	return (SizeType)(sizeof(Ply));
+      } else if (IsPythonFunction()) {
+	return (SizeType)(sizeof(PyObject));
+      } else if (IsPythonInstance()) {
+	return (SizeType)(sizeof(PyObject));
+      } else {
+	return GetStringLength();
+      }
+    }
+    case kNumberType: {
+      if (IsDouble())         return (SizeType)(sizeof(double));
+      else if (IsInt())       return (SizeType)(sizeof(int));
+      else if (IsUint())      return (SizeType)(sizeof(unsigned));
+      else if (IsInt64())     return (SizeType)(sizeof(int64_t));
+      else                    return (SizeType)(sizeof(uint64_t));
+    }
+    // case kObjectType: {
+    //   if (IsPythonInstance()) {
+    // 	return (SizeType)(sizeof(PyObject));
+    //   } else {
+    //  return (SizeType)(sizeof(GenericDocument<EncodingType, AllocatorType>));
+    //   }
+    // }
+    default:
+      return (SizeType)(sizeof(GenericDocument<EncodingType, AllocatorType, AllocatorType>));
+    }
+    return 0;
   }
 
   template <typename T>

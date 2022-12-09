@@ -1063,6 +1063,16 @@ public:
     ss << *this;
     return ss.str();
   }
+  //! \brief Create a copy of the units with a different encoding.
+  //! \tparam DestEncoding Encoding that the copy should use.
+  //! \return Copy w/ DestEncoding.
+  template<typename DestEncoding>
+  GenericUnits<DestEncoding> transcode() const {
+    GenericUnits<DestEncoding> out;
+    for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++)
+      out.units_.push_back(it->template transcode<DestEncoding>());
+    return out;
+  }
   //! \brief Get the dimensions of the units.
   //! \returns Consolidated dimensions of the units.
   Dimension dimension() const {
@@ -2166,26 +2176,20 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
 #define QUANTITY_TYPE(TT) Quantity<TT>
 
 #if RAPIDJSON_HAS_CXX11
-#define ADD_QUANTITY_OPERATOR(TYP, op)
-#define ADD_QUANTITY_ARRAY_OPERATOR(TYP, op)
+#define ADD_DEFAULT_OPERATOR(DEF, TYP, OP)
 #else
 template<typename T>
 class Quantity;
 template<typename T>
 class QuantityArray;
-#define ADD_QUANTITY_OPERATOR(TYP, op)					\
+#define ADD_DEFAULT_OPERATOR(DEF, TYP, OP)				\
   template<typename T2>							\
-  TYP(T)& operator op (const Quantity<T2>& x) {				\
-    if (internal::IsSame<Encoding,UTF8<char> >::Value)			\
-      return *this op *((TYP(T2)*)(&x));				\
-    return *this op TYP(T2)(x.value(), x.units());			\
-  }
-#define ADD_QUANTITY_ARRAY_OPERATOR(TYP, op)				\
-  template<typename T2>							\
-  TYP(T)& operator op (const QuantityArray<T2>& x) {			\
-    if (internal::IsSame<Encoding,UTF8<char> >::Value)			\
-      return *this op *((TYP(T2)*)(&x));				\
-    return *this op TYP(T2)(x.value(), x.ndim(), x.shape(), x.units());	\
+  TYP(T)& operator OP (const DEF<T2>& x) {				\
+    if (!internal::IsSame<Encoding,UTF8<char> >::Value) {		\
+      TYP(T2) tmp = x.template transcode<Encoding>();			\
+      return *this OP tmp;						\
+    }									\
+    return *this OP *((TYP(T2)*)(&x));					\
   }
 #endif
 
@@ -2241,8 +2245,8 @@ class QuantityArray;
     return *this;							\
   }									\
   DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE, OP, IOP) \
-  ADD_QUANTITY_ARRAY_OPERATOR(GENERIC_QUANTITY_ARRAY_TYPE, IOP)		\
-  ADD_QUANTITY_OPERATOR(GENERIC_QUANTITY_ARRAY_TYPE, IOP)
+  ADD_DEFAULT_OPERATOR(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, IOP)	\
+  ADD_DEFAULT_OPERATOR(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, IOP)
 #define INPLACE_OP_QUANTITY_COMBINE_(OP, IOP)				\
   template<typename T2>							\
   GenericQuantityArray& operator IOP(const GenericQuantityArray<T2, Encoding>& x) { \
@@ -2255,8 +2259,8 @@ class QuantityArray;
   }									\
   DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE, OP, IOP) \
   INPLACE_OP_SCALAR_(OP, IOP)						\
-  ADD_QUANTITY_ARRAY_OPERATOR(GENERIC_QUANTITY_ARRAY_TYPE, IOP)		\
-  ADD_QUANTITY_OPERATOR(GENERIC_QUANTITY_ARRAY_TYPE, IOP)
+  ADD_DEFAULT_OPERATOR(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, IOP)	\
+  ADD_DEFAULT_OPERATOR(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, IOP)
 
 #if RAPIDJSON_HAS_CXX11
 #define FRIEND_DEFAULT_(CLS)
@@ -2371,10 +2375,9 @@ public:
   { SizeType shape[] = {N, M}; _init(&(value[0][0]), 2, &(shape[0])); }
   //! \brief Copy constructor.
   //! \param other QuantityArray to copy.
-  template<typename Encoding2>
-  GenericQuantityArray(const GenericQuantityArray<T, Encoding2>& other) :
+  GenericQuantityArray(const GenericQuantityArray<T, Encoding>& other) :
     value_(), units_(other.units_), shape_()
-  { _init(other.value_.data(), other.ndim(), other.shape_); }
+  { _init(other.value_.data(), other.ndim(), other.shape_.data()); }
   //! \brief Destructor.
   ~GenericQuantityArray() {
     value_.clear();
@@ -2403,6 +2406,14 @@ public:
     std::basic_stringstream<Ch> ss;
     ss << *this;
     return ss.str();
+  }
+  //! \brief Create a copy of the quantity with units in a different encoding.
+  //! \tparam DestEncoding Encoding that the copy should use.
+  //! \return Copy w/ DestEncoding.
+  template<typename DestEncoding>
+  GenericQuantityArray<T, DestEncoding> transcode() const {
+    GenericUnits<DestEncoding> new_units = units_.template transcode<DestEncoding>();
+    return GenericQuantityArray<T, DestEncoding>(value(), ndim(), shape(), new_units);
   }
 private:
   std::vector<SizeType> _index(const SizeType idx) const {
@@ -2608,7 +2619,7 @@ public:
   //! \param x Scalar to modulo by.
   //! \return Result of division.
   INPLACE_OP_SCALAR_(%, %=)
-  ADD_QUANTITY_ARRAY_OPERATOR(GENERIC_QUANTITY_ARRAY_TYPE, %=)
+  ADD_DEFAULT_OPERATOR(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, %=)
   //! \brief Add a quantity with compatible units.
   //! \param x QuantityArray to add.
   //! \return Result of addition.
@@ -2796,14 +2807,6 @@ public:
     os << this->units();
     os << "\")";
   }
-private:
-  template<typename T1>
-  static T1 _initialize_value(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
-  { return (T1)(0); }
-  template<typename T1>
-  static T1 _initialize_value(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
-  { return T1(0.0, 0.0); }
-public:
   //! \brief Get the quantity value without units.
   //! \return Value.
   T value() const { return Base::value()[0]; }
@@ -2818,7 +2821,15 @@ public:
   }
   //! \brief Arithmetic operators
   INHERIT_OPERATORS_(GenericQuantity, GENERIC_QUANTITY_TYPE, GENERIC_QUANTITY_ARRAY_TYPE)
+  
 private:
+  template<typename T1>
+  static T1 _initialize_value(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
+  { return (T1)(0); }
+  template<typename T1>
+  static T1 _initialize_value(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
+  { return T1(0.0, 0.0); }
+  
   template<typename U, typename Encoding2>
   friend std::ostream & operator << (std::ostream &os, const GenericQuantity<U,Encoding2> &x);
 
@@ -2886,8 +2897,7 @@ CREATE_DEFAULT_(Quantity, QUANTITY_TYPE,
 #undef GENERIC_QUANTITY_TYPE
 #undef QUANTITY_ARRAY_TYPE
 #undef QUANTITY_TYPE
-#undef ADD_QUANTITY_OPERATOR
-#undef ADD_QUANTITY_ARRAY_OPERATOR
+#undef ADD_DEFAULT_OPERATOR
 #undef METHOD_FACTOR_PULL_
 #undef METHOD_FACTOR_APPLY_
 #undef INPLACE_OP_QUANTITY_BASE_
