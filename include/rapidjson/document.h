@@ -4801,7 +4801,6 @@ public:
     default:
       return (SizeType)(sizeof(GenericDocument<EncodingType, AllocatorType, AllocatorType>));
     }
-    return 0;
   }
 
   template <typename T>

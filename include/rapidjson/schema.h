@@ -4996,11 +4996,7 @@ public:
       CHECK_INCOMPATIBLE_IF_SET(minLength_, MinLength, 0);
       CHECK_INCOMPATIBLE_IF_SET(maxLength_, MaxLength, ~SizeType(0));
       // Scalar properties
-      if (precision_ != rhs.precision_) {
-	if (!((yggtype_ & (1 << kYggScalarSchemaType)) &&
-	      subtype_ == kYggStringSchemaSubType))
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPrecisionString(), precision_, rhs.precision_);
-      }
+      CHECK_INCOMPATIBLE_IF_PRESENT(precision_, Precision);
       CHECK_INCOMPATIBLE_IF_PRESENT(units_, Units);
       // This version allows the units to be compatible
       // if (units_.IsString() && rhs.units_.IsString()) {
