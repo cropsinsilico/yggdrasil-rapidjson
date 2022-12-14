@@ -3804,7 +3804,7 @@ public:
 	PyArray_Descr* desc = PyArray_DescrNewFromType(typenum);
 	if (desc == NULL) return NULL;
 	if (PyTypeNum_ISFLEXIBLE(typenum))
-	  desc->elsize = GetPrecision();
+	  desc->elsize = static_cast<int>(GetPrecision());
 	out = PyArray_Scalar((void*)GetString(), desc, NULL);
 	// if (out != NULL) {
 	//   Py_INCREF(desc);
@@ -3818,7 +3818,7 @@ public:
 	PyArray_Descr* desc = PyArray_DescrNewFromType(typenum);
 	if (desc == NULL) return NULL;
 	if (PyTypeNum_ISFLEXIBLE(typenum))
-	  desc->elsize = GetPrecision();
+	  desc->elsize = static_cast<int>(GetPrecision());
 	if (HasTitle()) {
 	  const ValueType& title = GetTitle();
 	  PyObject* titlePy = PyUnicode_FromStringAndSize(title.GetString(),
@@ -3870,7 +3870,7 @@ public:
 	  std::cerr << "CHANGING THE ENCODING" << std::endl;
 	  free_data = true;
 	  data = tmp;
-	  desc->elsize = tmp_nbytes / GetNElements();
+	  desc->elsize = static_cast<int>(tmp_nbytes / GetNElements());
 	}
 	PyObject* tmp = PyArray_NewFromDescr(&PyArray_Type, desc,
 					     (int)ndim, np_shape,
@@ -4102,14 +4102,18 @@ public:
 	    if (!SetPythonObjectRaw(field))
 	      return false;
 	    if (!skipTitle) {
-	      ValueType field_name(kw_keyS, kw_keyS_len, schema_->GetAllocator());
+	      ValueType field_name(kw_keyS,
+				   static_cast<SizeType>(kw_keyS_len),
+				   schema_->GetAllocator());
 	      AddSchemaMember(GetTitleString(), field_name);
 	    }
 	  } else {
 	    ValueType pyField(field);
 	    Py_DECREF(field);
 	    if (!skipTitle) {
-	      ValueType field_name(kw_keyS, kw_keyS_len, schema_->GetAllocator());
+	      ValueType field_name(kw_keyS,
+				   static_cast<SizeType>(kw_keyS_len),
+				   schema_->GetAllocator());
 	      pyField.AddSchemaMember(GetTitleString(), field_name);
 	    }
 	    PushBack(pyField, schema_->GetAllocator());
