@@ -4464,6 +4464,11 @@ public:
     }
     return false;
   }
+  bool IsScalar(const Ch* subT) const {
+    if (!IsScalar())
+      return false;
+    return (ValueType(subT, internal::StrLen(subT)) == GetSubType());
+  }
   template <typename T>
   bool IsScalar(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T)))) const {
     if (!IsScalar())
