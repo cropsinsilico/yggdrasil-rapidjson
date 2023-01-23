@@ -7570,7 +7570,7 @@ protected:
 	return true;
       }
     }
-    return true;
+    return false;
   }
   static bool NormRelativePath(Context& context, const Ch* str, SizeType length,
 			       SValue& dst, AllocatorType& allocator) {
