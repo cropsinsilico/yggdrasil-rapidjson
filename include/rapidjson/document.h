@@ -5189,7 +5189,7 @@ public:
     } else {
       return NULL;
     }
-    PyObject* py_class = import_python_object(mod_class, "GetPythonClass");
+    PyObject* py_class = import_python_object(mod_class, "GetPythonClass: ", true);
     return py_class;
   }
   PyObject* GetPythonFunction() const { return GetPythonClass(true); }

@@ -5598,7 +5598,7 @@ public:
 	if (context.python_disabled)
 	  return false;
 	PyObject* pyobj = import_python_object("collections:OrderedDict",
-					       "GenerateData", true);
+					       "GenerateData: ", true);
 	if (pyobj == NULL)
 	  return false;
 	data.SetPythonInstance(pyobj);
@@ -5609,10 +5609,10 @@ public:
 	PyObject* pycls = NULL;
 	if (class_.IsPythonClass() || class_.IsString()) {
 	  pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
-				       "GenerateData", true);
+				       "GenerateData: ", true);
 	} else {
 	  pycls = import_python_object("collections:OrderedDict",
-				       "GenerateData", true);
+				       "GenerateData: ", true);
 	}
 	if (pycls == NULL)
 	  return false;
@@ -7594,14 +7594,14 @@ protected:
       length = v.GetStringLength();
     }
     PyObject* pyobj = import_python_object(reinterpret_cast<const char*>(str),
-					   "CheckPythonImport", true);
+					   "CheckPythonImport: ", true);
     if (!(pyobj)) {
       context.error_handler.InvalidPythonImport(str, length);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonImport);
     }
     if (class_.IsPythonClass() || class_.IsString()) {
       PyObject* pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
-					     "CheckPythonImport", true);
+					     "CheckPythonImport: ", true);
       if (pycls && (PyObject_IsSubclass(pyobj, pycls) <= 0)) {
 	Py_DECREF(pyobj);
 	Py_DECREF(pycls);
@@ -7625,7 +7625,7 @@ protected:
     }
     if (class_.IsPythonClass() || class_.IsString()) {
       PyObject* pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
-					     "CheckPythonPickle", true);
+					     "CheckPythonPickle: ", true);
       if (pycls && (PyObject_IsSubclass(pyobj, pycls) <= 0)) {
 	Py_DECREF(pyobj);
 	Py_DECREF(pycls);
