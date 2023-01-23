@@ -4,6 +4,9 @@ definitions:
     allOf:
     - additionalProperties: false
       allowSingular: name
+      dependencies:
+        driver:
+        - args
       description: Base schema for all subtypes of comm components.
       properties:
         address:
@@ -23,6 +26,7 @@ definitions:
         client_id:
           type: string
         commtype:
+          default: default
           description: Communication mechanism that should be used.
           enum:
           - buffer
@@ -71,8 +75,16 @@ definitions:
           deprecated: true
           description: '[DEPRECATED] Name of driver class that should be used.'
           enum:
+          - IPCInputDriver
+          - IPCOutputDriver
           - InputDriver
           - OutputDriver
+          - RMQAsyncInputDriver
+          - RMQAsyncOutputDriver
+          - RMQInputDriver
+          - RMQOutputDriver
+          - ZMQInputDriver
+          - ZMQOutputDriver
           type: string
         field_names:
           aliases:
@@ -226,6 +238,12 @@ definitions:
             enum:
             - buffer
             type: string
+          driver:
+            deprecated: true
+            description: '[DEPRECATED] Name of driver class that should be used.'
+            enum:
+            - ''
+            type: string
           name:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+(::[A-Za-z0-9-_]+)?$
@@ -273,6 +291,12 @@ definitions:
             enum:
             - mpi
             type: string
+          driver:
+            deprecated: true
+            description: '[DEPRECATED] Name of driver class that should be used.'
+            enum:
+            - ''
+            type: string
           name:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+(::[A-Za-z0-9-_]+)?$
@@ -296,6 +320,12 @@ definitions:
           cookies:
             description: Cookies to send to the server. Defaults to None and is ignored.
             type: object
+          driver:
+            deprecated: true
+            description: '[DEPRECATED] Name of driver class that should be used.'
+            enum:
+            - ''
+            type: string
           host:
             default: http://localhost:{port}
             type: string
@@ -384,6 +414,12 @@ definitions:
           count:
             default: 1
             type: integer
+          driver:
+            deprecated: true
+            description: '[DEPRECATED] Name of driver class that should be used.'
+            enum:
+            - ''
+            type: string
           name:
             description: Name used for component in log messages.
             pattern: ^([A-Za-z0-9-_]+:)?[A-Za-z0-9-_]+(::[A-Za-z0-9-_]+)?$
@@ -809,7 +845,6 @@ definitions:
           deprecated: true
           description: '[DEPRECATED] Name of driver class that should be used.'
           enum:
-          - ''
           - AsciiFileInputDriver
           - AsciiFileOutputDriver
           - AsciiMapInputDriver
@@ -855,6 +890,7 @@ definitions:
             type: string
           type: array
         filetype:
+          default: binary
           description: The type of file that will be read from or written to.
           enum:
           - ascii
@@ -1840,7 +1876,6 @@ definitions:
           type: boolean
         args:
           allowSingular: true
-          default: []
           description: The path to the file containing the model program that will
             be run by the driver for the model's language and/or a list of arguments
             that should be passed as input to the model program or language executable
@@ -2087,6 +2122,7 @@ definitions:
             type: string
           type: array
         language:
+          default: executable
           description: The programming language that the model is written in. A list
             of available languages can be found :ref:`here <schema_table_model_subtype_rst>`.
           enum:
@@ -2441,7 +2477,6 @@ definitions:
         $properties/outputs/items/anyOf/2:
         - working_dir
       required:
-      - args
       - inputs
       - name
       - outputs
@@ -2465,6 +2500,7 @@ definitions:
             - executable
             type: string
         required:
+        - args
         - language
         title: yggdrasil.drivers.ExecutableModelDriver.ExecutableModelDriver
         type: object
@@ -2587,6 +2623,7 @@ definitions:
               type: string
             type: array
         required:
+        - args
         - language
         title: yggdrasil.drivers.CMakeModelDriver.CMakeModelDriver
         type: object
@@ -2645,6 +2682,7 @@ definitions:
               type: string
             type: array
         required:
+        - args
         - language
         title: yggdrasil.drivers.CModelDriver.CModelDriver
         type: object
@@ -2705,6 +2743,7 @@ definitions:
               type: string
             type: array
         required:
+        - args
         - language
         title: yggdrasil.drivers.CPPModelDriver.CPPModelDriver
         type: object
@@ -2746,6 +2785,7 @@ definitions:
               via the command line. Defaults to False.
             type: boolean
         required:
+        - args
         - language
         title: yggdrasil.drivers.DummyModelDriver.DummyModelDriver
         type: object
@@ -2810,6 +2850,7 @@ definitions:
             - f2008
             type: string
         required:
+        - args
         - language
         title: yggdrasil.drivers.FortranModelDriver.FortranModelDriver
         type: object
@@ -2850,6 +2891,7 @@ definitions:
               via the command line. Defaults to False.
             type: boolean
         required:
+        - args
         - language
         title: yggdrasil.drivers.LPyModelDriver.LPyModelDriver
         type: object
@@ -2870,6 +2912,7 @@ definitions:
             - mpi
             type: string
         required:
+        - args
         - language
         title: yggdrasil.drivers.MPIPartnerModel.MPIPartnerModel
         type: object
@@ -2990,6 +3033,7 @@ definitions:
               type: string
             type: array
         required:
+        - args
         - language
         title: yggdrasil.drivers.MakeModelDriver.MakeModelDriver
         type: object
@@ -3035,6 +3079,7 @@ definitions:
               in Matlab using symunit. Defaults to False.
             type: boolean
         required:
+        - args
         - language
         title: yggdrasil.drivers.MatlabModelDriver.MatlabModelDriver
         type: object
@@ -3085,6 +3130,7 @@ definitions:
               table of values will be extrapolated.
             type: object
         required:
+        - args
         - language
         title: yggdrasil.drivers.OSRModelDriver.OSRModelDriver
         type: object
@@ -3125,6 +3171,7 @@ definitions:
               via the command line. Defaults to False.
             type: boolean
         required:
+        - args
         - language
         title: yggdrasil.drivers.PythonModelDriver.PythonModelDriver
         type: object
@@ -3166,6 +3213,7 @@ definitions:
               via the command line. Defaults to False.
             type: boolean
         required:
+        - args
         - language
         title: yggdrasil.drivers.RModelDriver.RModelDriver
         type: object
@@ -3253,6 +3301,7 @@ definitions:
             description: Number of steps that should be output. Defaults to None.
             type: integer
         required:
+        - args
         - language
         title: yggdrasil.drivers.SBMLModelDriver.SBMLModelDriver
         type: object
@@ -3330,7 +3379,6 @@ definitions:
               type: string
             type: array
           language:
-            default: timesync
             description: Model is dedicated to synchronizingtimesteps between other
               models.
             enum:
@@ -3373,6 +3421,7 @@ definitions:
               units) or mappings with the keys:'
             type: object
         required:
+        - args
         - language
         title: yggdrasil.drivers.TimeSyncModelDriver.TimeSyncModelDriver
         type: object
@@ -3489,6 +3538,7 @@ definitions:
             Defaults to False.
           type: boolean
         seritype:
+          default: default
           description: Serializer type.
           enum:
           - default

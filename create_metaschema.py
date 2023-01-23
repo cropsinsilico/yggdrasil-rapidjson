@@ -233,7 +233,7 @@ def get_ygg_tests():
                           'translator': (
                               'tests.test_yamlfile:direct_translate')
                           }]})
-        test_yaml[1].append(
+        test_yaml[1]['models'].append(
             {'name': 'modelA',
              'args': ['./src/modelA.c'],
              'driver': 'GCCModelDriver',
