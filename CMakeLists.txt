@@ -83,11 +83,18 @@ endif()
 
 # Generate the metaschema header file
 option(RAPIDJSON_CREATE_METASCHEMA "Re-create the metaschema" OFF)
+option(RAPIDJSON_CREATE_METASCHEMA_FULL "Re-create the metaschema and the full_schema.yaml file" OFF)
 option(RAPIDJSON_YGGDRASIL_TESTS "Build tests using the yggdrasil schema" OFF)
+if(RAPIDJSON_CREATE_METASCHEMA_FULL)
+  set(RAPIDJSON_CREATE_METASCHEMA ON)
+endif()
 if(RAPIDJSON_CREATE_METASCHEMA)
     set(RAPIDJSON_YGGDRASIL_METASCHEMA_FLAGS "")
     if(RAPIDJSON_YGGDRASIL_TESTS)
         set(RAPIDJSON_YGGDRASIL_METASCHEMA_FLAGS "--ygg-tests")
+    endif()
+    if(RAPIDJSON_CREATE_METASCHEMA_FULL)
+        set(RAPIDJSON_YGGDRASIL_METASCHEMA_FLAGS "${RAPIDJSON_YGGDRASIL_METASCHEMA_FLAGS} --create-full-schema")
     endif()
     exec_program(${Python3_EXECUTABLE}
                  ARGS "${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py ${CMAKE_CURRENT_SOURCE_DIR}/include/rapidjson/metaschema.h ${RAPIDJSON_YGGDRASIL_METASCHEMA_FLAGS}")

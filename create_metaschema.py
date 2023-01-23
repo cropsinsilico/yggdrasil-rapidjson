@@ -6,7 +6,6 @@ from urllib.request import urlopen
 
 
 def create_full_schema(fname):
-    import yaml
     from yggdrasil import schema
     s = schema.get_schema()
     s.save(fname, schema=s.get_schema(full=False))
@@ -24,15 +23,19 @@ def get_ygg_tests():
     with open(fname, 'r') as fd:
         base = yaml.load(fd, yaml.SafeLoader)
     try:
-        base['definitions']['file']['allOf'][0]['properties']['name']['pattern'] = base['definitions']['file']['allOf'][0]['properties']['name']['pattern'].replace('\\', '\\\\')
+        base_file = base[
+            'definitions']['file']['allOf'][0]['properties']['name']
+        base_file['pattern'] = base_file['pattern'].replace('\\', '\\\\')
     except KeyError:
         pass
     for x in base['definitions']['file']['allOf'][1]['anyOf']:
         try:
-            x['properties']['name']['pattern'] = x['properties']['name']['pattern'].replace('\\', '\\\\')
+            x['properties']['name']['pattern'] = x[
+                'properties']['name']['pattern'].replace('\\', '\\\\')
         except KeyError:
             pass
-    default_datatype = "-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InN0cmluZyJ9-YGG-"
+    default_datatype = ("-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIj"
+                        "oic2NhbGFyIiwic3VidHlwZSI6InN0cmluZyJ9-YGG-")
     test_yaml = (
         {'models': [
             {'name': 'fortran_modelA',
@@ -78,33 +81,13 @@ def get_ygg_tests():
              'driver': 'GCCModelDriver',
              'inputs': ['inputA'],
              'name': 'modelA',
-             'outputs': ['outputA']},
-            {'name': 'modelA',
-             'args': './src/modelA.c',
-             'driver': 'GCCModelDriver',
-             'inputs': [{'name': 'inputA',
-                         'args': '/var/folders/6y/tnvg4kjn4n72pcpqw__8jjmh0000gn/T/tmp_5729eb32_0.yml',
-                         'driver': 'FileInputDriver',
-                         'onexit': 'printStatus'  # ,
-                         # 'translator': 'tests.test_yamlfile:direct_translate'
-                         }],
-             'outputs': [{'name': 'outputA',
-                          'driver': 'FileOutputDriver',
-                          'args': 'fileA.txt',
-                          'onexit': 'printStatus'  # ,
-                          # 'translator': 'tests.test_yamlfile:direct_translate'
-                          },
-                         {'name': 'outputA2',
-                          'driver': 'OutputDriver',
-                          'args': 'A_to_B',
-                          'onexit': 'printStatus'  # ,
-                          # 'translator': 'tests.test_yamlfile:direct_translate'
-                          }]}],
+             'outputs': ['outputA']}],
          'connections': [
              {'input': 'outputA',
               'output': 'fileA.txt',
               'seritype': 'ply'},
-             {'inputs': ['/var/folders/6y/tnvg4kjn4n72pcpqw__8jjmh0000gn/T/tmp_7c25e645_0.yml'],
+             {'inputs': [('/var/folders/6y/tnvg4kjn4n72pcpqw__8jjmh00'
+                          '00gn/T/tmp_7c25e645_0.yml')],
               'outputs': 'inputA',
               'read_meth': 'all'},
              {'input': 'outputA',
@@ -157,7 +140,10 @@ def get_ygg_tests():
                           'commtype': 'default',
                           'datatype': default_datatype,
                           'filter': {
-                              'function': '-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9maWx0ZXI=-YGG-'},
+                              'function': (
+                                  '-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-'
+                                  'ZXhhbXBsZV9weXRob246ZXhhbXBsZV9maW'
+                                  'x0ZXI=-YGG-')},
                           'field_names': ['a', 'b'],
                           'field_units': ['cm', 'g']}],
              'working_dir': os.getcwd()},
@@ -184,35 +170,7 @@ def get_ygg_tests():
              'outputs': [{'name': 'outputA',
                           'commtype': 'default',
                           'datatype': default_datatype}],
-             'working_dir': os.getcwd()},
-            {'name': 'modelA',
-             'args': ['./src/modelA.c'],
-             'driver': 'GCCModelDriver',
-             'language': 'c',
-             'working_dir': os.getcwd(),
-             'inputs': [{'name': 'inputA',
-                         'args': '/var/folders/6y/tnvg4kjn4n72pcpqw__8jjmh0000gn/T/tmp_5729eb32_0.yml',
-                         'driver': 'FileInputDriver',
-                         'onexit': 'printStatus',
-                         # 'transform': ['-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-dGVzdHMudGVzdF95YW1sZmlsZTpkaXJlY3RfdHJhbnNsYXRl-YGG-'],
-                         'working_dir': os.getcwd(),
-                         'serializer': {'seritype': 'default'},
-                         'filetype': 'binary'}],
-             'outputs': [{'name': 'outputA',
-                          'driver': 'FileOutputDriver',
-                          'args': 'fileA.txt',
-                          'onexit': 'printStatus',
-                          # 'transform': ['-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-dGVzdHMudGVzdF95YW1sZmlsZTpkaXJlY3RfdHJhbnNsYXRl-YGG-'],
-                          'working_dir': os.getcwd(),
-                          'serializer': {'seritype': 'default'},
-                          'filetype': 'binary'},
-                         {'name': 'outputA2',
-                          'driver': 'OutputDriver',
-                          'args': 'A_to_B',
-                          'onexit': 'printStatus',
-                          # 'transform': ['-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-dGVzdHMudGVzdF95YW1sZmlsZTpkaXJlY3RfdHJhbnNsYXRl-YGG-'],
-                          'datatype': default_datatype,
-                          'commtype': 'default'}]}],
+             'working_dir': os.getcwd()}],
          'connections': [
              {'inputs': [
                  {'name': 'outputA',
@@ -225,7 +183,8 @@ def get_ygg_tests():
                    'serializer': {'seritype': 'ply'},
                    'working_dir': os.getcwd()}],
               'working_dir': os.getcwd()},
-             {'inputs': [{'name': '/var/folders/6y/tnvg4kjn4n72pcpqw__8jjmh0000gn/T/tmp_7c25e645_0.yml',
+             {'inputs': [{'name': ('/var/folders/6y/tnvg4kjn4n72pcpqw'
+                                   '__8jjmh0000gn/T/tmp_7c25e645_0.yml'),
                           'filetype': 'binary',
                           'serializer': {'seritype': 'default'},
                           'working_dir': os.getcwd()}],
@@ -243,8 +202,77 @@ def get_ygg_tests():
                            'serializer': {'seritype': 'default'},
                            'working_dir': os.getcwd()}],
               'working_dir': os.getcwd(),
-              'write_meth': 'all'}],
+              'write_meth': 'all'}
+         ],
          'working_dir': os.getcwd()})
+    if args.create_full_schema:
+        test_yaml[0]['models'].append(
+            {'name': 'modelA',
+             'args': './src/modelA.c',
+             'driver': 'GCCModelDriver',
+             'inputs': [{'name': 'inputA',
+                         'args': (
+                             '/var/folders/6y/tnvg4kjn4n72pcpqw__8jj'
+                             'mh0000gn/T/tmp_5729eb32_0.yml'),
+                         'driver': 'FileInputDriver',
+                         'onexit': 'printStatus',
+                         'translator': (
+                             'tests.test_yamlfile:direct_translate')
+                         }],
+             'outputs': [{'name': 'outputA',
+                          'driver': 'FileOutputDriver',
+                          'args': 'fileA.txt',
+                          'onexit': 'printStatus',
+                          'translator': (
+                              'tests.test_yamlfile:direct_translate')
+                          },
+                         {'name': 'outputA2',
+                          'driver': 'OutputDriver',
+                          'args': 'A_to_B',
+                          'onexit': 'printStatus',
+                          'translator': (
+                              'tests.test_yamlfile:direct_translate')
+                          }]})
+        test_yaml[1].append(
+            {'name': 'modelA',
+             'args': ['./src/modelA.c'],
+             'driver': 'GCCModelDriver',
+             'language': 'c',
+             'working_dir': os.getcwd(),
+             'inputs': [{'name': 'inputA',
+                         'args': ('/var/folders/6y/tnvg4kjn4n72pcpqw_'
+                                  '_8jjmh0000gn/T/tmp_5729eb32_0.yml'),
+                         'driver': 'FileInputDriver',
+                         'onexit': 'printStatus',
+                         'transform': [
+                             '-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-dGVz'
+                             'dHMudGVzdF95YW1sZmlsZTpkaXJlY3RfdHJhbn'
+                             'NsYXRl-YGG-'],
+                         'working_dir': os.getcwd(),
+                         'serializer': {'seritype': 'default'},
+                         'filetype': 'binary'}],
+             'outputs': [{'name': 'outputA',
+                          'driver': 'FileOutputDriver',
+                          'args': 'fileA.txt',
+                          'onexit': 'printStatus',
+                          'transform': [
+                              '-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-dGVz'
+                              'dHMudGVzdF95YW1sZmlsZTpkaXJlY3RfdHJhbn'
+                              'NsYXRl-YGG-'],
+                          'working_dir': os.getcwd(),
+                          'serializer': {'seritype': 'default'},
+                          'filetype': 'binary'},
+                         {'name': 'outputA2',
+                          'driver': 'OutputDriver',
+                          'args': 'A_to_B',
+                          'onexit': 'printStatus',
+                          'transform': [
+                              '-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-dGVz'
+                              'dHMudGVzdF95YW1sZmlsZTpkaXJlY3RfdHJhbn'
+                              'NsYXRl-YGG-'],
+                          'datatype': default_datatype,
+                          'commtype': 'default'}]})
+
     return (["#define METASCHEMA_YGG_TESTS", ""]
             + make_function("get_yggschema", base)
             + make_function("get_testschema", test_yaml[0])
@@ -254,7 +282,8 @@ def get_ygg_tests():
 def make_function(name, base):
     return [
         "template<typename T>",
-        "inline const typename item_return<T>::type* " + name + "() { return nullptr; }", "",
+        "inline const typename item_return<T>::type* " + name + "() {"
+        " return nullptr; }", "",
         "template<>",
         "inline const item_return<char>::type* " + name + "<char>() {",
         "  const char* out = \""
@@ -304,7 +333,8 @@ if __name__ == "__main__":
         "scalar", "schema", "uint", "unicode"]
     base['properties'].update({
         "args": {
-            "description": "Arguments required to recreate a class instance.",
+            "description": (
+                "Arguments required to recreate a class instance."),
             "type": "array"
         },
         "class": {
@@ -313,10 +343,14 @@ if __name__ == "__main__":
                 {"items": {"type": "class"},
                  "minItems": 1,
                  "type": "array"}],
-            "description": "One or more classes that the object should be an instance of."
+            "description": (
+                "One or more classes that the object should be an "
+                "instance of.")
         },
         "kwargs": {
-            "description": "Keyword arguments required to recreate a class instance.",
+            "description": (
+                "Keyword arguments required to recreate a class "
+                "instance."),
             "type": "object"
         },
         "length": {
@@ -369,17 +403,36 @@ if __name__ == "__main__":
             "items": {"type": "string"}
         },
         "allowSingular": {
-            "description": "If true, the value may only contain an element matching the schema for 1) all array items, 2) the only array item in a 1-element long array, 3) the first required object property, 4) the only object property in a 1-element long object. Only valid for array & object schemas.",
+            "description": (
+                "If true, the value may only contain an element "
+                "matching the schema for 1) all array items, 2) the "
+                "only array item in a 1-element long array, 3) the "
+                "first required object property, 4) the only object "
+                "property in a 1-element long object. Only valid for "
+                "array & object schemas."),
             "type": ["boolean", "string"],
             "default": False
         },
         "deprecated": {
-            "description": ("Message about the deprecation of a schema property that will be displayed during validation."
-                            " If true, a generic warning will be displayed."),
+            "description": (
+                "Message about the deprecation of a schema property "
+                "that will be displayed during validation."
+                " If true, a generic warning will be displayed."),
             "type": ["boolean", "string"],
         },
         "pullProperties": {
-            "description": "Pull properties from another location in the provided JSON document. If true, any missing local properties will be pulled from the parent object. If an array of property names is provided, only those local properties in the array will be pulled from the parent object. If an object is provided, the keys should be relative or absolute paths to objects in the JSON document that properties will be pulled from with the values specifying which properties should be pulled (true for all properties and an array or a select subset).",
+            "description": (
+                "Pull properties from another location in the "
+                "provided JSON document. If true, any missing local "
+                "properties will be pulled from the parent object. "
+                "If an array of property names is provided, only "
+                "those local properties in the array will be pulled "
+                "from the parent object. If an object is provided, "
+                "the keys should be relative or absolute paths to "
+                "objects in the JSON document that properties will "
+                "be pulled from with the values specifying which "
+                "properties should be pulled (true for all "
+                "properties and an array or a select subset)."),
             "oneOf": [
                 {"type": "boolean"},
                 {"type": "array",
@@ -393,7 +446,19 @@ if __name__ == "__main__":
             "default": False
         },
         "pushProperties": {
-            "description": "Push properties to another location in the provided JSON document. If true, any properties missing from the parent will be pushed to the parent object. If an array of property names is provided, only those parent properties in the array will be pushed to the parent object. If an object is provided, the keys should be relative or absolute paths to objects in the JSON document that properties will be pushed to with the values specifying which properties should be pushed (true for all missing destination properties and an array or a select subset).",
+            "description": (
+                "Push properties to another location in the provided "
+                "JSON document. If true, any properties missing from "
+                "the parent will be pushed to the parent object. If "
+                "an array of property names is provided, only those "
+                "parent properties in the array will be pushed to "
+                "the parent object. If an object is provided, the "
+                "keys should be relative or absolute paths to "
+                "objects in the JSON document that properties will "
+                "be pushed to with the values specifying which "
+                "properties should be pushed (true for all missing "
+                "destination properties and an array or a select "
+                "subset)."),
             "oneOf": [
                 {"type": "boolean"},
                 {"type": "array",
@@ -407,18 +472,18 @@ if __name__ == "__main__":
             "default": False
         }
     })
-    contents = ["// This file is generated by create_metaschema.py do not modify directly", "",
+    contents = ["// This file is generated by create_metaschema.py do"
+                " not modify directly", "",
                 "#ifndef METASCHEMA_H_",
                 "#define METASCHEMA_H_", "",
                 "template<class T>",
                 "struct item_return{ typedef T type; };", ""]
     contents += (make_function("get_metaschema", base)
                  + make_function("get_standard_metaschema", standard))
-    ## Create test
+    # Create test
     if args.ygg_tests:
         contents += get_ygg_tests()
-    ## End test
+    # End test
     contents += ["", "#endif // METASCHEMA_H_", ""]
     with open(args.dest, 'w') as fd:
         fd.write('\n'.join(contents))
-        
