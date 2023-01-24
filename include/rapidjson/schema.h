@@ -2261,18 +2261,24 @@ public:
     // Normalize function name
     if (schema.yggtype_ & (1 << SchemaType::kYggPythonImportSchemaType) &&
 	schema.yggtype_ != (1 << SchemaType::kYggTotalSchemaType) - 1) {
-      GenericDocument<EncodingType, AllocatorType> valueSchema(kObjectType);
-      valueSchema.AddMember(SValue(schema.GetTypeString(),
-				   GetAllocator(),
-				   true).Move(),
-			    SValue(schema.GetPythonClassString(),
-				   GetAllocator(),
-				   true).Move(),
-			    GetAllocator());
-      bool out = NormYggdrasilString(context, schema, str, length, copy, valueSchema);
-      if (out && !schema.isMetaschema_)
-	RecordModified(kModificationTypeValue);
-      return out;
+      bool isString = false;
+      if (schema.type_ & (1 << SchemaType::kStringSchemaType)) {
+	isString = (!schema.CheckPythonImport(context, str, length));
+      }
+      if (!isString) {
+	GenericDocument<EncodingType, AllocatorType> valueSchema(kObjectType);
+	valueSchema.AddMember(SValue(schema.GetTypeString(),
+				     GetAllocator(),
+				     true).Move(),
+			      SValue(schema.GetPythonClassString(),
+				     GetAllocator(),
+				     true).Move(),
+			      GetAllocator());
+	bool out = NormYggdrasilString(context, schema, str, length, copy, valueSchema);
+	if (out && !schema.isMetaschema_)
+	  RecordModified(kModificationTypeValue);
+	return out;
+      }
     }
     // Normalize string to scalar string
     if (schema.yggtype_ & (1 << SchemaType::kYggScalarSchemaType) &&
