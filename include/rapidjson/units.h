@@ -1515,7 +1515,7 @@ typedef GenericUnits<UTF8<char> > Units;
     PACK_UNIT(VSTR("BTU", "british_thermal_unit"), VSTR("BTU"), dimensions::energy, 1055.0559),
     PACK_UNIT("pounds_per_square_inch", "psi", dimensions::pressure, constants::kg_per_pound * constants::standard_gravity_m_per_s2 / pow(constants::m_per_inch, 2)),
     PACK_UNIT("smoot", "smoot", dimensions::length, 1.7018),
-    PACK_UNIT("percent", "%", dimensions::dimensionless, 0.01),
+    PACK_UNIT(VSTR("percent"), VSTR("%", "100%"), dimensions::dimensionless, 0.01),
     PACK_UNIT("minute", "min", dimensions::time, constants::sec_per_min),
     PACK_UNIT(VSTR("hour"), VSTR("hr", "h", "hrs"), dimensions::time, constants::sec_per_hr),
     PACK_UNIT(VSTR("day"), VSTR("day", "d"), dimensions::time, constants::sec_per_day),
