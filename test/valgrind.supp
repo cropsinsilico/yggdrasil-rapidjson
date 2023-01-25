@@ -19,5 +19,17 @@
 {
     Suppress memcmp valgrind for wide character string
     Memcheck:Addr32
-    fun: __wmemcmp_avx2_movbe
+    fun:__wmemcmp_avx2_movbe
+}
+
+{
+    Suppress memcmp valgrind for wide character string
+    Memcheck:Addr4
+    fun:__wmemcmp_avx2_movbe
+}
+
+{
+    Suppress memcmp valgrind for wide character string
+    Memcheck:Addr32
+    fun:memcmp-avx2-movbe
 }
