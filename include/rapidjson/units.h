@@ -2065,8 +2065,8 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
 	  curr_parent->tokens.pop_back();
 	  parser::TokenBase<Encoding>* old_curr = curr;
 	  curr = new parser::WordToken<Encoding>(hundred[0], curr_parent);
-	  for (size_t i = 1; i < hundred.size(); i++)
-	    curr->append(hundred[i]);
+	  for (size_t ii = 1; ii < hundred.size(); ii++)
+	    curr->append(hundred[ii]);
 	  curr_parent->tokens.push_back(curr);
 	  delete old_curr;
 	}

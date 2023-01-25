@@ -632,7 +632,7 @@ static void TestParseNumberError() {
     { \
         char buffer[2048]; \
         ASSERT_LT(std::strlen(str), 2048u); \
-        sprintf(buffer, "%s", str); \
+        snprintf(buffer, 2048, "%s", str);   \
         InsituStringStream s(buffer); \
         BaseReaderHandler<> h; \
         Reader reader; \

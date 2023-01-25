@@ -3197,7 +3197,7 @@ static char* ReadFile(const char* filename, Allocator& allocator) {
     char buffer[1024];
     FILE *fp = 0;
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
-        sprintf(buffer, "%s%s", paths[i], filename);
+        snprintf(buffer, 1024, "%s%s", paths[i], filename);
         fp = fopen(buffer, "rb");
         if (fp)
             break;
@@ -3399,7 +3399,7 @@ TEST(SchemaValidator, TestSuite) {
 
     for (size_t i = 0; i < sizeof(filenames) / sizeof(filenames[0]); i++) {
         char filename[FILENAME_MAX];
-        sprintf(filename, "jsonschema/tests/draft4/%s", filenames[i]);
+        snprintf(filename, FILENAME_MAX, "jsonschema/tests/draft4/%s", filenames[i]);
         char* json = ReadFile(filename, jsonAllocator);
         if (!json) {
             printf("json test suite file %s not found", filename);
