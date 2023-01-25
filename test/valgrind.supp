@@ -15,3 +15,9 @@
     Memcheck:Value8
     fun:__wcslen_sse2
 }
+
+{
+    Suppress memcmp valgrind for wide character string
+    Memcheck:Addr32
+    fun: __wmemcmp_avx2_movbe
+}
