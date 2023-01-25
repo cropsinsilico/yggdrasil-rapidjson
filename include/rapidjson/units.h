@@ -1515,7 +1515,8 @@ typedef GenericUnits<UTF8<char> > Units;
     PACK_UNIT(VSTR("BTU", "british_thermal_unit"), VSTR("BTU"), dimensions::energy, 1055.0559),
     PACK_UNIT("pounds_per_square_inch", "psi", dimensions::pressure, constants::kg_per_pound * constants::standard_gravity_m_per_s2 / pow(constants::m_per_inch, 2)),
     PACK_UNIT("smoot", "smoot", dimensions::length, 1.7018),
-    PACK_UNIT(VSTR("percent"), VSTR("%", "100%"), dimensions::dimensionless, 0.01),
+    PACK_UNIT("percent", "%", dimensions::dimensionless, 0.01),
+    PACK_UNIT("fraction", "100%", dimensions::dimensionless, 1.0),
     PACK_UNIT("minute", "min", dimensions::time, constants::sec_per_min),
     PACK_UNIT(VSTR("hour"), VSTR("hr", "h", "hrs"), dimensions::time, constants::sec_per_hr),
     PACK_UNIT(VSTR("day"), VSTR("day", "d"), dimensions::time, constants::sec_per_day),
@@ -2045,6 +2046,29 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
 	  token.append(str[i++]);
 	  token.append(str[i++]);
 	  break;
+	}
+      }
+      // fall through to default
+      RAPIDJSON_DELIBERATE_FALLTHROUGH;
+    }
+    case '%': {
+      parser::TokenBase<Encoding>* curr = token.current_token();
+      if ((curr->t == parser::kWordToken) && !(curr->finalized) &&
+	  curr->is_numeric()) {
+	std::basic_string<Ch> hundred;
+	hundred.push_back('1');
+	hundred.push_back('0');
+	hundred.push_back('0');
+	if (static_cast<parser::WordToken<Encoding>*>(curr)->word == hundred &&
+	    curr->parent && curr->parent->t == parser::kGroupToken) {
+	  parser::GroupToken<Encoding>* curr_parent = static_cast<parser::GroupToken<Encoding>*>(curr->parent);
+	  curr_parent->tokens.pop_back();
+	  parser::TokenBase<Encoding>* old_curr = curr;
+	  curr = new parser::WordToken<Encoding>(hundred[0], curr_parent);
+	  for (size_t i = 1; i < hundred.size(); i++)
+	    curr->append(hundred[i]);
+	  curr_parent->tokens.push_back(curr);
+	  delete old_curr;
 	}
       }
       // fall through to default
