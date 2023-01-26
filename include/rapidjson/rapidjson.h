@@ -197,6 +197,12 @@
     prevent RapidJSON from defining its own types.
 */
 #ifndef RAPIDJSON_NO_INT64DEFINE
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS
+#endif
+#ifndef __STDC_CONSTANT_MACROS
+#define __STDC_CONSTANT_MACROS
+#endif
 //!@cond RAPIDJSON_HIDDEN_FROM_DOXYGEN
 #if defined(_MSC_VER) && (_MSC_VER < 1800)	// Visual Studio 2013
 #include "msinttypes/stdint.h"
