@@ -5,18 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Yggdrasil Specific
 
 ### TODO
-* Add namespaces for ply, obj, base64?
-* Add "encoding" property for bytes
 * Remove use of standard libraries (std::basic_string, std::vector, std::map)?
 * Use explicit allocator for QuantityArray?
-* Add Python wrapper for obj & ply w/ interop to other classes
-* Support for numpy bytes/unitcode scalars arrays
 * Add test for conflicting aliases in allOf set
 * Add test for array of strings & complex
-* Test void Missing( with source / test for AddMissingObject on local
-* Test failures in metaschema, instance, allowSingular nested schema normalization
-* Tests for shared properties by schema path with patternProperties, additionalProperties, items (with index), additionalItems, allowSingular
-* Test for shared property with invalid schema path
+* Add support for allowNested to allow validation/normalization of an element in an array/object against a schema requiring a scalar
 
 ### IN PROGRESS
 * Add docstrings to new methods
@@ -38,6 +31,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Warning messages during validation for deprecated properties
 * Normalization of compatible type/precision conversion
 * Made validation/normalization errors more verbose to match jsonschema
+* Added "encoding" property for scalar strings
 
 ## [Unreleased]
 
