@@ -5416,6 +5416,7 @@ public:
 	}								\
       }									\
       case (kYggStringSchemaSubType): {					\
+	if (prec == 0) prec = 5;					\
 	const Ch* encoding_str = 0;					\
 	SizeType encoding_len = 0;					\
 	if (encoding_ != kYggNullSchemaEncodingType) {			\
@@ -5554,7 +5555,7 @@ public:
 	data.SetScalar(value, units_str, units_len)
 #define STRING_SCALAR_							\
 	Ch* value = (Ch*)(allocator.Malloc(sizeof(Ch) * prec));		\
-	memcpy(value, letters, prec);					\
+	memcpy(value, letters, sizeof(Ch) * prec);			\
 	data.SetScalar(value, prec, allocator, encoding_str, encoding_len); \
 	allocator.Free(value)
 	SWITCH_SUBTYPE_(GET_SCALAR_, SET_SCALAR_, STRING_SCALAR_)
@@ -5592,7 +5593,7 @@ public:
 	Ch* value = (Ch*)(allocator.Malloc(nelements * sizeof(Ch) * prec)); \
 	memset(value, 0, nelements * sizeof(Ch) * prec);		\
 	for (SizeType i = 0; i < nelements; i++) {			\
-	  memcpy(value + (i * prec), letters, prec);			\
+	  memcpy(value + (i * sizeof(Ch) * prec), letters, sizeof(Ch) * prec); \
 	}								\
 	data.SetNDArray(value, prec, shape.data(), ndim, allocator, encoding_str, encoding_len); \
 	allocator.Free(value)
