@@ -638,6 +638,8 @@ template<typename Ch>
 bool isYggdrasilString(const Ch* str, SizeType length, bool) {
     const Ch ygg[5] = {'-', 'Y', 'G', 'G', '-'};
     SizeType len_ygg = 5;
+    if (length < (2 * len_ygg))
+      return false;
     return ((memcmp(ygg, str, sizeof(ygg)) == 0) &&
 	    (memcmp(ygg, str + (length - len_ygg), sizeof(ygg)) == 0));
 }
