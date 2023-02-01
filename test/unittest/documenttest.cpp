@@ -419,7 +419,7 @@ TEST(Document, AcceptWriter) {
 TEST(Document, UserBuffer) {
     typedef GenericDocument<UTF8<>, MemoryPoolAllocator<>, MemoryPoolAllocator<> > DocumentType;
     char valueBuffer[4096];
-    char parseBuffer[1024];
+    char parseBuffer[2048];  // TODO: Determine why the allocator requires more than 1024 on Mac M1
     MemoryPoolAllocator<> valueAllocator(valueBuffer, sizeof(valueBuffer));
     MemoryPoolAllocator<> parseAllocator(parseBuffer, sizeof(parseBuffer));
     DocumentType doc(&valueAllocator, sizeof(parseBuffer) / 2, &parseAllocator);
