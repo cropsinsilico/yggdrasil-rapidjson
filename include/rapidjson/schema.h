@@ -6919,7 +6919,10 @@ protected:
 #ifdef RAPIDJSON_YGGDRASIL
 	// yggdrasil types
 	else if (type == GetScalarString()  ) yggtype_ |= 1 << kYggScalarSchemaType;
-	else if (type == Get1DArrayString() ) yggtype_ |= 1 << kYggNDArraySchemaType;
+	else if (type == Get1DArrayString() ) {
+	  yggtype_ |= 1 << kYggNDArraySchemaType;
+	  ndim_ = 1;
+	}
 	else if (type == GetNDArrayString() ) yggtype_ |= 1 << kYggNDArraySchemaType;
 	else if (type == GetPythonClassString()    ) yggtype_ |= 1 << kYggPythonImportSchemaType;
 	else if (type == GetPythonFunctionString() ) yggtype_ |= 1 << kYggPythonImportSchemaType;

@@ -2456,6 +2456,14 @@ definitions:
             the model ran as expected. A non-zero return code is taken to indicate
             failure.
           type: string
+        with_asan:
+          description: Compile with Clang ASAN.
+          type: boolean
+        with_debugger:
+          description: Debugger tool that should be used to run models. This string
+            should include the tool executable and any flags that should be passed
+            to it.
+          type: string
         with_strace:
           default: false
           description: If True, the command is run with strace (on Linux) or dtrace
@@ -2683,6 +2691,9 @@ definitions:
             items:
               type: string
             type: array
+          with_asan:
+            description: Compile with Clang ASAN.
+            type: boolean
         required:
         - args
         - language
@@ -2744,6 +2755,9 @@ definitions:
             items:
               type: string
             type: array
+          with_asan:
+            description: Compile with Clang ASAN.
+            type: boolean
         required:
         - args
         - language
