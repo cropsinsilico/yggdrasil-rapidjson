@@ -6512,7 +6512,69 @@ TEST(SchemaCompare, AllowSingular) {
 		  "    \"expected\": [\"object\"], \"actual\": [\"string\"]"
 		  "}}");
 }
-
+TEST(SchemaCompare, NativeScalars) {
+  COMPARE("{"
+	  "  \"type\": \"number\""
+	  "}",
+	  "{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"float\""
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"number\""
+	  "}",
+	  "{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"float\","
+	  "  \"precision\": 4"
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"integer\""
+	  "}",
+	  "{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"int\""
+	  "}");
+  COMPARE("{"
+	  "  \"type\": \"integer\""
+	  "}",
+	  "{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"int\","
+	  "  \"precision\": 8"
+	  "}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"integer\""
+		  "}",
+		  "{"
+		  "  \"type\": \"scalar\","
+		  "  \"subtype\": \"float\""
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"integer\"],"
+		  "    \"actual\": [\"scalar\"]"
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"number\""
+		  "}",
+		  "{"
+		  "  \"type\": \"scalar\","
+		  "  \"subtype\": \"uint\","
+		  "  \"precision\": 1"
+		  "}",
+		  "{ \"compare\": {"
+		  "    \"errorCode\": 44,"
+		  "    \"schemaRef\": \"#\","
+		  "    \"instanceRef\": \"#\","
+		  "    \"property\": \"type\","
+		  "    \"expected\": [\"number\"],"
+		  "    \"actual\": [\"scalar\"]"
+		  "}}");
+}
 
 #define GENERATE(schema, s_expected)					\
   {									\

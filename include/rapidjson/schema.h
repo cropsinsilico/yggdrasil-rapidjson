@@ -4983,6 +4983,27 @@ public:
       return 0;
     }
 
+    bool CompareNativeScalar(const Schema<SchemaDocumentType>& rhs) const {
+      if (!(yggtype_ & (1 << kYggScalarSchemaType)))
+	return false;
+      if (rhs.type_ & (1 << kNumberSchemaType)) {
+	if (!(subtype_ == kYggFloatSchemaSubType ||
+	      subtype_ == kYggIntSchemaSubType ||
+	      subtype_ == kYggUintSchemaSubType))
+	  return false;
+      } else if (rhs.type_ & (1 << kIntegerSchemaType)) {
+	if (!(subtype_ == kYggIntSchemaSubType ||
+	      subtype_ == kYggUintSchemaSubType))
+	  return false;
+      }
+      if (precision_.IsUint()) {
+	SizeType prec = precision_.GetUint();
+	if (prec != 4 && prec != 8)
+	  return false;
+      }
+      return true;
+    }
+
     bool Compare(const Schema<SchemaDocumentType>& rhs, Context& context) const {
 #define RAPIDJSON_INCOMPATIBLE_SCHEMA(key, expected, actual)		\
       {									\
@@ -5007,14 +5028,21 @@ public:
       if (!key.IsNull() && !rhs.key.IsNull() && key != rhs.key)	\
 	RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), key, rhs.key)
       if (this == &rhs) return true;
+      bool native_scalar = false;
       // Type
       if (!(((type_ || rhs.type_) && (type_ & rhs.type_)) ||
 	    ((yggtype_ || rhs.yggtype_) && (yggtype_ & rhs.yggtype_)))) {
-	DisallowedTypeKey(context);
-	rhs.DisallowedTypeKey(context, true);
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+	if (CompareNativeScalar(rhs) ||
+	    rhs.CompareNativeScalar(*this)) {
+	  native_scalar = true;
+	} else {
+	  DisallowedTypeKey(context);
+	  rhs.DisallowedTypeKey(context, true);
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+	}
       }
-      if (((subtype_ != kYggNullSubType && rhs.type_ != ((1 << kTotalSchemaType) - 1)) ||
+      if ((!native_scalar) &&
+	  ((subtype_ != kYggNullSubType && rhs.type_ != ((1 << kTotalSchemaType) - 1)) ||
 	   (rhs.subtype_ != kYggNullSubType && type_ != ((1 << kTotalSchemaType) - 1)))
 	  && (subtype_ != rhs.subtype_)) {
 	const ValueType& lhs_subtype = SubType2String(subtype_);
