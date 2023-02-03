@@ -4995,6 +4995,8 @@ public:
 	if (!(subtype_ == kYggIntSchemaSubType ||
 	      subtype_ == kYggUintSchemaSubType))
 	  return false;
+      } else {
+	return false;
       }
       if (precision_.IsUint()) {
 	SizeType prec = precision_.GetUint();
