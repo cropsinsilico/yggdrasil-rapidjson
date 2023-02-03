@@ -6067,24 +6067,32 @@ public:
     return false;
   }
 
-#define RAPIDJSON_NORMALIZER_BASE_(method, arg)				\
+#define RAPIDJSON_NORMALIZER_BASE_(method, arg, cleanup)		\
   NormalizerContext<typename Context::NormalizedDocumentType> __normalizer_context(context.normalized);	\
   if (__normalizer_context.enabled()) {					\
-    if (!context.normalized->Base ## method arg)			\
+    if (!context.normalized->Base ## method arg) {			\
+      cleanup								\
       return false;							\
-    if (__normalizer_context.reset())					\
+    }									\
+    if (__normalizer_context.reset()) {					\
+      cleanup								\
       return true;							\
+    }									\
   }
 #define RAPIDJSON_NORMALIZER_NOARG_(method)				\
-  RAPIDJSON_NORMALIZER_BASE_(method, (context, *this))
+  RAPIDJSON_NORMALIZER_BASE_(method, (context, *this), )
 #define RAPIDJSON_NORMALIZER_(method, ...)				\
-  RAPIDJSON_NORMALIZER_BASE_(method, (context, *this, __VA_ARGS__))
+  RAPIDJSON_NORMALIZER_BASE_(method, (context, *this, __VA_ARGS__), )
+#define RAPIDJSON_NORMALIZER_CLEANUP_(method, cleanup, ...)		\
+  RAPIDJSON_NORMALIZER_BASE_(method, (context, *this, __VA_ARGS__), cleanup)
 #else
 #define RAPIDJSON_NORMALIZER_BASE_(method, arg)	 \
   {}
 #define RAPIDJSON_NORMALIZER_NOARG_(method)	\
   {}
 #define RAPIDJSON_NORMALIZER_(method, ...)       \
+  {}
+#define RAPIDJSON_NORMALIZER_CLEANUP_(method, cleanup, ...)	\
   {}
 #endif // RAPIDJSON_YGGDRASIL  
 
@@ -6223,7 +6231,7 @@ public:
 #define CLEANUP_				\
     if (context.normalized) delete schema
     RAPIDJSON_ASSERT(schema->IsObject());
-    RAPIDJSON_NORMALIZER_(YggdrasilString, str, length, copy, *schema);
+    RAPIDJSON_NORMALIZER_CLEANUP_(YggdrasilString, CLEANUP_;, str, length, copy, *schema);
     typename YggSchemaValueType::ConstMemberIterator vs = schema->FindMember(GetTypeString());
     RAPIDJSON_ASSERT(vs != schema->MemberEnd());
     const ValueType v(vs->value.GetString(), vs->value.GetStringLength());
