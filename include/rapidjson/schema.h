@@ -7573,10 +7573,10 @@ protected:
   }
   bool CheckPrecision(Context& context, const ValueType* actual, const bool&,
 		      const SValue& precision) const {
-    if (precision_.IsNull())
+    if (precision.IsNull())
       return true;
-    if (precision_.GetUint() < actual->GetUint()) {
-      context.error_handler.IncorrectPrecision(*actual, precision_);
+    if (precision.GetUint() < actual->GetUint()) {
+      context.error_handler.IncorrectPrecision(*actual, precision);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPrecision);
     }
     return true;
