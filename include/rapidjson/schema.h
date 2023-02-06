@@ -2974,18 +2974,20 @@ public:
 					  " but an index %d is set (type = %d)",
 					  (int)(*CurrentIdx()),
 					  (int)(current->GetType()));
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       if (*CurrentIdx() >= current->Size()) {
-	if ((!CurrentModified()) && CurrentChildModified()) {
+	if ((!CurrentModified())) {  // && CurrentChildModified()) {
 	  current->PushBack(ValueType(kNullType).Move(), GetAllocator());
 	  childMod = true;
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 	} else {
 	  RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current index %d outside of"
 					    " the current array (size = %d)",
 					    (int)(*CurrentIdx()),
 					    (int)(current->Size()));
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 	}
       }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       RAPIDJSON_ASSERT(current->IsArray() && *CurrentIdx() < current->Size());
       PushValue((*current)[*CurrentIdx()], *CurrentIdx(), false, childMod);
       CurrentIdx()[0]++;
@@ -7695,12 +7697,16 @@ protected:
 			       SValue& dst, AllocatorType& allocator) {
     if (!(context.relativePathRoot.IsString() && IsRelativePath(str, length)))
       return false;
-    dst.SetString(context.relativePathRoot.GetString(),
-		  length + context.relativePathRoot.GetStringLength(),
-		  allocator);
-    memcpy((void*)(dst.GetString() + context.relativePathRoot.GetStringLength()),
-	   (void*)str,
-	   length * sizeof(Ch));
+    SizeType total_length = length + context.relativePathRoot.GetStringLength();
+    Ch* dst_copy = (Ch*)malloc((total_length + 1) * sizeof(Ch));
+    memcpy((void*)dst_copy,
+	   context.relativePathRoot.GetString(),
+	   context.relativePathRoot.GetStringLength() * sizeof(Ch));
+    memcpy((void*)(dst_copy + context.relativePathRoot.GetStringLength()),
+	   str, length * sizeof(Ch));
+    dst_copy[total_length] = '\0';
+    dst.SetString(dst_copy, total_length, allocator);
+    free(dst_copy);
     return true;
   }
   bool CheckPythonImport(Context& context, const Ch* str, SizeType length) const {

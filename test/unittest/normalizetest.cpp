@@ -852,6 +852,43 @@ TEST(SchemaNormalizer, SingularNestedRef) {
 	    "{\"a\": [ { \"streets\": \"1600 Pennsylvania Ave.\"} ], \"b\": [ { \"streets\": \"1700 Pennsylvania Ave.\"} ]}");
 }
 
+
+TEST(SchemaNormalizer, SingularComplex) {
+  Document sd;
+  sd.Parse(
+        "{"
+	"  \"type\": \"array\","
+	"  \"allowSingular\": true,"
+	"  \"items\": {"
+	"    \"type\": \"object\","
+	"    \"required\": [\"inputs\"],"
+	"    \"properties\": {"
+	"      \"inputs\": {"
+	"        \"type\": \"array\","
+	"        \"allowSingular\": true,"
+	"        \"items\": {"
+	"          \"type\": \"object\","
+	"          \"allowSingular\": \"name\","
+	"          \"required\": [\"name\"],"
+	"          \"properties\": {"
+	"            \"name\": {"
+	"              \"type\": \"string\""
+ 	"            },"
+	"            \"value\": {"
+	"              \"type\": \"string\""
+	"            }"
+	"          }"
+	"        }"
+	"      }"
+	"    }"
+	"  }"
+        "}");
+  SchemaDocument s(sd);
+  NORMALIZE(s, "{\"inputs\": \"hello\"}", true,
+	    "[ { \"inputs\": [ { \"name\": \"hello\" } ] } ]");
+}
+
+
 TEST(SchemaNormalizer, AliasCircular) {
     Document sd;
     sd.Parse(
