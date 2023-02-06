@@ -853,39 +853,88 @@ TEST(SchemaNormalizer, SingularNestedRef) {
 }
 
 
-TEST(SchemaNormalizer, SingularComplex) {
-  Document sd;
-  sd.Parse(
-        "{"
-	"  \"type\": \"array\","
-	"  \"allowSingular\": true,"
-	"  \"items\": {"
-	"    \"type\": \"object\","
-	"    \"required\": [\"inputs\"],"
-	"    \"properties\": {"
-	"      \"inputs\": {"
-	"        \"type\": \"array\","
-	"        \"allowSingular\": true,"
-	"        \"items\": {"
-	"          \"type\": \"object\","
-	"          \"allowSingular\": \"name\","
-	"          \"required\": [\"name\"],"
-	"          \"properties\": {"
-	"            \"name\": {"
-	"              \"type\": \"string\""
- 	"            },"
-	"            \"value\": {"
-	"              \"type\": \"string\""
-	"            }"
-	"          }"
-	"        }"
-	"      }"
-	"    }"
-	"  }"
-        "}");
-  SchemaDocument s(sd);
-  NORMALIZE(s, "{\"inputs\": \"hello\"}", true,
-	    "[ { \"inputs\": [ { \"name\": \"hello\" } ] } ]");
+TEST(SchemaNormalizer, SingularAlias) {
+  {
+    Document sd;
+    sd.Parse("{"
+	     "    \"type\": \"object\","
+	     "    \"required\": [\"inputs\"],"
+	     "    \"properties\": {"
+	     "      \"inputs\": {"
+	     "        \"aliases\": [\"input\"],"
+	     "        \"type\": \"array\","
+	     "        \"allowSingular\": true,"
+	     "        \"items\": {"
+	     "          \"type\": \"object\","
+	     "          \"allowSingular\": \"name\","
+	     "          \"required\": [\"name\"],"
+	     "          \"properties\": {"
+	     "            \"name\": {"
+	     "              \"type\": \"string\""
+	     "            }"
+	     "          }"
+	     "        }"
+	     "      }"
+	     "    }"
+	     "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s, "{\"input\": \"hello\"}", true,
+	      "{ \"inputs\": [ { \"name\": \"hello\" } ] }");
+  }
+  {
+    Document sd;
+    sd.Parse("{"
+	     "  \"type\": \"array\","
+	     "  \"allowSingular\": true,"
+	     "  \"items\": {"
+	     "    \"type\": \"object\","
+	     "    \"required\": [\"inputs\"],"
+	     "    \"properties\": {"
+	     "      \"inputs\": {"
+	     "        \"aliases\": [\"input\"],"
+	     "        \"type\": \"string\""
+	     "      }"
+	     "    }"
+	     "  }"
+	     "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s, "{ \"input\": \"hello\" }", true,
+	      "[ { \"inputs\": \"hello\" } ]");
+  }
+  {
+    Document sd;
+    sd.Parse("{"
+	     "  \"type\": \"array\","
+	     "  \"allowSingular\": true,"
+	     "  \"items\": {"
+	     "    \"type\": \"object\","
+	     "    \"required\": [\"inputs\"],"
+	     "    \"properties\": {"
+	     "      \"inputs\": {"
+	     "        \"aliases\": [\"input\"],"
+	     "        \"type\": \"array\","
+	     "        \"allowSingular\": true,"
+	     "        \"items\": {"
+	     "          \"type\": \"object\","
+	     "          \"allowSingular\": \"name\","
+	     "          \"required\": [\"name\"],"
+	     "          \"properties\": {"
+	     "            \"name\": {"
+	     "              \"type\": \"string\""
+	     "            },"
+	     "            \"value\": {"
+	     "              \"type\": \"string\""
+	     "            }"
+	     "          }"
+	     "        }"
+	     "      }"
+	     "    }"
+	     "  }"
+	     "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s, "{\"input\": \"hello\"}", true,
+	      "[ { \"inputs\": [ { \"name\": \"hello\" } ] } ]");
+  }
 }
 
 

@@ -2976,7 +2976,7 @@ public:
 					  (int)(current->GetType()));
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
       if (*CurrentIdx() >= current->Size()) {
-	if ((!CurrentModified())) {  // && CurrentChildModified()) {
+	if ((!CurrentModified()) && CurrentChildModified()) {
 	  current->PushBack(ValueType(kNullType).Move(), GetAllocator());
 	  childMod = true;
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
@@ -3448,32 +3448,47 @@ public:
 private:
 
   void RecordModifiedAlias(const ValueType& primary, const ValueType& alias,
-			   PointerType* ptr_base=nullptr) {
-    bool in_extend = (ptr_base || InExtend());
-    RecordModified(kModificationTypeAlias, alias, primary, !in_extend);
+			   PointerType* ptr_base, ValueType* base) {
     PointerType p_primary;
     PointerType p_alias;
-    if (ptr_base) {
-      p_primary = ptr_base->Append(primary.GetString(),
-				   primary.GetStringLength(),
-				   &GetAllocator());
-      p_alias = ptr_base->Append(alias.GetString(),
-				 alias.GetStringLength(),
+    p_primary = ptr_base->Append(primary.GetString(),
+				 primary.GetStringLength(),
 				 &GetAllocator());
-    } else {
-      p_primary = GetInstancePointer(primary, false);
-      p_alias = GetInstancePointer(alias, false);
-    }
-    // Swap the aliased value
-    if (in_extend && HasMember(alias)) {
-      RAPIDJSON_ASSERT(CurrentValue()->IsObject());
-      ValueType tmp(kNullType);
-      tmp.Swap(CurrentValue()->FindMember(alias)->value);
-      // tmp.CopyFrom(CurrentValue()->FindMember(alias)->value, GetAllocator(), true);
-      CurrentValue()->RemoveMember(alias);
-      ValueType primary_cpy(primary, GetAllocator(), true);
-      CurrentValue()->AddMember(primary_cpy, tmp, GetAllocator());
-    }
+    p_alias = ptr_base->Append(alias.GetString(),
+			       alias.GetStringLength(),
+			       &GetAllocator());
+    RecordModified(kModificationTypeAlias, p_alias, p_primary, false);
+    SwapAliasValues(base, primary, alias);
+  }
+  void RecordModifiedAlias(const ValueType& primary, const ValueType& alias) {
+    bool in_extend = InExtend();
+    bool parent = (!in_extend);
+    PointerType p_primary_base = GetInstancePointer(parent, true);
+    PointerType p_alias_base = GetInstancePointer(parent, false);
+    PointerType p_primary;
+    PointerType p_alias;
+    p_primary = p_primary_base.Append(primary.GetString(),
+				      primary.GetStringLength(),
+				      &GetAllocator());
+    p_alias = p_alias_base.Append(alias.GetString(),
+				  alias.GetStringLength(),
+				  &GetAllocator());
+    RecordModified(kModificationTypeAlias, p_alias, p_primary, false);
+    if (in_extend && HasMember(alias))
+      SwapAliasValues(CurrentValue(), primary, alias);
+  }
+
+  void SwapAliasValues(ValueType* base, const ValueType& primary, const ValueType& alias) {
+    std::cerr << "SwapAliasValues" << std::endl;
+    RAPIDJSON_ASSERT(base && base->IsObject());
+    if (!(base->IsObject() && base->HasMember(alias)))
+      return;
+    ValueType tmp(kNullType);
+    tmp.Swap(base->FindMember(alias)->value);
+    // tmp.CopyFrom(base->FindMember(alias)->value, GetAllocator(), true);
+    base->RemoveMember(alias);
+    ValueType primary_cpy(primary, GetAllocator(), true);
+    base->AddMember(primary_cpy, tmp, GetAllocator());
   }
 
   template<typename VType>
@@ -3532,15 +3547,6 @@ private:
   void RecordModified(ModificationType type,
 		      const VType& key, bool parent=false) {
     RecordModified(type, GetInstancePointer(key, parent));
-  }
-  template <typename VType>
-  void RecordModified(ModificationType type,
-		      const VType& key_before, const VType& key_after,
-		      bool parent=false) {
-    PointerType base = GetInstancePointer(parent);
-    RecordModified(type,
-		   base.Append(key_before, &GetAllocator()),
-		   base.Append(key_after, &GetAllocator()));
   }
   void RecordModified(ModificationEntry& entry) {
     RecordModified(entry.type, entry.before, entry.after, entry.inherited,
@@ -4186,7 +4192,7 @@ private:
 	    } else {
 	      if (replaced)
 		*replaced = true;
-	      RecordModifiedAlias(primary, v->name, &base_ptr);
+	      RecordModifiedAlias(primary, v->name, &base_ptr, base);
 	    }
 	  }
 	}
