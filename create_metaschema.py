@@ -205,6 +205,47 @@ def get_ygg_tests():
               'write_meth': 'all'}
          ],
          'working_dir': os.getcwd()})
+    test_yaml = (
+        {'connections': {'in_temp': True,
+                         'input': 'output_log',
+                         'output': 'client_output.txt'},
+         'models': [{'args': ['./src/client.R', 3],
+                     'client_of': 'server',
+                     'language': 'R',
+                     'name': 'client',
+                     'outputs': 'output_log'}],
+         'working_dir': (
+             '/Users/langmm/yggdrasil/yggdrasil/examples/rpc_lesson1')},
+        {'connections': [
+            {'in_temp': True,
+             'inputs': [
+                 {'name': 'output_log',
+                  'commtype': 'default',
+                  'datatype': {'subtype': 'string', 'type': 'scalar'}}],
+             'outputs': [
+                 {'name': 'client_output.txt',
+                  'filetype': 'binary',
+                  'datatype': {'subtype': 'string', 'type': 'scalar'}}],
+             'working_dir': (
+                 '/Users/langmm/yggdrasil/yggdrasil/examples/rpc_lesson1')}],
+         'models': [
+             {'args': ['./src/client.R', 3],
+              'client_of': ['server'],
+              'inputs': [
+                  {'commtype': 'default',
+                   'datatype': {'subtype': 'string', 'type': 'scalar'},
+                   'is_default': True,
+                   'name': 'input'}],
+              'language': 'R',
+              'name': 'client',
+              'outputs': [
+                  {'commtype': 'default',
+                   'datatype': {'subtype': 'string', 'type': 'scalar'},
+                   'name': 'output_log'}],
+              'working_dir': (
+                  '/Users/langmm/yggdrasil/yggdrasil/examples/rpc_lesson1')}],
+         'working_dir': (
+             '/Users/langmm/yggdrasil/yggdrasil/examples/rpc_lesson1')})
     if args.create_full_schema:
         test_yaml[0]['models'].append(
             {'name': 'modelA',

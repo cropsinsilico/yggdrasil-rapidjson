@@ -3479,7 +3479,6 @@ private:
   }
 
   void SwapAliasValues(ValueType* base, const ValueType& primary, const ValueType& alias) {
-    std::cerr << "SwapAliasValues" << std::endl;
     RAPIDJSON_ASSERT(base && base->IsObject());
     if (!(base->IsObject() && base->HasMember(alias)))
       return;
