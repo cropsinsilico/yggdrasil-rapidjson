@@ -205,47 +205,6 @@ def get_ygg_tests():
               'write_meth': 'all'}
          ],
          'working_dir': os.getcwd()})
-    test_yaml = (
-        {'connections': {'in_temp': True,
-                         'input': 'output_log',
-                         'output': 'client_output.txt'},
-         'models': [{'args': ['./src/client.R', 3],
-                     'client_of': 'server',
-                     'language': 'R',
-                     'name': 'client',
-                     'outputs': 'output_log'}],
-         'working_dir': (
-             '/Users/langmm/yggdrasil/yggdrasil/examples/rpc_lesson1')},
-        {'connections': [
-            {'in_temp': True,
-             'inputs': [
-                 {'name': 'output_log',
-                  'commtype': 'default',
-                  'datatype': {'subtype': 'string', 'type': 'scalar'}}],
-             'outputs': [
-                 {'name': 'client_output.txt',
-                  'filetype': 'binary',
-                  'datatype': {'subtype': 'string', 'type': 'scalar'}}],
-             'working_dir': (
-                 '/Users/langmm/yggdrasil/yggdrasil/examples/rpc_lesson1')}],
-         'models': [
-             {'args': ['./src/client.R', 3],
-              'client_of': ['server'],
-              'inputs': [
-                  {'commtype': 'default',
-                   'datatype': {'subtype': 'string', 'type': 'scalar'},
-                   'is_default': True,
-                   'name': 'input'}],
-              'language': 'R',
-              'name': 'client',
-              'outputs': [
-                  {'commtype': 'default',
-                   'datatype': {'subtype': 'string', 'type': 'scalar'},
-                   'name': 'output_log'}],
-              'working_dir': (
-                  '/Users/langmm/yggdrasil/yggdrasil/examples/rpc_lesson1')}],
-         'working_dir': (
-             '/Users/langmm/yggdrasil/yggdrasil/examples/rpc_lesson1')})
     if args.create_full_schema:
         test_yaml[0]['models'].append(
             {'name': 'modelA',
@@ -313,7 +272,56 @@ def get_ygg_tests():
                               'NsYXRl-YGG-'],
                           'datatype': default_datatype,
                           'commtype': 'default'}]})
-
+    if False:
+        test_yaml = (
+            {'connections': {'in_temp': True,
+                             'input': 'output_log',
+                             'output': 'client_output.txt'},
+             'models': [{'args': ['./src/client.R', 3],
+                         'client_of': 'server',
+                         'language': 'R',
+                         'name': 'client',
+                         'outputs': 'output_log'}],
+             'working_dir': (
+                 '/Users/langmm/yggdrasil/yggdrasil/examples/rpc_lesson1')},
+            {'connections': [
+                {'inputs': [
+                    {'name': 'output_log',
+                     'commtype': 'default',
+                     'datatype': default_datatype,
+                     'working_dir': (
+                         '/Users/langmm/yggdrasil/yggdrasil/examples/'
+                         'rpc_lesson1')}],
+                 'outputs': [
+                     {'name': 'client_output.txt',
+                      'in_temp': True,
+                      'filetype': 'binary',
+                      'serializer': {'seritype': 'default'},
+                      'working_dir': (
+                          '/Users/langmm/yggdrasil/yggdrasil/examples/'
+                          'rpc_lesson1')}],
+                 'working_dir': (
+                     '/Users/langmm/yggdrasil/yggdrasil/examples/'
+                     'rpc_lesson1')}],
+             'models': [
+                 {'args': ['./src/client.R', 3],
+                  'client_of': ['server'],
+                  'inputs': [
+                      {'commtype': 'default',
+                       'datatype': default_datatype,
+                       'is_default': True,
+                       'name': 'input'}],
+                  'language': 'R',
+                  'name': 'client',
+                  'outputs': [
+                      {'commtype': 'default',
+                       'datatype': default_datatype,
+                       'name': 'output_log'}],
+                  'working_dir': (
+                      '/Users/langmm/yggdrasil/yggdrasil/examples/'
+                      'rpc_lesson1')}],
+             'working_dir': (
+                 '/Users/langmm/yggdrasil/yggdrasil/examples/rpc_lesson1')})
     return (["#define METASCHEMA_YGG_TESTS", ""]
             + make_function("get_yggschema", base)
             + make_function("get_testschema", test_yaml[0])

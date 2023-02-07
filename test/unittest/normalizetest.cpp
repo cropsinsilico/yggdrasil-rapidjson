@@ -50,7 +50,12 @@ using namespace rapidjson;
       EXPECT_TRUE(normalizer.WasNormalized());\
       SchemaValidator validator(schema);\
       EXPECT_TRUE(normalizer.GetNormalized().Accept(validator));\
-      /* TODO: Display validation error? */			\
+      if (!validator.IsValid()) {				\
+	StringBuffer sb;					\
+	PrettyWriter<StringBuffer> w(sb);			\
+	validator.GetError().Accept(w);				\
+	printf("Validation error: %s\n", sb.GetString());	\
+      }								\
     }\
     if ((expected) && !normalizer.IsValid()) {\
         normalizer.GetNormalizedDoc().FinalizeFromStack(true);	\

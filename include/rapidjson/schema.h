@@ -1767,8 +1767,20 @@ public:
     PointerType pCurrent = GetInstancePointer(false, true);
     ResetModifiedVisited(pCurrent);
     bool replaced = false;
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    std::cerr << "Parent Aliases: ";
+    DisplayValue(aliases_);
+    std::cerr << std::endl << "Child Aliases: ";
+    DisplayValue(child->aliases_);
+    std::cerr << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     if (!child->ExtendAliases(context, aliases_, &replaced)) return false;
     if (!ExtendAliases(context, child->aliases_, &replaced)) return false;
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+    std::cerr << "Merged aliases: ";
+    DisplayValue(aliases_);
+    std::cerr << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     if (!ExtendShared(context, schema, child->sharedStack_)) return false;
     if (!(replaced || child->WasModified()))
       return true;
@@ -3268,6 +3280,8 @@ public:
     // 		       (*current, GetAllocator()));
     if ((!CurrentModified()) && CurrentChildModified())
       StealChildModified();
+    else
+      StealChildRemoved();
     EXTEND_END_(EndObject);
   }
   bool ExtendStartArray(Context& context, bool dont_recurse=false) {
@@ -3448,15 +3462,17 @@ public:
 private:
 
   void RecordModifiedAlias(const ValueType& primary, const ValueType& alias,
-			   PointerType* ptr_base, ValueType* base) {
+			   const PointerType& ptr_base0, ValueType* base) {
     PointerType p_primary;
     PointerType p_alias;
-    p_primary = ptr_base->Append(primary.GetString(),
-				 primary.GetStringLength(),
-				 &GetAllocator());
-    p_alias = ptr_base->Append(alias.GetString(),
-			       alias.GetStringLength(),
-			       &GetAllocator());
+    PointerType root_ptr = GetInstancePointer(false, true);
+    PointerType ptr_base = ReplaceSingular(ptr_base0.RelativeTo(root_ptr));
+    p_primary = ptr_base.Append(primary.GetString(),
+				primary.GetStringLength(),
+				&GetAllocator());
+    p_alias = ptr_base.Append(alias.GetString(),
+			      alias.GetStringLength(),
+			      &GetAllocator());
     RecordModified(kModificationTypeAlias, p_alias, p_primary, false);
     SwapAliasValues(base, primary, alias);
   }
@@ -3464,7 +3480,7 @@ private:
     bool in_extend = InExtend();
     bool parent = (!in_extend);
     PointerType p_primary_base = GetInstancePointer(parent, true);
-    PointerType p_alias_base = GetInstancePointer(parent, false);
+    PointerType p_alias_base = GetInstancePointer(parent, true);
     PointerType p_primary;
     PointerType p_alias;
     p_primary = p_primary_base.Append(primary.GetString(),
@@ -3480,8 +3496,9 @@ private:
 
   void SwapAliasValues(ValueType* base, const ValueType& primary, const ValueType& alias) {
     RAPIDJSON_ASSERT(base && base->IsObject());
-    if (!(base->IsObject() && base->HasMember(alias)))
+    if (!(base->IsObject() && base->HasMember(alias))) {
       return;
+    }
     ValueType tmp(kNullType);
     tmp.Swap(base->FindMember(alias)->value);
     // tmp.CopyFrom(base->FindMember(alias)->value, GetAllocator(), true);
@@ -3595,6 +3612,29 @@ private:
   void PopModified() {
     ModificationEntry* ref = modifiedStack_.template Pop<ModificationEntry>(1);
     ref->~ModificationEntry();
+  }
+  void StealChildRemoved(bool parent=false) {
+    PointerType p = GetInstancePointer(parent, true);
+    for (ModificationEntry* it = extend_child_->modifiedStack_.template Bottom<ModificationEntry>();
+	 it != extend_child_->modifiedStack_.template End<ModificationEntry>(); it++) {
+      if (it->type == kModificationTypeRemoved && it->after == p) {
+	typename PointerType::Token key_token = it->before.GetTokens()[it->before.GetTokenCount() - 1];
+	ValueType key(key_token.name, key_token.length);
+	ValueType* current = CurrentValue();
+	if (current && current->IsObject() && current->HasMember(key)) {
+	  // TODO: Check if the parent modified the key being removed?
+#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+	  std::cerr << "StealChildRemoved [";
+	  DisplayPointer(p);
+	  std::cerr << "]: ";
+	  DisplayValue(key);
+	  std::cerr << std::endl;
+#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+	  current->RemoveMember(key);
+	  RecordModified(*it);
+	}
+      }
+    }
   }
   int FindValueModified(const PointerType& p,
 			bool exact=false,
@@ -4191,7 +4231,7 @@ private:
 	    } else {
 	      if (replaced)
 		*replaced = true;
-	      RecordModifiedAlias(primary, v->name, &base_ptr, base);
+	      RecordModifiedAlias(primary, v->name, base_ptr, base);
 	    }
 	  }
 	}
@@ -4226,7 +4266,7 @@ private:
   }
   ValueType& GetAliases() {
     GenericStringBuffer<EncodingType> address;
-    GetInstanceRef(address, (OutsideExtend()));
+    GetInstanceRef(address, (OutsideExtend()), true);
     RAPIDJSON_ASSERT(aliases_.IsObject());
     if (!aliases_.HasMember(address.GetString())) {
       aliases_.AddMember(ValueType(address.GetString(),
