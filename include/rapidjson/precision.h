@@ -16,7 +16,7 @@
 #define INT8_MAX 127
 #endif // INT8_MAX
 #ifndef INT8_MIN
-#define INT8_MIN -128
+#define INT8_MIN (-128)
 #endif // INT8_MIN
 #ifndef UINT8_MAX
 #define UINT8_MAX 255
@@ -26,7 +26,7 @@
 #define INT16_MAX 32767
 #endif // INT16_MAX
 #ifndef INT16_MIN
-#define INT16_MIN −32768
+#define INT16_MIN (−32768)
 #endif // INT16_MIN
 #ifndef UINT16_MAX
 #define UINT16_MAX 65535
@@ -36,7 +36,7 @@
 #define INT32_MAX 2147483647
 #endif // INT32_MAX
 #ifndef INT32_MIN
-#define INT32_MIN -2147483648
+#define INT32_MIN (-2147483648)
 #endif // INT32_MIN
 #ifndef UINT32_MAX
 #define UINT32_MAX 4294967295
@@ -46,7 +46,7 @@
 #define INT64_MAX 9223372036854775807
 #endif // INT64_MAX
 #ifndef INT64_MIN
-#define INT64_MIN -9223372036854775808
+#define INT64_MIN (-9223372036854775808)
 #endif // INT64_MIN
 #ifndef UINT64_MAX
 #define UINT64_MAX 18446744073709551615
