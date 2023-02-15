@@ -26,7 +26,7 @@
 #define INT16_MAX 32767
 #endif // INT16_MAX
 #ifndef INT16_MIN
-#define INT16_MIN (−32768)
+#define INT16_MIN (-32768)
 #endif // INT16_MIN
 #ifndef UINT16_MAX
 #define UINT16_MAX 65535
