@@ -202,6 +202,7 @@ enum ValidateErrorCode {
     kValidateErrorEncoding,                    //!< Property has an encoding that does not match the schema.
     kValidateErrorPythonImport,                //!< Property is not an importable Python object.
     kValidateErrorPythonClass,                 //!< Property is not a Python instance of the class specified in the schema.
+    kValidateErrorPythonDisabled,              //!< Python API disabled.
     kValidateErrorInvalidSchema,               //!< Property is not a valid JSON schema.
     kValidateErrorPly,                         //!< Property is not a valid Ply document: %disallowed.
     kValidateErrorObjWavefront,                //!< Property is not a valid ObjWavefront document: %disallowed.

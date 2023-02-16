@@ -729,6 +729,7 @@ struct Transcoder<Encoding, Encoding> {
 
 #ifdef RAPIDJSON_YGGDRASIL
 
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 template<typename Ch>
 inline bool assign_wchar_PyUnicode(PyObject*, Py_ssize_t&, Ch*&)
 { return false; }
@@ -795,6 +796,7 @@ typename Encoding::Ch* PyUnicode_AsEncoding(PyObject* x, SizeType& length,
   return out;
 }
 
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_NAMESPACE_END

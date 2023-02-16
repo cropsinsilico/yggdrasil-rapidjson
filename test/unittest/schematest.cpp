@@ -2172,6 +2172,7 @@ TEST(SchemaValidator, InvalidSchema) {
   }
 }
 
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 TEST(SchemaValidator, PythonClass) { // 32
     Document sd;
     sd.Parse(
@@ -2316,6 +2317,7 @@ TEST(SchemaValidator, PythonInstanceClass) { // 34
 	       "                  \"schemaRef\": \"#/properties/class/anyOf/1\"}}]"
 	       "}}}}");
 }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 
 TEST(SchemaValidator, Schema) { // 34
   Document sd;
@@ -2329,7 +2331,7 @@ TEST(SchemaValidator, Schema) { // 34
   INVALIDATE(s, "{\"type\": \"invalid\"}",
 	     "", "schema", "",
 	     "{ \"schema\": {"
-	     "    \"errorCode\": 34,"
+	     "    \"errorCode\": 35,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	     "    \"errors\": {"
 	     "        \"anyOf\": {"
@@ -2346,7 +2348,7 @@ TEST(SchemaValidator, Schema) { // 34
   INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW52YWxpZCJ9-YGG-\"",
 	     "", "schema", "",
 	     "{ \"schema\": {"
-	     "    \"errorCode\": 34,"
+	     "    \"errorCode\": 35,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	     "    \"errors\": {"
 	     "        \"anyOf\": {"
@@ -2360,6 +2362,7 @@ TEST(SchemaValidator, Schema) { // 34
 	     "                {\"type\":{\"expected\":[\"array\"],\"actual\":\"string\",\"errorCode\":20,\"instanceRef\":\"#/type\",\"schemaRef\":\"#/properties/type/anyOf/1\"}}"
 	     "            ]"
 	     "}}}}");
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
   // Python instnace
   INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"",
 	     "", "type", "",
@@ -2372,6 +2375,7 @@ TEST(SchemaValidator, Schema) { // 34
 	     "    \"schemaRef\": \"#\""
 	     "  }"
 	     "}");
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 }
 
 TEST(SchemaValidator, Ply) {
@@ -2473,7 +2477,7 @@ TEST(SchemaValidator, SingularArraySchema) {
 	     "    \"expected\": [\"array\"], \"actual\": \"object\""
 	     "  },"
 	     "  \"singular\": { \"schema\": {"
-	     "    \"errorCode\": 34,"
+	     "    \"errorCode\": 35,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#/items\","
 	     "    \"errors\": {"
 	     "        \"anyOf\": {"
@@ -2564,7 +2568,7 @@ TEST(SchemaValidator, SingularObjectSchema) {
 	     "    \"schemaRef\": \"#\""
 	     "  },"
 	     "  \"singular\": { \"schema\": {"
-	     "    \"errorCode\": 34,"
+	     "    \"errorCode\": 35,"
 	     "    \"instanceRef\": \"#\", \"schemaRef\": \"#/properties/key\","
 	     "    \"errors\": {"
 	     "        \"anyOf\": {"
@@ -2596,7 +2600,7 @@ TEST(SchemaValidator, CircularAliases) {
   INVALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }",
 	     "", "aliases", "/street",
 	     "{ \"aliases\": {"
-	     "    \"errorCode\": 38,"
+	     "    \"errorCode\": 39,"
 	     "    \"instanceRef\": \"#\","
 	     "    \"schemaRef\": \"#\","
 	     "    \"circular\": [\"street\", \"street_address\"]"
@@ -2619,7 +2623,7 @@ TEST(SchemaValidator, ConflictingAliases) {
   INVALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }",
 	     "", "aliases", "/street",
 	     "{ \"aliases\": {"
-	     "    \"errorCode\": 39,"
+	     "    \"errorCode\": 40,"
 	     "    \"instanceRef\": \"#\","
 	     "    \"schemaRef\": \"#\","
 	     "    \"conflicting\": \"street\","
@@ -2644,7 +2648,7 @@ TEST(SchemaValidator, Deprecating) {
   VALIDATE_WARNING(s, "{\"deprecated\": \"string\", \"valid\": 0}",
 		   "", "warnings", "",
 		   "{ \"deprecated\": {"
-		   "    \"errorCode\": 42,"
+		   "    \"errorCode\": 43,"
 		   "    \"instanceRef\": \"#/deprecated\","
 		   "    \"schemaRef\": \"#/properties/deprecated\","
 		   "    \"warning\": \"Deprecation message\""
@@ -2668,7 +2672,7 @@ TEST(SchemaValidator, DeprecatingBool) {
   VALIDATE_WARNING(s, "{\"deprecated\": \"string\", \"valid\": 0}",
 		   "", "warnings", "",
 		   "{ \"deprecated\": {"
-		   "    \"errorCode\": 42,"
+		   "    \"errorCode\": 43,"
 		   "    \"instanceRef\": \"#/deprecated\","
 		   "    \"schemaRef\": \"#/properties/deprecated\""
 		   "  }"
@@ -2714,12 +2718,12 @@ TEST(SchemaValidator, DeprecatingArray) {
 		   "", "warnings", "",
 		   "{ \"deprecated\": ["
 		   "  {"
-		   "    \"errorCode\": 42,"
+		   "    \"errorCode\": 43,"
 		   "    \"instanceRef\": \"#/deprecated\","
 		   "    \"schemaRef\": \"#/allOf/0/properties/deprecated\""
 		   "  },"
 		   "  {"
-		   "    \"errorCode\": 42,"
+		   "    \"errorCode\": 43,"
 		   "    \"instanceRef\": \"#/deprecated2\","
 		   "    \"schemaRef\": \"#/allOf/1/allOf/0/properties/deprecated2\""
 		   "  }"
@@ -2728,17 +2732,17 @@ TEST(SchemaValidator, DeprecatingArray) {
 		   "", "warnings", "",
 		   "{ \"deprecated\": ["
 		   "  {"
-		   "    \"errorCode\": 42,"
+		   "    \"errorCode\": 43,"
 		   "    \"instanceRef\": \"#/deprecated\","
 		   "    \"schemaRef\": \"#/allOf/0/properties/deprecated\""
 		   "  },"
 		   "  {"
-		   "    \"errorCode\": 42,"
+		   "    \"errorCode\": 43,"
 		   "    \"instanceRef\": \"#/deprecated2\","
 		   "    \"schemaRef\": \"#/allOf/1/allOf/0/properties/deprecated2\""
 		   "  },"
 		   "  {"
-		   "    \"errorCode\": 42,"
+		   "    \"errorCode\": 43,"
 		   "    \"instanceRef\": \"#/deprecated3\","
 		   "    \"schemaRef\": \"#/allOf/1/allOf/1/properties/deprecated3\""
 		   "  }"
@@ -4364,6 +4368,7 @@ TEST(SchemaEncoder, NDArray) {
 		   "  \"units\": \"g\""
 		   "}");
 }
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 TEST(SchemaEncoder, PythonClass) {
   VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"",
 		   "{"
@@ -4391,6 +4396,7 @@ TEST(SchemaEncoder, PythonInstance) {
 		   "  \"type\": \"instance\""
 		   "}");
 }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 TEST(SchemaEncoder, Schema) {
   VALIDATE_ENCODED("\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"",
 		   "{"
@@ -4480,7 +4486,7 @@ TEST(SchemaCompare, Type) {
 		  "  \"type\": \"string\""
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"schema\"], \"actual\": [\"string\"]"
@@ -4508,7 +4514,7 @@ TEST(SchemaCompare, SubType) {
 		  "  \"precision\": 8"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"subtype\","
 		  "    \"expected\": \"float\", \"actual\": \"int\""
@@ -4526,7 +4532,7 @@ TEST(SchemaCompare, Precision) {
 		  "  \"precision\": 4"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"precision\","
 		  "    \"expected\": 8, \"actual\": 4"
@@ -4569,7 +4575,7 @@ TEST(SchemaCompare, Units) {
 		  "  \"units\": \"kg\""
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"units\","
 		  "    \"expected\": \"cm\", \"actual\": \"kg\""
@@ -4612,7 +4618,7 @@ TEST(SchemaCompare, Shape) {
 		  "  \"shape\": [4, 5]"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"shape\","
 		  "    \"expected\": [2, 3], \"actual\": [4, 5]"
@@ -4667,7 +4673,7 @@ TEST(SchemaCompare, NDim) {
 		  "  \"ndim\": 3"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"ndim\","
 		  "    \"expected\": 2, \"actual\": 3"
@@ -4698,12 +4704,13 @@ TEST(SchemaCompare, Encoding) {
 		  "  \"precision\": 8"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"encoding\","
 		  "    \"expected\": \"UTF8\", \"actual\": \"null\""
 		  "}}");
 }
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 TEST(SchemaCompare, Class) {
   COMPARE("{"
 	  "  \"type\": \"instance\","
@@ -4730,12 +4737,13 @@ TEST(SchemaCompare, Class) {
 		  "  \"class\": \"example_python:OtherClass\""
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"class\","
 		  "    \"expected\": \"example_python:ExampleClass\", \"actual\": \"example_python:OtherClass\""
 		  "}}");
 }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 TEST(SchemaCompare, Enum) {
   COMPARE("{"
 	  "  \"enum\": [\"NW\", \"NE\", \"SW\"]"
@@ -4750,7 +4758,7 @@ TEST(SchemaCompare, Enum) {
 		  "  \"enum\": [\"SW\", \"SE\"]"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"enum\","
 		  "    \"expected\": [\"NW\", \"NE\"], \"actual\": [\"SW\", \"SE\"]"
@@ -4783,7 +4791,7 @@ TEST(SchemaCompare, Not) {
 		  "  \"not\": { \"type\": \"schema\" }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"not\","
 		  "    \"expected\": false, \"actual\": true"
@@ -4824,7 +4832,7 @@ TEST(SchemaCompare, AllOf) {
 		  "  ]"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#/allOf/0\","
 		  "    \"schemaRef\": \"#/allOf/1\","
 		  "    \"property\": \"maxLength\","
@@ -4843,7 +4851,7 @@ TEST(SchemaCompare, AllOf) {
 		  "  ]"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/allOf/1\","
 		  "    \"instanceRef\": \"#/allOf/1\","
 		  "    \"property\": \"maxLength\","
@@ -4886,7 +4894,7 @@ TEST(SchemaCompare, AnyOf) {
 		  "  ]"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"anyOf\","
 		  "    \"expected\": true, \"actual\": false"
@@ -4926,7 +4934,7 @@ TEST(SchemaCompare, OneOf) {
 		  "  ]"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"oneOf\","
 		  "    \"expected\": 1, \"actual\": 2"
@@ -4966,7 +4974,7 @@ TEST(SchemaCompare, Properties) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#/properties/b\", \"schemaRef\": \"#/properties/b\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
@@ -5023,7 +5031,7 @@ TEST(SchemaCompare, Properties) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"properties\","
 		  "    \"expected\": \"c\", \"actual\": null"
@@ -5046,7 +5054,7 @@ TEST(SchemaCompare, Properties) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"properties\","
 		  "    \"expected\": null, \"actual\": \"c\""
@@ -5078,7 +5086,7 @@ TEST(SchemaCompare, AdditionalProperties) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#/additionalProperties\", \"schemaRef\": \"#/additionalProperties\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
@@ -5100,7 +5108,7 @@ TEST(SchemaCompare, AdditionalProperties) {
 		  "  \"additionalProperties\": true"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"additionalProperties\","
 		  "    \"expected\": false, \"actual\": true"
@@ -5136,7 +5144,7 @@ TEST(SchemaCompare, PatternProperties) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#/patternProperties/%5ES_\", \"schemaRef\": \"#/patternProperties/%5ES_\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
@@ -5176,7 +5184,7 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "  \"maxProperties\": 10"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"minProperties\","
@@ -5199,7 +5207,7 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "  \"maxProperties\": 15"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxProperties\","
@@ -5235,7 +5243,7 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "  \"minProperties\": 2"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"minProperties\","
@@ -5291,7 +5299,7 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "  \"maxProperties\": 3"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxProperties\","
@@ -5314,7 +5322,7 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "  \"additionalProperties\": true"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxProperties\","
@@ -5337,7 +5345,7 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "  \"maxProperties\": 2"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxProperties\","
@@ -5360,7 +5368,7 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "  \"additionalProperties\": false"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxProperties\","
@@ -5388,7 +5396,7 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"properties\","
 		  "    \"expected\": null, \"actual\": \"c\""
@@ -5412,7 +5420,7 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "  \"additionalProperties\": false"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"properties\","
 		  "    \"expected\": \"c\", \"actual\": null"
@@ -5457,7 +5465,7 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/properties/c\","
 		  "    \"instanceRef\": \"#/additionalProperties\","
 		  "    \"property\": \"type\","
@@ -5522,7 +5530,7 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/properties/I_0\","
 		  "    \"instanceRef\": \"#/patternProperties/%5EI_\","
 		  "    \"property\": \"type\","
@@ -5548,7 +5556,7 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/patternProperties/%5EI_\","
 		  "    \"instanceRef\": \"#/properties/I_0\","
 		  "    \"property\": \"type\","
@@ -5619,7 +5627,7 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/additionalProperties\","
 		  "    \"instanceRef\": \"#/patternProperties/%5EI_\","
 		  "    \"property\": \"type\","
@@ -5647,7 +5655,7 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/patternProperties/%5EI_\","
 		  "    \"instanceRef\": \"#/additionalProperties\","
 		  "    \"property\": \"type\","
@@ -5680,7 +5688,7 @@ TEST(SchemaCompare, ItemsList) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/items\","
 		  "    \"instanceRef\": \"#/items\","
 		  "    \"property\": \"type\","
@@ -5721,7 +5729,7 @@ TEST(SchemaCompare, ItemsTuple) {
 		  "  ]"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/items/2\","
 		  "    \"instanceRef\": \"#/items/2\","
 		  "    \"property\": \"type\","
@@ -5772,7 +5780,7 @@ TEST(SchemaCompare, ItemsListTuple) {
 		  "  ]"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/items\","
 		  "    \"instanceRef\": \"#/items/2\","
 		  "    \"property\": \"type\","
@@ -5793,7 +5801,7 @@ TEST(SchemaCompare, ItemsListTuple) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/items/2\","
 		  "    \"instanceRef\": \"#/items\","
 		  "    \"property\": \"type\","
@@ -5826,7 +5834,7 @@ TEST(SchemaCompare, AdditionalItems) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#/additionalItems\", \"schemaRef\": \"#/additionalItems\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
@@ -5848,7 +5856,7 @@ TEST(SchemaCompare, AdditionalItems) {
 		  "  \"additionalItems\": true"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"additionalItems\","
 		  "    \"expected\": false, \"actual\": true"
@@ -5905,7 +5913,7 @@ TEST(SchemaCompare, AdditionalItems) {
 		  "  ]"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"items\","
@@ -5928,7 +5936,7 @@ TEST(SchemaCompare, AdditionalItems) {
 		  "  \"additionalItems\": false"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"items\","
@@ -5969,7 +5977,7 @@ TEST(SchemaCompare, ItemsCount) {
 		  "  \"maxItems\": 10"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"minItems\","
@@ -5992,7 +6000,7 @@ TEST(SchemaCompare, ItemsCount) {
 		  "  \"maxItems\": 15"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxItems\","
@@ -6043,7 +6051,7 @@ TEST(SchemaCompare, ItemsCount) {
 		  "  \"minItems\": 2"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"minItems\","
@@ -6063,7 +6071,7 @@ TEST(SchemaCompare, ItemsCount) {
 		  "  ]"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"minItems\","
@@ -6119,7 +6127,7 @@ TEST(SchemaCompare, ItemsCount) {
 		  "  \"maxItems\": 3"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxItems\","
@@ -6142,7 +6150,7 @@ TEST(SchemaCompare, ItemsCount) {
 		  "  \"additionalItems\": true"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxItems\","
@@ -6165,7 +6173,7 @@ TEST(SchemaCompare, ItemsCount) {
 		  "  \"maxItems\": 2"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxItems\","
@@ -6188,7 +6196,7 @@ TEST(SchemaCompare, ItemsCount) {
 		  "  \"additionalItems\": false"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxItems\","
@@ -6222,7 +6230,7 @@ TEST(SchemaCompare, ItemsComplex) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/items\","
 		  "    \"instanceRef\": \"#/additionalItems\","
 		  "    \"property\": \"type\","
@@ -6266,7 +6274,7 @@ TEST(SchemaCompare, ItemsComplex) {
 		  "  }"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#/items/2\","
 		  "    \"instanceRef\": \"#/additionalItems\","
 		  "    \"property\": \"type\","
@@ -6303,7 +6311,7 @@ TEST(SchemaCompare, UniqueItems) {
 		  "  \"uniqueItems\": false"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"uniqueItems\","
@@ -6328,7 +6336,7 @@ TEST(SchemaCompare, Minimum) {
 		  "  \"minimum\": 5"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"minimum\","
@@ -6353,7 +6361,7 @@ TEST(SchemaCompare, Maximum) {
 		  "  \"maximum\": 5"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maximum\","
@@ -6378,7 +6386,7 @@ TEST(SchemaCompare, MultipleOf) {
 		  "  \"multipleOf\": 5"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"multipleOf\","
@@ -6411,7 +6419,7 @@ TEST(SchemaCompare, String) {
 		  "  \"pattern\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"minLength\","
@@ -6430,7 +6438,7 @@ TEST(SchemaCompare, String) {
 		  "  \"pattern\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"maxLength\","
@@ -6449,7 +6457,7 @@ TEST(SchemaCompare, String) {
 		  "  \"pattern\": \"^[0-9]{3}-[0-9]{4}$\""
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"pattern\","
@@ -6479,7 +6487,7 @@ TEST(SchemaCompare, AllowSingular) {
 		  "  \"type\": \"string\""
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"type\","
@@ -6506,7 +6514,7 @@ TEST(SchemaCompare, AllowSingular) {
 		  "  \"type\": \"string\""
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"object\"], \"actual\": [\"string\"]"
@@ -6551,7 +6559,7 @@ TEST(SchemaCompare, NativeScalars) {
 		  "  \"subtype\": \"float\""
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"type\","
@@ -6567,7 +6575,7 @@ TEST(SchemaCompare, NativeScalars) {
 		  "  \"precision\": 1"
 		  "}",
 		  "{ \"compare\": {"
-		  "    \"errorCode\": 44,"
+		  "    \"errorCode\": 45,"
 		  "    \"schemaRef\": \"#\","
 		  "    \"instanceRef\": \"#\","
 		  "    \"property\": \"type\","
@@ -6941,6 +6949,7 @@ TEST(SchemaGenerateData, Ply) {
 	   "}",
 	   "\"-YGG-eyJ0eXBlIjoicGx5In0=-YGG-cGx5CmZvcm1hdCBhc2NpaSAxLjAKZWxlbWVudCB2ZXJ0ZXggOApwcm9wZXJ0eSBkb3VibGUgeApwcm9wZXJ0eSBkb3VibGUgeQpwcm9wZXJ0eSBkb3VibGUgegplbGVtZW50IGZhY2UgMgpwcm9wZXJ0eSBsaXN0IHVjaGFyIGludCB2ZXJ0ZXhfaW5kZXgKZWxlbWVudCBlZGdlIDUKcHJvcGVydHkgaW50IHZlcnRleDEKcHJvcGVydHkgaW50IHZlcnRleDIKZW5kX2hlYWRlcgowIDAgMAowIDAgMQowIDEgMQowIDEgMAoxIDAgMAoxIDAgMQoxIDEgMQoxIDEgMAozIDMgMCAxCjMgMyAwIDIKMCAxCjEgMgoyIDMKMyAwCjIgMAo=-YGG-\"");
 }
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 TEST(SchemaGenerateData, PythonImport) {
   GENERATE("{"
 	   "  \"type\": \"class\""
@@ -6954,6 +6963,7 @@ TEST(SchemaGenerateData, PythonImport) {
 // 	   "}",
 // 	   "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-gANjY29sbGVjdGlvbnMKT3JkZXJlZERpY3QKcQApUnEBLg==-YGG-\"");
 // }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #endif // RAPIDJSON_YGGDRASIL
 
 #if defined(_MSC_VER) || defined(__clang__)

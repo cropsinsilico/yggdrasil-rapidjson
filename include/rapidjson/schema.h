@@ -304,6 +304,7 @@ public:
   virtual void IncorrectEncoding(const typename SchemaType::ValueType& actual, const typename SchemaType::ValueType& expected) = 0;
   virtual void InvalidPythonImport(const Ch* str, SizeType len) = 0;
   virtual void InvalidPythonClass(const Ch* str, SizeType len, const SValue& expected) = 0;
+  virtual void PythonDisabled(const Ch* str, SizeType len) = 0;
   virtual void InvalidSchema(ValidateErrorCode code, ISchemaValidator* subvalidator) = 0;
   virtual void InvalidPly(const Ch* str, SizeType len) = 0;
   virtual void InvalidObjWavefront(const Ch* str, SizeType len) = 0;
@@ -5707,6 +5708,9 @@ public:
 #undef SET_ARRAY_
 #undef STRING_ARRAY_
       } else if (YGGTYPE_CHECK_(PythonImport)) {
+#ifdef YGGDRASIL_DISABLE_PYTHON_C_API
+	return false;
+#else // YGGDRASIL_DISABLE_PYTHON_C_API
 	if (context.python_disabled)
 	  return false;
 	PyObject* pyobj = import_python_object("collections:OrderedDict",
@@ -5715,7 +5719,11 @@ public:
 	  return false;
 	data.SetPythonInstance(pyobj);
 	AFTER_SET_;
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
       } else if (YGGTYPE_CHECK_(PythonInstance)) {
+#ifdef YGGDRASIL_DISABLE_PYTHON_C_API
+	return false;
+#else // YGGDRASIL_DISABLE_PYTHON_C_API
 	if (context.python_disabled)
 	  return false;
 	PyObject* pycls = NULL;
@@ -5740,6 +5748,7 @@ public:
 	  return false;
 	data.SetPythonInstance(pyobj);
 	AFTER_SET_;
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
       } else if (YGGTYPE_CHECK_(Obj)) {
 	ARRAYS_3D(1);
 	ObjWavefront x(vertices, faces, edges);
@@ -7755,6 +7764,10 @@ protected:
     return true;
   }
   bool CheckPythonImport(Context& context, const Ch* str, SizeType length) const {
+#ifdef YGGDRASIL_DISABLE_PYTHON_C_API
+    context.error_handler.PythonDisabled(str, length);
+    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonDisabled);
+#else // YGGDRASIL_DISABLE_PYTHON_C_API
     if (context.python_disabled)
       return true;
     AllocatorType allocator;
@@ -7782,8 +7795,13 @@ protected:
     }
     Py_DECREF(pyobj);
     return true;
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
   }
   bool CheckPythonPickle(Context& context, const Ch* str, SizeType length) const {
+#ifdef YGGDRASIL_DISABLE_PYTHON_C_API
+    context.error_handler.PythonDisabled(str, length);
+    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonDisabled);
+#else // YGGDRASIL_DISABLE_PYTHON_C_API
     if (context.python_disabled)
       return true;
     PyObject* pyobj = unpickle_python_object(reinterpret_cast<const char*>(str),
@@ -7806,6 +7824,7 @@ protected:
     }
     Py_DECREF(pyobj);
     return true;
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
   }
 
     class SharedProperty; //!< Forward declaration.
@@ -10615,6 +10634,11 @@ public:
 			    ValueType(str, len, GetStateAllocator()).Move(),
 			    GetStateAllocator());
     AddCurrentError(kValidateErrorPythonClass, true);
+  }
+  void PythonDisabled(const Ch* str, SizeType len) {
+    currentError_.SetObject();
+    currentError_.AddMember(GetDisallowedString(), ValueType(str, len, GetStateAllocator()).Move(), GetStateAllocator());
+    AddCurrentError(kValidateErrorPythonDisabled, true);
   }
   void InvalidSchema(ValidateErrorCode code, ISchemaValidator* subvalidator) {
     currentError_.SetObject();

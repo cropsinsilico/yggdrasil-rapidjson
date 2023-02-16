@@ -40,7 +40,9 @@ int main(int argc, char **argv) {
     std::cout << "RapidJSON v" << RAPIDJSON_VERSION_STRING << std::endl;
 
 #ifdef RAPIDJSON_YGGDRASIL
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
     INIT_PYTHON();
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #endif // RAPIDJSON_YGGDRASIL
     
 #ifdef _MSC_VER
@@ -59,7 +61,9 @@ int main(int argc, char **argv) {
 #endif
     
 #ifdef RAPIDJSON_YGGDRASIL
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
     FINALIZE_PYTHON();
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #endif // RAPIDJSON_YGGDRASIL
     
     return ret;

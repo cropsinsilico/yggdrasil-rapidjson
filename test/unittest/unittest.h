@@ -128,6 +128,7 @@ public:
 #endif
 
 #ifdef RAPIDJSON_YGGDRASIL
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 #define INIT_PYTHON()							\
   {									\
     rapidjson::initialize_python("test");				\
@@ -144,6 +145,7 @@ public:
   {						\
     rapidjson::finalize_python("test");		\
   }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #define DISPLAY_STRING_ALLOC(name, value)		\
   {							\
     StringBuffer buffer;				\
@@ -168,6 +170,7 @@ public:
     RAPIDJSON_ASSERT(container.Accept(writer));				\
     std::cerr << name << ": " << buffer.GetString() << std::endl;	\
   }
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 #define CREATE_PYTHON_INSTANCE(cls, var)				\
   PyObject* var = NULL;							\
   {									\
@@ -202,6 +205,7 @@ public:
     Py_DECREF(pyargs);							\
     Py_DECREF(pykwargs);						\
   }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #define SIMPLE_TYPES_STRING				\
   "[\"array\","						\
   "\"boolean\","					\

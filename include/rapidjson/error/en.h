@@ -117,6 +117,7 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
         case kValidateErrorEncoding:                    return RAPIDJSON_ERROR_STRING("Property has an encoding '%actual' that does not match the schema '%expected'.");
         case kValidateErrorPythonImport:                return RAPIDJSON_ERROR_STRING("Property is not an importable Python object: '%disallowed'.");
         case kValidateErrorPythonClass:                 return RAPIDJSON_ERROR_STRING("Property is not a Python instance of the class '%expected' specified in the schema (actual = '%actual').");
+        case kValidateErrorPythonDisabled:              return RAPIDJSON_ERROR_STRING("Python was disabled so Python objects cannot be serialized: '%disallowed'");
         case kValidateErrorInvalidSchema:               return RAPIDJSON_ERROR_STRING("Property is not a valid JSON schema.");
         case kValidateErrorPly:                         return RAPIDJSON_ERROR_STRING("Property is not a valid Ply document: %disallowed");
         case kValidateErrorObjWavefront:                return RAPIDJSON_ERROR_STRING("Property is not a valid ObjWavefront document: %disallowed");

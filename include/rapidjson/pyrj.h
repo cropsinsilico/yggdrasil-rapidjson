@@ -5,6 +5,25 @@
 #include <omp.h>
 #endif
 
+
+#ifdef YGGDRASIL_DISABLE_PYTHON_C_API
+
+#ifndef PyObject
+#define PyObject void*
+#endif
+
+RAPIDJSON_NAMESPACE_BEGIN
+
+inline
+bool isPythonInitialized() {
+  std::cerr << "The Python C API was disabled" << std::endl;
+  return false;
+}
+
+RAPIDJSON_NAMESPACE_END
+
+#else // YGGDRASIL_DISABLE_PYTHON_C_API
+
 #ifndef RAPIDJSON_FORCE_IMPORT_ARRAY
 #define NO_IMPORT_ARRAY
 #endif // RAPIDJSON_FORCE_IMPORT_ARRAY
@@ -579,7 +598,8 @@ PyObject* GetStructuredArray(PyObject* x) {
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
 }
 
-
 RAPIDJSON_NAMESPACE_END
+
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 
 #endif // RAPIDJSON_PYTHON_H_

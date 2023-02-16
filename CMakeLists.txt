@@ -29,56 +29,62 @@ else()
     PROJECT(RapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES CXX)
 endif()
 
+
 if(POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
     cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python
 endif()
 
-# needed on GitHub Actions CI: actions/setup-python does not touch registry/frameworks on Windows/macOS
-# this mirrors PythonInterp behavior which did not consult registry/frameworks first
-if (NOT DEFINED Python_FIND_REGISTRY)
-    set(Python_FIND_REGISTRY "LAST")
-endif ()
-if (NOT DEFINED Python_FIND_FRAMEWORK)
-    set(Python_FIND_FRAMEWORK "LAST")
-endif ()
+option(YGGDRASIL_DISABLE_PYTHON_C_API "Disable the Python C API" OFF)
+if(YGGDRASIL_DISABLE_PYTHON_C_API)
+    add_definitions(-DYGGDRASIL_DISABLE_PYTHON_C_API)
+else()
+    # needed on GitHub Actions CI: actions/setup-python does not touch registry/frameworks on Windows/macOS
+    # this mirrors PythonInterp behavior which did not consult registry/frameworks first
+    if (NOT DEFINED Python_FIND_REGISTRY)
+        set(Python_FIND_REGISTRY "LAST")
+    endif ()
+    if (NOT DEFINED Python_FIND_FRAMEWORK)
+        set(Python_FIND_FRAMEWORK "LAST")
+    endif ()
 
-message(STATUS "Python executable is ${Python3_EXECUTABLE}")
-if(NOT Python3_ROOT_DIR)
-    set(CONDA_PREFIX "$ENV{CONDA_PREFIX}")
-    if(CONDA_PREFIX)
-        message(STATUS "CONDA_PREFIX = ${CONDA_PREFIX}")
-        set(Python3_ROOT_DIR "${CONDA_PREFIX}")
-    else()
-        if(Python3_EXECUTABLE)
-            exec_program(${Python3_EXECUTABLE}
-	                 ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
-		         OUTPUT_VARIABLE PYTHON_ROOT
-		         RETURN_VALUE ROOT_NOT_FOUND)
-            if(ROOT_NOT_FOUND)
-  	        message(FATAL_ERROR "Python root not found")
+    message(STATUS "Python executable is ${Python3_EXECUTABLE}")
+    if(NOT Python3_ROOT_DIR)
+        set(CONDA_PREFIX "$ENV{CONDA_PREFIX}")
+        if(CONDA_PREFIX)
+            message(STATUS "CONDA_PREFIX = ${CONDA_PREFIX}")
+            set(Python3_ROOT_DIR "${CONDA_PREFIX}")
+        else()
+            if(Python3_EXECUTABLE)
+                exec_program(${Python3_EXECUTABLE}
+	                     ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
+		             OUTPUT_VARIABLE PYTHON_ROOT
+		             RETURN_VALUE ROOT_NOT_FOUND)
+                if(ROOT_NOT_FOUND)
+     	            message(FATAL_ERROR "Python root not found")
+                endif()
+	        set(Python3_ROOT_DIR "${RETURN_VALUE}")
             endif()
-	    set(Python3_ROOT_DIR "${RETURN_VALUE}")
-        endif()
+         endif()
     endif()
-endif()
-if(Python3_ROOT_DIR)
-    message(STATUS "Python root directory is ${Python3_ROOT_DIR}")
-endif()
-find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
-if(NOT Python3_NumPy_FOUND)
-    message(FATAL_ERROR "NumPy headers not found")
-endif()
-if(NOT Python3_FOUND)
-    message(FATAL_ERROR "Python libraries not found")
-endif()
+    if(Python3_ROOT_DIR)
+        message(STATUS "Python root directory is ${Python3_ROOT_DIR}")
+    endif()
+    find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+    if(NOT Python3_NumPy_FOUND)
+        message(FATAL_ERROR "NumPy headers not found")
+    endif()
+    if(NOT Python3_FOUND)
+        message(FATAL_ERROR "Python libraries not found")
+    endif()
 
-# Set environment variables required for embedding Python
-set(RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Python3_EXECUTABLE}")
+    # Set environment variables required for embedding Python
+    set(RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Python3_EXECUTABLE}")
 
-# There is an issue with embedding Python on Windows in conda environments
-# https://github.com/ContinuumIO/anaconda-issues/issues/11374
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set(RAPIDJSON_PYTHON_ENV "${RAPIDJSON_PYTHON_ENV};PYTHONHOME=${Python3_RUNTIME_LIBRARY_DIRS}")
+    # There is an issue with embedding Python on Windows in conda environments
+    # https://github.com/ContinuumIO/anaconda-issues/issues/11374
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        set(RAPIDJSON_PYTHON_ENV "${RAPIDJSON_PYTHON_ENV};PYTHONHOME=${Python3_RUNTIME_LIBRARY_DIRS}")
+    endif()
 endif()
 
 # Generate the metaschema header file
@@ -87,6 +93,9 @@ option(RAPIDJSON_CREATE_METASCHEMA_FULL "Re-create the metaschema and the full_s
 option(RAPIDJSON_YGGDRASIL_TESTS "Build tests using the yggdrasil schema" OFF)
 if(RAPIDJSON_CREATE_METASCHEMA_FULL)
   set(RAPIDJSON_CREATE_METASCHEMA ON)
+endif()
+if(YGGDRASIL_DISABLE_PYTHON_C_API)
+  set(RAPIDJSON_CREATE_METASCHEMA OFF)
 endif()
 if(RAPIDJSON_CREATE_METASCHEMA)
     set(RAPIDJSON_YGGDRASIL_METASCHEMA_FLAGS "")

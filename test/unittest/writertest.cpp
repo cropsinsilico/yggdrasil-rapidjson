@@ -168,6 +168,7 @@ TEST(Writer, OneDArrayUInt) {
 TEST(Writer, NDArrayUInt) {
   TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAECAwQF-YGG-\"");
 }
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 TEST(Writer, PythonClass) {
   TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"");
   TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9mdW5jdGlvbg==-YGG-\"");
@@ -176,6 +177,7 @@ TEST(Writer, PythonClass) {
 TEST(Writer, PythonInstance) {
   TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"");
 }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 TEST(Writer, Schema) {
   TEST_YGG_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"");
 }
@@ -217,6 +219,7 @@ TEST(ReadableWriter, OneDArrayUInt) {
 TEST(ReadableWriter, NDArrayUInt) {
   TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJ1aW50IiwicHJlY2lzaW9uIjoxLCJ1bml0cyI6ImciLCJzaGFwZSI6WzIsM119-YGG-AAECAwQF-YGG-\"", "[[0,1,2],[3,4,5]]");
 }
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 TEST(ReadableWriter, PythonClass) {
   TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"", "\"example_python:ExampleClass\"");
   TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9mdW5jdGlvbg==-YGG-\"", "\"example_python:example_function\"");
@@ -225,6 +228,7 @@ TEST(ReadableWriter, PythonClass) {
 TEST(ReadableWriter, PythonInstance) {
   TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", "{\"class\":\"example_python:ExampleSubClass\",\"args\":[\"hello\",0.5],\"kwargs\":{\"a\":\"world\",\"b\":1}}");
 }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 TEST(ReadableWriter, Schema) {
   TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoiaW50IiwicHJlY2lzaW9uIjo4fQ==-YGG-\"", "{\"type\":\"int\",\"precision\":8}");
 }

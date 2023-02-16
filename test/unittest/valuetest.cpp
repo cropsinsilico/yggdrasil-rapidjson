@@ -1971,6 +1971,7 @@ TEST(Value, Ply) {
   EXPECT_EQ(obj, cpy_obj);
 }
 
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 // Python objects
 TEST(Value, PythonFunction) {
   PyObject* pyfunc = import_python_class("example_python", "example_function");
@@ -2014,6 +2015,7 @@ TEST(Value, PythonInstance) {
   Py_DECREF(pyinst);
   Py_DECREF(pyinst_cpy);
 }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 
 // schema
 TEST(Value, Schema) {

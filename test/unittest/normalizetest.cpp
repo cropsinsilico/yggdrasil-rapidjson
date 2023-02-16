@@ -208,7 +208,7 @@ using namespace rapidjson;
     FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",	\
 		     "/a",					\
 		     "{ \"normalization\": {"			\
-		     "    \"errorCode\": 40,"			\
+		     "    \"errorCode\": 41,"			\
 		     "    \"instanceRef\": \"#/a\","		\
 		     "    \"schemaRef\": \"#/allOf/1\","	\
 		     "    \"conflicting\": \"" #method "\","	\
@@ -240,7 +240,7 @@ using namespace rapidjson;
     FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",	\
 		     "/a",					\
 		     "{ \"normalization\": {"			\
-		     "    \"errorCode\": 40,"			\
+		     "    \"errorCode\": 41,"			\
 		     "    \"instanceRef\": \"#/a\","		\
 		     "    \"schemaRef\": \"#/allOf/1\","	\
 		     "    \"conflicting\": \"" #method "\","	\
@@ -278,10 +278,12 @@ TEST(SchemaNormalizer, BaseTypes) {
 	"        \"k\": {\"type\": \"scalar\", \"subtype\": \"uint\","
 	"                \"precision\": 1,"
 	"                \"default\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\"},"
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 	"        \"l\": {\"type\": \"function\","
 	"                \"default\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\"},"
 	"        \"m\": {\"type\": \"instance\","
 	"                \"default\": \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"},"
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 	"        \"n\": {\"type\": \"schema\","
 	"                \"default\": \"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoic2NhbGFyIiwicHJlY2lzaW9uIjo4LCJzdWJ0eXBlIjoiaW50In0=-YGG-\"},"
 	"        \"o\": {\"type\": \"1darray\", \"subtype\": \"float\","
@@ -291,23 +293,31 @@ TEST(SchemaNormalizer, BaseTypes) {
 	"                \"precision\": 4, \"shape\": [2, 3],"
 	"                \"default\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAgD8AAABAAABAQAAAgEAAAKBA-YGG-\"}"
 	"      },"
-	"      \"required\": [\"k\", \"l\", \"m\", \"n\", \"o\", \"p\"]"
+	"      \"required\": [\"k\", "
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
+	"\"l\", \"m\", "
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
+	"\"n\", \"o\", \"p\"]"
 	"    }"
 	"  ]"
 	"}");
     SchemaDocument s(sd);
     NO_NORMALIZE(s, "{ \"a\": null, \"b\": false, \"c\": -1, \"d\": -9223372036854775808, \"e\": 9223372036854775807, \"f\": 1, \"g\": 3.583, \"h\": \"foo\", \"i\": [ 2, 4, 8 ], \"j\": { \"x\": 2, \"y\": 7, \"z\": -1}, "
 		 "\"k\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\", "
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 		 "\"l\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\", "
 		 "\"m\": \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\", "
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 		 "\"n\": \"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoic2NhbGFyIiwicHJlY2lzaW9uIjo4LCJzdWJ0eXBlIjoiaW50In0=-YGG-\", "
 		 "\"o\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOls0XX0=-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEA=-YGG-\", "
 		 "\"p\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAgD8AAABAAABAQAAAgEAAAKBA-YGG-\" }");
     NORMALIZE(s, "{}", true,
 	      "{ \"a\": null, \"b\": false, \"c\": -1, \"d\": -9223372036854775808, \"e\": 9223372036854775807, \"f\": 1, \"g\": 3.583, \"h\": \"foo\", \"i\": [ 2, 4, 8 ], \"j\": { \"x\": 2, \"y\": 7, \"z\": -1}, "
 	      "\"k\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6InVpbnQiLCJwcmVjaXNpb24iOjEsInVuaXRzIjoiZyJ9-YGG-DA==-YGG-\", "
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 	      "\"l\": \"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-ZXhhbXBsZV9weXRob246RXhhbXBsZUNsYXNz-YGG-\", "
 	      "\"m\": \"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\", "
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 	      "\"n\": \"-YGG-eyJ0eXBlIjoic2NoZW1hIn0=-YGG-eyJ0eXBlIjoic2NhbGFyIiwicHJlY2lzaW9uIjo4LCJzdWJ0eXBlIjoiaW50In0=-YGG-\", "
 	      "\"o\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6OCwic2hhcGUiOls0XX0=-YGG-AAAAAAAAAAAAAAAAAADwPwAAAAAAAABAAAAAAAAACEA=-YGG-\", "
 	      "\"p\": \"-YGG-eyJ0eXBlIjoibmRhcnJheSIsInN1YnR5cGUiOiJmbG9hdCIsInByZWNpc2lvbiI6NCwic2hhcGUiOlsyLDNdfQ==-YGG-AAAAAAAAgD8AAABAAABAQAAAgEAAAKBA-YGG-\" }");
@@ -415,7 +425,7 @@ TEST(SchemaNormalizer, MergeAllOf) {
     FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",
 		     "/field",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 40,"
+		     "    \"errorCode\": 41,"
 		     "    \"instanceRef\": \"#/field\","
 		     "    \"schemaRef\": \"#/allOf/1\","
 		     "    \"conflicting\": \"string\","
@@ -466,7 +476,7 @@ TEST(SchemaNormalizer, MergeAnyOf) {
     FAILED_NORMALIZE(s, "{}", "/anyOf/0", "normalization",
 		     "/field",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 40,"
+		     "    \"errorCode\": 41,"
 		     "    \"instanceRef\": \"#/field\","
 		     "    \"schemaRef\": \"#/anyOf/0\","
 		     "    \"conflicting\": \"string\","
@@ -521,7 +531,7 @@ TEST(SchemaNormalizer, MergeOneOf) {
     FAILED_NORMALIZE(s, "{}", "/oneOf/0", "normalization",
 		     "/field",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 40,"
+		     "    \"errorCode\": 41,"
 		     "    \"instanceRef\": \"#/field\","
 		     "    \"schemaRef\": \"#/oneOf/0\","
 		     "    \"conflicting\": \"string\","
@@ -551,7 +561,7 @@ TEST(SchemaNormalizer, MergeConflict) {
     FAILED_NORMALIZE(s, "{}", "/allOf/1", "normalization",
 		     "/shipping_address",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 40,"
+		     "    \"errorCode\": 41,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/allOf/1\","
 		     "    \"conflicting\": \"string\","
@@ -567,7 +577,9 @@ TEST(SchemaNormalizer, MergeConflict) {
   MERGE_CONFLICT_ERROR(integer, 9223372036854775808, uint64);
   MERGE_CONFLICT_ERROR(number, 0.123, double);
   MERGE_CONFLICT_ERROR_STRING(scalar, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImcifQ==-YGG-AAAAAABAj0A=-YGG-\"", "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImcifQ==-YGG-AAAAAABAj0A=-YGG-\"", yggString);
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
   MERGE_CONFLICT_ERROR_STRING(instance, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOkV4YW1wbGVTdWJDbGFzcyIsImFyZ3MiOlsiaGVsbG8iLDAuNV0sImt3YXJncyI6eyJhIjoid29ybGQiLCJiIjoxfX0=-YGG-\"", "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-e30=-YGG-\"", yggObject);
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 }
 
 TEST(SchemaNormalizer, MergeConflictNested) {
@@ -595,7 +607,7 @@ TEST(SchemaNormalizer, MergeConflictNested) {
 		     "/properties/client/allOf/1", "normalization",
 		     "/client/shipping_address",
 		     "{ \"normalization\": {"
-		     "    \"errorCode\": 40,"
+		     "    \"errorCode\": 41,"
 		     "    \"instanceRef\": \"#/client/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/client/allOf/1\","
 		     "    \"conflicting\": \"string\","
@@ -680,7 +692,7 @@ TEST(SchemaNormalizer, Alias) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address/street_address",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 37,"
+		     "    \"errorCode\": 38,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"duplicates\": [\"street\", \"street_address\"]"
@@ -740,7 +752,7 @@ TEST(SchemaNormalizer, AliasConflict) {
 		     "{\"b2\": \"bar\"}",
 		     "", "aliases", "",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 37,"
+		     "    \"errorCode\": 38,"
 		     "    \"instanceRef\": \"#\","
 		     "    \"schemaRef\": \"#\","
 		     "    \"duplicates\": [\"b\", \"b2\"]"
@@ -976,7 +988,7 @@ TEST(SchemaNormalizer, AliasCircular) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address/street",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 38,"
+		     "    \"errorCode\": 39,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"circular\": [\"street\", \"street_address\"]"
@@ -1016,7 +1028,7 @@ TEST(SchemaNormalizer, AliasConflicting) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address/street",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 39,"
+		     "    \"errorCode\": 40,"
 		     "    \"instanceRef\": \"#/shipping_address\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"conflicting\": \"street\","
@@ -1073,7 +1085,7 @@ TEST(SchemaNormalizer, AliasNested) {
 		     "{ \"allOf\": {"
 		     "    \"errors\": ["
 		     "       { \"aliases\": {"
-		     "           \"errorCode\": 37,"
+		     "           \"errorCode\": 38,"
 		     "           \"instanceRef\": \"#/shipping_address\","
 		     "           \"schemaRef\": \"#/definitions/address\","
 		     "           \"duplicates\": [\"street\", \"street_address\"]"
@@ -1130,7 +1142,7 @@ TEST(SchemaNormalizer, AliasNestedCircular) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 38,"
+		     "    \"errorCode\": 39,"
 		     "    \"instanceRef\": \"#\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "    \"circular\": [\"street\", \"street_address\"]"
@@ -1182,7 +1194,7 @@ TEST(SchemaNormalizer, AliasNestedConflicting) {
 		     "/properties/shipping_address", "aliases",
 		     "/shipping_address",
 		     "{ \"aliases\": {"
-		     "    \"errorCode\": 39,"
+		     "    \"errorCode\": 40,"
 		     "    \"instanceRef\": \"#\","
 		     "    \"schemaRef\": \"#/properties/shipping_address\","
 		     "  \"conflicting\": \"street\","
@@ -2079,6 +2091,7 @@ TEST(SchemaNormalizer, PushPropertiesPathExclude) {
 		     "}}");
 }
 
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 #ifdef METASCHEMA_YGG_TESTS
 TEST(SchemaNormalizer, YggSchema) {
     Document sd;
@@ -2095,6 +2108,7 @@ TEST(SchemaNormalizer, YggSchema) {
     NORMALIZE(s, get_testschema<char>(), true, get_testschema_result<char>());
 }
 #endif // METASCHEMA_YGG_TESTS
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #if defined(_MSC_VER) || defined(__clang__)
 RAPIDJSON_DIAG_POP
 #endif

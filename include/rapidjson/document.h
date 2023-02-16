@@ -718,6 +718,7 @@ struct TypeHelper<ValueType, std::complex<long double> > {
   static ValueType& Set(ValueType& v, std::complex<long double> data) { return v.SetScalar(data); }
 };
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 // python instance
 template<typename ValueType>
 struct TypeHelper<ValueType, PyObject*> {
@@ -725,6 +726,7 @@ struct TypeHelper<ValueType, PyObject*> {
   static PyObject* Get(const ValueType& v) { return v.template GetPythonInstance(); }
   static ValueType& Set(ValueType& v, PyObject* data) { return v.SetPythonInstance(data); }
 };
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 // obj & ply
 template<typename ValueType>
 struct TypeHelper<ValueType, ObjWavefront> {
@@ -1390,11 +1392,11 @@ public:
             // simultaneously.
             __declspec(thread) static char buffer[sizeof(GenericValue)];
             return *new (buffer) GenericValue();
-#elif defined(__GNUC__) || defined(__clang__)
-            // This will generate -Wexit-time-destructors in clang, but that's
-            // better than having under-alignment.
-            __thread static GenericValue buffer;
-            return buffer;
+// #elif defined(__GNUC__) || defined(__clang__)
+//             // This will generate -Wexit-time-destructors in clang, but that's
+//             // better than having under-alignment.
+//             __thread static GenericValue buffer;
+//             return buffer;
 #else
             // Don't know what compiler this is, so don't know how to ensure
             // thread-locality.
@@ -3642,6 +3644,22 @@ public:
     }
     return true;
   }
+#ifdef YGGDRASIL_DISABLE_PYTHON_C_API
+  PyObject* GetPythonObjectRaw() const {
+    RAPIDJSON_ASSERT(isPythonInitialized());
+    return NULL;
+  }
+  bool SetPythonObjectRaw(PyObject* x, Allocator* allocator = 0,
+#ifdef RAPIDJSON_DONT_IMPORT_NUMPY
+			  bool=false,
+#else // RAPIDJSON_DONT_IMPORT_NUMPY
+			  bool skipTitle=false,
+#endif // RAPIDJSON_DONT_IMPORT_NUMPY
+			  bool allowPickle=true) {
+    RAPIDJSON_ASSERT(isPythonInitialized());
+    return false;
+  }
+#else // YGGDRASIL_DISABLE_PYTHON_C_API
   bool GetPythonObjectClassName(PyObject* x, Ch*& mod_cls, SizeType& mod_cls_siz,
 				Allocator& allocator) {
     RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__module__"));
@@ -4386,6 +4404,7 @@ public:
     Py_DECREF(py_str);
     return true;
   }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
   void SetObjRaw(const ObjWavefront& x, Allocator* allocator = 0) {
     std::stringstream ss;
     ss << x;
@@ -4556,6 +4575,7 @@ public:
     return kYggNullSubType;
   }
 
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
   static bool NumpyType2SubType(PyArray_Descr* desc,
 				ValueType& subtype,
@@ -4654,6 +4674,7 @@ public:
     }
   }
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 
   const ValueType& GetSubType() const {
     RAPIDJSON_ASSERT(IsYggdrasil());
@@ -5167,6 +5188,7 @@ public:
     return decoded_bytes;
   }
 
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
   PyObject* GetPythonClass(bool allowFunc = false) const {
     const char *mod_class;
     if (IsPythonInstance()) {
@@ -5232,6 +5254,7 @@ public:
       return NULL;
     }
   }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
   void GetObjWavefront(ObjWavefront &o) const {
     if (IsObjWavefront()) {
       std::stringstream ss;
@@ -5355,6 +5378,7 @@ public:
     this->~GenericValue();
     new (this) GenericValue(x, precision, shape, ndim, allocator, encoding, encoding_len);
     return *this; }
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
   GenericValue& SetPythonInstance(PyObject* x, Allocator* allocator = 0) {
     this->~GenericValue();
     if (allocator)
@@ -5362,6 +5386,7 @@ public:
     else
       new (this) GenericValue(x);
     return *this; }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
   GenericValue& SetObjWavefront(ObjWavefront x, Allocator* allocator = 0) {
     this->~GenericValue();
     new (this) GenericValue(x, allocator);
