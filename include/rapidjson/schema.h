@@ -5032,6 +5032,7 @@ public:
     }
 
     bool CompareNativeScalar(const Schema<SchemaDocumentType>& rhs) const {
+      bool dontCheckPrecision = false;
       if (!(yggtype_ & (1 << kYggScalarSchemaType)))
 	return false;
       if (rhs.type_ & (1 << kNumberSchemaType)) {
@@ -5043,10 +5044,14 @@ public:
 	if (!(subtype_ == kYggIntSchemaSubType ||
 	      subtype_ == kYggUintSchemaSubType))
 	  return false;
+      } else if (rhs.type_ & (1 << kStringSchemaType)) {
+	if (!(subtype_ == kYggStringSchemaSubType))
+	  return false;
+	dontCheckPrecision = true;
       } else {
 	return false;
       }
-      if (precision_.IsUint()) {
+      if ((!dontCheckPrecision) && precision_.IsUint()) {
 	SizeType prec = precision_.GetUint();
 	if (prec != 4 && prec != 8)
 	  return false;

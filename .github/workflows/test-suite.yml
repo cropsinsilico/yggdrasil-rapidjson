@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
         run: |
-          # sudo apt-get update
+          sudo apt-get update
           sudo apt-get install -y libc6-dbg gdb valgrind
           sudo apt upgrade --fix-missing
           valgrind --version

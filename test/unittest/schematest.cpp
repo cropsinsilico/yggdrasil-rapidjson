@@ -6551,6 +6551,13 @@ TEST(SchemaCompare, NativeScalars) {
 	  "  \"subtype\": \"int\","
 	  "  \"precision\": 8"
 	  "}");
+  COMPARE("{"
+	  "  \"type\": \"string\""
+	  "}",
+	  "{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"string\""
+	  "}");
   INVALID_COMPARE("{"
 		  "  \"type\": \"integer\""
 		  "}",
