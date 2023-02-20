@@ -36,6 +36,7 @@
 #include <complex>
 #include "units.h"
 #include "precision.h"
+#include "va_list.h"
 #endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_DIAG_PUSH
@@ -788,6 +789,32 @@ void Ply::fromObjWavefront(const ObjWavefront& o) {
 		       ((*it)->code == "f") ||
 		       ((*it)->code == "l"));
   }
+}
+
+// VarArgs helpers
+/*!
+  @brief Count the number of variable arguments that would be returned or
+    set for the type described by the schema.
+  @param[in] schema Schema containing type information about the
+    variables.
+  @param[in] set If true, the arguments are counted for the case where
+    the schema would be used to set variables.
+  @returns Number of variables associated with the schema.
+ */
+template<typename ValueType>
+size_t countVarArgs(ValueType& schema, bool set) {
+  GenericDocument<typename ValueType::EncodingType,
+		  typename ValueType::AllocatorType,
+		  RAPIDJSON_DEFAULT_STACK_ALLOCATOR> tmp;
+  return tmp.CountVarArgs(schema, set);
+};
+
+template<typename ValueType>
+bool VarArgList::skip(ValueType& schema, bool set) {
+  GenericDocument<typename ValueType::EncodingType,
+		  typename ValueType::AllocatorType,
+		  RAPIDJSON_DEFAULT_STACK_ALLOCATOR> tmp;
+  return tmp.SkipVarArgs(schema, *this, set);
 }
 
 #endif // RAPIDJSON_YGGDRASIL
@@ -3602,6 +3629,568 @@ public:
     ResetSchema(allocator);
     schema_ = &(schema_->Parse(s));
   }
+
+  //! Variable argument setting/getting
+  template <typename DocumentType>
+  bool ApplyVarArgs(ValueType& schema, VarArgList &ap,
+		    const uint16_t flag, DocumentType* parent,
+		    size_t table_nelements=0) {
+    if (!(schema.IsObject() && schema.HasMember("type") &&
+	  schema["type"].IsString())) {
+      // ygglog_throw_error("ApplyVarArgs: Schema must be an object "
+      //                    "containing a 'type' string property.");
+      return false;
+    }
+    RAPIDJSON_ASSERT((flag != kGetVarArgsFlag) || parent);
+    if (flag == kGetVarArgsFlag and !parent)
+      return false;
+    std::string schema_type(schema["type"].GetString());
+#define BASE_(method_set, method_chk, method_get, type)		\
+    type tmp;							\
+    if (flag == kSetVarArgsFlag) {				\
+      if (!method_chk)						\
+	return false;						\
+      tmp = method_set;						\
+    }								\
+    if (!ap.apply(&tmp, flag)) {				\
+      return false;						\
+    }								\
+    if (flag == kGetVarArgsFlag) {				\
+      method_get;						\
+    }
+#define BASE_STD_(method, type)			\
+    BASE_(Get ## method(), Is ## method(), Set ## method(tmp), type)
+#define CASE_STRING_							\
+    const char* tmp = NULL;						\
+    size_t tmp_len = 0;							\
+    char* mem = NULL;							\
+    char** mem_ref = NULL;						\
+    size_t mem_len = 0;							\
+    if (flag == kSetVarArgsFlag) {					\
+      tmp_len = (size_t)GetStringLength();				\
+      tmp = GetString();						\
+      mem_len = tmp_len;						\
+    }									\
+    if (!ap.apply_mem(mem, mem_ref, flag))				\
+      return false;							\
+    if (!ap.apply(&mem_len, flag, true))				\
+      return false;							\
+    if (flag == kSetVarArgsFlag) {					\
+      if (!ap.set_mem_term(mem, mem_ref, mem_len, tmp, tmp_len))	\
+	return false;							\
+    } else if (flag == kGetVarArgsFlag) {				\
+      SetString(mem, (SizeType)mem_len, parent->GetAllocator());	\
+    }
+    // TODO: Move this to yggdrasil side
+    bool use_generic = false;
+    if (schema.HasMember("use_generic") &&
+	schema["use_generic"].IsBool() &&
+	schema["use_generic"].GetBool()) {
+      use_generic = true;
+    }
+    if (use_generic ||
+	schema_type == std::string("any") ||
+	schema_type == std::string("schema")) {
+      DocumentType* tmp = NULL;
+      DocumentType** tmp_ref = NULL;
+      if (!ap.apply_mem(tmp, tmp_ref, flag))
+	return false;
+      if (flag == kSetVarArgsFlag) {
+	if (tmp == NULL) {
+	  // if (!ap.allow_realloc)
+	  //   return false;
+	  tmp = new DocumentType();
+	  tmp_ref[0] = tmp;
+	}
+	tmp->CopyFrom(*this, tmp->GetAllocator());
+      } else if (flag == kGetVarArgsFlag) {
+	CopyFrom(*tmp, parent->GetAllocator());
+      }
+      return true;
+    }
+    else if (schema_type == "null") {
+      BASE_(NULL, IsNull(), SetNull(), void*)
+    }
+    else if (schema_type == "boolean") {
+      BASE_STD_(Bool, bool)
+    }
+    else if (schema_type == std::string("integer")) {
+      BASE_STD_(Int, int);
+    }
+    else if (schema_type == std::string("number")) {
+      BASE_STD_(Double, double)
+    }
+    // else if (schema_type == std::string("integer") ||
+    // 	     schema_type == std::string("number")) {
+    //   if (flag & kSetVarArgsFlag) {
+    //     if (IsInt()) {
+    // 	  BASE_STD_(Int, int)
+    //     } else if (IsUint()) {
+    // 	  BASE_STD_(Uint, unsigned)
+    //     } else if (IsInt64()) {
+    // 	  BASE_STD_(Int64, int64_t)
+    //     } else if (IsUint64()) {
+    // 	  BASE_STD_(Uint64, uint64_t)
+    // 	} else if (schema_type == std::string("number") && IsDouble()) {
+    // 	  BASE_STD_(Double, double)
+    //     }
+    //   } else if (schema_type == std::string("number")) {
+    // 	BASE_STD_(Double, double)
+    //   } else {
+    // 	BASE_STD_(Int, int)
+    //   }
+    // }
+    else if (schema_type == std::string("string")) {
+      CASE_STRING_;
+    }
+    else if (schema_type == std::string("array")) {
+      if (!(schema.HasMember("items") && (schema["items"].IsArray() ||
+					  schema["items"].IsObject()))) {
+	// ygglog_throw_error("ApplyVarArgs: schema for array must contain an items member");
+	return false;
+      }
+      size_t nelements = 0;
+      if (flag & kSetVarArgsFlag) {
+	nelements = is_document_format_array(*this, true);
+      } else {
+	nelements = (size_t)is_schema_format_array(schema);
+      }
+      if (nelements) {
+	if (!ap.apply(&nelements, flag))
+	  return false;
+      }
+      SizeType total = 0;
+      bool advance = false;
+      if (flag == kSetVarArgsFlag) {
+	if (!IsArray())
+	  return false;
+	total = Size();
+	advance = true;
+      } else {
+	if (!schema["items"].IsArray())
+	  return false;
+	total = schema["items"].Size();
+	if (flag == kGetVarArgsFlag) {
+	  SetArray();
+	  Reserve(total, parent->GetAllocator());
+	  for (SizeType i = 0; i < total; i++) {
+	    ValueType item;
+	    PushBack(item, parent->GetAllocator());
+	  }
+	  advance = true;
+	}
+      }
+
+      ValueIterator it;
+      if (advance)
+	it = Begin();
+      else
+	it = this;
+      for (SizeType i = 0; i < total; i++) {
+	if (schema["items"].IsArray()) {
+	  if (!it->ApplyVarArgs(schema["items"][i], ap, flag,
+				parent, nelements))
+	    return false;
+	} else {
+	  if (!it->ApplyVarArgs(schema["items"], ap, flag,
+				parent, nelements))
+	    return false;
+	}
+	if (advance)
+	  it++;
+      }
+    }
+    else if (schema_type == std::string("object")) {
+      if (!(schema.HasMember("properties") && schema["properties"].IsObject())) {
+	// ygglog_throw_error("ApplyVarArgs: schema for object must contain a properties member");
+	return false;
+      }
+      SizeType total = 0;
+      bool advance = false;
+      if (flag == kSetVarArgsFlag) {
+	if (!IsObject())
+	  return false;
+	total = MemberCount();
+	advance = true;
+      } else {
+	total = schema["properties"].MemberCount();
+	if (flag == kGetVarArgsFlag) {
+	  SetObject();
+	  MemberReserve(total, parent->GetAllocator());
+	  for (MemberIterator it = schema["properties"].MemberBegin();
+	       it != schema["properties"].MemberEnd(); it++) {
+	    ValueType item;
+	    AddMember(ValueType(it->name, parent->GetAllocator()).Move(),
+		      item, parent->GetAllocator());
+	  }
+	  advance = true;
+	}
+      }
+
+      MemberIterator it;
+      ValueType* name = NULL;
+      ValueType* value = NULL;
+      if (advance)
+	it = MemberBegin();
+      else
+	it = schema["properties"].MemberBegin();
+      for (SizeType i = 0; i < total; i++) {
+	if (advance) {
+	  name = &(it->name);
+	  value = &(it->value);
+	} else {
+	  name = &(it->name);
+	  value = this;
+	}
+	if (!value->ApplyVarArgs(schema["properties"][*name], ap,
+				 flag, parent))
+	  return false;
+	// if (!it->value.ApplyVarArgs(schema["properties"][it->name], ap,
+	// 			    flag, parent))
+	//   return false;
+	// if (advance)
+	it++;
+      }
+    }
+    else if (schema_type == std::string("scalar")) {
+      if (!(schema.HasMember("subtype") && schema["subtype"].IsString()))  {
+	// ygglog_throw_error("ApplyVarArgs: Scalar schema must contain a string subtype member");
+	return false;
+      }
+      std::string schema_subtype(schema["subtype"].GetString());
+      bool is_string = (schema_subtype == std::string("string") ||
+			schema_subtype == std::string("bytes") ||
+			schema_subtype == std::string("unicode"));
+      int schema_precision = 0;
+      if (schema.HasMember("precision") && schema["precision"].IsInt()) {
+	if (!is_string)
+	  schema_precision = schema["precision"].GetInt();
+      } else if (!is_string) {
+	// ygglog_throw_error("ApplyVarArgs: Scalar %s schema must contain an integer precision member", schema_subtype.c_str());
+	return false;
+      }
+      int precision = schema_precision;
+      std::string subtype = schema_subtype;
+      if (flag == kSetVarArgsFlag) {
+	precision = (int)(GetPrecision());
+	subtype = std::string(GetSubType().GetString());
+      }
+#define CASE_SCALAR_(subT, prec, type)					\
+      if (subtype == std::string(#subT) && prec == precision) {		\
+	type tmp;							\
+	if (flag == kSetVarArgsFlag) {					\
+	  tmp = GetScalar<type>();					\
+	}								\
+	if (!ap.apply(&tmp, flag)) {					\
+	  return false;							\
+	}								\
+	if (flag == kGetVarArgsFlag) {					\
+	  ValueType schema_cpy(schema, parent->GetAllocator());		\
+	  if (is_string && !schema_precision) {				\
+	    schema_cpy.AddMember(GetPrecisionString(),			\
+				 ValueType(precision).Move(),		\
+				 parent->GetAllocator());		\
+	  }								\
+	  SetYggdrasilString((const char*)(&tmp),			\
+			     static_cast<SizeType>(precision),		\
+			     parent->GetAllocator(), schema_cpy);	\
+	}								\
+      }
+      CASE_SCALAR_(int, 1, int8_t)
+      else CASE_SCALAR_(int, 2, int16_t)
+      else CASE_SCALAR_(int, 4, int32_t)
+      else CASE_SCALAR_(int, 8, int64_t)
+      else CASE_SCALAR_(uint, 1, uint8_t)
+      else CASE_SCALAR_(uint, 2, uint16_t)
+      else CASE_SCALAR_(uint, 4, uint32_t)
+      else CASE_SCALAR_(uint, 8, uint64_t)
+      else CASE_SCALAR_(float, 4, float)
+      else CASE_SCALAR_(float, 8, double)
+      else CASE_SCALAR_(complex, 8, std::complex<float>)
+      else CASE_SCALAR_(complex, 16, std::complex<double>)
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+      else CASE_SCALAR_(float, 16, long double)
+      else CASE_SCALAR_(complex, 32, std::complex<long double>)
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+      else if (is_string) {
+	CASE_STRING_;
+	// TODO: Encoding
+	ValueType schema_cpy(schema, parent->GetAllocator());
+	if (flag == kGetVarArgsFlag) {
+	  if (!schema_precision) {
+	    schema_cpy.AddMember(GetPrecisionString(),
+				 ValueType(0).Move(),
+				 parent->GetAllocator());
+	  }
+	  schema_cpy["precision"].SetUint64(mem_len);
+	  SetValueSchema(schema_cpy, &(parent->GetAllocator()));
+	}
+      }
+      else {
+	// ygglog_throw_error("ApplyVarArgs: Unsupported subtype and precision combination for scalar: subtype = %s, precision = %d", schema_subtype.c_str(), schema_precision);
+	return false;
+      }
+#undef CASE_SCALAR_
+#undef CASE_STRING_
+    }
+    else if (schema_type == std::string("ndarray") ||
+	     schema_type == std::string("1darray")) {
+      if (!(schema.HasMember("subtype") && schema["subtype"].IsString())) {
+	// ygglog_throw_error("ApplyVarArgs: ndarray schema must contain a string subtype member");
+	return false;
+      }
+      size_t schema_ndim = 0;
+      bool has_shape = false;
+      size_t nelements = 1;
+      std::string schema_subtype(schema["subtype"].GetString());
+      size_t schema_precision = 0;
+      bool is_string = (schema_subtype == std::string("string") ||
+			schema_subtype == std::string("bytes") ||
+			schema_subtype == std::string("unicode"));
+      if (schema.HasMember("precision") && schema["precision"].IsUint()) {
+	schema_precision = static_cast<size_t>(schema["precision"].GetUint());
+      } else if (!is_string) {
+	// ygglog_throw_error("ApplyVarArgs: ndarray schema must contain an integer precision member");
+	return false;
+      }
+      if (schema_type == std::string("1darray")) {
+	schema_ndim = 1;
+      }
+      // if (!ap.for_fortran) {
+      if (schema.HasMember("length") && schema["length"].IsUint()) {
+	schema_ndim = 1;
+	has_shape = true;
+	nelements *= static_cast<size_t>(schema["length"].GetUint());
+      } else if (schema.HasMember("shape") && schema["shape"].IsArray()) {
+	schema_ndim = static_cast<size_t>(schema["shape"].Size());
+	has_shape = true;
+	for (ValueIterator it = schema["shape"].Begin();
+	     it != schema["shape"].End(); it++) {
+	  nelements *= static_cast<size_t>(it->GetUint());
+	}
+      }
+      // }
+      if (schema_ndim == 0 && schema.HasMember("ndim") && schema["ndim"].IsInt())
+	schema_ndim = static_cast<size_t>(schema["ndim"].GetUint());
+      if (table_nelements) {
+	nelements = table_nelements;
+      }
+      // if (schema_ndim == 0)
+      //   ygglog_throw_error("ApplyVarArgs: Could not determine the number of dimension in the array from the schema");
+      std::string subtype = schema_subtype;
+      size_t precision = schema_precision;
+      size_t ndim = schema_ndim;
+      if (flag == kSetVarArgsFlag) {
+	subtype = std::string(GetSubType().GetString());
+	precision = static_cast<size_t>(GetPrecision());
+	if (Is1DArray()) {
+	  ndim = 1;
+	} else {
+	  ndim = static_cast<size_t>(GetShape().Size());
+	}
+	nelements = static_cast<size_t>(GetNElements());
+      }
+      char* mem = NULL;
+      char** mem_ref = NULL;
+      size_t mem_len = 0;
+      size_t mem_ndim = 0;
+      size_t mem_prec = 0;
+      size_t* mem_shape = NULL;
+      size_t** mem_shape_ref = NULL;
+      bool exchange_size = ((!table_nelements) &&
+			    (ap.for_fortran || !has_shape));
+      // bool exchange_size = (!((has_shape && !ap.for_fortran) ||
+      // 			      table_nelements));
+      bool exchange_len = (exchange_size && (ndim == 1));
+      bool exchange_shape = (exchange_size && (ndim > 1));
+      bool exchange_prec = (is_string && (ap.for_fortran ||
+					  !table_nelements));
+      mem_len = nelements;
+      mem_ndim = ndim;
+      mem_prec = precision;
+      if (!ap.apply_mem(mem, mem_ref, flag))
+	return false;
+      if (exchange_len) {
+	if (!ap.apply(&mem_len, flag, true))
+	  return false;
+	mem_shape = &mem_len;
+      } else if (exchange_shape) {
+	if (!ap.apply(&mem_ndim, flag, true))
+	  return false;
+	if (!ap.apply_mem(mem_shape, mem_shape_ref, flag))
+	  return false;
+      }
+      if (exchange_prec) {
+	if (!ap.apply(&mem_prec, flag, true))
+	  return false;
+      }
+      if (flag == kSetVarArgsFlag) {
+	// TODO: Check that shape matches in case of not allow_realloc
+	if (exchange_shape) {
+	  size_t i = 0;
+	  size_t src_shape_len = ndim;
+	  size_t* src_shape = (size_t*)malloc(src_shape_len * sizeof(size_t));
+	  if (Is1DArray()) {
+	    src_shape[0] = static_cast<size_t>(GetNElements());
+	  } else {
+	    for (ConstValueIterator it = GetShape().Begin();
+		 it != GetShape().End(); it++, i++) {
+	      src_shape[i] = static_cast<size_t>(it->GetUint());
+	    }
+	  }
+	  if (!ap.set_mem(mem_shape, mem_shape_ref, mem_ndim,
+			  src_shape, src_shape_len))
+	    return false;
+	  free(src_shape);
+	}
+	const char* tmp = GetString();
+	// TODO: Handle element by element terminating characters
+	if (is_string) {
+	  size_t tmp_len = nelements;
+	  size_t tmp_prec = precision;
+	  if (!ap.set_mem_strided(mem, mem_ref, mem_len, mem_prec,
+				  tmp, tmp_len, tmp_prec))
+	    return false;
+	} else {
+	  size_t tmp_nbytes = static_cast<size_t>(GetNBytes());
+	  size_t mem_nbytes = mem_len * mem_prec;
+	  if (!ap.set_mem(mem, mem_ref, mem_nbytes, tmp, tmp_nbytes))
+	    return false;
+	}
+      } else if (flag == kGetVarArgsFlag) {
+	if (exchange_shape) {
+	  if (ap.for_fortran && !mem_shape) {
+	    mem_len = 0;
+	  } else {
+	    mem_len = 1;
+	    for (size_t i = 0; i < mem_ndim; i++)
+	      mem_len *= mem_shape[i];
+	  }
+	}
+	ValueType schema_cpy(schema, parent->GetAllocator());
+	if (exchange_prec) {
+	  if (!schema_precision)
+	    schema_cpy.AddMember(GetPrecisionString(),
+				 ValueType(0).Move(),
+				 parent->GetAllocator());
+	  schema_cpy["precision"].SetUint64(mem_prec);
+	}
+	if (exchange_size) {
+	  if (!has_shape) {
+	    schema_cpy.AddMember(GetShapeString(),
+				 ValueType(kArrayType).Move(),
+				 parent->GetAllocator());
+	    schema_cpy["shape"].Reserve((SizeType)mem_ndim,
+					parent->GetAllocator());
+	    for (size_t i = 0; i < mem_ndim; i++)
+	      schema_cpy["shape"].PushBack(0, parent->GetAllocator());
+	  } else {
+	    RAPIDJSON_ASSERT(schema_ndim == mem_ndim);
+	    if (schema_ndim != mem_ndim)
+	      return false;
+	  }
+	  RAPIDJSON_ASSERT(mem_shape);
+	  if (!mem_shape)
+	    return false;
+	  for (size_t i = 0; i < mem_ndim; i++)
+	    schema_cpy["shape"][static_cast<SizeType>(i)].SetUint64(mem_shape[i]);
+	}
+	SetYggdrasilString(mem,
+			   static_cast<SizeType>(mem_prec * mem_len),
+			   parent->GetAllocator(), schema_cpy);
+      }
+
+      /*
+#define CASE_NDARRAY_(subT, prec, type)					\
+      if (subtype == std::string(subT) && prec == precision) {		\
+	type* dst = (type*)mem;						\
+	type** dst_ref = (type**)mem_ref;				\
+	if (flag == kSetVarArgsFlag) {					\
+	  type* src = (type*)GetString();				\
+	  size_t src_nbytes = static_cast<size_t>(GetNBytes());		\
+	  if (!ap.set_mem(dst, dst_ref, mem_len,			\
+			  src, src_nbytes / sizeof(type))) {		\
+	    return false;						\
+	  }								\
+	} else if (flag == kGetVarArgsFlag) {				\
+	  SetYggdrasilString(mem, mem_prec * mem_len,			\
+			     parent->GetAllocator(), schema_cpy);	\
+	}								\
+      }
+      CASE_NDARRAY_(int, 1, int8_t)
+      else CASE_NDARRAY_(int, 2, int16_t)
+      else CASE_NDARRAY_(int, 4, int32_t)
+      else CASE_NDARRAY_(int, 8, int64_t)
+      else CASE_NDARRAY_(uint, 1, uint8_t)
+      else CASE_NDARRAY_(uint, 2, uint16_t)
+      else CASE_NDARRAY_(uint, 4, uint32_t)
+      else CASE_NDARRAY_(uint, 8, uint64_t)
+      else CASE_NDARRAY_(float, 4, float)
+      else CASE_NDARRAY_(float, 8, double)
+      else CASE_NDARRAY_(complex, 8, complex_float_t)
+      else CASE_NDARRAY_(complex, 16, complex_double_t)
+      else CASE_NDARRAY_(string, precision, char)
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+      else CASE_NDARRAY_(float, 16, long double)
+      else CASE_NDARRAY_(complex, 32, complex_long_double_t)
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+      else {
+	// ygglog_throw_error("ApplyVarArgs: Unsupported subtype and precision combination for ndarray: subtype = %s, precision = %d", schema_subtype.c_str(), schema_precision);
+	return false;
+      }
+#undef CASE_NDARRAY_
+      */
+    }
+    // TODO: Handle wrapping on C side as python_t
+#define CASE_PYTHON_(str)						\
+    if (schema_type == Get ## str ## String()) {			\
+      PyObject* tmp = NULL;						\
+      if (flag == kSetVarArgsFlag) {					\
+	tmp = GetPythonObjectRaw();					\
+      }									\
+      if (!ap.apply(&tmp, flag)) {					\
+	return false;							\
+      }									\
+      if (flag == kGetVarArgsFlag) {					\
+	SetPythonObjectRaw(tmp);					\
+      }									\
+    }
+    else CASE_PYTHON_(PythonClass)
+    else CASE_PYTHON_(PythonFunction)
+    else CASE_PYTHON_(PythonInstance)
+#undef CASE_PYTHON_
+    // TODO: Handle wrapping on C side as obj_t & ply_t
+#define CASE_GEOMETRY_(str)					\
+    if (schema_type == Get ## str ## String()) {		\
+      str* tmp = NULL;						\
+      str** tmp_ref = NULL;					\
+      if (!ap.apply_mem(tmp, tmp_ref, flag)) {			\
+	return false;						\
+      }								\
+      if (flag == kSetVarArgsFlag) {				\
+	if (tmp == NULL) {					\
+	  if (!ap.allow_realloc)				\
+	    return false;					\
+	  tmp = new str();					\
+	  tmp_ref[0] = tmp;					\
+	}							\
+	Get ## str(*tmp);					\
+      } else if (flag == kGetVarArgsFlag) {			\
+	Set ## str(*tmp);					\
+      }								\
+    }
+    else CASE_GEOMETRY_(ObjWavefront)
+    else CASE_GEOMETRY_(Ply)
+#undef CASE_GEOMETRY_
+    else {
+      // ygglog_throw_error("ApplyVarArgs: Unsupported type %s, stored as a string", schema_type.GetString());
+      return false;
+    }
+#undef BASE_STD_
+#undef BASE_
+    return true;
+  }
+  
   template <typename T>
   bool SetNDArrayRaw(const units::GenericQuantityArray<T, EncodingType>* x,
 		     Allocator* allocator = 0,
@@ -4790,6 +5379,11 @@ public:
       for (SizeType i = 0; i < shape->value.Size(); i++) {
 	out *= static_cast<SizeType>(shape->value[i].GetUint());
       }
+    } else {
+      ConstMemberIterator length = schema_->FindMember(GetLengthString());
+      if (length != schema_->MemberEnd()) {
+	out *= static_cast<SizeType>(length->value.GetUint());
+      }
     }
     return out;
   }
@@ -5871,6 +6465,63 @@ public:
   size_t StackSize() const {
     return stack_.GetSize() / sizeof(ValueType);
   }
+  // TODO: Version where schema not provided when setting from existing
+  //   populated document.
+  size_t CountVarArgs(ValueType& schema, bool set) {
+    VarArgList ap;
+    ap.is_empty = true;
+    uint16_t flag = kCountVarArgsFlag;
+    if (set)
+      flag |= kSetVarArgsFlag;
+    else
+      flag |= kGetVarArgsFlag;
+    if (ApplyVarArgs(schema, ap, flag))
+      return ap.get_nargs();
+    return 0;
+  }
+  bool SkipVarArgs(ValueType& schema, VarArgList& ap, bool set) {
+    uint16_t flag = kSkipVarArgsFlag;
+    if (set)
+      flag |= kSetVarArgsFlag;
+    else
+      flag |= kGetVarArgsFlag;
+    return ApplyVarArgs(schema, ap, flag);
+  }
+  bool SetVarArgs(ValueType& schema, VarArgList& ap) {
+    return ApplyVarArgs(schema, ap, kSetVarArgsFlag);
+  }
+  bool SetVarArgs(ValueType* schema, ...) {
+    size_t nargs = CountVarArgs(*schema, true);
+    RAPIDJSON_BEGIN_VAR_ARGS(ap, schema, &nargs, false);
+    bool out = SetVarArgs(*schema, ap);
+    RAPIDJSON_END_VAR_ARGS(ap);
+    return out;
+  }
+  bool SetVarArgsRealloc(ValueType& schema, VarArgList& ap) {
+    return ApplyVarArgs(schema, ap, kSetVarArgsFlag);
+  }
+  bool SetVarArgsRealloc(ValueType* schema, ...) {
+    size_t nargs = CountVarArgs(*schema, true);
+    RAPIDJSON_BEGIN_VAR_ARGS(ap, schema, &nargs, true);
+    bool out = SetVarArgsRealloc(*schema, ap);
+    RAPIDJSON_END_VAR_ARGS(ap);
+    return out;
+  }
+  bool GetVarArgs(ValueType& schema, VarArgList& ap) {
+    return ApplyVarArgs(schema, ap, kGetVarArgsFlag);
+  }
+  bool GetVarArgs(ValueType* schema, ...) {
+    size_t nargs = CountVarArgs(*schema, false);
+    RAPIDJSON_BEGIN_VAR_ARGS(ap, schema, &nargs, false);
+    bool out = GetVarArgs(*schema, ap);
+    RAPIDJSON_END_VAR_ARGS(ap);
+    return out;
+  }
+  bool ApplyVarArgs(ValueType& schema, VarArgList &ap,
+		    const uint16_t flag) {
+    return ValueType::ApplyVarArgs(schema, ap, flag, this);
+  }
+		    
 #endif // RAPIDJSON_YGGDRASIL
 
     bool String(const Ch* str, SizeType length, bool copy) {

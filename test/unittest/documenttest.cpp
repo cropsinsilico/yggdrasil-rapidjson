@@ -716,6 +716,597 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
 //  d1 = d2;
 //}
 
+#ifdef RAPIDJSON_YGGDRASIL
+// Tests for getting setting from arguments
+#define SET_GET_(get_args, set_args)		\
+  Document d;					\
+  EXPECT_TRUE(d.GetVarArgs get_args);		\
+  EXPECT_TRUE(d.SetVarArgs set_args)
+#define SET_GET_REALLOC_(get_args, set_args)	\
+  Document d;					\
+  EXPECT_TRUE(d.GetVarArgs get_args);		\
+  EXPECT_TRUE(d.SetVarArgsRealloc set_args)
+#define SET_GET_SIMPLE_(name, type, schema, value)	\
+  TEST(VarArgs, name) {					\
+    Document s;						\
+    s.Parse("{\"type\": \"" #schema "\"}");		\
+    const type a = value;				\
+    type b;						\
+    SET_GET_((&s, a), (&s, &b));			\
+    EXPECT_EQ(a, b);					\
+  }
+#define SET_GET_1DARRAY_(name, type, subtype, precision, len, ...)	\
+  TEST(VarArgs, 1DArray_ ## name) {					\
+    Document s;								\
+    s.Parse("{\"type\": \"1darray\","					\
+	    " \"subtype\": \"" #subtype "\","				\
+	    " \"precision\": " #precision "}");				\
+    type a[len];							\
+    size_t a_len = len;							\
+    for (size_t i = 0; i < a_len; i++)					\
+      a[i] = type(__VA_ARGS__);						\
+    type b[len];							\
+    size_t b_len = len;							\
+    SET_GET_((&s, &(a[0]), a_len), (&s, &(b[0]), &b_len));		\
+    EXPECT_EQ(a_len, b_len);						\
+    for (size_t i = 0; i < a_len; i++) {				\
+      EXPECT_EQ(a[i], b[i]);						\
+    }									\
+  }									\
+  TEST(VarArgs, 1DArray_ ## name ##_Realloc) {				\
+    Document s;								\
+    s.Parse("{\"type\": \"1darray\","					\
+	    " \"subtype\": \"" #subtype "\","				\
+	    " \"precision\": " #precision "}");				\
+    type a[len];							\
+    size_t a_len = len;							\
+    for (size_t i = 0; i < a_len; i++)					\
+      a[i] = type(__VA_ARGS__);						\
+    type* b = NULL;							\
+    size_t b_len = 0;							\
+    SET_GET_REALLOC_((&s, &(a[0]), a_len), (&s, &b, &b_len));		\
+    EXPECT_EQ(a_len, b_len);						\
+    EXPECT_TRUE(b != NULL);						\
+    for (size_t i = 0; i < a_len; i++) {				\
+      EXPECT_EQ(a[i], b[i]);						\
+    }									\
+  }									\
+  TEST(VarArgs, 1DArray_ ## name ##_Realloc_Defined) {			\
+    Document s;								\
+    s.Parse("{\"type\": \"1darray\","					\
+	    " \"subtype\": \"" #subtype "\","				\
+	    " \"precision\": " #precision ","				\
+	    " \"length\": " #len "}");					\
+    type a[len];							\
+    size_t a_len = len;							\
+    for (size_t i = 0; i < a_len; i++)					\
+      a[i] = type(__VA_ARGS__);						\
+    type b[len];							\
+    SET_GET_((&s, &(a[0])), (&s, &(b[0])));				\
+    for (size_t i = 0; i < a_len; i++) {				\
+      EXPECT_EQ(a[i], b[i]);						\
+    }									\
+  }
+#define BRACES_(...)							\
+  {__VA_ARGS__}
+#define BRACKETS_(...)							\
+  [__VA_ARGS__]
+#define STR_(x)								\
+  #x
+#define SET_GET_NDARRAY_(name, type, subtype, precision, len, ndim, shape, ...) \
+  TEST(VarArgs, NDArray_ ## name) {					\
+    Document s;								\
+    s.Parse("{\"type\": \"ndarray\","					\
+	    " \"subtype\": \"" #subtype "\","				\
+	    " \"precision\": " #precision ","				\
+	    " \"ndim\": " #ndim "}");					\
+    size_t a_shape[ndim] = BRACES_ shape;				\
+    type a[len];							\
+    size_t a_len = len;							\
+    size_t a_ndim = ndim;						\
+    for (size_t i = 0; i < a_len; i++)					\
+      a[i] = type(__VA_ARGS__);						\
+    type b[len];							\
+    size_t b_len = len;							\
+    size_t b_ndim = ndim;						\
+    size_t b_shape[ndim] = BRACES_ shape;				\
+    SET_GET_((&s, a, a_ndim, &a_shape[0]), (&s, &b, &b_ndim, &b_shape[0])); \
+    EXPECT_EQ(a_ndim, b_ndim);						\
+    for (size_t i = 0; i < a_ndim; i++) {				\
+      EXPECT_EQ(a_shape[i], b_shape[i]);				\
+    }									\
+    for (size_t i = 0; i < a_len; i++) {				\
+      EXPECT_EQ(a[i], b[i]);						\
+    }									\
+  }									\
+  TEST(VarArgs, NDArray_ ## name ## _Realloc) {				\
+    Document s;								\
+    s.Parse("{\"type\": \"ndarray\","					\
+	    " \"subtype\": \"" #subtype "\","				\
+	    " \"precision\": " #precision ","				\
+	    " \"ndim\": " #ndim "}");					\
+    size_t a_shape[ndim] = BRACES_ shape;				\
+    type a[len];							\
+    size_t a_len = len;							\
+    size_t a_ndim = ndim;						\
+    for (size_t i = 0; i < a_len; i++)					\
+      a[i] = type(__VA_ARGS__);						\
+    type* b = NULL;							\
+    size_t b_len = 0;							\
+    size_t b_ndim = 0;							\
+    size_t* b_shape = NULL;						\
+    SET_GET_REALLOC_((&s, a, a_ndim, &a_shape[0]), (&s, &b, &b_ndim, &b_shape)); \
+    EXPECT_EQ(a_ndim, b_ndim);						\
+    for (size_t i = 0; i < a_ndim; i++) {				\
+      EXPECT_EQ(a_shape[i], b_shape[i]);				\
+    }									\
+    for (size_t i = 0; i < a_len; i++) {				\
+      EXPECT_EQ(a[i], b[i]);						\
+    }									\
+  }									\
+  TEST(VarArgs, NDArray_ ## name ## _Defined) {				\
+    Document s;								\
+    s.Parse("{\"type\": \"ndarray\","					\
+	    " \"subtype\": \"" #subtype "\","				\
+	    " \"precision\": " #precision ","				\
+	    " \"shape\": [2, 3]}");					\
+    /* " \"shape\": " STR_(BRACKETS_ shape) "}"); */			\
+    size_t a_shape[ndim] = BRACES_ shape;				\
+    type a[len];							\
+    size_t a_len = len;							\
+    size_t a_ndim = ndim;						\
+    for (size_t i = 0; i < a_len; i++)					\
+      a[i] = type(__VA_ARGS__);						\
+    type b[len];							\
+    SET_GET_((&s, a), (&s, &b));					\
+    for (size_t i = 0; i < a_len; i++) {				\
+      EXPECT_EQ(a[i], b[i]);						\
+    }									\
+  }
+#define SET_GET_SCALAR_(name, type, subtype, precision, ...)		\
+  TEST(VarArgs, Scalar_ ## name) {					\
+    Document s;								\
+    s.Parse("{\"type\": \"scalar\","					\
+	    " \"subtype\": \"" #subtype "\","				\
+	    " \"precision\": " #precision "}");				\
+    const type a(__VA_ARGS__);						\
+    type b;								\
+    SET_GET_((&s, a), (&s, &b));					\
+    EXPECT_EQ(a, b);							\
+  }									\
+  SET_GET_1DARRAY_(name, type, subtype, precision, 5, __VA_ARGS__)	\
+  SET_GET_NDARRAY_(name, type, subtype, precision, 6, 2, (2, 3), __VA_ARGS__)
+SET_GET_SIMPLE_(Null, void*, null, NULL)
+SET_GET_SIMPLE_(Boolean, bool, boolean, true)
+SET_GET_SIMPLE_(Int, int, integer, -1234)
+// SET_GET_SIMPLE_(Uint, unsigned, integer, 1234u)
+// SET_GET_SIMPLE_(Int64, int64_t, integer, -2147483648u)
+// SET_GET_SIMPLE_(Uint64, uint64_t, integer, 4294967295u)
+SET_GET_SIMPLE_(Double, double, number, 12.34)
+// SET_GET_SIMPLE_(Float, float, number, 12.34f)
+SET_GET_SCALAR_(Int8, int8_t, int, 1, 12)
+SET_GET_SCALAR_(Uint8, uint8_t, uint, 1, 12u)
+SET_GET_SCALAR_(Int16, int16_t, int, 2, 12)
+SET_GET_SCALAR_(Uint16, uint16_t, uint, 2, 12u)
+SET_GET_SCALAR_(Int32, int32_t, int, 4, 12)
+SET_GET_SCALAR_(Int64, int64_t, int, 8, 12)
+SET_GET_SCALAR_(Uint64, uint64_t, uint, 8, 12u)
+SET_GET_SCALAR_(Float, float, float, 4, 12.34f)
+SET_GET_SCALAR_(Complex32, std::complex<float>,
+		complex, 8, 2.2f, 3.4f);
+SET_GET_SCALAR_(Complex64, std::complex<double>,
+		complex, 16, 2.2, 3.4);
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+SET_GET_SCALAR_(Complex128, std::complex<long double>,
+		complex, 8, 2.2lf, 3.4lf);
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+TEST(VarArgs, String) {
+  Document s;
+  s.Parse("{\"type\": \"string\"}");
+  const char a[10] = "hello";
+  size_t a_len = 5;
+  char b[10] = "";
+  size_t b_len = 10;
+  SET_GET_((&s, a, a_len), (&s, &b, &b_len));
+  EXPECT_EQ(a_len, b_len);
+  for (size_t i = 0; i < a_len; i++)
+    EXPECT_EQ(a[i], b[i]);
+}
+TEST(VarArgs, Scalar_String) {
+  Document s;
+  s.Parse("{\"type\": \"scalar\","
+	  " \"subtype\": \"string\"}");
+  const char a[10] = "hello";
+  size_t a_len = 5;
+  char b[10] = "";
+  size_t b_len = 10;
+  SET_GET_((&s, a, a_len), (&s, &b, &b_len));
+  EXPECT_EQ(a_len, b_len);
+  for (size_t i = 0; i < a_len; i++)
+    EXPECT_EQ(a[i], b[i]);
+}
+TEST(VarArgs, Scalar_String_Realloc) {
+  Document s;
+  s.Parse("{\"type\": \"scalar\","
+	  " \"subtype\": \"string\"}");
+  const char a[10] = "hello";
+  size_t a_len = 5;
+  char* b = NULL;
+  size_t b_len = 0;
+  SET_GET_REALLOC_((&s, a, a_len), (&s, &b, &b_len));
+  EXPECT_EQ(a_len, b_len);
+  for (size_t i = 0; i < a_len; i++)
+    EXPECT_EQ(a[i], b[i]);
+}
+TEST(VarArgs, Scalar_String_Defined) {
+  Document s;
+  s.Parse("{\"type\": \"scalar\","
+	  " \"subtype\": \"string\","
+	  " \"precision\": 5}");
+  const char a[10] = "hello";
+  size_t a_prec = 5;
+  char b[10] = "";
+  size_t b_prec = 10;
+  SET_GET_((&s, a, a_prec), (&s, &b, &b_prec));
+  EXPECT_EQ(a_prec, b_prec);
+  for (size_t i = 0; i < a_prec; i++)
+    EXPECT_EQ(a[i], b[i]);
+}
+TEST(VarArgs, 1DArray_String) {
+  Document s;
+  s.Parse("{\"type\": \"1darray\","
+	  " \"subtype\": \"string\"}");
+  char a[3][6];
+  size_t a_len = 3;
+  size_t a_prec = 6;
+  for (size_t i = 0; i < a_len; i++)
+    strncpy(&(a[i][0]), "hello", a_prec);
+  char b[3][10];
+  size_t b_len = 3;
+  size_t b_prec = 10;
+  SET_GET_((&s, a, a_len, a_prec), (&s, &b, &b_len, &b_prec));
+  EXPECT_EQ(a_len, b_len);
+  EXPECT_EQ(a_prec, b_prec);
+  for (size_t i = 0; i < a_len; i++)
+    for (size_t j = 0; j < a_prec; j++)
+      EXPECT_EQ(a[i][j], b[i][j]);
+}
+TEST(VarArgs, 1DArray_String_Realloc) {
+  Document s;
+  s.Parse("{\"type\": \"1darray\","
+	  " \"subtype\": \"string\"}");
+  char a[3][6];
+  size_t a_len = 3;
+  size_t a_prec = 6;
+  for (size_t i = 0; i < a_len; i++)
+    strncpy(&(a[i][0]), "hello", a_prec);
+  char* b = NULL;
+  size_t b_len = 0;
+  size_t b_prec = 0;
+  SET_GET_REALLOC_((&s, a, a_len, a_prec), (&s, &b, &b_len, &b_prec));
+  EXPECT_EQ(a_len, b_len);
+  EXPECT_EQ(a_prec, b_prec);
+  for (size_t i = 0; i < a_len; i++)
+    for (size_t j = 0; j < a_prec; j++)
+      EXPECT_EQ(a[i][j], b[(i * a_prec) + j]);
+}
+TEST(VarArgs, 1DArray_String_Defined) {
+  Document s;
+  s.Parse("{\"type\": \"1darray\","
+	  " \"subtype\": \"string\","
+	  " \"length\": 3,"
+	  " \"precision\": 6}");
+  char a[3][6];
+  size_t a_len = 3;
+  size_t a_prec = 6;
+  for (size_t i = 0; i < a_len; i++)
+    strncpy(&(a[i][0]), "hello", a_prec);
+  char b[3][10];
+  size_t b_prec = 10;
+  SET_GET_((&s, a, a_prec), (&s, &b, &b_prec));
+  EXPECT_EQ(a_prec, b_prec);
+  for (size_t i = 0; i < a_len; i++)
+    for (size_t j = 0; j < a_prec; j++)
+      EXPECT_EQ(a[i][j], b[i][j]);
+}
+TEST(VarArgs, NDArray_String) {
+  Document s;
+  s.Parse("{\"type\": \"ndarray\","
+	  " \"subtype\": \"string\","
+	  " \"ndim\": 2}");
+  char a[2][3][6];
+  size_t a_ndim = 2;
+  size_t a_shape[2] = {2, 3};
+  size_t a_prec = 6;
+  for (size_t i = 0; i < a_shape[0]; i++)
+    for (size_t j = 0; j < a_shape[1]; j++)
+      strncpy(&(a[i][j][0]), "hello", a_prec);
+  char b[2][3][10];
+  size_t b_ndim = 2;
+  size_t b_shape[2] = {2, 3};
+  size_t b_prec = 10;
+  SET_GET_((&s, a, a_ndim, a_shape, a_prec),
+	   (&s, &b, &b_ndim, &b_shape, &b_prec));
+  EXPECT_EQ(a_ndim, b_ndim);
+  EXPECT_EQ(a_prec, b_prec);
+  EXPECT_EQ(a_shape[0], b_shape[0]);
+  EXPECT_EQ(a_shape[1], b_shape[1]);
+  for (size_t i = 0; i < a_shape[0]; i++)
+    for (size_t j = 0; j < a_shape[1]; j++)
+      for (size_t k = 0; k < a_prec; k++)
+	EXPECT_EQ(a[i][j][k], b[i][j][k]);
+}
+TEST(VarArgs, NDArray_String_Realloc) {
+  Document s;
+  s.Parse("{\"type\": \"ndarray\","
+	  " \"subtype\": \"string\","
+	  " \"ndim\": 2}");
+  char a[2][3][6];
+  size_t a_ndim = 2;
+  size_t a_shape[2] = {2, 3};
+  size_t a_prec = 6;
+  for (size_t i = 0; i < a_shape[0]; i++)
+    for (size_t j = 0; j < a_shape[1]; j++)
+      strncpy(&(a[i][j][0]), "hello", a_prec);
+  char* b = NULL;
+  size_t b_ndim = 0;
+  size_t* b_shape = NULL;
+  size_t b_prec = 0;
+  SET_GET_REALLOC_((&s, a, a_ndim, a_shape, a_prec),
+		   (&s, &b, &b_ndim, &b_shape, &b_prec));
+  EXPECT_EQ(a_ndim, b_ndim);
+  EXPECT_EQ(a_prec, b_prec);
+  EXPECT_EQ(a_shape[0], b_shape[0]);
+  EXPECT_EQ(a_shape[1], b_shape[1]);
+  for (size_t i = 0; i < a_shape[0]; i++)
+    for (size_t j = 0; j < a_shape[1]; j++)
+      for (size_t k = 0; k < a_prec; k++)
+	EXPECT_EQ(a[i][j][k], b[(i * a_shape[1] * a_prec) + (j * a_prec) + k]);
+}
+TEST(VarArgs, NDArray_String_Defined) {
+  Document s;
+  s.Parse("{\"type\": \"ndarray\","
+	  " \"subtype\": \"string\","
+	  " \"shape\": [2, 3],"
+	  " \"precision\": 6}");
+  char a[2][3][6];
+  size_t a_ndim = 2;
+  size_t a_shape[2] = {2, 3};
+  size_t a_prec = 6;
+  for (size_t i = 0; i < a_shape[0]; i++)
+    for (size_t j = 0; j < a_shape[1]; j++)
+      strncpy(&(a[i][j][0]), "hello", a_prec);
+  char b[2][3][10];
+  size_t b_prec = 10;
+  SET_GET_((&s, a, a_prec), (&s, &b, &b_prec));
+  EXPECT_EQ(a_prec, b_prec);
+  for (size_t i = 0; i < a_shape[0]; i++)
+    for (size_t j = 0; j < a_shape[1]; j++)
+      for (size_t k = 0; k < a_prec; k++)
+	EXPECT_EQ(a[i][j][k], b[i][j][k]);
+}
+#define SET_GET_GEOMETRY_(name, type, zero)	\
+  TEST(VarArgs, name) {				\
+    float vertices[8][3] =			\
+      {{0.0, 0.0, 0.0},				\
+       {0.0, 0.0, 1.0},				\
+       {0.0, 1.0, 1.0},				\
+       {0.0, 1.0, 0.0},				\
+       {1.0, 0.0, 0.0},				\
+       {1.0, 0.0, 1.0},				\
+       {1.0, 1.0, 1.0},				\
+       {1.0, 1.0, 0.0}};			\
+    int faces[2][3] =				\
+      {{3 + zero, 0 + zero, 1 + zero},		\
+       {3 + zero, 0 + zero, 2 + zero}};		\
+    int edges[5][2] =				\
+      {{0 + zero, 1 + zero},			\
+       {1 + zero, 2 + zero},			\
+       {2 + zero, 3 + zero},			\
+       {3 + zero, 0 + zero},			\
+       {2 + zero, 0 + zero}};			\
+    Document s;					\
+    s.Parse("{\"type\": \"" #type "\"}");	\
+    name a(vertices, faces, edges);		\
+    name b;					\
+    SET_GET_((&s, &a), (&s, &b));		\
+    EXPECT_EQ(a, b);				\
+  }						\
+  TEST(VarArgs, name ## _Realloc) {		\
+    float vertices[8][3] =			\
+      {{0.0, 0.0, 0.0},				\
+       {0.0, 0.0, 1.0},				\
+       {0.0, 1.0, 1.0},				\
+       {0.0, 1.0, 0.0},				\
+       {1.0, 0.0, 0.0},				\
+       {1.0, 0.0, 1.0},				\
+       {1.0, 1.0, 1.0},				\
+       {1.0, 1.0, 0.0}};			\
+    int faces[2][3] =				\
+      {{3 + zero, 0 + zero, 1 + zero},		\
+       {3 + zero, 0 + zero, 2 + zero}};		\
+    int edges[5][2] =				\
+      {{0 + zero, 1 + zero},			\
+       {1 + zero, 2 + zero},			\
+       {2 + zero, 3 + zero},			\
+       {3 + zero, 0 + zero},			\
+       {2 + zero, 0 + zero}};			\
+    Document s;					\
+    s.Parse("{\"type\": \"" #type "\"}");	\
+    name a(vertices, faces, edges);		\
+    name* b = NULL;				\
+    SET_GET_REALLOC_((&s, &a), (&s, &b));	\
+    EXPECT_EQ(a, *b);				\
+  }
+SET_GET_GEOMETRY_(Ply, ply, 0)
+SET_GET_GEOMETRY_(ObjWavefront, obj, 1)
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
+TEST(VarArgs, PythonFunction) {
+  Document s;
+  s.Parse("{\"type\": \"function\"}");
+  PyObject* a = import_python_class("example_python", "example_function");
+  RAPIDJSON_ASSERT(a);
+  PyObject* b = NULL;
+  SET_GET_((&s, a), (&s, &b));
+  EXPECT_EQ(PyObject_RichCompareBool(a, b, Py_EQ), 1);
+  Py_DECREF(a);
+  Py_DECREF(b);
+}
+TEST(VarArgs, PythonClass) {
+  Document s;
+  s.Parse("{\"type\": \"class\"}");
+  PyObject* a = import_python_class("example_python", "ExampleClass");
+  RAPIDJSON_ASSERT(a);
+  PyObject* b = NULL;
+  SET_GET_((&s, a), (&s, &b));
+  EXPECT_EQ(PyObject_RichCompareBool(a, b, Py_EQ), 1);
+  Py_DECREF(a);
+  Py_DECREF(b);
+}
+TEST(VarArgs, PythonInstance) {
+  Document s;
+  s.Parse("{\"type\": \"instance\"}");
+  CREATE_PYTHON_INSTANCE(ExampleClass, a)
+  RAPIDJSON_ASSERT(a);
+  PyObject* b = NULL;
+  SET_GET_((&s, a), (&s, &b));
+  EXPECT_EQ(PyObject_RichCompareBool(a, b, Py_EQ), 1);
+  Py_DECREF(a);
+  Py_DECREF(b);
+}
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
+TEST(VarArgs, Array) {
+  Document s;
+  s.Parse("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {\"type\": \"boolean\"},"
+	  "    {\"type\": \"string\"},"
+	  "    {\"type\": \"number\"},"
+	  "    {\"type\": \"scalar\","
+	  "     \"subtype\": \"int\","
+	  "     \"precision\": 1}"
+	  "  ]"
+	  "}");
+  bool a1 = true;
+  const char* a2 = "hello";
+  size_t a2_len = 5;
+  double a3 = 12.34;
+  int8_t a4 = 3;
+  bool b1 = true;
+  char b2[10];
+  size_t b2_len = 10;
+  double b3 = 0;
+  int8_t b4 = 0;
+  SET_GET_((&s, a1, a2, a2_len, a3, a4), (&s, &b1, &b2, &b2_len, &b3, &b4));
+  EXPECT_EQ(a1, b1);
+  EXPECT_EQ(a2_len, b2_len);
+  EXPECT_EQ(strcmp(a2, b2), 0);
+  EXPECT_EQ(a3, b3);
+  EXPECT_EQ(a4, b4);
+}
+TEST(VarArgs, Object) {
+  Document s;
+  s.Parse("{"
+	  "  \"type\": \"object\","
+	  "  \"properties\": {"
+	  "    \"a\": {\"type\": \"boolean\"},"
+	  "    \"b\": {\"type\": \"string\"},"
+	  "    \"c\": {\"type\": \"number\"},"
+	  "    \"d\": {\"type\": \"scalar\","
+	  "            \"subtype\": \"int\","
+	  "            \"precision\": 1}"
+	  "  }"
+	  "}");
+  bool a1 = true;
+  const char* a2 = "hello";
+  size_t a2_len = 5;
+  double a3 = 12.34;
+  int8_t a4 = 3;
+  bool b1 = true;
+  char b2[10];
+  size_t b2_len = 10;
+  double b3 = 0;
+  int8_t b4 = 0;
+  SET_GET_((&s, a1, a2, a2_len, a3, a4), (&s, &b1, &b2, &b2_len, &b3, &b4));
+  EXPECT_EQ(a1, b1);
+  EXPECT_EQ(a2_len, b2_len);
+  EXPECT_EQ(strcmp(a2, b2), 0);
+  EXPECT_EQ(a3, b3);
+  EXPECT_EQ(a4, b4);
+}
+bool method_variable(Document* schema1, bool realloc1, int set1,
+		     Document* schema2, bool realloc2, int set2, ...) {
+  size_t nargs1 = countVarArgs(*schema1, static_cast<bool>(set1));
+  size_t nargs2 = countVarArgs(*schema2, static_cast<bool>(set2));
+  size_t nargs = nargs1 + nargs2;
+  VarArgList* ap1 = new VarArgList(nargs, realloc1);
+  va_start(ap1->va, set2);
+  VarArgList* ap2 = new VarArgList(*ap1);
+  Document d;
+  if (!d.GetVarArgs(*schema1, *ap1))
+    return false;
+  ap1->allow_realloc = realloc2;
+  if (!ap1->skip(*schema2, static_cast<bool>(set2)))
+    return false;
+  EXPECT_EQ(ap1->get_nargs(), 0);
+  if (!ap2->skip(*schema1, static_cast<bool>(set1)))
+    return false;
+  ap2->allow_realloc = realloc2;
+  if (!d.SetVarArgs(*schema2, *ap2))
+    return false;
+  EXPECT_EQ(ap2->get_nargs(), 0);
+  delete ap1;
+  delete ap2;
+  return true;
+}
+TEST(VarArgs, Skip) {
+  Document s1;
+  s1.Parse("{"
+	   "  \"type\": \"array\","
+	   "  \"items\": ["
+	   "    {\"type\": \"boolean\"},"
+	   "    {\"type\": \"string\"},"
+	   "    {\"type\": \"number\"},"
+	   "    {\"type\": \"scalar\","
+	   "     \"subtype\": \"int\","
+	   "     \"precision\": 1}"
+	   "  ]"
+	   "}");
+  Document s2;
+  s2.Parse("{"
+	   "  \"type\": \"array\","
+	   "  \"items\": ["
+	   "    {\"type\": \"boolean\"},"
+	   "    {\"type\": \"string\"},"
+	   "    {\"type\": \"number\"},"
+	   "    {\"type\": \"scalar\","
+	   "     \"subtype\": \"int\","
+	   "     \"precision\": 1}"
+	   "  ]"
+	   "}");
+  bool a1 = true;
+  const char* a2 = "hello";
+  size_t a2_len = 5;
+  double a3 = 12.34;
+  int8_t a4 = 3;
+  bool b1 = true;
+  char b2[10];
+  size_t b2_len = 10;
+  double b3 = 0;
+  int8_t b4 = 0;
+  EXPECT_TRUE(method_variable(&s1, false, 0,
+			      &s2, false, 1,
+			      a1, a2, a2_len, a3, a4,
+			      &b1, &b2, &b2_len, &b3, &b4));
+  EXPECT_EQ(a1, b1);
+  EXPECT_EQ(a2_len, b2_len);
+  EXPECT_EQ(strcmp(a2, b2), 0);
+  EXPECT_EQ(a3, b3);
+  EXPECT_EQ(a4, b4);
+}
+#endif // RAPIDJSON_YGGDRASIL
+
 #ifdef __clang__
 RAPIDJSON_DIAG_POP
 #endif
