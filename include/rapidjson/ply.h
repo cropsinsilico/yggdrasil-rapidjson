@@ -1480,6 +1480,9 @@ inline
 bool operator == (const PlyElementSet& lhs, const PlyElementSet& rhs)
 { return lhs.is_equal(rhs); }
 
+//! Forward declaration.
+class ObjWavefront;
+
 //! Ply 3D geometry container class.
 class Ply {
 public:
@@ -1487,6 +1490,12 @@ public:
   //! \brief Copy constructor.
   //! \param rhs Instance to copy.
   Ply(const Ply& rhs) : comments(rhs.comments), format(rhs.format), elements(rhs.elements), element_order(rhs.element_order) {}
+  //! \brief Copy from an ObjWavefront instance.
+  //! \param rhs Instance to copy.
+  Ply(const ObjWavefront& rhs) :
+    comments(), format("ascii 1.0"), elements(), element_order() {
+    fromObjWavefront(rhs);
+  }
   //! \brief Create an Ply instance from a C array of vertices.
   //! \tparam Tv Type of value in vertex value arrays.
   //! \tparam Mv Number of vertex elements.
@@ -1538,6 +1547,10 @@ public:
     add_element_set("edge", edges);
   }
 
+  //! \brief Copy from an ObjWavefront instance.
+  //! \param rhs Instance to copy.
+  void fromObjWavefront(const ObjWavefront& rhs);
+    
   //! \brief Add a set of vertex elements.
   //! \tparam Tv Type of element properties.
   //! \tparam Mv Number of elements.

@@ -745,6 +745,50 @@ struct TypeHelper<ValueType, Ply> {
 
 } // namespace internal
 
+// Geometry helpers
+inline
+void ObjWavefront::fromPly(const Ply& p) {
+  size_t nvert = 0;
+  for (std::vector<std::string>::const_iterator name = p.element_order.begin(); name != p.element_order.end(); name++) {
+    if ((*name) == "vertex") {
+      for (std::vector<PlyElement>::const_iterator it = p.elements.find(*name)->second.elements.begin();
+	   it != p.elements.find(*name)->second.elements.end(); it++) {
+	this->add_element("v", it->get_double_array());
+	nvert++;
+      }
+    } else if ((*name) == "face") {
+      for (std::vector<PlyElement>::const_iterator it = p.elements.find(*name)->second.elements.begin();
+	   it != p.elements.find(*name)->second.elements.end(); it++)
+	this->add_element("f", it->get_int_array(nvert));
+    } else if ((*name) == "edge") {
+      for (std::vector<PlyElement>::const_iterator it = p.elements.find(*name)->second.elements.begin();
+	   it != p.elements.find(*name)->second.elements.end(); it++)
+	this->add_element("l", it->get_int_array(nvert));
+    } else
+      RAPIDJSON_ASSERT(((*name) == "vertex") ||
+		       ((*name) == "face") ||
+		       ((*name) == "edge"));
+  }
+}
+inline
+void Ply::fromObjWavefront(const ObjWavefront& o) {
+  size_t nvert = 0;
+  for (std::vector<ObjElement*>::const_iterator it = o.elements.begin(); it != o.elements.end(); it++) {
+    if ((*it)->code == "v") {
+      this->add_element("vertex", (*it)->get_double_array());
+      nvert++;
+    } else if ((*it)->code == "f") {
+      this->add_element("face", (*it)->get_int_array(nvert));
+    } else if ((*it)->code == "l") {
+      this->add_element("edge", (*it)->get_int_array(nvert));
+    }
+    else
+      RAPIDJSON_ASSERT(((*it)->code == "v") ||
+		       ((*it)->code == "f") ||
+		       ((*it)->code == "l"));
+  }
+}
+
 #ifdef RAPIDJSON_YGG_DOCUMENT_DEBUG_
 #define RAPIDJSON_YGG_DOCUMENT_BASE_(method, arg)			\
   std::cerr << "Document [" << #method << "]: " << StackSize() << std::endl
@@ -5262,27 +5306,7 @@ public:
       ss >> o;
     } else if (IsPly()) {
       Ply p = GetPly();
-      size_t nvert = 0;
-      for (std::vector<std::string>::const_iterator name = p.element_order.begin(); name != p.element_order.end(); name++) {
-	if ((*name) == "vertex") {
-	  for (std::vector<PlyElement>::const_iterator it = p.elements[*name].elements.begin();
-	       it != p.elements[*name].elements.end(); it++) {
-	    o.add_element("v", it->get_double_array());
-	    nvert++;
-	  }
-	} else if ((*name) == "face") {
-	  for (std::vector<PlyElement>::const_iterator it = p.elements[*name].elements.begin();
-	       it != p.elements[*name].elements.end(); it++)
-	    o.add_element("f", it->get_int_array(nvert));
-	} else if ((*name) == "edge") {
-	  for (std::vector<PlyElement>::const_iterator it = p.elements[*name].elements.begin();
-	       it != p.elements[*name].elements.end(); it++)
-	    o.add_element("l", it->get_int_array(nvert));
-	} else
-	  RAPIDJSON_ASSERT(((*name) == "vertex") ||
-			   ((*name) == "face") ||
-			   ((*name) == "edge"));
-      }
+      o.fromPly(p);
     } else {
       RAPIDJSON_ASSERT(IsPly() || IsObjWavefront());
     }
@@ -5299,21 +5323,7 @@ public:
       ss >> p;
     } else if (IsObjWavefront()) {
       ObjWavefront o = GetObjWavefront();
-      size_t nvert = 0;
-      for (std::vector<ObjElement*>::const_iterator it = o.elements.begin(); it != o.elements.end(); it++) {
-	if ((*it)->code == "v") {
-	  p.add_element("vertex", (*it)->get_double_array());
-	  nvert++;
-	} else if ((*it)->code == "f") {
-	  p.add_element("face", (*it)->get_int_array(nvert));
-	} else if ((*it)->code == "l") {
-	  p.add_element("edge", (*it)->get_int_array(nvert));
-	}
-	else
-	  RAPIDJSON_ASSERT(((*it)->code == "v") ||
-			   ((*it)->code == "f") ||
-			   ((*it)->code == "l"));
-      }
+      p.fromObjWavefront(o);
     } else {
       RAPIDJSON_ASSERT(IsPly() || IsObjWavefront());
     }

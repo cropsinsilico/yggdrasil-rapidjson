@@ -2232,7 +2232,7 @@ TEST(SchemaValidator, PythonInstance) { // 32
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImludmFsaWQiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
 	       "", "schema", "",
 	       "{ \"schema\": {"
-	       "    \"errorCode\": 34,"
+	       "    \"errorCode\": 35,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"errors\": {"
 	       "        \"anyOf\": {"
@@ -2295,7 +2295,7 @@ TEST(SchemaValidator, PythonInstanceClass) { // 34
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-eyJjbGFzcyI6ImV4YW1wbGVfcHl0aG9uOk90aGVyQ2xhc3MiLCJhcmdzIjpbImhlbGxvIiwwLjVdLCJrd2FyZ3MiOnsiYSI6IndvcmxkIiwiYiI6MX19-YGG-\"",
 	       "", "schema", "",
 	       "{ \"schema\": {"
-	       "    \"errorCode\": 34,"
+	       "    \"errorCode\": 35,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 	       "    \"errors\": {"
 	       "        \"anyOf\": {"

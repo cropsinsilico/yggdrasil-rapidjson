@@ -2284,8 +2284,8 @@ public:
     get_properties(out);
   }
   //! \brief Get element values as an array of ints.
-  //! \param nvert Number of vertices previously added to a Ply object
-  //!   being constructed from this geometry.
+  //! \param nvert Number of vertices previously added to a Ply
+  //!   object being constructed from this geometry.
   //! \param dec If true and a property is an index, it will be decremented.
   //! \return Array of int values.
   std::vector<int> get_int_array(const size_t nvert=0, bool dec=false) const {
@@ -2294,8 +2294,8 @@ public:
     return out;
   }
   //! \brief Get element values as an array of ints.
-  //! \param nvert Number of vertices previously added to a Ply object
-  //!   being constructed from this geometry.
+  //! \param nvert Number of vertices previously added to a Ply
+  //!   object being constructed from this geometry.
   //! \param dec If true and a property is an index, it will be decremented.
   //! \param[out] out Array to put values in.
   void get_int_array(std::vector<int>& out,
@@ -3859,6 +3859,9 @@ inline bool read_obj_element(std::istream &in,
   return true;
 }
 
+//! Forward declare ply
+class Ply;
+
 //! Obj wavefront 3D geometry container class.
 class ObjWavefront : public ObjGroupBase {
 public:
@@ -3866,6 +3869,11 @@ public:
   //! \brief Copy constructor.
   //! \param rhs Instance to copy.
   ObjWavefront(const ObjWavefront& rhs) : ObjGroupBase(rhs) {}
+  //! \brief Copy from ply.
+  //! \param rhs Instance to copy.
+  ObjWavefront(const Ply& rhs) : ObjGroupBase("") {
+    fromPly(rhs);
+  }
   //! \brief Create an ObjWavefront instance from C arrays of vertices.
   //! \tparam Tv Type of value in vertex value arrays.
   //! \tparam Mv Number of vertex elements.
@@ -3916,6 +3924,9 @@ public:
     add_element_set("f", faces);
     add_element_set("l", edges);
   }
+  //! \brief Copy from ply.
+  //! \param rhs Instance to copy.
+  void fromPly(const Ply& p);
   //! \copydoc ObjGroupBase::write_group_header
   bool write_group_header(std::ostream &) const OVERRIDE_CXX11 {
     return true; // Don't write a header for the start of the file
