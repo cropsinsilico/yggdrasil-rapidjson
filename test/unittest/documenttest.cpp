@@ -874,6 +874,16 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
     SET_GET_((&s, a), (&s, &b));					\
     EXPECT_EQ(a, b);							\
   }									\
+  TEST(VarArgs, Scalar_ ## name ## _Realloc) {				\
+    Document s;								\
+    s.Parse("{\"type\": \"scalar\","					\
+	    " \"subtype\": \"" #subtype "\","				\
+	    " \"precision\": " #precision "}");				\
+    const type a(__VA_ARGS__);						\
+    type* b = NULL;							\
+    SET_GET_REALLOC_((&s, a), (&s, &b));				\
+    EXPECT_EQ(a, *b);							\
+  }									\
   SET_GET_1DARRAY_(name, type, subtype, precision, 5, __VA_ARGS__)	\
   SET_GET_NDARRAY_(name, type, subtype, precision, 6, 2, (2, 3), __VA_ARGS__)
 SET_GET_SIMPLE_(Null, void*, null, NULL)
@@ -1304,6 +1314,47 @@ TEST(VarArgs, Skip) {
   EXPECT_EQ(strcmp(a2, b2), 0);
   EXPECT_EQ(a3, b3);
   EXPECT_EQ(a4, b4);
+}
+TEST(VarArgs, TableArray) {
+  Document s;
+  s.Parse("{"
+	  "  \"type\": \"array\","
+	  "  \"items\": ["
+	  "    {"
+	  "      \"type\": \"ndarray\","
+	  "      \"subtype\": \"string\","
+	  "      \"precision\": 6,"
+	  "      \"length\": 3"
+	  "    },"
+	  "    {"
+	  "      \"type\": \"ndarray\","
+	  "      \"subtype\": \"int\","
+	  "      \"precision\": 4,"
+	  "      \"length\": 3"
+	  "    },"
+	  "    {"
+	  "      \"type\": \"ndarray\","
+	  "      \"subtype\": \"float\","
+	  "      \"precision\": 8,"
+	  "      \"length\": 3"
+	  "    }"
+	  "  ]"
+	  "}");
+  size_t a0 = 3;
+  const char a1[3][6] = { "test1", "test2", "test3" };
+  int32_t a2[3] = { 0, 1, 2 };
+  double a3[3] = { 0.0, 1.1, 2.2 };
+  size_t b0 = 0;
+  char* b1 = NULL;
+  int32_t* b2 = NULL;
+  double* b3 = NULL;
+  SET_GET_REALLOC_((&s, a0, a1, a2, a3), (&s, &b0, &b1, &b2, &b3));
+  EXPECT_EQ(a0, b0);
+  for (size_t i = 0; i < a0; i++) {
+    EXPECT_EQ(a2[i], b2[i]);
+    EXPECT_EQ(a3[i], b3[i]);
+    EXPECT_EQ(strcmp(a1[i], b1 + 6*i), 0);
+  }
 }
 #endif // RAPIDJSON_YGGDRASIL
 

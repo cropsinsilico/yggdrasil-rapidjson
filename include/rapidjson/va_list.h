@@ -10,19 +10,19 @@
 // } generic_t;
 
 
-typedef struct complex_float {
+typedef struct complex_float_pod_t {
   float re;
   float im;
-} complex_float;
-typedef struct complex_double {
+} complex_float_pod_t;
+typedef struct complex_double_pod_t {
   double re;
   double im;
-} complex_double;
+} complex_double_pod_t;
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
 typedef struct complex_long_double {
   long double re;
   long double im;
-} complex_long_double;
+} complex_long_double_pod_t;
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 
 RAPIDJSON_NAMESPACE_BEGIN
@@ -56,30 +56,33 @@ class VarArgList {
 public:
   VarArgList(size_t nargs0=0, bool allow_realloc0=false) :
     va(), nargs_(nargs0), nargs(NULL),
-    ptrs(NULL), iptr(0), for_fortran(false),
+    ptrs(NULL), iptr(0), for_fortran(false), for_c(false),
     allow_realloc(allow_realloc0), is_empty(false) {
     nargs = &nargs_;
   }
   VarArgList(size_t* nargs0, bool allow_realloc0=false) :
     va(), nargs_(0), nargs(nargs0),
-    ptrs(NULL), iptr(0), for_fortran(false),
+    ptrs(NULL), iptr(0), for_fortran(false), for_c(false),
     allow_realloc(allow_realloc0), is_empty(false) {}
   VarArgList(va_list va0, size_t* nargs0=NULL,
-	     bool allow_realloc0=false) :
+	     bool allow_realloc0=false, bool for_c0=false) :
     va(va0), nargs_(0), nargs(nargs0),
-    ptrs(NULL), iptr(0), for_fortran(false),
+    ptrs(NULL), iptr(0), for_fortran(false), for_c(for_c0),
     allow_realloc(allow_realloc0), is_empty(false) {}
   VarArgList(const size_t nptrs, void** ptrs0,
-	     bool for_fortran0=false, bool allow_realloc0=false) :
+	     bool allow_realloc0=false, bool for_fortran0=false) :
     va(), nargs_(nptrs), nargs(NULL),
-    ptrs(ptrs0), iptr(0), for_fortran(for_fortran0),
+    ptrs(ptrs0), iptr(0), for_fortran(for_fortran0), for_c(false),
     allow_realloc(allow_realloc0), is_empty(false) {
     nargs = &nargs_;
+    if (for_fortran)
+      for_c = true;
   }
   VarArgList(VarArgList& other) :
-    va(), nargs_(other.nargs_), nargs(),
+    va(), nargs_(other.get_nargs()), nargs(),
     ptrs(other.ptrs), iptr(other.iptr), for_fortran(other.for_fortran),
-    allow_realloc(other.allow_realloc), is_empty(other.is_empty) {
+    for_c(other.for_c), allow_realloc(other.allow_realloc),
+    is_empty(other.is_empty) {
     nargs = &nargs_;
     if (!ptrs)
       va_copy(va, other.va);
@@ -94,6 +97,7 @@ public:
   void **ptrs; //!< Variable arguments stored as pointers.
   int iptr; //!< The index of the current variable argument pointer.
   int for_fortran; //!< Flag that is 1 if this structure will be accessed by fortran.
+  int for_c; //!< Flag that is 1 if the structure will be accessed by c.
   bool allow_realloc; //!< If true, variables can be reallocated during assignment.
   bool is_empty; //!< Set to true for empty list used for count.
 
@@ -101,12 +105,18 @@ public:
   bool end() {
     if (!ptrs)
       va_end(va);
-    RAPIDJSON_ASSERT(get_nargs() == 0);
-    return (get_nargs() != 0);
+    return (get_nargs() == 0);
   }
 
   va_list* get_va() {
     return &va;
+  }
+
+  //! @brief Set the argument count to 0.
+  void clear() {
+    if (nargs)
+      nargs[0] = 0;
+    nargs_ = 0;
   }
 
   //! @brief Get the number of arguments.
@@ -279,7 +289,7 @@ public:
     if (ptrs) {								\
       dst = ((std::complex<type>*)pop_ptr(allow_null))[0];		\
     } else {								\
-      complex_ ## type_cast tmp;					\
+      complex_ ## type_cast ## _pod_t tmp;				\
       if (!pop(tmp, allow_null))					\
 	return false;							\
       dst = std::complex<type>(tmp.re, tmp.im);				\
@@ -309,7 +319,6 @@ public:
   */
   template<typename T>
   bool skip(bool pointers=false) {
-    std::cerr << "skip (pointers = " << pointers << "): " << get_nargs() << std::endl;
     if (pointers) {
       T* tmp = NULL;
       T** tmp_ref = NULL;
@@ -465,15 +474,18 @@ public:
     @param[out] dst_ref Variable that will be assigned the pointer to the
       address of the underlying value (the pointer to dst) so that the
       pointer may be updated if dst is reallocated.
+    @param[in] disable_realloc If true, the memory will be popped without
+      assuming it is the address of a pointer for reallocation.
     @returns true if successful, false otherwise.
   */
   template<typename T>
-  bool pop_mem(T*& dst, T**& dst_ref, bool disable_realloc=false) {
+  bool pop_mem(T*& dst, T**& dst_ref, bool disable_realloc=false,
+	       bool force_realloc=false) {
     if (!nargs || nargs[0] == 0) {
       // ygglog_throw_error("pop_mem: No more arguments");
       return false;
     }
-    if (allow_realloc && !disable_realloc) {
+    if ((allow_realloc || force_realloc) && !disable_realloc) {
       if (ptrs) {
 	dst_ref = (T**)pop_ptr_ref(1);
       } else {
@@ -536,19 +548,23 @@ public:
       // ygglog_throw_error("set: No more arguments");
       return false;
     }
-    if (!pop_mem(arg, p, true))
+    if (!pop_mem(arg, p, swap))
       return false;
-    // Set should never be used to allocate a destination
-    // if (arg == NULL) {
-    //   if (!allow_realloc)
-    // 	return false;
-    //   if (for_fortran) {
-    // 	arg = *p; // Is this required outside of realloc?
-    //   } else {
-    // 	arg = (T*)realloc(*p, sizeof(T));
-    //   }
-    //   p[0] = arg;
-    // }
+    if (allow_realloc && !swap) {
+      // if (!allow_realloc)
+      // 	return false;
+      if (for_fortran) {
+	arg = *p;
+      } else {
+	if (arg == NULL)
+	  arg = (T*)malloc(sizeof(T));
+	else
+	  arg = (T*)realloc(*p, sizeof(T));
+      }
+      p[0] = arg;
+    } else if (arg == NULL) {
+      return false;
+    }
     if (swap) {
       orig = arg[0];
     }
@@ -578,14 +594,14 @@ public:
 #undef SET_SPECIAL_
 
   template<typename T>
-  bool apply(T* val, const uint16_t flag, bool swap_set=false) {
+  bool apply(T* val, const uint16_t flag) {
     if (flag & kCountVarArgsFlag) {
       inc_nargs();
       return true;
     } else if (flag & kSetVarArgsFlag) {
       if (flag & kSkipVarArgsFlag)
 	return skip<T*>(true);
-      return set(*val, swap_set);
+      return set(*val);
     } else if (flag & kGetVarArgsFlag) {
       if (flag & kSkipVarArgsFlag)
 	return skip<T>(false);
@@ -609,6 +625,32 @@ public:
       return pop(dst);
     }
     return false;
+  }
+
+  template<typename T>
+  bool apply_c(T*& dst, T**& dst_ref, const uint16_t flag) {
+    if (for_fortran && ((flag == kSetVarArgsFlag) ||
+			flag == kGetVarArgsFlag)) {
+      // Fortran always passes pointer to pointer
+      bool out = pop(dst_ref);
+      if (out) {
+	if (!dst_ref)
+	  return false;
+	dst = dst_ref[0];
+      }
+      return out;
+    } else if (for_c && flag == kSetVarArgsFlag) {
+      // C always passes pointer to pointer when setting
+      return pop_mem(dst, dst_ref, false, true);
+    }
+    return apply_mem(dst, dst_ref, flag);
+  }
+
+  template<typename T>
+  bool apply_swap(T* val, const uint16_t flag) {
+    if (flag != kSetVarArgsFlag)
+      return apply(val, flag);
+    return set(*val, true);
   }
   
 };

@@ -55,6 +55,7 @@ extern "C" {
 #include <string>
 #include <stdexcept>
 #include <iostream>
+#include <vector>
 #ifdef WIN32
 #include <stdlib.h>
 #endif // WIN32

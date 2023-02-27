@@ -40,9 +40,7 @@
 #define RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
 #define RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
 #include "prettywriter.h"
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
 #endif // RAPIDJSON_YGGDRASIL
 
 #if !defined(RAPIDJSON_SCHEMA_USE_INTERNALREGEX)
@@ -11807,6 +11805,29 @@ private:
 };
 
 typedef GenericSchemaEncoder<UTF8<char> > SchemaEncoder;
+
+
+template <typename Encoding, typename Allocator, typename StackAllocator>
+bool GenericDocument<Encoding,Allocator,StackAllocator>::Normalize(const ValueType& schema, StringBuffer* error) {
+  GenericSchemaDocument<ValueType> sd(schema);
+  GenericSchemaNormalizer< GenericSchemaDocument<ValueType> > normalizer(sd);
+  if (!this->Accept(normalizer)) {
+    if (error) {
+      ValueType err;
+      normalizer.GetErrorMsg(err, GetAllocator());
+      PrettyWriter<StringBuffer> writer(*error);
+      err.Accept(writer);
+    }
+    return false;
+  }
+  if (normalizer.WasNormalized()) {
+    this->SetNull();
+    if (!normalizer.GetNormalized().Accept(*this))
+      return false;
+    this->FinalizeFromStack();
+  }
+  return true;
+};
 
 #endif // RAPIDJSON_YGGDRASIL
 

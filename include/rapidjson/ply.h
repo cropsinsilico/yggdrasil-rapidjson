@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include <vector>
 #include "internal/meta.h"
 
 RAPIDJSON_NAMESPACE_BEGIN

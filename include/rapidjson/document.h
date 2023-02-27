@@ -3673,7 +3673,7 @@ public:
     }									\
     if (!ap.apply_mem(mem, mem_ref, flag))				\
       return false;							\
-    if (!ap.apply(&mem_len, flag, true))				\
+    if (!ap.apply_swap(&mem_len, flag))					\
       return false;							\
     if (flag == kSetVarArgsFlag) {					\
       if (!ap.set_mem_term(mem, mem_ref, mem_len, tmp, tmp_len))	\
@@ -3693,12 +3693,12 @@ public:
 	schema_type == std::string("schema")) {
       DocumentType* tmp = NULL;
       DocumentType** tmp_ref = NULL;
-      if (!ap.apply_mem(tmp, tmp_ref, flag))
+      if (!ap.apply_c(tmp, tmp_ref, flag))
 	return false;
       if (flag == kSetVarArgsFlag) {
 	if (tmp == NULL) {
-	  // if (!ap.allow_realloc)
-	  //   return false;
+	  if (!(ap.allow_realloc || ap.for_c))
+	    return false;
 	  tmp = new DocumentType();
 	  tmp_ref[0] = tmp;
 	}
@@ -3750,14 +3750,16 @@ public:
 	return false;
       }
       size_t nelements = 0;
-      if (flag & kSetVarArgsFlag) {
+      if (flag == kSetVarArgsFlag) {
 	nelements = is_document_format_array(*this, true);
       } else {
 	nelements = (size_t)is_schema_format_array(schema);
       }
       if (nelements) {
-	if (!ap.apply(&nelements, flag))
+	if (!ap.apply_swap(&nelements, flag))
 	  return false;
+	if (nelements == 0)
+	  nelements = 1;
       }
       SizeType total = 0;
       bool advance = false;
@@ -3970,8 +3972,10 @@ public:
 	}
       }
       // }
-      if (schema_ndim == 0 && schema.HasMember("ndim") && schema["ndim"].IsInt())
-	schema_ndim = static_cast<size_t>(schema["ndim"].GetUint());
+      if (schema_ndim == 0) {
+	if (schema.HasMember("ndim") && schema["ndim"].IsInt())
+	  schema_ndim = static_cast<size_t>(schema["ndim"].GetUint());
+      }
       if (table_nelements) {
 	nelements = table_nelements;
       }
@@ -3985,8 +3989,10 @@ public:
 	precision = static_cast<size_t>(GetPrecision());
 	if (Is1DArray()) {
 	  ndim = 1;
-	} else {
+	} else if (IsNDArray()) {
 	  ndim = static_cast<size_t>(GetShape().Size());
+	} else {
+	  return false;
 	}
 	nelements = static_cast<size_t>(GetNElements());
       }
@@ -4002,7 +4008,7 @@ public:
       // bool exchange_size = (!((has_shape && !ap.for_fortran) ||
       // 			      table_nelements));
       bool exchange_len = (exchange_size && (ndim == 1));
-      bool exchange_shape = (exchange_size && (ndim > 1));
+      bool exchange_shape = (exchange_size && (ndim > 1 || ndim == 0));
       bool exchange_prec = (is_string && (ap.for_fortran ||
 					  !table_nelements));
       mem_len = nelements;
@@ -4011,17 +4017,20 @@ public:
       if (!ap.apply_mem(mem, mem_ref, flag))
 	return false;
       if (exchange_len) {
-	if (!ap.apply(&mem_len, flag, true))
+	if (!ap.apply_swap(&mem_len, flag))
 	  return false;
 	mem_shape = &mem_len;
       } else if (exchange_shape) {
-	if (!ap.apply(&mem_ndim, flag, true))
+	if (!ap.apply_swap(&mem_ndim, flag))
 	  return false;
 	if (!ap.apply_mem(mem_shape, mem_shape_ref, flag))
 	  return false;
+      } else if (table_nelements) {
+	mem_shape = &mem_len;
+	mem_ndim = 1;
       }
       if (exchange_prec) {
-	if (!ap.apply(&mem_prec, flag, true))
+	if (!ap.apply_swap(&mem_prec, flag))
 	  return false;
       }
       if (flag == kSetVarArgsFlag) {
@@ -4032,11 +4041,13 @@ public:
 	  size_t* src_shape = (size_t*)malloc(src_shape_len * sizeof(size_t));
 	  if (Is1DArray()) {
 	    src_shape[0] = static_cast<size_t>(GetNElements());
-	  } else {
+	  } else if (IsNDArray()) {
 	    for (ConstValueIterator it = GetShape().Begin();
 		 it != GetShape().End(); it++, i++) {
 	      src_shape[i] = static_cast<size_t>(it->GetUint());
 	    }
+	  } else {
+	    return false;
 	  }
 	  if (!ap.set_mem(mem_shape, mem_shape_ref, mem_ndim,
 			  src_shape, src_shape_len))
@@ -4059,6 +4070,9 @@ public:
 	}
       } else if (flag == kGetVarArgsFlag) {
 	if (exchange_shape) {
+	  RAPIDJSON_ASSERT(mem_shape);
+	  if (!mem_shape)
+	    return false;
 	  if (ap.for_fortran && !mem_shape) {
 	    mem_len = 0;
 	  } else {
@@ -4075,7 +4089,7 @@ public:
 				 parent->GetAllocator());
 	  schema_cpy["precision"].SetUint64(mem_prec);
 	}
-	if (exchange_size) {
+	if (exchange_size || table_nelements) {
 	  if (!has_shape) {
 	    schema_cpy.AddMember(GetShapeString(),
 				 ValueType(kArrayType).Move(),
@@ -4092,58 +4106,20 @@ public:
 	  RAPIDJSON_ASSERT(mem_shape);
 	  if (!mem_shape)
 	    return false;
-	  for (size_t i = 0; i < mem_ndim; i++)
-	    schema_cpy["shape"][static_cast<SizeType>(i)].SetUint64(mem_shape[i]);
+	  if (schema_cpy.HasMember("length")) {
+	    schema_cpy["length"].SetUint64(mem_shape[0]);
+	  } else {
+	    for (size_t i = 0; i < mem_ndim; i++)
+	      schema_cpy["shape"][static_cast<SizeType>(i)].SetUint64(mem_shape[i]);
+	  }
 	}
 	SetYggdrasilString(mem,
 			   static_cast<SizeType>(mem_prec * mem_len),
 			   parent->GetAllocator(), schema_cpy);
       }
-
-      /*
-#define CASE_NDARRAY_(subT, prec, type)					\
-      if (subtype == std::string(subT) && prec == precision) {		\
-	type* dst = (type*)mem;						\
-	type** dst_ref = (type**)mem_ref;				\
-	if (flag == kSetVarArgsFlag) {					\
-	  type* src = (type*)GetString();				\
-	  size_t src_nbytes = static_cast<size_t>(GetNBytes());		\
-	  if (!ap.set_mem(dst, dst_ref, mem_len,			\
-			  src, src_nbytes / sizeof(type))) {		\
-	    return false;						\
-	  }								\
-	} else if (flag == kGetVarArgsFlag) {				\
-	  SetYggdrasilString(mem, mem_prec * mem_len,			\
-			     parent->GetAllocator(), schema_cpy);	\
-	}								\
-      }
-      CASE_NDARRAY_(int, 1, int8_t)
-      else CASE_NDARRAY_(int, 2, int16_t)
-      else CASE_NDARRAY_(int, 4, int32_t)
-      else CASE_NDARRAY_(int, 8, int64_t)
-      else CASE_NDARRAY_(uint, 1, uint8_t)
-      else CASE_NDARRAY_(uint, 2, uint16_t)
-      else CASE_NDARRAY_(uint, 4, uint32_t)
-      else CASE_NDARRAY_(uint, 8, uint64_t)
-      else CASE_NDARRAY_(float, 4, float)
-      else CASE_NDARRAY_(float, 8, double)
-      else CASE_NDARRAY_(complex, 8, complex_float_t)
-      else CASE_NDARRAY_(complex, 16, complex_double_t)
-      else CASE_NDARRAY_(string, precision, char)
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      else CASE_NDARRAY_(float, 16, long double)
-      else CASE_NDARRAY_(complex, 32, complex_long_double_t)
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-      else {
-	// ygglog_throw_error("ApplyVarArgs: Unsupported subtype and precision combination for ndarray: subtype = %s, precision = %d", schema_subtype.c_str(), schema_precision);
-	return false;
-      }
-#undef CASE_NDARRAY_
-      */
     }
-    // TODO: Handle wrapping on C side as python_t
 #define CASE_PYTHON_(str)						\
-    if (schema_type == Get ## str ## String()) {			\
+    if (schema_type == Get ## str ## String().GetString()) {		\
       PyObject* tmp = NULL;						\
       if (flag == kSetVarArgsFlag) {					\
 	tmp = GetPythonObjectRaw();					\
@@ -4159,23 +4135,24 @@ public:
     else CASE_PYTHON_(PythonFunction)
     else CASE_PYTHON_(PythonInstance)
 #undef CASE_PYTHON_
-    // TODO: Handle wrapping on C side as obj_t & ply_t
 #define CASE_GEOMETRY_(str)					\
-    if (schema_type == Get ## str ## String()) {		\
+    if (schema_type == Get ## str ## String().GetString()) {	\
       str* tmp = NULL;						\
       str** tmp_ref = NULL;					\
-      if (!ap.apply_mem(tmp, tmp_ref, flag)) {			\
+      if (!ap.apply_c(tmp, tmp_ref, flag)) {			\
 	return false;						\
-      }								\
+      } 							\
       if (flag == kSetVarArgsFlag) {				\
-	if (tmp == NULL) {					\
-	  if (!ap.allow_realloc)				\
-	    return false;					\
-	  tmp = new str();					\
-	  tmp_ref[0] = tmp;					\
-	}							\
-	Get ## str(*tmp);					\
+	if (tmp == NULL) { 					\
+	  if (!(ap.allow_realloc || ap.for_c))			\
+	    return false; 					\
+	  tmp = new str(); 					\
+	  tmp_ref[0] = tmp; 					\
+	} 							\
+	Get ## str(*tmp); 					\
       } else if (flag == kGetVarArgsFlag) {			\
+	if (tmp == NULL)					\
+	  return false;						\
 	Set ## str(*tmp);					\
       }								\
     }
@@ -5154,6 +5131,8 @@ public:
     if (GetYggType() == Get1DArrayString())
       return true;
     if (IsNDArray()) {
+      if (schema_->HasMember(GetLengthString()))
+	return true;
       ConstMemberIterator shape = schema_->FindMember(GetShapeString());
       if ((shape != schema_->MemberEnd()) && shape->value.IsArray() && (shape->value.Size() == 1))
 	return true;
@@ -5313,11 +5292,19 @@ public:
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 
   const ValueType& GetSubType() const {
-    RAPIDJSON_ASSERT(IsYggdrasil());
-    RAPIDJSON_ASSERT(schema_->HasMember(GetSubTypeString()));
-    ConstMemberIterator subtype = schema_->FindMember(GetSubTypeString());
-    RAPIDJSON_ASSERT(subtype->value.IsString());
-    return subtype->value;
+    if (IsDouble()) {
+      return GetFloatSubTypeString();
+    } else if (IsInt() || IsInt64()) {
+      return GetIntSubTypeString();
+    } else if (IsUint() || IsUint64()) {
+      return GetUintSubTypeString();
+    } else {
+      RAPIDJSON_ASSERT(IsYggdrasil());
+      RAPIDJSON_ASSERT(schema_->HasMember(GetSubTypeString()));
+      ConstMemberIterator subtype = schema_->FindMember(GetSubTypeString());
+      RAPIDJSON_ASSERT(subtype->value.IsString());
+      return subtype->value;
+    }
   }
 
   const Ch* GetSubType(SizeType &length) const {
@@ -5332,8 +5319,16 @@ public:
     return (x != schema_->MemberEnd());
   }
   SizeType GetPrecision() const {
-    RAPIDJSON_ASSERT(HasPrecision());
-    return static_cast<SizeType>(schema_->FindMember(GetPrecisionString())->value.GetUint());
+    if (IsDouble()) {
+      return 8;
+    } else if (IsInt() || IsUint()) {
+      return 4;
+    } else if (IsInt64() || IsUint64()) {
+      return 8;
+    } else {
+      RAPIDJSON_ASSERT(HasPrecision());
+      return static_cast<SizeType>(schema_->FindMember(GetPrecisionString())->value.GetUint());
+    }
   }
 
   bool HasEncoding() const {
@@ -6465,6 +6460,15 @@ public:
   size_t StackSize() const {
     return stack_.GetSize() / sizeof(ValueType);
   }
+
+  // Utility methods for serialization
+  /*!
+    @brief Normalize the document according to a schema
+    @param[in] schema To normalize the document with.
+    @param[in] dont_raise If true, a C++ error will not be raised.
+    @returns true if successful, false otherwise.
+   */
+  bool Normalize(const ValueType& schema, StringBuffer* error=NULL);
   // TODO: Version where schema not provided when setting from existing
   //   populated document.
   size_t CountVarArgs(ValueType& schema, bool set) {

@@ -11,6 +11,7 @@
 #ifndef BASE64_H_
 #define BASE64_H_
 
+#include <vector>
 #include "encodings.h"
 #include "stream.h"
 #include "precision.h"
