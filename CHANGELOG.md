@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add test for conflicting aliases in allOf set
 * Add test for array of strings & complex
 * Add support for allowNested to allow validation/normalization of an element in an array/object against a schema requiring a scalar
+* Allow for different character types in Ply & ObjWavefront classes
 
 ### IN PROGRESS
 * Add docstrings to new methods

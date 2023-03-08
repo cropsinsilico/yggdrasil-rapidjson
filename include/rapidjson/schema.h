@@ -2421,6 +2421,54 @@ public:
 	NORM_BODY_(YggdrasilString, (v.GetString(), v.GetStringLength(), true, valueSchema));
 	NORM_END_(YggdrasilString);
       }
+    } else if (typeV != valueSchema.MemberEnd() &&
+	       schema.yggtype_ & (1 << SchemaType::kYggPlySchemaType) &&
+	       schema.yggtype_ != (1 << SchemaType::kYggTotalSchemaType) - 1 &&
+	       typeV->value == YggSchemaValueType::GetObjString()) {
+      ObjWavefront x;
+      std::stringstream ss;
+      ss.str((char*)str);
+      if (x.read(ss) && x.is_valid()) {
+	Ply y(x);
+	ss.clear();
+	ss.str("");
+	if (y.write(ss)) {
+	  std::string s = ss.str();
+	  valueSchema[YggSchemaValueType::GetTypeString()].SetString(YggSchemaValueType::GetPlyString().GetString(),
+								     YggSchemaValueType::GetPlyString().GetStringLength(),
+								     valueSchema.GetAllocator());
+	  RecordModified(kModificationTypeValue, false);
+	  flags_ |= kNormalizerStateExitAfter;
+	  const Ch* tmp = (Ch*)s.c_str();
+	  SizeType tmp_len = static_cast<SizeType>(s.size() / sizeof(Ch));
+	  return NormYggdrasilString(context, schema, tmp, tmp_len,
+				     true, valueSchema);
+	}
+      }
+    } else if (typeV != valueSchema.MemberEnd() &&
+	       schema.yggtype_ & (1 << SchemaType::kYggObjSchemaType) &&
+	       schema.yggtype_ != (1 << SchemaType::kYggTotalSchemaType) - 1 &&
+	       typeV->value == YggSchemaValueType::GetPlyString()) {
+      Ply x;
+      std::stringstream ss;
+      ss.str((char*)str);
+      if (x.read(ss) && x.is_valid()) {
+	ObjWavefront y(x);
+	ss.clear();
+	ss.str("");
+	if (y.write(ss)) {
+	  std::string s = ss.str();
+	  valueSchema[YggSchemaValueType::GetTypeString()].SetString(YggSchemaValueType::GetObjString().GetString(),
+								     YggSchemaValueType::GetObjString().GetStringLength(),
+								     valueSchema.GetAllocator());
+	  RecordModified(kModificationTypeValue, false);
+	  flags_ |= kNormalizerStateExitAfter;
+	  const Ch* tmp = (Ch*)s.c_str();
+	  SizeType tmp_len = static_cast<SizeType>(s.size() / sizeof(Ch));
+	  return NormYggdrasilString(context, schema, tmp, tmp_len,
+				     true, valueSchema);
+	}
+      }
     }
     NORM_BODY_(YggdrasilString, (str, length, true, valueSchema));
     NORM_END_(YggdrasilString);

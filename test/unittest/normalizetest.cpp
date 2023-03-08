@@ -1380,6 +1380,32 @@ TEST(SchemaNormalizer, NDArray) {
 		     "}}");
 }
 
+TEST(SchemaNormalizer, ObjWavefront2Ply) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"ply\""
+        "}");
+  SchemaDocument s(sd);
+  NORMALIZE(s,
+	    "\"-YGG-eyJ0eXBlIjoib2JqIn0=-YGG-diAwLjAgMC4wIDAuMAp2IDAuMCAwLjAgMS4wCnYgMC4wIDEuMCAxLjAKdiAwLjAgMS4wIDAuMAp2IDEuMCAwLjAgMC4wCnYgMS4wIDAuMCAxLjAKdiAxLjAgMS4wIDEuMAp2IDEuMCAxLjAgMC4wCmYgNCAxIDIKZiA0IDEgMwpsIDEgMgpsIDIgMwpsIDMgNApsIDQgMQpsIDMgMQo=-YGG-\"",
+	    true,
+	    "\"-YGG-eyJ0eXBlIjoicGx5In0=-YGG-cGx5CmZvcm1hdCBhc2NpaSAxLjAKZWxlbWVudCB2ZXJ0ZXggOApwcm9wZXJ0eSBkb3VibGUgeApwcm9wZXJ0eSBkb3VibGUgeQpwcm9wZXJ0eSBkb3VibGUgegplbGVtZW50IGZhY2UgMgpwcm9wZXJ0eSBsaXN0IHVjaGFyIGludCB2ZXJ0ZXhfaW5kZXgKZWxlbWVudCBlZGdlIDUKcHJvcGVydHkgaW50IHZlcnRleDEKcHJvcGVydHkgaW50IHZlcnRleDIKZW5kX2hlYWRlcgowIDAgMAowIDAgMQowIDEgMQowIDEgMAoxIDAgMAoxIDAgMQoxIDEgMQoxIDEgMAozIDMgMCAxCjMgMyAwIDIKMCAxCjEgMgoyIDMKMyAwCjIgMAo=-YGG-\"");
+}
+
+TEST(SchemaNormalizer, Ply2ObjWavefront) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"obj\""
+        "}");
+  SchemaDocument s(sd);
+  NORMALIZE(s,
+	    "\"-YGG-eyJ0eXBlIjoicGx5In0=-YGG-cGx5CmZvcm1hdCBhc2NpaSAxLjAKZWxlbWVudCB2ZXJ0ZXggOApwcm9wZXJ0eSBkb3VibGUgeApwcm9wZXJ0eSBkb3VibGUgeQpwcm9wZXJ0eSBkb3VibGUgegplbGVtZW50IGZhY2UgMgpwcm9wZXJ0eSBsaXN0IHVjaGFyIGludCB2ZXJ0ZXhfaW5kZXgKZWxlbWVudCBlZGdlIDUKcHJvcGVydHkgaW50IHZlcnRleDEKcHJvcGVydHkgaW50IHZlcnRleDIKZW5kX2hlYWRlcgowIDAgMAowIDAgMQowIDEgMQowIDEgMAoxIDAgMAoxIDAgMQoxIDEgMQoxIDEgMAozIDMgMCAxCjMgMyAwIDIKMCAxCjEgMgoyIDMKMyAwCjIgMAo=-YGG-\"",
+	    true,
+	    "\"-YGG-eyJ0eXBlIjoib2JqIn0=-YGG-diAwLjAgMC4wIDAuMAp2IDAuMCAwLjAgMS4wCnYgMC4wIDEuMCAxLjAKdiAwLjAgMS4wIDAuMAp2IDEuMCAwLjAgMC4wCnYgMS4wIDAuMCAxLjAKdiAxLjAgMS4wIDEuMAp2IDEuMCAxLjAgMC4wCmYgNCAxIDIKZiA0IDEgMwpsIDEgMgpsIDIgMwpsIDMgNApsIDQgMQpsIDMgMQo=-YGG-\"");
+}
+
 TEST(SchemaNormalizer, Schema) {
   Document sd;
   sd.Parse(
