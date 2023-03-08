@@ -745,6 +745,7 @@ struct TypeHelper<ValueType, Ply> {
 
 } // namespace internal
 
+#ifdef RAPIDJSON_YGGDRASIL
 // Geometry helpers
 inline
 void ObjWavefront::fromPly(const Ply& p) {
@@ -788,6 +789,8 @@ void Ply::fromObjWavefront(const ObjWavefront& o) {
 		       ((*it)->code == "l"));
   }
 }
+
+#endif // RAPIDJSON_YGGDRASIL
 
 #ifdef RAPIDJSON_YGG_DOCUMENT_DEBUG_
 #define RAPIDJSON_YGG_DOCUMENT_BASE_(method, arg)			\
