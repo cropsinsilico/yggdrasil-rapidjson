@@ -3,13 +3,6 @@
 
 #ifdef RAPIDJSON_YGGDRASIL
 
-// typedef struct generic_t {
-//   char prefix; //!< Prefix character for limited verification.
-//   void *obj; //!< Pointer to rapidjson::Document or rapidjson::Value.
-//   void *allocator; //!< Allocator for rapidjson::Value stored in obj.
-// } generic_t;
-
-
 typedef struct complex_float_pod_t {
   float re;
   float im;
@@ -27,21 +20,13 @@ typedef struct complex_long_double {
 
 RAPIDJSON_NAMESPACE_BEGIN
 
-#include <stdarg.h>
-
+#include <cstdarg>
 
 #define RAPIDJSON_BEGIN_VAR_ARGS(out, last_arg, nargs, realloc)	\
   VarArgList out(nargs, realloc);				\
   va_start(out.va, last_arg)
 
 #define RAPIDJSON_END_VAR_ARGS(out)
-  // out.end()
-
-/*
-  #define RAPIDJSON_BEGIN_VAR_ARGS_SCHEMA(out, last_arg, schema, set, realloc) \
-  size_t out ## _nargs = countVarArgs(schema, set);			\
-  RAPIDJSON_BEGIN_VAR_ARGS(out, last_arg, &out ## _nargs, realloc)
-*/
 
 enum VarArgsFlag {
   kSetVarArgsFlag   = 0x0008,
@@ -60,13 +45,9 @@ public:
     allow_realloc(allow_realloc0), is_empty(false) {
     nargs = &nargs_;
   }
-  VarArgList(size_t* nargs0, bool allow_realloc0=false) :
+  VarArgList(size_t* nargs0, bool allow_realloc0=false,
+	     bool for_c0=false) :
     va(), nargs_(0), nargs(nargs0),
-    ptrs(NULL), iptr(0), for_fortran(false), for_c(false),
-    allow_realloc(allow_realloc0), is_empty(false) {}
-  VarArgList(va_list va0, size_t* nargs0=NULL,
-	     bool allow_realloc0=false, bool for_c0=false) :
-    va(va0), nargs_(0), nargs(nargs0),
     ptrs(NULL), iptr(0), for_fortran(false), for_c(for_c0),
     allow_realloc(allow_realloc0), is_empty(false) {}
   VarArgList(const size_t nptrs, void** ptrs0,
@@ -91,7 +72,11 @@ public:
     if (!is_empty)
       end();
   }
-  va_list va;  //!< Traditional variable argument list.
+private:
+  //! Copy constructor is not permitted.
+  VarArgList(const VarArgList& rhs);
+public:
+  std::va_list va;  //!< Traditional variable argument list.
   size_t nargs_; //!< Storage for number of remaining arguments if not provided as a pointer.
   size_t *nargs; //!< The number of remaining arguments.
   void **ptrs; //!< Variable arguments stored as pointers.
@@ -108,7 +93,7 @@ public:
     return (get_nargs() == 0);
   }
 
-  va_list* get_va() {
+  std::va_list* get_va() {
     return &va;
   }
 
@@ -266,7 +251,7 @@ public:
   }
 #define POP_SPECIAL_(type, type_cast)					\
   template<>								\
-  bool pop(type& dst, int allow_null) {					\
+  bool pop<type>(type& dst, int allow_null) {				\
     if (!nargs || nargs[0] == 0) {					\
       return false;							\
     }									\
@@ -282,7 +267,7 @@ public:
   }
 #define POP_COMPLEX_(type, type_cast)					\
   template<>								\
-  bool pop(std::complex<type>& dst, int allow_null) {			\
+  bool pop<std::complex<type> >(std::complex<type>& dst, int allow_null) { \
     if (!nargs || nargs[0] == 0) {					\
       return false;							\
     }									\

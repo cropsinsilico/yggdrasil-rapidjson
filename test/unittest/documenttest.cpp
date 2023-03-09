@@ -807,7 +807,6 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
     for (size_t i = 0; i < a_len; i++)					\
       a[i] = type(__VA_ARGS__);						\
     type b[len];							\
-    size_t b_len = len;							\
     size_t b_ndim = ndim;						\
     size_t b_shape[ndim] = BRACES_ shape;				\
     SET_GET_((&s, a, a_ndim, &a_shape[0]), (&s, &b, &b_ndim, &b_shape[0])); \
@@ -832,7 +831,6 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
     for (size_t i = 0; i < a_len; i++)					\
       a[i] = type(__VA_ARGS__);						\
     type* b = NULL;							\
-    size_t b_len = 0;							\
     size_t b_ndim = 0;							\
     size_t* b_shape = NULL;						\
     SET_GET_REALLOC_((&s, a, a_ndim, &a_shape[0]), (&s, &b, &b_ndim, &b_shape)); \
@@ -854,7 +852,6 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
     size_t a_shape[ndim] = BRACES_ shape;				\
     type a[len];							\
     size_t a_len = len;							\
-    size_t a_ndim = ndim;						\
     for (size_t i = 0; i < a_len; i++)					\
       a[i] = type(__VA_ARGS__);						\
     type b[len];							\
@@ -1080,7 +1077,6 @@ TEST(VarArgs, NDArray_String_Defined) {
 	  " \"shape\": [2, 3],"
 	  " \"precision\": 6}");
   char a[2][3][6];
-  size_t a_ndim = 2;
   size_t a_shape[2] = {2, 3};
   size_t a_prec = 6;
   for (size_t i = 0; i < a_shape[0]; i++)

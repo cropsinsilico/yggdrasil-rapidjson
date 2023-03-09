@@ -3642,7 +3642,7 @@ public:
       return false;
     }
     RAPIDJSON_ASSERT((flag != kGetVarArgsFlag) || parent);
-    if (flag == kGetVarArgsFlag and !parent)
+    if (flag == kGetVarArgsFlag && !parent)
       return false;
     std::string schema_type(schema["type"].GetString());
 #define BASE_(method_set, method_chk, method_get, type)		\
