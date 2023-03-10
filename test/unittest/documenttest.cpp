@@ -770,6 +770,7 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
     for (size_t i = 0; i < a_len; i++) {				\
       EXPECT_EQ(a[i], b[i]);						\
     }									\
+    free(b);								\
   }									\
   TEST(VarArgs, 1DArray_ ## name ##_Realloc_Defined) {			\
     Document s;								\
