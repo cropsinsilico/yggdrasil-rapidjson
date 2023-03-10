@@ -841,6 +841,8 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
     for (size_t i = 0; i < a_len; i++) {				\
       EXPECT_EQ(a[i], b[i]);						\
     }									\
+    free(b);								\
+    free(b_shape);							\
   }									\
   TEST(VarArgs, NDArray_ ## name ## _Defined) {				\
     Document s;								\
@@ -878,6 +880,7 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
     type* b = NULL;							\
     SET_GET_REALLOC_((&s, a), (&s, &b));				\
     EXPECT_EQ(a, *b);							\
+    free(b);								\
   }									\
   SET_GET_1DARRAY_(name, type, subtype, precision, 5, __VA_ARGS__)	\
   SET_GET_NDARRAY_(name, type, subtype, precision, 6, 2, (2, 3), __VA_ARGS__)
@@ -942,6 +945,7 @@ TEST(VarArgs, Scalar_String_Realloc) {
   EXPECT_EQ(a_len, b_len);
   for (size_t i = 0; i < a_len; i++)
     EXPECT_EQ(a[i], b[i]);
+  free(b);
 }
 TEST(VarArgs, Scalar_String_Defined) {
   Document s;
@@ -994,6 +998,7 @@ TEST(VarArgs, 1DArray_String_Realloc) {
   for (size_t i = 0; i < a_len; i++)
     for (size_t j = 0; j < a_prec; j++)
       EXPECT_EQ(a[i][j], b[(i * a_prec) + j]);
+  free(b);
 }
 TEST(VarArgs, 1DArray_String_Defined) {
   Document s;
@@ -1067,6 +1072,8 @@ TEST(VarArgs, NDArray_String_Realloc) {
     for (size_t j = 0; j < a_shape[1]; j++)
       for (size_t k = 0; k < a_prec; k++)
 	EXPECT_EQ(a[i][j][k], b[(i * a_shape[1] * a_prec) + (j * a_prec) + k]);
+  free(b);
+  free(b_shape);
 }
 TEST(VarArgs, NDArray_String_Defined) {
   Document s;
@@ -1141,6 +1148,7 @@ TEST(VarArgs, NDArray_String_Defined) {
     name* b = NULL;				\
     SET_GET_REALLOC_((&s, &a), (&s, &b));	\
     EXPECT_EQ(a, *b);				\
+    delete b;					\
   }
 SET_GET_GEOMETRY_(Ply, ply, 0)
 SET_GET_GEOMETRY_(ObjWavefront, obj, 1)
@@ -1349,6 +1357,9 @@ TEST(VarArgs, TableArray) {
     EXPECT_EQ(a3[i], b3[i]);
     EXPECT_EQ(strcmp(a1[i], b1 + 6*i), 0);
   }
+  free(b1);
+  free(b2);
+  free(b3);
 }
 #endif // RAPIDJSON_YGGDRASIL
 
