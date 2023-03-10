@@ -578,14 +578,15 @@ public:
     } else if (arg == NULL) {
       return false;
     }
-    if (swap) {
-      orig = arg[0];
-    }
     if (!arg)
       return false;
-    arg[0] = src;
     if (swap) {
+      T orig = arg[0];
+      orig = arg[0];
+      arg[0] = src;
       src = orig;
+    } else {
+      arg[0] = src;
     }
     return true;
   }
