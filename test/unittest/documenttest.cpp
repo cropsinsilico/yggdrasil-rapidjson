@@ -848,8 +848,6 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
 	    " \"subtype\": \"" #subtype "\","				\
 	    " \"precision\": " #precision ","				\
 	    " \"shape\": [2, 3]}");					\
-    /* " \"shape\": " STR_(BRACKETS_ shape) "}"); */			\
-    size_t a_shape[ndim] = BRACES_ shape;				\
     type a[len];							\
     size_t a_len = len;							\
     for (size_t i = 0; i < a_len; i++)					\

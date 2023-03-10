@@ -3,6 +3,8 @@
 
 #ifdef RAPIDJSON_YGGDRASIL
 
+#include "internal/meta.h"
+
 typedef struct complex_float_pod_t {
   float re;
   float im;
@@ -75,6 +77,7 @@ public:
 private:
   //! Copy constructor is not permitted.
   VarArgList(const VarArgList& rhs);
+  VarArgList& operator=(const VarArgList& rhs);
 public:
   std::va_list va;  //!< Traditional variable argument list.
   size_t nargs_; //!< Storage for number of remaining arguments if not provided as a pointer.
@@ -235,7 +238,31 @@ public:
     return true;
   }
   template<typename T>
-  bool pop(T& dst, int allow_null = 0) {
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
+			      internal::OrExpr<internal::IsSame<std::complex<float>, T>,
+			      internal::OrExpr<internal::IsSame<std::complex<double>, T>,
+			      internal::OrExpr<internal::IsSame<std::complex<long double>, T>,
+			      internal::OrExpr<internal::IsSame<bool, T>,
+			      internal::OrExpr<internal::IsSame<char, T>,
+			      internal::OrExpr<internal::IsSame<int8_t, T>,
+			      internal::OrExpr<internal::IsSame<int16_t, T>,
+			      internal::OrExpr<internal::IsSame<uint8_t, T>,
+			      internal::OrExpr<internal::IsSame<uint16_t, T>,
+			      internal::IsSame<float, T> > > > > > > > > > >), (bool))
+#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
+			      internal::OrExpr<internal::IsSame<std::complex<float>, T>,
+			      internal::OrExpr<internal::IsSame<std::complex<double>, T>,
+			      internal::OrExpr<internal::IsSame<bool, T>,
+			      internal::OrExpr<internal::IsSame<char, T>,
+			      internal::OrExpr<internal::IsSame<int8_t, T>,
+			      internal::OrExpr<internal::IsSame<int16_t, T>,
+			      internal::OrExpr<internal::IsSame<uint8_t, T>,
+			      internal::OrExpr<internal::IsSame<uint16_t, T>,
+			      internal::IsSame<float, T> > > > > > > > > >), (bool))
+#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+  pop(T& dst, int allow_null = 0) {
     if (!nargs || nargs[0] == 0) {
       // ygglog_throw_error("pop: No more arguments");
       return false;
@@ -250,8 +277,9 @@ public:
     return true;
   }
 #define POP_SPECIAL_(type, type_cast)					\
-  template<>								\
-  bool pop<type>(type& dst, int allow_null) {				\
+  template<typename T>							\
+  bool pop(T& dst, int allow_null=false,    				\
+	   RAPIDJSON_ENABLEIF((internal::IsSame<type, T>))) {		\
     if (!nargs || nargs[0] == 0) {					\
       return false;							\
     }									\
@@ -266,8 +294,9 @@ public:
     return true;							\
   }
 #define POP_COMPLEX_(type, type_cast)					\
-  template<>								\
-  bool pop<std::complex<type> >(std::complex<type>& dst, int allow_null) { \
+  template<typename T>							\
+  bool pop(T& dst, int allow_null=false,				\
+	   RAPIDJSON_ENABLEIF((internal::IsSame<std::complex<type>, T>))) { \
     if (!nargs || nargs[0] == 0) {					\
       return false;							\
     }									\
@@ -528,7 +557,6 @@ public:
   bool set(T& src, bool swap=false) {
     T** p = NULL;
     T* arg = NULL;
-    T orig;
     if (!nargs || nargs[0] == 0) {
       // ygglog_throw_error("set: No more arguments");
       return false;
@@ -562,6 +590,7 @@ public:
     return true;
   }
 
+  /*
 #define SET_SPECIAL_(type, type_cast)		\
   template<>					\
   bool set(type& src, bool swap) {		\
@@ -577,6 +606,7 @@ public:
   }
 
 #undef SET_SPECIAL_
+  */
 
   template<typename T>
   bool apply(T* val, const uint16_t flag) {
