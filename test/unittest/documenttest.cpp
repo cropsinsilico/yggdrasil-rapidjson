@@ -1362,6 +1362,25 @@ TEST(VarArgs, TableArray) {
   free(b2);
   free(b3);
 }
+TEST(VarArgs, Any) {
+  Document s;
+  s.Parse("{\"type\": \"any\"}");
+  Document a;
+  a.Parse("24");
+  Document b;
+  SET_GET_((&s, &a), (&s, &b));
+  EXPECT_EQ(a, b);
+}
+TEST(VarArgs, AnyRealloc) {
+  Document s;
+  s.Parse("{\"type\": \"any\"}");
+  Document a;
+  a.Parse("24");
+  Document* b = NULL;
+  SET_GET_REALLOC_((&s, &a), (&s, &b));
+  EXPECT_EQ(a, *b);
+  delete b;
+}
 #endif // RAPIDJSON_YGGDRASIL
 
 #ifdef __clang__
