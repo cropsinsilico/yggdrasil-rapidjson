@@ -326,15 +326,25 @@ PyObject* import_python_object(const char* mod_class,
       throw std::runtime_error(error_prefix + "import_python_object: Failed to import Python object '" + mod_class + "'"); // GCOVR_EXCL_LINE
     return NULL;
   }
-  bool is_file = ((module_size > 3) && (strncmp(module_name + (module_size - 3), ".py", 3) == 0));
-  if (is_file) {
+  bool ends_with_py = ((module_size > 3) && (strncmp(module_name + (module_size - 3), ".py", 3) == 0));
+  if (ends_with_py) {
+    if (file_size > 0) {
+      if (!(ignore_error))
+	throw std::runtime_error(error_prefix + "import_python_object: File specified and module is file: " + mod_class); // GCOVR_EXCL_LINE
+      return NULL;
+    }
     strcpy(file_name, module_name);
     file_size = module_size;
     module_size = 0;
+  } else {
+    ends_with_py = ((file_size > 3) &&
+		    (strncmp(file_name + (file_size - 3), ".py", 3) == 0));
   }
-  PyObject* path_dir = NULL;
+  PyObject* path_add = NULL;
   if (file_size > 0) {
-    PyObject* path = PyUnicode_FromStringAndSize(file_name, (Py_ssize_t)(file_size - 3));
+    if (ends_with_py)
+      file_size -= 3;
+    PyObject* path = PyUnicode_FromStringAndSize(file_name, (Py_ssize_t)file_size);
     if (path == NULL)
       goto cleanup;
     PyObject* os_path = PyImport_ImportModule("os.path");
@@ -353,7 +363,6 @@ PyObject* import_python_object(const char* mod_class,
     Py_DECREF(path);
     path = path_abs;
     path_abs = NULL;
-    
     PyObject* path_split = PyObject_GetAttrString(os_path, "split");
     Py_DECREF(os_path);
     if (path_split == NULL) {
@@ -361,17 +370,24 @@ PyObject* import_python_object(const char* mod_class,
       goto cleanup;
     }
     PyObject* path_parts = PyObject_CallFunction(path_split, "(O)", path);
-    Py_DECREF(path);
     Py_DECREF(path_split);
     if (path_parts == NULL) {
+      Py_DECREF(path);
       goto cleanup;
     }
-    path_dir = PyTuple_GetItem(path_parts, 0);
+    PyObject* path_dir = PyTuple_GetItem(path_parts, 0);
     if (path_dir == NULL) {
+      Py_DECREF(path);
       Py_DECREF(path_parts);
       goto cleanup;
     }
-    Py_INCREF(path_dir);
+    if (ends_with_py || module_size == 0) {
+      path_add = path_dir;
+    } else {
+      path_add = path;
+    }
+    Py_INCREF(path_add); // Before path or path_dir (via path_parts) decref'd
+    Py_DECREF(path);
     PyObject* path_base = PyTuple_GetItem(path_parts, 1);
     if (path_base == NULL) {
       Py_DECREF(path_parts);
@@ -395,20 +411,20 @@ PyObject* import_python_object(const char* mod_class,
   // Removing added path makes the object un-picklable
   if (out == NULL && file_size > 0) {
     // Add file path
-    RAPIDJSON_ASSERT(path_dir != NULL);
-    if (path_dir == NULL) {
+    RAPIDJSON_ASSERT(path_add != NULL);
+    if (path_add == NULL) {
       return NULL;
     }
     PyObject* sys_path = PySys_GetObject("path");
     if (sys_path == NULL) {
-      Py_DECREF(path_dir);
+      Py_DECREF(path_add);
       goto cleanup;
     }
-    if (PyList_Append(sys_path, path_dir) < 0) {
-      Py_DECREF(path_dir);
+    if (PyList_Append(sys_path, path_add) < 0) {
+      Py_DECREF(path_add);
       goto cleanup;
     }
-    Py_DECREF(path_dir);
+    Py_DECREF(path_add);
     // Try again with path added
     out = import_python_class(module_name, class_name, error_prefix, ignore_error);
     // Remove added path
