@@ -6961,14 +6961,14 @@ TEST(SchemaGenerateData, PythonImport) {
   GENERATE("{"
 	   "  \"type\": \"class\""
 	   "}",
-	   "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-Y29sbGVjdGlvbnM6T3JkZXJlZERpY3Q=-YGG-\"");
+	   "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-L1VzZXJzL2xhbmdtbS9tYW1iYWZvcmdlL2VudnMvcHlyai9saWIvcHl0aG9uMy45L2NvbGxlY3Rpb25zL19faW5pdF9fLnB5OmNvbGxlY3Rpb25zOk9yZGVyZWREaWN0-YGG-\"");
 }
 // Disabled as pickle string varies with python version
 // TEST(SchemaGenerateData, PythonInstance) {
 //   GENERATE("{"
 // 	   "  \"type\": \"instance\""
 // 	   "}",
-// 	   "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-gANjY29sbGVjdGlvbnMKT3JkZXJlZERpY3QKcQApUnEBLg==-YGG-\"");
+// 	   "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-gASVIgAAAAAAAACMC2NvbGxlY3Rpb25zlIwLT3JkZXJlZERpY3SUk5QpUpQu-YGG-\"");
 // }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #endif // RAPIDJSON_YGGDRASIL

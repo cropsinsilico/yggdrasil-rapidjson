@@ -278,10 +278,13 @@ PyObject* import_python_object(const char* mod_class,
 			       const std::string error_prefix="",
 			       const bool ignore_error=false) {
   PyObject* out = NULL;
+  char file_name[256] = "";
   char module_name[256] = "";
   char class_name[100] = "";
   size_t mod_class_len = strlen(mod_class);
-  size_t iColon = mod_class_len;
+  size_t iColon1 = mod_class_len, iColon2 = mod_class_len;
+  size_t file_size = 0, module_size = 0, class_size = 0;
+  bool ignore_error_1st = ignore_error;
   RAPIDJSON_ASSERT(mod_class_len <= 256);
   if (mod_class_len > 256) {
     if (!(ignore_error))
@@ -289,23 +292,49 @@ PyObject* import_python_object(const char* mod_class,
     return NULL;
   }
   for (size_t i = 0; i < mod_class_len; i++) {
-    if (mod_class[i] == ':')
-      iColon = i;
+    if (i > 1 && mod_class[i] == ':') {
+      if (iColon1 == mod_class_len) {
+	iColon1 = i;
+      } else if (iColon2 == mod_class_len) {
+	iColon2 = i;
+      } else {
+	if (!(ignore_error))
+	  throw std::runtime_error(error_prefix + "import_python_object: Name of module has more than 3 colons in it: " + mod_class); // GCOVR_EXCL_LINE
+	return NULL;
+      }
+    }
   }
-  if (iColon < mod_class_len) {
-    memcpy(module_name, mod_class, iColon * sizeof(char));
-    memcpy(class_name, mod_class + iColon + 1, (mod_class_len - (iColon + 1)) * sizeof(char));
-    module_name[iColon] = '\0';
-    class_name[mod_class_len - (iColon + 1)] = '\0';
+  if (iColon2 < mod_class_len) {
+    file_size = iColon1;
+    module_size = iColon2 - (iColon1 + 1);
+    class_size = mod_class_len - (iColon2 + 1);
+    memcpy(file_name, mod_class, file_size * sizeof(char));
+    memcpy(module_name, mod_class + iColon1 + 1, module_size * sizeof(char));
+    memcpy(class_name, mod_class + iColon2 + 1, class_size * sizeof(char));
+    file_name[file_size] = '\0';
+    module_name[module_size] = '\0';
+    class_name[class_size] = '\0';
+  } else if (iColon1 < mod_class_len) {
+    module_size = iColon1;
+    class_size = mod_class_len - (iColon1 + 1);
+    memcpy(module_name, mod_class, module_size * sizeof(char));
+    memcpy(class_name, mod_class + iColon1 + 1, class_size * sizeof(char));
+    module_name[module_size] = '\0';
+    class_name[class_size] = '\0';
   } else {
     if (!(ignore_error))
       throw std::runtime_error(error_prefix + "import_python_object: Failed to import Python object '" + mod_class + "'"); // GCOVR_EXCL_LINE
     return NULL;
   }
-  Py_ssize_t module_name_len = (Py_ssize_t)(iColon); // strlen(module_name);
-  bool is_file = ((module_name_len > 3) && (strncmp(module_name + ((size_t)module_name_len - 3), ".py", 3) == 0));
+  bool is_file = ((module_size > 3) && (strncmp(module_name + (module_size - 3), ".py", 3) == 0));
   if (is_file) {
-    PyObject* path = PyUnicode_FromStringAndSize(module_name, module_name_len - 3);
+    strcpy(file_name, module_name);
+    file_size = module_size;
+    module_size = 0;
+  }
+  PyObject* path_dir = NULL;
+  if (file_size > 0) {
+    PyObject* path = PyUnicode_FromStringAndSize(file_name, (Py_ssize_t)(file_size - 3));
     if (path == NULL)
       goto cleanup;
     PyObject* os_path = PyImport_ImportModule("os.path");
@@ -337,22 +366,14 @@ PyObject* import_python_object(const char* mod_class,
     if (path_parts == NULL) {
       goto cleanup;
     }
-    PyObject* path_dir = PyTuple_GetItem(path_parts, 0);
+    path_dir = PyTuple_GetItem(path_parts, 0);
     if (path_dir == NULL) {
       Py_DECREF(path_parts);
       goto cleanup;
     }
+    Py_INCREF(path_dir);
     PyObject* path_base = PyTuple_GetItem(path_parts, 1);
     if (path_base == NULL) {
-      Py_DECREF(path_parts);
-      goto cleanup;
-    }
-    PyObject* sys_path = PySys_GetObject("path");
-    if (sys_path == NULL) {
-      Py_DECREF(path_parts);
-      goto cleanup;
-    }
-    if (PyList_Append(sys_path, path_dir) < 0) {
       Py_DECREF(path_parts);
       goto cleanup;
     }
@@ -362,21 +383,38 @@ PyObject* import_python_object(const char* mod_class,
       Py_DECREF(path_parts);
       goto cleanup;
     }
-    memcpy(module_name, tmp, (size_t)tmp_size);
-    module_name[tmp_size] = '\0';
+    if (module_size == 0) {
+      module_size = static_cast<size_t>(tmp_size);
+      memcpy(module_name, tmp, module_size);
+      module_name[module_size] = '\0';
+    }
     Py_DECREF(path_parts);
+    ignore_error_1st = true;
   }
-  out = import_python_class(module_name, class_name, error_prefix, ignore_error);
+  out = import_python_class(module_name, class_name, error_prefix, ignore_error_1st);
   // Removing added path makes the object un-picklable
-  // if (is_file) {
-  //   PyObject* sys_path = PySys_GetObject("path");
-  //   if (sys_path == NULL) {
-  //     Py_DECREF(out);
-  //     out = NULL;
-  //     goto cleanup;
-  //   }
-  //   PyObject_CallMethod(sys_path, "pop", "n", Py_SIZE(sys_path) - 1);
-  // }
+  if (out == NULL && file_size > 0) {
+    // Add file path
+    RAPIDJSON_ASSERT(path_dir != NULL);
+    if (path_dir == NULL) {
+      return NULL;
+    }
+    PyObject* sys_path = PySys_GetObject("path");
+    if (sys_path == NULL) {
+      Py_DECREF(path_dir);
+      goto cleanup;
+    }
+    if (PyList_Append(sys_path, path_dir) < 0) {
+      Py_DECREF(path_dir);
+      goto cleanup;
+    }
+    Py_DECREF(path_dir);
+    // Try again with path added
+    out = import_python_class(module_name, class_name, error_prefix, ignore_error);
+    // Remove added path
+    // Removing added path makes the object un-picklable
+    PyObject_CallMethod(sys_path, "pop", "n", Py_SIZE(sys_path) - 1);
+  }
   PYTHON_ERROR_CLEANUP_(import_python_object);
 }
 
