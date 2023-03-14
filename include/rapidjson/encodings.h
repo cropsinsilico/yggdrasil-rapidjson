@@ -19,7 +19,6 @@
 
 #ifdef RAPIDJSON_YGGDRASIL
 #include "internal/meta.h"
-#include "pyrj.h"
 #endif // RAPIDJSON_YGGDRASIL
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -726,78 +725,6 @@ struct Transcoder<Encoding, Encoding> {
         return Encoding::Validate(is, os);  // source/target encoding are the same
     }
 };
-
-#ifdef RAPIDJSON_YGGDRASIL
-
-#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
-template<typename Ch>
-inline bool assign_wchar_PyUnicode(PyObject*, Py_ssize_t&, Ch*&)
-{ return false; }
-template<>
-inline bool assign_wchar_PyUnicode<wchar_t>(PyObject* x, Py_ssize_t& py_len,
-					    wchar_t*& free_orig) {
-  free_orig = PyUnicode_AsWideCharString(x, &py_len);
-  return true;
-}
-
-template<typename Encoding>
-inline bool assign_char_PyUnicode(PyObject*, Py_ssize_t&,
-				  const typename Encoding::Ch*&,
-				  PyObject*&,
-				  RAPIDJSON_DISABLEIF((internal::IsSame<typename Encoding::Ch,char>)))
-{ return false; }
-template<typename Encoding>
-inline bool assign_char_PyUnicode(PyObject* x, Py_ssize_t& py_len,
-				  const typename Encoding::Ch*& orig,
-				  PyObject*& x2,
-				  RAPIDJSON_ENABLEIF((internal::IsSame<typename Encoding::Ch,char>))) {
-  
-#define ENCODING_BRANCH(enc)						\
-  else if (internal::IsSame<Encoding, enc<typename Encoding::Ch> >::Value) { \
-    x2 = PyUnicode_As ## enc ## String(x);				\
-    if (x2 != NULL) {							\
-      py_len = PyBytes_Size(x2);					\
-      orig = PyBytes_AsString(x2);					\
-      return true;							\
-    }									\
-  }
-  if (internal::IsSame<Encoding, UTF8<typename Encoding::Ch> >::Value) {
-    orig = PyUnicode_AsUTF8AndSize(x, &py_len);
-    return true;
-  }
-  ENCODING_BRANCH(UTF16)
-  ENCODING_BRANCH(UTF32)
-  ENCODING_BRANCH(ASCII)
-#undef ENCODING_BRANCH
-  return false;
-}
-
-template<typename Encoding, typename Allocator>
-typename Encoding::Ch* PyUnicode_AsEncoding(PyObject* x, SizeType& length,
-					    Allocator& allocator) {
-  PyObject* x2 = NULL;
-  typename Encoding::Ch* free_orig = NULL;
-  const typename Encoding::Ch* orig = NULL;
-  Py_ssize_t py_len = 0;
-  if (assign_wchar_PyUnicode(x, py_len, free_orig)) {
-    orig = free_orig;
-  } else {
-    assign_char_PyUnicode<Encoding>(x, py_len, orig, x2);
-  }
-  length = (SizeType)py_len;
-  typename Encoding::Ch* out = nullptr;
-  if (orig != NULL) {
-    out = (typename Encoding::Ch*)allocator.Malloc(length * sizeof(typename Encoding::Ch));
-    memcpy(out, orig, length * sizeof(typename Encoding::Ch));
-    if (free_orig)
-      PyMem_Free(free_orig);
-  }
-  Py_XDECREF(x2);
-  return out;
-}
-
-#endif // YGGDRASIL_DISABLE_PYTHON_C_API
-#endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_NAMESPACE_END
 

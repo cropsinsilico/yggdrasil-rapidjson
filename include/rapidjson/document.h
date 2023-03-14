@@ -4273,83 +4273,6 @@ public:
     return false;
   }
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
-  bool GetPythonObjectClassName(PyObject* x, Ch*& mod_cls, SizeType& mod_cls_siz,
-				Allocator& allocator) {
-    RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__module__"));
-    RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__name__"));
-    if (!(PyObject_HasAttrString(x, "__module__") && PyObject_HasAttrString(x, "__name__")))
-      return false;
-    // This version uses the full path, but it will not be portable
-    // Get file containing the module
-    PyObject* inspect = PyImport_ImportModule("inspect");
-    if (inspect == NULL)
-      return false;
-    PyObject* inspect_getfile = PyObject_GetAttrString(inspect, "getfile");
-    Py_DECREF(inspect);
-    if (inspect_getfile == NULL)
-      return false;
-    PyObject* file_py = PyObject_CallFunction(inspect_getfile, "(O)", x);
-    Py_DECREF(inspect_getfile);
-    // Get the module
-    PyObject *mod_py = PyObject_GetAttrString(x, "__module__");
-    RAPIDJSON_ASSERT(mod_py != NULL);
-    if (mod_py == NULL)
-      return false;
-    // Get the class
-    PyObject *cls_py = PyObject_GetAttrString(x, "__name__");
-    RAPIDJSON_ASSERT(cls_py != NULL);
-    if (cls_py == NULL) {
-      Py_DECREF(mod_py);
-      return false;
-    }
-    SizeType mod_len = 0;
-    SizeType cls_len = 0;
-    SizeType file_len = 0;
-    Ch* mod = PyUnicode_AsEncoding<Encoding,Allocator>(mod_py, mod_len, allocator);
-    Ch* cls = PyUnicode_AsEncoding<Encoding,Allocator>(cls_py, cls_len, allocator);
-    Ch* file = NULL;
-    Py_DECREF(mod_py);
-    Py_DECREF(cls_py);
-    RAPIDJSON_ASSERT((mod != NULL) && (cls != NULL));
-    if ((mod == NULL) || (cls == NULL))
-      return false;
-    mod_cls_siz = mod_len + cls_len + 1;
-    if (file_py != NULL) {
-      file = PyUnicode_AsEncoding<Encoding,Allocator>(file_py, file_len, allocator);
-      Py_DECREF(file_py);
-      RAPIDJSON_ASSERT(file != NULL);
-      if (file == NULL)
-	return false;
-      if (file_len == 0) {
-	allocator.Free(file);
-	file = NULL;
-      } else {
-	mod_cls_siz += (file_len + 1);
-      }
-    }
-    mod_cls = static_cast<Ch*>(allocator.Malloc((mod_cls_siz + 1) * sizeof(Ch)));
-    RAPIDJSON_ASSERT(mod_cls);
-    if (!mod_cls)
-      return false;
-    Ch* curr = mod_cls;
-    if (file_len > 0) {
-      memcpy(curr, file, file_len * sizeof(Ch));
-      curr[file_len] = (Ch)(':');
-      curr += (file_len + 1);
-      allocator.Free(file);
-      file = NULL;
-    }
-    memcpy(curr, mod, mod_len * sizeof(Ch));
-    curr[mod_len] = (Ch)(':');
-    curr += (mod_len + 1);
-    memcpy(curr, cls, cls_len);
-    curr[cls_len] = '\0';
-    allocator.Free(mod);
-    allocator.Free(cls);
-    mod = NULL;
-    cls = NULL;
-    return true;
-  }
   bool GetPythonObjectClassAttr(PyObject* x, const char* attr,
                                 Allocator& allocator, ValueType& out,
 				bool call_function = false) {
@@ -4651,8 +4574,9 @@ public:
       ResetSchema(allocator);
       Ch* mod_cls = NULL;
       SizeType mod_cls_siz = 0;
-      out = GetPythonObjectClassName(x, mod_cls, mod_cls_siz,
-				     schema_->GetAllocator());
+      out = export_python_object<Encoding,Allocator>(x, mod_cls,
+						     mod_cls_siz,
+						     schema_->GetAllocator());
       RAPIDJSON_ASSERT(out && (mod_cls != NULL));
       if (!out || (mod_cls == NULL))
 	return out;
@@ -4974,8 +4898,10 @@ public:
  	return false;
       Ch* mod_cls_ref = NULL;
       SizeType mod_cls_siz = 0;
-      out = GetPythonObjectClassName(inst_class, mod_cls_ref, mod_cls_siz,
-				     schema_->GetAllocator());
+      out = export_python_object<Encoding,Allocator>(inst_class,
+						     mod_cls_ref,
+						     mod_cls_siz,
+						     schema_->GetAllocator());
       Py_DECREF(inst_class);
       RAPIDJSON_ASSERT(out && (mod_cls_ref != NULL));
       if (!out && (mod_cls_ref == NULL))

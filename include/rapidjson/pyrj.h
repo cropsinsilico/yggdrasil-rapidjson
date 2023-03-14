@@ -60,6 +60,7 @@ extern "C" {
 #include <stdlib.h>
 #endif // WIN32
 #include "rapidjson.h"
+#include "encodings.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -228,6 +229,72 @@ void finalize_python(const std::string error_prefix="") {
 #endif // RAPIDJSON_YGGDRASIL_PYTHON
 
 
+template<typename Ch>
+inline bool assign_wchar_PyUnicode(PyObject*, Py_ssize_t&, Ch*&)
+{ return false; }
+template<>
+inline bool assign_wchar_PyUnicode<wchar_t>(PyObject* x, Py_ssize_t& py_len,
+					    wchar_t*& free_orig) {
+  free_orig = PyUnicode_AsWideCharString(x, &py_len);
+  return true;
+}
+
+template<typename Encoding>
+inline bool assign_char_PyUnicode(PyObject*, Py_ssize_t&,
+				  const typename Encoding::Ch*&,
+				  PyObject*&,
+				  RAPIDJSON_DISABLEIF((internal::IsSame<typename Encoding::Ch,char>)))
+{ return false; }
+template<typename Encoding>
+inline bool assign_char_PyUnicode(PyObject* x, Py_ssize_t& py_len,
+				  const typename Encoding::Ch*& orig,
+				  PyObject*& x2,
+				  RAPIDJSON_ENABLEIF((internal::IsSame<typename Encoding::Ch,char>))) {
+  
+#define ENCODING_BRANCH(enc)						\
+  else if (internal::IsSame<Encoding, enc<typename Encoding::Ch> >::Value) { \
+    x2 = PyUnicode_As ## enc ## String(x);				\
+    if (x2 != NULL) {							\
+      py_len = PyBytes_Size(x2);					\
+      orig = PyBytes_AsString(x2);					\
+      return true;							\
+    }									\
+  }
+  if (internal::IsSame<Encoding, UTF8<typename Encoding::Ch> >::Value) {
+    orig = PyUnicode_AsUTF8AndSize(x, &py_len);
+    return true;
+  }
+  ENCODING_BRANCH(UTF16)
+  ENCODING_BRANCH(UTF32)
+  ENCODING_BRANCH(ASCII)
+#undef ENCODING_BRANCH
+  return false;
+}
+
+template<typename Encoding, typename Allocator>
+typename Encoding::Ch* PyUnicode_AsEncoding(PyObject* x, SizeType& length,
+					    Allocator& allocator) {
+  PyObject* x2 = NULL;
+  typename Encoding::Ch* free_orig = NULL;
+  const typename Encoding::Ch* orig = NULL;
+  Py_ssize_t py_len = 0;
+  if (assign_wchar_PyUnicode(x, py_len, free_orig)) {
+    orig = free_orig;
+  } else {
+    assign_char_PyUnicode<Encoding>(x, py_len, orig, x2);
+  }
+  length = (SizeType)py_len;
+  typename Encoding::Ch* out = nullptr;
+  if (orig != NULL) {
+    out = (typename Encoding::Ch*)allocator.Malloc(length * sizeof(typename Encoding::Ch));
+    memcpy(out, orig, length * sizeof(typename Encoding::Ch));
+    if (free_orig)
+      PyMem_Free(free_orig);
+  }
+  Py_XDECREF(x2);
+  return out;
+}
+
 /*!
   @brief Try to import a Python module, throw an error if it fails.
   @param[in] module_name const char* Name of the module to import (absolute path).
@@ -271,6 +338,136 @@ PyObject* import_python_class(const char* module_name,
   out = PyObject_GetAttrString(py_module, class_name);
   Py_DECREF(py_module);
   PYTHON_ERROR_CLEANUP_(import_python_class);
+}
+
+template<typename Encoding, typename Allocator>
+bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
+			  SizeType& mod_cls_siz,
+			  Allocator& allocator) {
+  typedef typename Encoding::Ch Ch;
+  RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__module__"));
+  RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__name__"));
+  if (!(PyObject_HasAttrString(x, "__module__") && PyObject_HasAttrString(x, "__name__")))
+    return false;
+  // Get the module
+  PyObject *mod_py = PyObject_GetAttrString(x, "__module__");
+  RAPIDJSON_ASSERT(mod_py != NULL);
+  if (mod_py == NULL)
+    return false;
+  // Get the class
+  PyObject *cls_py = PyObject_GetAttrString(x, "__name__");
+  RAPIDJSON_ASSERT(cls_py != NULL);
+  if (cls_py == NULL) {
+    Py_DECREF(mod_py);
+    return false;
+  }
+  // Check for local function
+  PyObject* x_repr = PyObject_Repr(x);
+  if (x_repr == NULL) {
+    Py_DECREF(mod_py);
+    Py_DECREF(cls_py);
+    return false;
+  }
+  PyObject* local_str = PyUnicode_FromString("<locals>");
+  if (local_str == NULL) {
+    Py_DECREF(mod_py);
+    Py_DECREF(cls_py);
+    return false;
+  }
+  int is_local = PySequence_Contains(x_repr, local_str);
+  Py_DECREF(x_repr);
+  Py_DECREF(local_str);
+  if (is_local < 0) {
+    Py_DECREF(mod_py);
+    Py_DECREF(cls_py);
+    return false;
+  }
+  // Get file containing the module
+  // Using the file alone is not portable
+  PyObject* file_py = NULL;
+  if (is_local) {
+    file_py = PyUnicode_FromString("local");
+  } else {
+    PyObject* inspect = PyImport_ImportModule("inspect");
+    if (inspect == NULL) {
+      Py_DECREF(mod_py);
+      Py_DECREF(cls_py);
+      return false;
+    }
+    PyObject* inspect_getfile = PyObject_GetAttrString(inspect, "getfile");
+    Py_DECREF(inspect);
+    if (inspect_getfile == NULL) {
+      Py_DECREF(mod_py);
+      Py_DECREF(cls_py);
+      return false;
+    }
+    file_py = PyObject_CallFunction(inspect_getfile, "(O)", x);
+    Py_DECREF(inspect_getfile);
+  }
+  if (file_py == NULL) {
+    Py_DECREF(mod_py);
+    Py_DECREF(cls_py);
+    return false;
+  }
+  SizeType mod_len = 0;
+  SizeType cls_len = 0;
+  SizeType file_len = 0;
+  Ch* mod = PyUnicode_AsEncoding<Encoding,Allocator>(mod_py, mod_len, allocator);
+  Ch* cls = PyUnicode_AsEncoding<Encoding,Allocator>(cls_py, cls_len, allocator);
+  Ch* file = NULL;
+  Py_DECREF(mod_py);
+  Py_DECREF(cls_py);
+  RAPIDJSON_ASSERT((mod != NULL) && (cls != NULL));
+  if ((mod == NULL) || (cls == NULL))
+    return false;
+  mod_cls_siz = mod_len + cls_len + 1;
+  if (file_py != NULL) {
+    file = PyUnicode_AsEncoding<Encoding,Allocator>(file_py, file_len, allocator);
+    Py_DECREF(file_py);
+    RAPIDJSON_ASSERT(file != NULL);
+    if (file == NULL)
+      return false;
+    if (file_len == 0) {
+      allocator.Free(file);
+      file = NULL;
+    } else {
+      mod_cls_siz += (file_len + 1);
+    }
+  }
+  mod_cls = static_cast<Ch*>(allocator.Malloc((mod_cls_siz + 1) * sizeof(Ch)));
+  RAPIDJSON_ASSERT(mod_cls);
+  if (!mod_cls)
+    return false;
+  Ch* curr = mod_cls;
+  if (file_len > 0) {
+    memcpy(curr, file, file_len * sizeof(Ch));
+    curr[file_len] = (Ch)(':');
+    curr += (file_len + 1);
+    allocator.Free(file);
+    file = NULL;
+  }
+  memcpy(curr, mod, mod_len * sizeof(Ch));
+  curr[mod_len] = (Ch)(':');
+  curr += (mod_len + 1);
+  memcpy(curr, cls, cls_len);
+  curr[cls_len] = '\0';
+  allocator.Free(mod);
+  allocator.Free(cls);
+  mod = NULL;
+  cls = NULL;
+  if (is_local) {
+    // Add local function to globals so that there is a chance of
+    // deserializing if called in the same python session
+    PyObject* globals = PyEval_GetGlobals();
+    // TODO: Handle encoding?
+    if (PyDict_GetItemString(globals, (char*)mod_cls) != NULL) {
+      return false;
+    }
+    if (PyDict_SetItemString(globals, (char*)mod_cls, x) < 0) {
+      return false;
+    }
+  }
+  return true;
 }
 
 inline
@@ -339,6 +536,18 @@ PyObject* import_python_object(const char* mod_class,
   } else {
     ends_with_py = ((file_size > 3) &&
 		    (strncmp(file_name + (file_size - 3), ".py", 3) == 0));
+  }
+  bool is_local = (strcmp(file_name, "local") == 0);
+  if (is_local) {
+    // Look for local function added to the globals dictionary during
+    // serialization.
+    file_size = 0;
+    PyObject* globals = PyEval_GetGlobals();
+    PyObject* tmp = PyDict_GetItemString(globals, mod_class);
+    if (tmp != NULL) {
+      Py_INCREF(tmp);
+    }
+    return tmp;
   }
   PyObject* path_add = NULL;
   if (file_size > 0) {
@@ -652,6 +861,51 @@ PyObject* GetStructuredArray(PyObject* x) {
   return out;
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
 }
+
+template<typename Ch>
+class CleanupLocals {
+public:
+#define METHOD_NOARGS(name)			\
+  bool name() { return true; }
+#define METHOD_ARGS(name, ...)			\
+  bool name(__VA_ARGS__) { return true; }
+  CleanupLocals() {}
+  METHOD_NOARGS(Null)
+  METHOD_ARGS(Bool, bool)
+  METHOD_ARGS(Int, int)
+  METHOD_ARGS(Uint, unsigned)
+  METHOD_ARGS(Int64, int64_t)
+  METHOD_ARGS(Uint64, uint64_t)
+  METHOD_ARGS(Double, double)
+  METHOD_ARGS(String, const Ch*, SizeType, bool)
+  METHOD_NOARGS(StartObject)
+  METHOD_ARGS(Key, const Ch*, SizeType, bool)
+  METHOD_ARGS(EndObject, SizeType)
+  METHOD_NOARGS(StartArray)
+  METHOD_ARGS(EndArray, SizeType)
+  template <typename YggSchemaValueType>
+  bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
+    RAPIDJSON_ASSERT(valueSchema.IsObject());
+    if (!valueSchema.IsObject())
+      return false;
+    const Ch local_str[] = {'l', 'o', 'c', 'a', 'l', ':', '\0'};
+    if (length > 6 && (memcmp(str, local_str, 6 * sizeof(Ch)) == 0)) {
+      typename YggSchemaValueType::ConstMemberIterator typeV = valueSchema.FindMember(YggSchemaValueType::GetTypeString());
+      if (typeV != valueSchema.MemberEnd() &&
+	  (typeV->value == YggSchemaValueType::GetPythonClassString() ||
+	   typeV->value == YggSchemaValueType::GetPythonFunctionString())) {
+	PyObject* globals = PyEval_GetGlobals();
+	if (PyDict_GetItemString(globals, (char*)str) != NULL) {
+	  PyDict_DelItemString(globals, (char*)str);
+	}
+      }
+    }
+    return true;
+  }
+  template <typename YggSchemaValueType>
+  METHOD_ARGS(YggdrasilStartObject, YggSchemaValueType&)
+  METHOD_ARGS(YggdrasilEndObject, SizeType)
+};
 
 RAPIDJSON_NAMESPACE_END
 
