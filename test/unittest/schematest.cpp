@@ -574,6 +574,22 @@ TEST(SchemaValidator, String_Pattern) {
 
     VALIDATE(s, "\"555-1212\"", true);
     VALIDATE(s, "\"(888)555-1212\"", true);
+#ifdef RAPIDJSON_YGGDRASIL
+    INVALIDATE(s, "\"(888)555-1212 ext. 532\"", "", "pattern", "",
+        "{ \"pattern\": {"
+        "    \"errorCode\": 8,"
+        "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+        "    \"actual\": \"(888)555-1212 ext. 532\","
+	"    \"expected\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
+        "}}");
+    INVALIDATE(s, "\"(800)FLOWERS\"", "", "pattern", "",
+        "{ \"pattern\": {"
+        "    \"errorCode\": 8,"
+        "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+        "    \"actual\": \"(800)FLOWERS\","
+	"    \"expected\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
+        "}}");
+#else // RAPIDJSON_YGGDRASIL
     INVALIDATE(s, "\"(888)555-1212 ext. 532\"", "", "pattern", "",
         "{ \"pattern\": {"
         "    \"errorCode\": 8,"
@@ -586,6 +602,7 @@ TEST(SchemaValidator, String_Pattern) {
         "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
         "    \"actual\": \"(800)FLOWERS\""
         "}}");
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(SchemaValidator, String_Pattern_Invalid) {
@@ -3867,8 +3884,8 @@ TEST(SchemaValidator, ContinueOnErrors) {
         "  },"
         "  \"anyOf\": {"
         "    \"errors\":["
-        "      {\"pattern\": {\"actual\": \"999ABC\", \"errorCode\": 8, \"instanceRef\": \"#/address/postcode\", \"schemaRef\": \"#/definitions/address_type/properties/postcode/anyOf/0\"}},"
-        "      {\"pattern\": {\"actual\": \"999ABC\", \"errorCode\": 8, \"instanceRef\": \"#/address/postcode\", \"schemaRef\": \"#/definitions/address_type/properties/postcode/anyOf/1\"}}"
+        "      {\"pattern\": {\"actual\": \"999ABC\", \"expected\": \"^[A-Z]{2}[0-9]{1,2} [0-9][A-Z]{2}$\", \"errorCode\": 8, \"instanceRef\": \"#/address/postcode\", \"schemaRef\": \"#/definitions/address_type/properties/postcode/anyOf/0\"}},"
+        "      {\"pattern\": {\"actual\": \"999ABC\", \"expected\": \"^[0-9]{5}$\", \"errorCode\": 8, \"instanceRef\": \"#/address/postcode\", \"schemaRef\": \"#/definitions/address_type/properties/postcode/anyOf/1\"}}"
         "    ],"
         "    \"errorCode\": 24, \"instanceRef\": \"#/address/postcode\", \"schemaRef\": \"#/definitions/address_type/properties/postcode\""
         "  },"
@@ -4109,8 +4126,8 @@ TEST(SchemaValidator, ContinueOnErrors_UniqueItems) {
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
     INVALIDATE_(s, "{\"phones\":[\"ab-34\",\"cd-78\"]}", "#", "errors", "#",
         "{\"pattern\": ["
-        "  {\"actual\": \"ab-34\", \"errorCode\": 8, \"instanceRef\": \"#/phones/0\", \"schemaRef\": \"#/definitions/phone_type\"},"
-        "  {\"actual\": \"cd-78\", \"errorCode\": 8, \"instanceRef\": \"#/phones/1\", \"schemaRef\": \"#/definitions/phone_type\"}"
+        "  {\"actual\": \"ab-34\", \"expected\": \"^[0-9]*-[0-9]*\", \"errorCode\": 8, \"instanceRef\": \"#/phones/0\", \"schemaRef\": \"#/definitions/phone_type\"},"
+        "  {\"actual\": \"cd-78\", \"expected\": \"^[0-9]*-[0-9]*\", \"errorCode\": 8, \"instanceRef\": \"#/phones/1\", \"schemaRef\": \"#/definitions/phone_type\"}"
         "]}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
     CrtAllocator::Free(schema);

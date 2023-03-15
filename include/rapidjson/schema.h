@@ -256,7 +256,12 @@ public:
 
     virtual void TooLong(const Ch* str, SizeType length, SizeType expected) = 0;
     virtual void TooShort(const Ch* str, SizeType length, SizeType expected) = 0;
+#ifdef RAPIDJSON_YGGDRASIL
+    virtual void DoesNotMatch(const Ch* str, SizeType length,
+			      const Ch* str_exp, SizeType length_exp) = 0;
+#else // RAPIDJSON_YGGDRASIL
     virtual void DoesNotMatch(const Ch* str, SizeType length) = 0;
+#endif // RAPIDJSON_YGGDRASIL
 
     virtual void DisallowedItem(SizeType index) = 0;
     virtual void TooFewItems(SizeType actualCount, SizeType expectedCount) = 0;
@@ -6306,7 +6311,13 @@ public:
         }
 
         if (pattern_ && !IsPatternMatch(pattern_, str, length)) {
+#ifdef RAPIDJSON_YGGDRASIL
+	    context.error_handler.DoesNotMatch(str, length,
+					       patternStr_.GetString(),
+					       patternStr_.GetStringLength());
+#else // RAPIDJSON_YGGDRASIL
             context.error_handler.DoesNotMatch(str, length);
+#endif // RAPIDJSON_YGGDRASIL
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPattern);
         }
 
@@ -6432,7 +6443,13 @@ public:
 
         if (pattern_ && !IsPatternMatch(pattern_, str, length)) {
 	    CLEANUP_;
+#ifdef RAPIDJSON_YGGDRASIL
+            context.error_handler.DoesNotMatch(str, length,
+					       patternStr_.GetString(),
+					       patternStr_.GetStringLength());
+#else // RAPIDJSON_YGGDRASIL
             context.error_handler.DoesNotMatch(str, length);
+#endif // RAPIDJSON_YGGDRASIL
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPattern);
         }
       } else {
@@ -10405,11 +10422,21 @@ public:
         AddNumberError(kValidateErrorMinLength,
             ValueType(str, length, GetStateAllocator()).Move(), SValue(expected).Move());
     }
+#ifdef RAPIDJSON_YGGDRASIL
+    void DoesNotMatch(const Ch* str, SizeType length,
+		      const Ch* str_exp, SizeType length_exp) {
+        currentError_.SetObject();
+        currentError_.AddMember(GetActualString(), ValueType(str, length, GetStateAllocator()).Move(), GetStateAllocator());
+	currentError_.AddMember(GetExpectedString(), ValueType(str_exp, length_exp, GetStateAllocator()).Move(), GetStateAllocator());
+        AddCurrentError(kValidateErrorPattern);
+    }
+#else // RAPIDJSON_YGGDRASIL
     void DoesNotMatch(const Ch* str, SizeType length) {
         currentError_.SetObject();
         currentError_.AddMember(GetActualString(), ValueType(str, length, GetStateAllocator()).Move(), GetStateAllocator());
         AddCurrentError(kValidateErrorPattern);
     }
+#endif // RAPIDJSON_YGGDRASIL
 
     void DisallowedItem(SizeType index) {
         currentError_.SetObject();
