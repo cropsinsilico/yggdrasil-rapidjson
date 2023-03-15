@@ -884,7 +884,7 @@ public:
   METHOD_NOARGS(StartArray)
   METHOD_ARGS(EndArray, SizeType)
   template <typename YggSchemaValueType>
-  bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& valueSchema) {
+  bool YggdrasilString(const Ch* str, SizeType length, bool, YggSchemaValueType& valueSchema) {
     RAPIDJSON_ASSERT(valueSchema.IsObject());
     if (!valueSchema.IsObject())
       return false;
