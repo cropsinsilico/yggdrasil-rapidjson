@@ -4495,7 +4495,11 @@ public:
     bool out = true;
     if (x == NULL)
       return false;
-    else if (PyList_CheckExact(x)) {
+    if (x == Py_None) {
+      SetNull();
+    } else if (PyBool_Check(x)) {
+      SetBool(x == Py_True);
+    } else if (PyList_CheckExact(x)) {
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
@@ -4563,12 +4567,6 @@ public:
       Set(std::complex<double>(PyComplex_RealAsDouble(x),
                                PyComplex_ImagAsDouble(x)));
       RAPIDJSON_ASSERT(PyErr_Occurred() == NULL);
-    } else if (x == Py_False) {
-      SetBool(false);
-    } else if (x == Py_True) {
-      SetBool(true);
-    } else if (x == Py_None) {
-      SetNull();
     } else if (PyType_Check(x) || PyFunction_Check(x)) {
       SetString("");
       ResetSchema(allocator);
@@ -4886,6 +4884,12 @@ public:
       return (!error);
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
     } else {
+      if (PyObject_HasAttrString(x, "_ygg_rapidjson")) {
+	PyObject* x_rep = PyObject_CallMethod(x, "_ygg_rapidjson", NULL);
+	out = SetPythonObjectRaw(x_rep, allocator);
+	Py_DECREF(x_rep);
+	return out;
+      }
       SetObject();
       ResetSchema(allocator);
       AddSchemaMember(GetTypeString(), GetPythonInstanceString());
