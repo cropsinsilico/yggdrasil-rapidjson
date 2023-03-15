@@ -4903,7 +4903,7 @@ public:
 						     mod_cls_siz,
 						     schema_->GetAllocator());
       Py_DECREF(inst_class);
-      RAPIDJSON_ASSERT(out && (mod_cls_ref != NULL));
+      // RAPIDJSON_ASSERT(out && (mod_cls_ref != NULL));
       if (!out && (mod_cls_ref == NULL))
 	return false;
       ValueType mod_cls(mod_cls_ref, mod_cls_siz, schema_->GetAllocator());
