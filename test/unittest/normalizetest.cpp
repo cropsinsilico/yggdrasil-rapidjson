@@ -405,6 +405,121 @@ TEST(SchemaNormalizer, InvalidDefault) {
 		     "}}");
 }
 
+// TODO: Fix this so that it works
+// TEST(SchemaNormalizer, PushWithDefault) {
+//   Document sd;
+//   sd.Parse("{ \"type\": \"object\","
+// 	   "  \"pushProperties\": {"
+// 	   "    \"$properties/x\": true"
+// 	   "  },"
+// 	   "  \"properties\": { \"x\": {"
+// 	   "  \"allOf\": ["
+// 	   "    {"
+// 	   "      \"type\": \"object\","
+// 	   "      \"properties\": {"
+// 	   "        \"subtype\": {\"enum\": [\"a\", \"b\"]},"
+// 	   "        \"subval\": {\"type\": \"string\"}"
+// 	   "      }"
+// 	   "    },"
+// 	   "    {"
+// 	   "      \"anyOf\": ["
+// 	   "        {"
+// 	   "          \"type\": \"object\","
+// 	   "          \"properties\": {"
+// 	   "            \"subtype\": {\"enum\": [\"a\"], \"default\": \"a\"},"
+// 	   "            \"subval\": {\"type\": \"string\", \"default\": \"hello\"}"
+// 	   "          },"
+// 	   "          \"required\": [\"subtype\", \"subval\"]"
+// 	   "        },"
+// 	   "        {"
+// 	   "          \"type\": \"object\","
+// 	   "          \"properties\": {"
+// 	   "            \"subtype\": {\"enum\": [\"b\"], \"default\": \"b\"}"
+// 	   "          },"
+// 	   "          \"required\": [\"subtype\"]"
+// 	   "        }"
+// 	   "      ]"
+// 	   "    }"
+// 	   "  ]"
+// 	   "}}}");
+//   SchemaDocument s(sd);
+//   NORMALIZE(s, "{\"subtype\": \"b\", \"x\": {}}", true,
+// 	    "{\"x\": {\"subtype\": \"b\"}}");
+// }
+
+TEST(SchemaNormalizer, ConditionalDefault) {
+    Document sd;
+    sd.Parse("{"
+	     "  \"allOf\": ["
+	     "    {\"type\": \"object\","
+	     "     \"properties\": {"
+	     "       \"a\": {\"type\": \"string\", \"default\": \"0\"},"
+	     "       \"b\": {\"type\": \"string\"}"
+	     "     }"
+	     "    },"
+	     "    {"
+	     "      \"anyOf\": ["
+	     "        {"
+	     "          \"type\": \"object\","
+	     "          \"properties\": {"
+	     "            \"a\": {\"type\": \"string\","
+	     "                    \"default\": \"1\","
+	     "                    \"enum\": [\"1\"]},"
+	     "            \"b\": {\"type\": \"string\"}"
+	     "          },"
+	     "          \"required\": [\"a\", \"b\"]"
+	     "        },"
+	     "        {"
+	     "          \"type\": \"object\","
+	     "          \"properties\": {"
+	     "            \"a\": {\"type\": \"string\","
+	     "                    \"default\": \"2\","
+	     "                    \"enum\": [\"2\"]},"
+	     "            \"b\": {\"type\": \"string\","
+	     "                    \"default\": \"10\"}"
+	     "          },"
+	     "          \"required\": [\"a\", \"b\"]"
+	     "        }"
+	     "      ]"
+	     "    }"
+	     "  ]"
+	     "}");
+    SchemaDocument s(sd);
+    NORMALIZE(s, "{\"b\": \"1\"}", true,
+	      "{\"b\": \"1\", \"a\": \"1\"}");
+    NORMALIZE(s, "{}", true,
+	      "{\"a\": \"2\", \"b\": \"10\"}");
+    FAILED_NORMALIZE(s, "{\"a\": \"1\"}",
+		     "", "allOf", "",
+		     "{ \"allOf\": {"
+		     "  \"errorCode\": 23,"
+		     "  \"instanceRef\": \"#\","
+		     "  \"schemaRef\": \"#\","
+		     "  \"errors\": ["
+		     "    {},"
+		     "    { \"anyOf\": {"
+		     "      \"errorCode\": 24,"
+		     "      \"instanceRef\": \"#\","
+		     "      \"schemaRef\": \"#/allOf/1\","
+		     "      \"errors\": ["
+		     "        { \"required\": {"
+		     "          \"errorCode\": 15,"
+		     "          \"instanceRef\": \"#\","
+		     "          \"schemaRef\": \"#/allOf/1/anyOf/0\","
+		     "          \"missing\": [\"b\"]"
+		     "        } },"
+		     "        { \"enum\": {"
+		     "          \"errorCode\": 19,"
+		     "          \"instanceRef\": \"#/a\","
+		     "          \"schemaRef\": \"#/allOf/1/anyOf/1/properties/a\","
+		     "          \"expected\": [\"2\"]"
+		     "        } }"
+		     "      ]"
+		     "    }}"
+		     "  ]"
+		     "}}");
+}
+
 TEST(SchemaNormalizer, MergeAllOf) {
     // TODO: Allow normalization when aliases not in base schema
     Document sd;

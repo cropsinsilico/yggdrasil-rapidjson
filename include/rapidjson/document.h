@@ -4886,9 +4886,13 @@ public:
     } else {
       if (PyObject_HasAttrString(x, "_ygg_rapidjson")) {
 	PyObject* x_rep = PyObject_CallMethod(x, "_ygg_rapidjson", NULL);
-	out = SetPythonObjectRaw(x_rep, allocator);
-	Py_DECREF(x_rep);
-	return out;
+	if (x_rep != NULL) {
+	  out = SetPythonObjectRaw(x_rep, allocator);
+	  Py_DECREF(x_rep);
+	  return out;
+	} else {
+	  PyErr_Clear();
+	}
       }
       SetObject();
       ResetSchema(allocator);

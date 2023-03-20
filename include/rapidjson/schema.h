@@ -1518,32 +1518,38 @@ public:
 	if (!parent)
 	  parent = GetParent(normalized, false);
 	RAPIDJSON_ASSERT(parent && parent->IsObject() && dst.parent);
-	if (parent && !parent->HasMember(name) && dst.parent) {
+	if (parent && dst.parent && !parent->HasMember(name)) {
 	  typename SchemaType::SharedProperty::PropertyEntry* prop = dst.parent->FindProperty(name);
 	  RAPIDJSON_ASSERT(prop);
 	  if (!prop) return false;
 	  PointerType iP = dst.instancePtr.Append(name.GetString(), name.GetStringLength(), &normalized.GetAllocator());
 	  PointerType iS = dst.schemaPtr.Append(SchemaType::GetPropertiesString(), &normalized.GetAllocator()).Append(name.GetString(), name.GetStringLength(), &normalized.GetAllocator());
+	  // if (parent->HasMember(name)) {
+	  //   std::cerr << "Normalizing new value" << std::endl;
+	  //   value = &(parent->FindMember(name)->value);
+	  // }
 	  if (!normalized.NormalizeShared(context, *value, value0, iP, iS,
 					  *prop->base->schema))
 	    return false; // GCOVR_EXCL_LINE
 	  value = &value0;
+	  if (!parent->HasMember(name)) {
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-	  std::cerr << "SETTING [" << name.GetString() << "]: ";
-	  DisplayPointer(dst.instancePtr);
-	  std::cerr << " = ";
-	  DisplayValue(*value);
-	  std::cerr << std::endl;
+	    std::cerr << "SETTING [" << name.GetString() << "]: ";
+	    DisplayPointer(dst.instancePtr);
+	    std::cerr << " = ";
+	    DisplayValue(*value);
+	    std::cerr << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-	  parent->AddMember(ValueType(name.GetString(),
-				      name.GetStringLength(),
-				      normalized.GetAllocator()).Move(),
-			    ValueType(*value,
-				      normalized.GetAllocator(), true).Move(),
-			    normalized.GetAllocator());
-	  normalized.RecordModified(kModificationTypeAdded,
-				    // kModificationTypeShared,
-				    dst.instancePtr, iP);
+	    parent->AddMember(ValueType(name.GetString(),
+					name.GetStringLength(),
+					normalized.GetAllocator()).Move(),
+			      ValueType(*value,
+					normalized.GetAllocator(), true).Move(),
+			      normalized.GetAllocator());
+	    normalized.RecordModified(kModificationTypeAdded,
+				      // kModificationTypeShared,
+				      dst.instancePtr, iP);
+	  }
 	}
       }
       if (!normalized.SetSharedSiblings(context, this, name, value))
@@ -1576,8 +1582,12 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	std::cerr << "AssignMissing [";
 	DisplayPointer(src.instancePtr);
+	std::cerr << "--";
+	DisplayPointer(src.schemaPtr);
 	std::cerr << " -> ";
 	DisplayPointer(dst.instancePtr);
+	std::cerr << "--";
+	DisplayPointer(dst.schemaPtr);
 	std::cerr << "]: " << copy[i].GetString() << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	if (!SetMember(context, copy[i], val, normalized, dstParent)) {
@@ -1610,6 +1620,8 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	std::cerr << "AssignDefaults [";
 	DisplayPointer(dst.instancePtr);
+	std::cerr << "--";
+	DisplayPointer(dst.schemaPtr);
 	std::cerr << "]: " << copy[i].GetString() << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
 	if (!SetMember(context, copy[i], val, normalized, dstParent))
