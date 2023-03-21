@@ -648,14 +648,14 @@ public:
         SizeType length = static_cast<SizeType>(end - buffer);
         buffer[length] = '\0';
         if (sizeof(Ch) == 1) {
-            Token token = { reinterpret_cast<Ch*>(buffer), length, index };
+            Token token = { reinterpret_cast<Ch*>(buffer), length, tokenIndex };
 	    return Replace(index, token, allocator);
         }
         else {
             Ch name[21];
             for (size_t i = 0; i <= length; i++)
                 name[i] = static_cast<Ch>(buffer[i]);
-            Token token = { name, length, index };
+            Token token = { name, length, tokenIndex };
 	    return Replace(index, token, allocator);
         }
 	

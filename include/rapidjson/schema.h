@@ -6904,6 +6904,7 @@ public:
     RAPIDJSON_STRING_(Compare, 'c', 'o', 'm', 'p', 'a', 'r', 'e')
     RAPIDJSON_STRING_(RelativeUp, '.', '.')
     RAPIDJSON_STRING_(Wildcard, '.', '*')
+    RAPIDJSON_STRING_(Asterix, '*')
 #endif // RAPIDJSON_YGGDRASIL
 
 #undef RAPIDJSON_STRING_
@@ -8565,8 +8566,9 @@ protected:
 				      this->schema->allocator_);
 	}
 	if (inSchema) {
-	  const SchemaType* s = SchemaType::Get(root, localPtr);
-	  if (!s) {
+	  std::vector<std::pair<PointerType, const SchemaType*> > svect;
+	  const SchemaType* s = SchemaType::Get(root, localPtr, svect);
+	  if ((!s) && (svect.size() == 0)) {
 	    std::cerr << "SortSources: Could not find schema document: ";
 	    NormalizedDocumentType::DisplayPointer(rootPath);
 	    std::cerr << ", ";
@@ -8574,9 +8576,16 @@ protected:
 	    std::cerr << std::endl;
 	    instances.template Pop<InstanceEntry>(1)->~InstanceEntry();
 	  } else {
-	    const_cast<SchemaType*>(s)->AddSharedPropertyLink(PointerType(),
-							      localPtr,
-							      this);
+	    if (s)
+	      const_cast<SchemaType*>(s)->AddSharedPropertyLink(PointerType(),
+								localPtr,
+								this);
+	    for (size_t i = 0; i < svect.size(); i++) {
+	      const SchemaType* salt = svect[i].second;
+	      const_cast<SchemaType*>(salt)->AddSharedPropertyLink(PointerType(),
+								   svect[i].first,
+								   this);
+	    }
 	  }
 	} else {
 	  const_cast<SchemaType*>(root)->AddSharedPropertyLink(localPtr,
@@ -8946,21 +8955,30 @@ protected:
 	    continue;
 	  } else if (token == GetAllOfString()) {
 	    t++;
-	    if (t != p.GetTokens() + p.GetTokenCount() &&
-		t->index != kPointerInvalidIndex) {
-	      continue;
+	    if (t != p.GetTokens() + p.GetTokenCount()) {
+	      if (t->index != kPointerInvalidIndex)
+		continue;
+	      ValueType token2(t->name, t->length);
+	      if (token2 == GetAsterixString())
+		continue;
 	    }
 	  } else if (token == GetAnyOfString()) {
 	    t++;
-	    if (t != p.GetTokens() + p.GetTokenCount() &&
-		t->index != kPointerInvalidIndex) {
-	      continue;
+	    if (t != p.GetTokens() + p.GetTokenCount()) {
+	      if (t->index != kPointerInvalidIndex)
+		continue;
+	      ValueType token2(t->name, t->length);
+	      if (token2 == GetAsterixString())
+		continue;
 	    }
 	  } else if (token == GetOneOfString()) {
 	    t++;
-	    if (t != p.GetTokens() + p.GetTokenCount() &&
-		t->index != kPointerInvalidIndex) {
-	      continue;
+	    if (t != p.GetTokens() + p.GetTokenCount()) {
+	      if (t->index != kPointerInvalidIndex)
+		continue;
+	      ValueType token2(t->name, t->length);
+	      if (token2 == GetAsterixString())
+		continue;
 	    }
 	  } else if (token == GetAllowSingularString()) {
 	    continue;
@@ -8994,7 +9012,30 @@ protected:
 						     
     static const SchemaType* Get(const SchemaType* root,
 				 const PointerType& p,
+				 std::vector<std::pair<PointerType, const SchemaType*> >& out,
 				 size_t* unresolvedTokenIndex = 0) {
+#define APPEND_ALT(valt, talt)						\
+      {									\
+	SizeType partial_count = 0;					\
+	const typename PointerType::Token *partial_t = t;		\
+	partial_t++;							\
+	while (partial_t != p.GetTokens() + p.GetTokenCount()) {	\
+	  partial_t++;							\
+	  partial_count++;						\
+	}								\
+	if (partial_count > 0) {					\
+	  partial_count++;						\
+	  PointerType new_p = p.Replace(static_cast<SizeType>(p.GetTokenCount()) - partial_count, talt); \
+	  /* std::cerr << "APPEND_ALT: "; */				\
+	  /* NormalizedDocumentType::DisplayPointer(new_p); */		\
+	  /* std::cerr << std::endl; */					\
+	  const SchemaType* new_v = Get(root, new_p, out);		\
+	  if (new_v) {							\
+	    std::pair<PointerType, const SchemaType*> new_pair (new_p, new_v); \
+	    out.push_back(new_pair);					\
+	  }								\
+        }								\
+      }
       RAPIDJSON_ASSERT(p.IsValid());
       const SchemaType* v = root;
       for (const typename PointerType::Token *t = p.GetTokens(); t != p.GetTokens() + p.GetTokenCount(); ++t) {
@@ -9017,9 +9058,6 @@ protected:
 	      continue;
 	    }
 	  } else if (token == GetPatternPropertiesString()) {
-	    // TODO: Currently, only the first match will be followed so
-	    //   if there are multiple matches, those schemas will not
-	    //   be linked.
 	    if (v->patternProperties_) {
 	      t++;
 	      if (t != p.GetTokens() + p.GetTokenCount() &&
@@ -9031,9 +9069,15 @@ protected:
 				      t->name, t->length) ||
 		       ((t->length == v->patternProperties_[i].patternStr.GetStringLength()) &&
 			(std::memcmp(t->name, v->patternProperties_[i].patternStr.GetString(), t->length * sizeof(Ch)) == 0)))) {
+		    // TODO: Determine if there can be more than one
+		    // associated with each
+		    // if (match) {
+		    //   APPEND_ALT(v->patternProperties_[i].schema, t)
+		    // } else {
 		    v = v->patternProperties_[i].schema;
 		    match = true;
 		    break;
+		    // }
 		  }
 		}
 		if (match)
@@ -9068,31 +9112,61 @@ protected:
 	  } else if (token == GetAllOfString()) {
 	    if (v->allOf_.schemas) {
 	      t++;
-	      if (t != p.GetTokens() + p.GetTokenCount() &&
-		  t->index != kPointerInvalidIndex &&
-		  t->index < v->allOf_.count) {
-		v = v->allOf_.schemas[t->index];
-		continue;
+	      if (t != p.GetTokens() + p.GetTokenCount()) {
+		if (t->index != kPointerInvalidIndex &&
+		    t->index < v->allOf_.count) {
+		  v = v->allOf_.schemas[t->index];
+		  continue;
+		} else if (t->index == kPointerInvalidIndex &&
+			   v->allOf_.count > 0) {
+		  ValueType token2(t->name, t->length);
+		  if (token2 == GetAsterixString()) {
+		    for (SizeType ialt = 0; ialt < (SizeType)(v->allOf_.count); ialt++) {
+		      APPEND_ALT(v->allOf_.schemas[ialt], ialt)
+		    }
+		    return 0;
+		  }
+		}
 	      }
 	    }
 	  } else if (token == GetAnyOfString()) {
 	    if (v->anyOf_.schemas) {
 	      t++;
-	      if (t != p.GetTokens() + p.GetTokenCount() &&
-		  t->index != kPointerInvalidIndex &&
-		  t->index < v->anyOf_.count) {
-		v = v->anyOf_.schemas[t->index];
-		continue;
+	      if (t != p.GetTokens() + p.GetTokenCount()) {
+		if (t->index != kPointerInvalidIndex &&
+		    t->index < v->anyOf_.count) {
+		  v = v->anyOf_.schemas[t->index];
+		  continue;
+		} else if (t->index == kPointerInvalidIndex &&
+			   v->anyOf_.count > 0) {
+		  ValueType token2(t->name, t->length);
+		  if (token2 == GetAsterixString()) {
+		    for (SizeType ialt = 0; ialt < (SizeType)(v->anyOf_.count); ialt++) {
+		      APPEND_ALT(v->anyOf_.schemas[ialt], ialt)
+		    }
+		    return 0;
+		  }
+		}
 	      }
 	    }
 	  } else if (token == GetOneOfString()) {
 	    if (v->oneOf_.schemas) {
 	      t++;
-	      if (t != p.GetTokens() + p.GetTokenCount() &&
-		  t->index != kPointerInvalidIndex &&
-		  t->index < v->oneOf_.count) {
-		v = v->oneOf_.schemas[t->index];
-		continue;
+	      if (t != p.GetTokens() + p.GetTokenCount()) {
+		if (t->index != kPointerInvalidIndex &&
+		    t->index < v->oneOf_.count) {
+		  v = v->oneOf_.schemas[t->index];
+		  continue;
+		} else if (t->index == kPointerInvalidIndex &&
+			   v->oneOf_.count > 0) {
+		  ValueType token2(t->name, t->length);
+		  if (token2 == GetAsterixString()) {
+		    for (SizeType ialt = 0; ialt < (SizeType)(v->oneOf_.count); ialt++) {
+		      APPEND_ALT(v->oneOf_.schemas[ialt], ialt)
+		    }
+		    return 0;
+		  }
+		}
 	      }
 	    }
 	  }
@@ -9109,7 +9183,10 @@ protected:
 	  NormalizedDocumentType::DisplayPointer(p);
 	  std::cerr << "\"" << std::endl;
 	} else {
-	  std::cerr << "Get: Failing token is \"" << t->name << "\" from ";
+	  if (t->index == kPointerInvalidIndex)
+	    std::cerr << "Get: Failing token is \"" << t->name << "\" from ";
+	  else
+	    std::cerr << "Get: Failing token is " << t->index << " from ";
 	  NormalizedDocumentType::DisplayPointer(p);
 	  std::cerr << std::endl;
 	  std::cerr << "Properties = " << std::endl;
@@ -9123,10 +9200,14 @@ protected:
       std::cerr << "Get: ";
       NormalizedDocumentType::DisplayPointer(p);
       std::cerr << " -> ";
-      NormalizedDocumentType::DisplayPointer(v->pointer_);
+      if (v)
+	NormalizedDocumentType::DisplayPointer(v->pointer_);
+      else
+	std::cerr << "NULL";
       std::cerr << std::endl;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
       return v;
+#undef APPEND_ALT
     }
 #define NESTED_CONST_CALL(method, schema, ...)			\
       const_cast<SchemaType*>(schema)->method(__VA_ARGS__)

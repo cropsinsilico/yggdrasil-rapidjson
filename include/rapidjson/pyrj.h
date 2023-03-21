@@ -638,7 +638,7 @@ PyObject* import_python_object(const char* mod_class,
     out = import_python_class(module_name, class_name, error_prefix, ignore_error);
     // Remove added path
     // Removing added path makes the object un-picklable
-    PyObject_CallMethod(sys_path, "pop", "n", Py_SIZE(sys_path) - 1);
+    // PyObject_CallMethod(sys_path, "pop", "n", Py_SIZE(sys_path) - 1);
   }
   PYTHON_ERROR_CLEANUP_(import_python_object);
 }

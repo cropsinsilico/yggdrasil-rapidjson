@@ -8,7 +8,7 @@ from urllib.request import urlopen
 def create_full_schema(fname):
     from yggdrasil import schema
     s = schema.get_schema()
-    s.save(fname, schema=s.get_schema(full=False))
+    s.save(fname, schema=s.get_schema())
 
 
 def get_ygg_tests():
@@ -24,11 +24,16 @@ def get_ygg_tests():
         base = yaml.load(fd, yaml.SafeLoader)
     try:
         base_file = base[
-            'definitions']['file']['allOf'][0]['properties']['name']
+            'definitions']['file-subtype-base']['properties']['name']
         base_file['pattern'] = base_file['pattern'].replace('\\', '\\\\')
     except KeyError:
         pass
-    for x in base['definitions']['file']['allOf'][1]['anyOf']:
+    if 'allOf' in base['definitions']['file']:
+        subtypes = base['definitions']['file']['allOf'][1]['anyOf']
+    else:
+        subtypes = base['definitions']['file']['anyOf']
+    for x_def in subtypes:
+        x = base['definitions'][x_def['$ref'].split('#/definitions/')[-1]]
         try:
             x['properties']['name']['pattern'] = x[
                 'properties']['name']['pattern'].replace('\\', '\\\\')

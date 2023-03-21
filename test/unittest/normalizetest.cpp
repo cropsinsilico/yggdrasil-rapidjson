@@ -1974,6 +1974,65 @@ TEST(SchemaNormalizer, PullPropertiesPath) {
 		     "}}");
 }
 
+TEST(SchemaNormalizer, PushPropertiesWildcard) {
+  Document sd;
+  sd.Parse("{"
+	   "  \"type\": \"object\","
+	   "  \"pushProperties\": {"
+	   "    \"$properties/x/anyOf/*/properties/y\": true"
+	   "  },"
+	   "  \"additionalProperties\": false,"
+	   "  \"properties\": {"
+	   "    \"x\": {"
+	   "      \"type\": \"object\","
+	   "      \"anyOf\": ["
+	   "        {"
+	   "          \"type\": \"object\","
+	   "          \"additionalProperties\": false,"
+	   "          \"required\": [\"y\"],"
+	   "          \"properties\": {"
+	   "            \"y\": {"
+	   "              \"type\": \"object\","
+	   "              \"required\": [\"a\", \"c\"],"
+	   "              \"default\": {},"
+	   "              \"properties\": {"
+	   "                \"a\": {\"type\": \"integer\"},"
+	   "                \"c\": {\"type\": \"integer\"}"
+	   "              }"
+	   "            }"
+	   "          }"
+	   "        },"
+	   "        {"
+	   "          \"type\": \"object\","
+	   "          \"additionalProperties\": false,"
+	   "          \"required\": [\"y\"],"
+	   "          \"properties\": {"
+	   "            \"y\": {"
+	   "              \"type\": \"object\","
+	   "              \"required\": [\"a\", \"b\"],"
+	   "              \"default\": {},"
+	   "              \"properties\": {"
+	   "                \"a\": {\"type\": \"integer\"},"
+	   "                \"b\": {\"type\": \"integer\"}"
+	   "              }"
+	   "            }"
+	   "          }"
+	   "        }"
+	   "      ]"
+	   "    }"
+	   "  }"
+	   "}");
+  EXPECT_FALSE(sd.HasParseError());
+  SchemaDocument s(sd);
+  NORMALIZE(s, "{\"a\": 1, \"c\": 2, \"x\": {}}",
+	    true, "{\"x\": {\"y\": {\"a\": 1, \"c\": 2}}}");
+  // Fix this so that pushed properties can be used to rull out anyOf
+  // branch before properties are visited or unvisited anyOf branches are
+  // cached when the target of pushed properties
+  // NORMALIZE(s, "{\"a\": 1, \"b\": 2, \"x\": {}}",
+  // 	    true, "{\"x\": {\"y\": {\"a\": 1, \"b\": 2}}}");
+}
+
 TEST(SchemaNormalizer, PushPropertiesPath) {
     Document sd;
     sd.Parse(
