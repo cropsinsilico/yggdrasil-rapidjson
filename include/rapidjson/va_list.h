@@ -627,8 +627,7 @@ public:
   }
 
   template<typename T>
-  bool apply_ptr(T** val, const uint16_t flag,
-		 RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
+  bool apply_ptr(T** val, const uint16_t flag) {
     if (for_fortran && flag == kGetVarArgsFlag) {
       T** val_ref = NULL;
       bool out = pop(val_ref);
