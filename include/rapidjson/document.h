@@ -5908,6 +5908,20 @@ public:
     new (this) GenericValue(x, precision, encoding, encoding_len, allocator);
     return *this; }
   template<typename T>
+  GenericValue& SetScalar(const units::GenericQuantity<T, EncodingType> &x,
+			  Allocator& allocator,
+			  RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
+    this->~GenericValue();
+    new (this) GenericValue(x, allocator);
+    return *this; }
+  template<typename T>
+  GenericValue& SetScalar(const units::GenericQuantity<T, EncodingType> &x,
+			  Allocator* allocator = 0,
+			  RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
+    this->~GenericValue();
+    new (this) GenericValue(x, allocator);
+    return *this; }
+  template<typename T>
   GenericValue& Set1DArray(const T* x, SizeType nelements,
 			   const Ch* units_str=nullptr,
 			   const SizeType units_len=0,

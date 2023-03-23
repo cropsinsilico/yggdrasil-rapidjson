@@ -2591,8 +2591,12 @@ public:
   //! \return true if less than, false otherwise.
   template<typename T2>
   bool operator<(const GenericQuantityArray<T2, Encoding>& x) const {
-    if (units_ != x.units()) return false;
     if (!is_same_shape(x)) return false;
+    if (units_ != x.units()) {
+      if (is_compatible(x.units()))
+	return *this < x.as(units_);
+      return false;
+    }
     for (SizeType i = 0; i < nelements(); i++)
       if (!(internal::values_lt(value_[i], x.value()[i]))) return false;
     return true;
@@ -2602,8 +2606,12 @@ public:
   //! \return true if greater than, false otherwise.
   template<typename T2>
   bool operator>(const GenericQuantityArray<T2, Encoding>& x) const {
-    if (units_ != x.units()) return false;
     if (!is_same_shape(x)) return false;
+    if (units_ != x.units()) {
+      if (is_compatible(x.units()))
+	return *this > x.as(units_);
+      return false;
+    }
     for (SizeType i = 0; i < nelements(); i++)
       if (!(internal::values_gt(value_[i], x.value()[i]))) return false;
     return true;
