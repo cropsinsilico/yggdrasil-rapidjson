@@ -3381,7 +3381,8 @@ public:
 			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length)); SetValueSchema(schema); }
   template <typename SourceAllocator>
   explicit GenericValue(Type type,
-			const GenericValue<Encoding,SourceAllocator>& schema)
+			const GenericValue<Encoding,SourceAllocator>& schema,
+			Allocator& allocator)
   RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT {
     static const uint16_t defaultFlags[] = {
       kNullFlag, kFalseFlag, kTrueFlag, kObjectFlag, kArrayFlag, kShortStringFlag,
@@ -3393,7 +3394,7 @@ public:
     // Use ShortString to store empty string.
     if (type == kStringType)
       data_.ss.SetLength(0);
-    SetValueSchema(schema);
+    SetValueSchema(schema, &allocator);
   }
 
   // TODO: Pass stack allocator?
@@ -6572,16 +6573,16 @@ public:
   template <typename YggSchemaValueType>
   bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema) {
     RAPIDJSON_YGG_DOCUMENT_(YggdrasilString, str, length, copy, schema);
-    if (copy) 
-      new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator(), schema);
-    else
-      new (stack_.template Push<ValueType>()) ValueType(str, length, schema);
+    // if (copy) 
+    new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator(), schema);
+    // else
+    //   new (stack_.template Push<ValueType>()) ValueType(str, length, schema);
     return true;
   }
   template <typename YggSchemaValueType>
   bool YggdrasilStartObject(YggSchemaValueType& schema) {
     RAPIDJSON_YGG_DOCUMENT_(YggdrasilStartObject, schema);
-    new (stack_.template Push<ValueType>()) ValueType(kObjectType, schema);
+    new (stack_.template Push<ValueType>()) ValueType(kObjectType, schema, GetAllocator());
     return true;
   }
   bool YggdrasilEndObject(SizeType memberCount) {

@@ -3263,11 +3263,11 @@ public:
     REQUIRED_PROPERTY_(YggdrasilString,
 		       (current &&
 			(current->IsYggdrasil() || current->IsString())),
-		       (str, length, valueSchema));
+		       (str, length, GetAllocator(), valueSchema));
     if (current->IsYggdrasil()) {
       REQUIRED_PROPERTY_(YggdrasilString,
 			 (current->GetValueSchema() == valueSchema),
-			 (str, length, valueSchema));
+			 (str, length, GetAllocator(), valueSchema));
     } else {
       current->SetValueSchema(valueSchema, &GetAllocator());
     }
@@ -3278,14 +3278,14 @@ public:
   }
   template <typename YggSchemaValueType>
   bool ExtendYggdrasilStartObject(Context& context, YggSchemaValueType& valueSchema, bool dont_recurse=false) {
-    EXTEND_BEGIN_(YggdrasilObject, (kObjectType, valueSchema));
+    EXTEND_BEGIN_(YggdrasilObject, (kObjectType, valueSchema, GetAllocator()));
     REQUIRED_PROPERTY_(YggdrasilObject,
 		       (current && (current->IsYggdrasil() || current->IsString())),
-		       (kObjectType, valueSchema));
+		       (kObjectType, valueSchema, GetAllocator()));
     if (current->IsYggdrasil()) {
       REQUIRED_PROPERTY_(YggdrasilObject,
 			 (current->GetValueSchema() == valueSchema),
-			 (kObjectType, valueSchema));
+			 (kObjectType, valueSchema, GetAllocator()));
     } else {
       current->SetValueSchema(valueSchema, &GetAllocator());
     }
