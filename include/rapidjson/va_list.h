@@ -627,6 +627,22 @@ public:
   }
 
   template<typename T>
+  bool apply_ptr(T** val, const uint16_t flag,
+		 RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
+    if (for_fortran && flag == kGetVarArgsFlag) {
+      T** val_ref = NULL;
+      bool out = pop(val_ref);
+      if (out) {
+        if (!val_ref)
+          return false;
+        val[0] = val_ref[0];
+      }
+      return out;
+    }
+    return apply(val, flag);
+  }
+
+  template<typename T>
   bool apply_mem(T*& dst, T**& dst_ref, const uint16_t flag) {
     if (flag & kCountVarArgsFlag) {
       inc_nargs();

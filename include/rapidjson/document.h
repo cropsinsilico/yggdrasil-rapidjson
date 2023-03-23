@@ -4124,7 +4124,7 @@ public:
       if (flag == kSetVarArgsFlag) {					\
 	tmp = GetPythonObjectRaw();					\
       }									\
-      if (!ap.apply(&tmp, flag)) {					\
+      if (!ap.apply_ptr(&tmp, flag)) {					\
 	return false;							\
       }									\
       if (flag == kGetVarArgsFlag) {					\
