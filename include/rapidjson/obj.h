@@ -6,6 +6,7 @@
 #include <iterator>
 #include <vector>
 #include <map>
+#include <algorithm>
 #include "internal/meta.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
