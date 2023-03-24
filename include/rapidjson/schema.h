@@ -2073,7 +2073,6 @@ public:
 	      NormEndObject(context, schema, memberCount,
 			    schema.parentSchema_->allowSingularSchema_.schemas[0]));
     } else if (schema.isSingular_ == kWrappedArray) {
-      std::cerr << "Wrap array" << std::endl;
       ValueType* curr = CurrentValue();
       if (!(curr->IsArray() && curr->Size() == 1))
 	return false;
@@ -2082,7 +2081,6 @@ public:
       tmp.CopyFrom((*curr)[0], GetAllocator(), true);
       curr->Swap(tmp);
     } else if (schema.isSingular_ == kWrappedObject) {
-      std::cerr << "Wrap object" << std::endl;
       ValueType* curr = CurrentValue();
       if (!(curr->IsObject() && curr->MemberCount() == 1 &&
 	    schema.parentKey_.IsString() &&
@@ -3635,9 +3633,6 @@ private:
     RAPIDJSON_ASSERT(type == kModificationTypeWrappedArray ||
 		     type == kModificationTypeWrappedObject);
     PointerType base = GetInstancePointer(false, true);
-    std::cerr << "RecordModifiedWrapped: ";
-    DisplayPointer(base);
-    std::cerr << std::endl;
     RecordModified(type, base.Append(key, &GetAllocator()), base,
 		   false, setStack);
   }
@@ -10460,7 +10455,7 @@ public:
       ErrorType typeError_target;
       ErrorType nonTypeError_singular, nonTypeError_wrapped;
       ErrorType typeError_singular, typeError_wrapped;
-      SizeType idx_singular = 0, idx_wrapped;
+      SizeType idx_singular = 0, idx_wrapped = 0;
       if (!nonTypeError)
 	nonTypeError = &nonTypeError_target;
       if (!typeError)
@@ -11081,9 +11076,11 @@ public:
     AddCurrentError(kValidateErrorPythonDisabled, true);
   }
   void InvalidSchema(ValidateErrorCode code, ISchemaValidator* subvalidator) {
+    // typedef internal::GenericNormalizedDocument<SchemaDocumentType, StateAllocator> NormalizedDocumentType;
+    // NormalizedDocumentType::DisplayValue(static_cast<GenericSchemaValidator*>(subvalidator)->GetError());
     currentError_.SetObject();
     currentError_.AddMember(GetErrorsString(),
-			   static_cast<GenericSchemaValidator*>(subvalidator)->GetError(),
+			    static_cast<GenericSchemaValidator*>(subvalidator)->GetError(),
 			   GetStateAllocator());
     AddCurrentError(code, true);
   }
