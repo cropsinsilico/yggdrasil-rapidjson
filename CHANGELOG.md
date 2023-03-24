@@ -9,7 +9,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Use explicit allocator for QuantityArray?
 * Add test for conflicting aliases in allOf set
 * Add test for array of strings & complex
-* Add support for allowNested to allow validation/normalization of an element in an array/object against a schema requiring a scalar
 * Allow for different character types in Ply & ObjWavefront classes
 
 ### IN PROGRESS
@@ -33,6 +32,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Normalization of compatible type/precision conversion
 * Made validation/normalization errors more verbose to match jsonschema
 * Added "encoding" property for scalar strings
+* Added allowWrapped flag for validating/normalizing to single element in array/object
 
 ## [Unreleased]
 

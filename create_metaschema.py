@@ -467,6 +467,14 @@ if __name__ == "__main__":
             "type": ["boolean", "string"],
             "default": False
         },
+        "allowWrapped": {
+            "description": (
+                "If true, the value may be wrapped in an array. If a "
+                "string, the value may be wrapped in an object at the "
+                "property specified by the string."),
+            "type": ["boolean", "string"],
+            "default": False
+        },
         "deprecated": {
             "description": (
                 "Message about the deprecation of a schema property "

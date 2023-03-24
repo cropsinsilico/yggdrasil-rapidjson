@@ -2433,6 +2433,36 @@ TEST(SchemaValidator, Alias) {
   VALIDATE(s, "{ \"street\": \"1600 Pennsylvania Ave.\" }", true);
 }
 
+TEST(SchemaValidator, ArrayWrapped) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"streets\": { \"type\": \"string\","
+	"                    \"allowWrapped\": true,"
+	"                    \"aliases\": [\"street\"] }},"
+	"  \"required\": [\"streets\"]"
+        "}");
+  SchemaDocument s(sd);
+  VALIDATE(s, "{ \"streets\": [\"1600 Pennsylvania Ave.\"] }", true);
+  VALIDATE(s, "{ \"street\": [\"1600 Pennsylvania Ave.\"] }", true);
+}
+
+TEST(SchemaValidator, ObjectWrapped) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"streets\": { \"type\": \"string\","
+	"                    \"allowWrapped\": \"key\" }},"
+	"  \"required\": [\"streets\"]"
+        "}");
+  SchemaDocument s(sd);
+  VALIDATE(s, "{ \"streets\": { \"key\": \"1600 Pennsylvania Ave.\" } }", true);
+}
+
 TEST(SchemaValidator, SingularArray) {
   Document sd;
   sd.Parse(

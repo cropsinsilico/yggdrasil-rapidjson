@@ -316,6 +316,7 @@ public:
   virtual void CircularAlias(const SValue& alias) = 0;
   virtual void ConflictingAliases(const SValue& alias, const SValue& base1, const SValue& base2) = 0;
   virtual ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) = 0;
+  virtual ValidateErrorCode NotWrappedItem(ISchemaValidator** subvalidator) = 0;
   virtual void NormalizationMergeConflict(const typename SchemaType::ValueType& cond, const SValue& expected, const SValue& actual) = 0;
   virtual void AddWarnings(ISchemaValidator** subvalidators, SizeType count) = 0;
   virtual void DeprecationWarning(const SValue* warning=nullptr) = 0;
@@ -755,7 +756,11 @@ enum SingularFlag {
   kSingularArray = 1,
   kSingularItem = 2,
   kSingularObject = 3,
-  kSingularValue = 4
+  kSingularValue = 4,
+  kWrappedArray = 5,
+  kWrappedItem = 6,
+  kWrappedObject = 7,
+  kWrappedValue = 8
 };
 
 // template<typename ValueType>
@@ -806,10 +811,11 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 enum NormalizerStateFlag {
   kNormalizerStateNoFlags = 0,             //!< No flags are set
   kNormalizerStateInSingular = 1 << 0,     //!< In singular schema
-  kNormalizerStateExitAfter = 1 << 1,      //!< Exit after normalization
-  kNormalizerStateExtending = 1 << 2,      //!< Currently extending
-  kNormalizerStateAppending = 1 << 3,      //!< Currently appending
-  kNormalizerStateBasePointerSet = 1 << 4  //!< Base pointer set
+  kNormalizerStateInWrapped = 1 << 1,      //!< In wrapped schema
+  kNormalizerStateExitAfter = 1 << 2,      //!< Exit after normalization
+  kNormalizerStateExtending = 1 << 3,      //!< Currently extending
+  kNormalizerStateAppending = 1 << 4,      //!< Currently appending
+  kNormalizerStateBasePointerSet = 1 << 5  //!< Base pointer set
 };
   
 ///////////////////////////////////////////////////////////////////////////////
@@ -963,12 +969,14 @@ public:
   struct ModificationEntry;
   struct ValueEntry {
     ValueEntry(ValueType& value) :
-      val(&value), ptr(), flags(0), singular(-1), child_singular(-1) {}
+      val(&value), ptr(), flags(0), singular(-1), child_singular(-1),
+      wrapped(-1), child_wrapped(-1) {}
       
     ValueEntry(ValueType& value, const PointerType& p, unsigned flags0,
 	       AllocatorType& allocator) :
       val(&value), ptr(p, &allocator), flags(flags0),
-      singular(-1), child_singular(-1) {
+      singular(-1), child_singular(-1),
+      wrapped(-1), child_wrapped(-1) {
       if (flags & (1 << kValueFlagTemp))
 	val = new ValueType(value, allocator, true);
     }
@@ -992,6 +1000,9 @@ public:
     unsigned flags;
     int singular;
     int child_singular;
+    int wrapped;
+    int child_wrapped;
+    // TODO: merge wrapped and singular?
   };
   enum ModificationType {
     kModificationTypeAny,
@@ -1002,7 +1013,10 @@ public:
     kModificationTypeShared,
     kModificationTypeSingular,
     kModificationTypeSingularArray,
-    kModificationTypeSingularObject
+    kModificationTypeSingularObject,
+    kModificationTypeWrapped,
+    kModificationTypeWrappedArray,
+    kModificationTypeWrappedObject
   };
   struct ModificationEntry {
     ModificationEntry(const ModificationType type0, bool inherited0,
@@ -1017,8 +1031,12 @@ public:
       return (type == kModificationTypeSingularArray ||
 	      type == kModificationTypeSingularObject);
     }
+    bool isWrapped() const {
+      return (type == kModificationTypeWrappedArray ||
+	      type == kModificationTypeWrappedObject);
+    }
     bool modifiesPath() const {
-      return (isSingular() || isAlias()) && !visited;
+      return (isSingular() || isWrapped() || isAlias()) && !visited;
     }
     bool noBefore() const {
       return (type == kModificationTypeAdded ||
@@ -2054,6 +2072,27 @@ public:
 	      schema.parentSchema_->allowSingularSchema_.schemas &&
 	      NormEndObject(context, schema, memberCount,
 			    schema.parentSchema_->allowSingularSchema_.schemas[0]));
+    } else if (schema.isSingular_ == kWrappedArray) {
+      std::cerr << "Wrap array" << std::endl;
+      ValueType* curr = CurrentValue();
+      if (!(curr->IsArray() && curr->Size() == 1))
+	return false;
+      RecordModifiedWrapped(kModificationTypeWrappedArray, (SizeType)0);
+      ValueType tmp;
+      tmp.CopyFrom((*curr)[0], GetAllocator(), true);
+      curr->Swap(tmp);
+    } else if (schema.isSingular_ == kWrappedObject) {
+      std::cerr << "Wrap object" << std::endl;
+      ValueType* curr = CurrentValue();
+      if (!(curr->IsObject() && curr->MemberCount() == 1 &&
+	    schema.parentKey_.IsString() &&
+	    curr->HasMember(schema.parentKey_)))
+	return false;
+      RecordModifiedWrapped(kModificationTypeWrappedObject,
+			    schema.parentKey_);
+      ValueType tmp;
+      tmp.CopyFrom((*curr)[schema.parentKey_], GetAllocator(), true);
+      curr->Swap(tmp);
     }
     return true;
   }
@@ -3479,6 +3518,8 @@ public:
       last->flags |= (1 << kValueFlagParentModified);
       if (ref->isSingular())
 	last->singular = ref_idx;
+      if (ref->isWrapped())
+	last->wrapped = ref_idx;
     }
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     std::cerr << "RecordModified[";
@@ -3510,10 +3551,17 @@ public:
     case (kModificationTypeSingularObject) :
       std::cerr << "singular object";
       break;
+    case (kModificationTypeWrappedArray) :
+      std::cerr << "wrapped array";
+      break;
+    case (kModificationTypeWrappedObject) :
+      std::cerr << "wrapped object";
+      break;
     }
     std::cerr << "] (" <<
       isValueModified(before, after, true, true, nullptr, type) << ", " <<
-      isValueSingular(after, nullptr, true) << ", ";
+      isValueSingular(after, nullptr, true) << ", " <<
+      isValueWrapped(after, nullptr, true) << ", ";
     DisplayPointer(before);
     std::cerr << " -> ";
     DisplayPointer(after);
@@ -3579,6 +3627,18 @@ private:
     PointerType base = GetInstancePointer(false, true);
     RecordModified(type, base,
 		   base.Append(key, &GetAllocator()),
+		   false, setStack);
+  }
+  template<typename VType>
+  void RecordModifiedWrapped(ModificationType type, const VType& key,
+			     bool setStack = false) {
+    RAPIDJSON_ASSERT(type == kModificationTypeWrappedArray ||
+		     type == kModificationTypeWrappedObject);
+    PointerType base = GetInstancePointer(false, true);
+    std::cerr << "RecordModifiedWrapped: ";
+    DisplayPointer(base);
+    std::cerr << std::endl;
+    RecordModified(type, base.Append(key, &GetAllocator()), base,
 		   false, setStack);
   }
   PointerType ReplacePrefix(const PointerType p,
@@ -3660,15 +3720,22 @@ private:
 	RecordModifiedAdded(it->name, it->value, pNew);
     }
   }
-  void StealChildModified(bool parent=false, bool excludeSingular=false) {
-    // StealChildModified(extend_child_->ReplaceSingular(GetInstancePointer(parent)), excludeSingular);
-    StealChildModified(GetInstancePointer(parent, true), excludeSingular);
+  void StealChildModified(bool parent=false,
+			  bool excludeSingular=false,
+			  bool excludeWrapped=false) {
+    // StealChildModified(extend_child_->ReplaceSingular(GetInstancePointer(parent)), excludeSingular, excludeWrapped);
+    StealChildModified(GetInstancePointer(parent, true),
+		       excludeSingular, excludeWrapped);
   }
-  void StealChildModified(const PointerType& p, bool excludeSingular=false) {
+  void StealChildModified(const PointerType& p,
+			  bool excludeSingular=false,
+			  bool excludeWrapped=false) {
     if (extend_child_) {
       for (ModificationEntry* it = extend_child_->modifiedStack_.template Bottom<ModificationEntry>();
 	   it != extend_child_->modifiedStack_.template End<ModificationEntry>(); it++) {
-	if (it->after.StartsWith(p) && !(excludeSingular && it->isSingular()))
+	if (it->after.StartsWith(p) &&
+	    !(excludeSingular && it->isSingular()) &&
+	    !(excludeWrapped && it->isWrapped()))
 	  RecordModified(*it);
       }
     }
@@ -3719,7 +3786,11 @@ private:
       if ((type == kModificationTypeAny || type == it->type ||
 	   (type == kModificationTypeSingular && it->isSingular() &&
 	    (exact ||
-	     it->after.GetTokenCount() == (p.GetTokenCount() + 1)))) &&
+	     it->after.GetTokenCount() == (p.GetTokenCount() + 1))) ||
+	   (type == kModificationTypeWrapped && it->isWrapped() &&
+	    (exact ||
+	     it->after.GetTokenCount() == (p.GetTokenCount() - 1)))
+	   ) &&
 	  ((checkFlag <= kCheckModifiedBoth &&
 	    PointerStartsWith(it->before, p, exact)) ||
 	   (checkFlag >= kCheckModifiedBoth &&
@@ -3757,7 +3828,8 @@ private:
     const ModificationEntry* it = start;
     while (true) {
       if ((type == kModificationTypeAny || type == it->type ||
-	   (type == kModificationTypeSingular && it->isSingular())) &&
+	   (type == kModificationTypeSingular && it->isSingular()) ||
+	   (type == kModificationTypeWrapped && it->isWrapped())) &&
 	  PointerStartsWith(it->before, pBefore, exactBefore) &&
 	  PointerStartsWith(it->after, pAfter, exactAfter))
 	return idx;
@@ -3786,6 +3858,12 @@ private:
 		       bool appended=true) const {
     return isValueModified(p, appended, kCheckModifiedAfter, match,
 			   kModificationTypeSingular);
+  }
+  bool isValueWrapped(const PointerType& p,
+		       int* match=nullptr,
+		       bool appended=true) const {
+    return isValueModified(p, appended, kCheckModifiedAfter, match,
+			   kModificationTypeWrapped);
   }
   bool isValueModified(const PointerType& p, bool exact=false,
 		       ModificationFlag checkFlag=kCheckModifiedBoth,
@@ -3833,6 +3911,13 @@ private:
     else
       flags_ |= kNormalizerStateInSingular;
     return (flags_ & kNormalizerStateInSingular);
+  }
+  bool ToggleWrapped() {
+    if (flags_ & kNormalizerStateInWrapped)
+      flags_ &= ~kNormalizerStateInWrapped;
+    else
+      flags_ |= kNormalizerStateInWrapped;
+    return (flags_ & kNormalizerStateInWrapped);
   }
 
   const ValueType* CurrentValue() const {
@@ -4653,7 +4738,8 @@ public:
 	instanceValidatorIndex_(),
 	defaultSet_(false), default_(),
 	aliases_(kArrayType), child_aliases_(kObjectType), hasAliases_(false),
-	allowSingular_(false), isSingular_(isSingular), singularPtr_(),
+	allowSingular_(false), allowWrapped_(false),
+	isSingular_(isSingular), singularPtr_(),
 	parentSchema_(parentSchema), parentKey_(kNullType),
 	deprecated_(false), enumValues_(kNullType),
 	sharedProperties_(0)
@@ -4703,7 +4789,9 @@ public:
 	  if (v->IsArray())
 	    aliases_.CopyFrom(*v, *allocator_, true);
 	}
-	if (schemaDocument && (isSingular_ != kSingularArray) && (isSingular_ != kSingularObject) && (!isMetaschema_)) {
+	if (schemaDocument && (!isMetaschema_) &&
+	    (isSingular_ != kSingularArray) &&
+	    (isSingular_ != kSingularObject)) {
 	  SingularFlag kSingular = kSingularNoFlags;
 	  if (type_ & (1 << kArraySchemaType))
 	    kSingular = kSingularArray;
@@ -4718,6 +4806,82 @@ public:
 	    type_ = (1 << kTotalSchemaType) - 1;
 	    yggtype_ = (1 << kYggTotalSchemaType) - 1;
 	    return;
+	  }
+	}
+	if (schemaDocument && (!isMetaschema_) &&
+	    (isSingular_ != kWrappedItem) &&
+	    (isSingular_ != kWrappedValue)) {
+	  if (const ValueType* v = GetMember(value, GetAllowWrappedString())) {
+	    SingularFlag wrappedFlagCont = kSingularNoFlags;
+	    SingularFlag wrappedFlagItem = kSingularNoFlags;
+	    ValueType valueCont(kObjectType);
+	    const ValueType* wrappedKey = nullptr;
+	    typename ValueType::AllocatorType tmpAllocator;
+	    PointerType q;
+	    if (v->IsBool() && v->GetBool()) {
+	      allowWrapped_ = true;
+	      wrappedFlagCont = kWrappedArray;
+	      wrappedFlagItem = kWrappedItem;
+	      q = p.Append(GetItemsString(), allocator_);
+	      q = q.Append(0, allocator_);
+	      valueCont.AddMember(GetTypeString(),
+				  ValueType(GetArrayString().GetString(),
+					    GetArrayString().GetStringLength(),
+					    tmpAllocator).Move(),
+				  tmpAllocator);
+	      valueCont.AddMember(GetItemsString(),
+				  ValueType(kArrayType).Move(),
+				  tmpAllocator);
+	      ValueType tmp;
+	      tmp.CopyFrom(value, tmpAllocator, true);
+	      tmp.RemoveMember(GetAllowWrappedString());
+	      valueCont[GetItemsString()].PushBack(tmp, tmpAllocator);
+	    } else if (v->IsString()) {
+	      allowWrapped_ = true;
+	      wrappedFlagCont = kWrappedObject;
+	      wrappedFlagItem = kWrappedValue;
+	      wrappedKey = v;
+	      q = p.Append(GetPropertiesString(), allocator_);
+	      q = q.Append(*wrappedKey, allocator_);
+	      valueCont.AddMember(GetTypeString(),
+				  ValueType(GetObjectString().GetString(),
+					    GetObjectString().GetStringLength(),
+					    tmpAllocator).Move(),
+				  tmpAllocator);
+	      valueCont.AddMember(GetPropertiesString(),
+				  ValueType(kObjectType).Move(),
+				  tmpAllocator);
+	      valueCont.AddMember(GetRequiredString(),
+				  ValueType(kArrayType).Move(),
+				  tmpAllocator);
+	      ValueType tmp;
+	      tmp.CopyFrom(value, tmpAllocator, true);
+	      tmp.RemoveMember(GetAllowWrappedString());
+	      valueCont[GetPropertiesString()].AddMember(ValueType(wrappedKey->GetString(),
+								   wrappedKey->GetStringLength(),
+								   tmpAllocator).Move(),
+							 tmp, tmpAllocator);
+	      valueCont[GetRequiredString()].PushBack(ValueType(wrappedKey->GetString(),
+								wrappedKey->GetStringLength(),
+								tmpAllocator).Move(),
+						      tmpAllocator);
+	    }
+	    if (allowWrapped_) {
+	      allowWrappedSchema_.count = 2;
+	      allowWrappedSchema_.schemas = static_cast<const Schema**>(allocator_->Malloc(allowWrappedSchema_.count * sizeof(const Schema*)));
+	      memset(allowWrappedSchema_.schemas, 0, sizeof(Schema*)* allowWrappedSchema_.count);
+	      schemaDocument->CreateSchema(&allowWrappedSchema_.schemas[0], p, value, document, id_, &wrappedFlagItem);
+	      schemaDocument->CreateSchema(&allowWrappedSchema_.schemas[1], q, valueCont, document, id_, &wrappedFlagCont, this, wrappedKey);
+	      allowWrappedSchema_.begin = validatorCount_;
+	      validatorCount_ += allowWrappedSchema_.count;
+	      singularPtr_ = q;
+	      RAPIDJSON_ASSERT(!allowWrappedSchema_.schemas[0]->allowWrappedSchema_.schemas);
+	      // Reset types so that they are only evaluated within the
+	      // nested schema
+	      type_ = (1 << kTotalSchemaType) - 1;
+	      yggtype_ = (1 << kYggTotalSchemaType) - 1;
+	      return;
+	    }
 	  }
 	}
 	if (const ValueType* v = GetMember(value, GetDeprecatedString())) {
@@ -5078,6 +5242,8 @@ public:
     const SValue* GetDefaultValue() const {
       if (allowSingularSchema_.schemas)
 	return allowSingularSchema_.schemas[0]->GetDefaultValue();
+      if (allowWrappedSchema_.schemas)
+	return allowWrappedSchema_.schemas[0]->GetDefaultValue();
       if (defaultSet_) return &default_;
       const SValue* out = 0;
 #define LOOP_(base)					\
@@ -5284,6 +5450,18 @@ public:
 	context.error_handler.ResetError();
 	return Compare(*(rhs.allowSingularSchema_.schemas[0]), context);
       }
+      if (allowWrappedSchema_.schemas) {
+	if (allowWrappedSchema_.schemas[1]->Compare(rhs, context))
+	  return true;
+	context.error_handler.ResetError();
+	return allowWrappedSchema_.schemas[0]->Compare(rhs, context);
+      } else if (rhs.allowWrappedSchema_.schemas) {
+	if (Compare(*(rhs.allowWrappedSchema_.schemas[1]), context))
+	  return true;
+	context.error_handler.ResetError();
+	return Compare(*(rhs.allowWrappedSchema_.schemas[0]), context);
+      }
+      
       // Properties
       if (properties_) {
 	for (SizeType i = 0; i < propertyCount_; i++) {
@@ -6052,6 +6230,14 @@ public:
 	      }
 	    }
 
+	    if (allowWrappedSchema_.schemas) {
+	      if (!((context.validators[allowWrappedSchema_.begin]->IsValid()) ||
+		    (context.validators[allowWrappedSchema_.begin + 1]->IsValid()))) {
+		ValidateErrorCode code = context.error_handler.NotWrappedItem(&context.validators[allowWrappedSchema_.begin]);
+		RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+	      }
+	    }
+
 	    if (context.normalized) {
 
 	      if (allOf_.schemas)
@@ -6109,6 +6295,18 @@ public:
 		}
 	      }
 	      
+	      if (allowWrappedSchema_.schemas) {
+                for (SizeType i = 0; i < allowWrappedSchema_.count; i++) {
+		  if (context.validators[i + allowWrappedSchema_.begin]->IsValid()) {
+		    if (!context.normalized->ExtendChild(context, *this,
+							 *allowWrappedSchema_.schemas[i],
+							 context.validators[i + allowWrappedSchema_.begin]->GetValidatorID()))
+		      return false;// GCOVR_EXCL_LINE
+		    break;
+		  }
+		}
+	      }
+	      
 	    }
 
 	    // Warnings
@@ -6137,6 +6335,12 @@ public:
 	    
 	    if (allowSingularSchema_.schemas)
 	      for (SizeType i = allowSingularSchema_.begin; i < allowSingularSchema_.begin + allowSingularSchema_.count; i++)
+		if (context.validators[i]->IsValid()) {
+		  context.error_handler.AddWarnings(&context.validators[i], 1);
+		  break;
+		}
+	    if (allowWrappedSchema_.schemas)
+	      for (SizeType i = allowWrappedSchema_.begin; i < allowWrappedSchema_.begin + allowWrappedSchema_.count; i++)
 		if (context.validators[i]->IsValid()) {
 		  context.error_handler.AddWarnings(&context.validators[i], 1);
 		  break;
@@ -6879,6 +7083,7 @@ public:
     RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
     RAPIDJSON_STRING_(Aliases, 'a', 'l', 'i', 'a', 's', 'e', 's')
     RAPIDJSON_STRING_(AllowSingular, 'a', 'l', 'l', 'o', 'w', 'S', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
+    RAPIDJSON_STRING_(AllowWrapped, 'a', 'l', 'l', 'o', 'w', 'W', 'r', 'a', 'p', 'p', 'e', 'd')
     RAPIDJSON_STRING_(Deprecated, 'd', 'e', 'p', 'r', 'e', 'c', 'a', 't', 'e', 'd')
     RAPIDJSON_STRING_(PushProperties, 'p', 'u', 's', 'h', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
     RAPIDJSON_STRING_(PullProperties, 'p', 'u', 'l', 'l', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
@@ -7345,6 +7550,16 @@ protected:
 		  pSing = pSing.Append(singularPtr_.GetTokens()[i], allocator_);
 	      }
 	      context.validators[allowSingularSchema_.begin + 1] = context.factory.CreateSchemaValidator(*allowSingularSchema_.schemas[1], false, pSing);
+	    }
+	    if (allowWrappedSchema_.schemas) {
+	      context.validators[allowWrappedSchema_.begin] = context.factory.CreateSchemaValidator(*allowWrappedSchema_.schemas[0], false, context.schemaPointerAbs);
+	      PointerType pWrap(context.schemaPointerAbs, allocator_);
+	      if (singularPtr_.StartsWith(pointer_)) {
+		for (size_t i = pointer_.GetTokenCount();
+		     i < singularPtr_.GetTokenCount(); i++)
+		  pWrap = pWrap.Append(singularPtr_.GetTokens()[i], allocator_);
+	      }
+	      context.validators[allowWrappedSchema_.begin + 1] = context.factory.CreateSchemaValidator(*allowWrappedSchema_.schemas[1], false, pWrap);
 	    }
 #endif // RAPIDJSON_YGGDRASIL
 	    
@@ -8803,6 +9018,10 @@ protected:
 	//   }
 	// }
       }
+      if (allowWrappedSchema_.schemas) {
+	AddSharedPropertyLink(ptr, path, sharedProp,
+			      allowWrappedSchema_.schemas[0], true);
+      }
       if (ptr.GetTokenCount() > 0) {
 	SizeType index;
 	ValueType name;
@@ -8895,7 +9114,7 @@ protected:
 	return;
       }
       /// NESTED SECTION
-      if (allowSingularSchema_.schemas)
+      if (allowSingularSchema_.schemas || allowWrappedSchema_.schemas)
 	return;
       if (!sharedProperties_)
 	sharedProperties_ = new SharedPropertiesType();
@@ -8982,6 +9201,8 @@ protected:
 	    }
 	  } else if (token == GetAllowSingularString()) {
 	    continue;
+	  } else if (token == GetAllowWrappedString()) {
+	    continue;
 	  }
 	}
 	// Error: unresolved token
@@ -9047,6 +9268,13 @@ protected:
 	      continue;
 	    }
 	    v = v->allowSingularSchema_.schemas[0];
+	  }
+	  if (v->allowWrappedSchema_.schemas) {
+	    if (token == GetAllowWrappedString()) {
+	      v = v->allowWrappedSchema_.schemas[1];
+	      continue;
+	    }
+	    v = v->allowWrappedSchema_.schemas[0];
 	  }
 	  if (token == GetPropertiesString()) {
 	    t++;
@@ -9284,6 +9512,11 @@ protected:
 	  NESTED_CONST_CALL(SortSharedProperties, allowSingularSchema_.schemas[i],
 			    root, path);
       }
+      if (allowWrappedSchema_.schemas) {
+	for (SizeType i = 0; i < 1; i++)
+	  NESTED_CONST_CALL(SortSharedProperties, allowWrappedSchema_.schemas[i],
+			    root, path);
+      }
       inSort_--;
     }
 #undef NESTED_CONST_CALL_ARRAY
@@ -9395,6 +9628,8 @@ protected:
     bool hasAliases_;
     SchemaArray allowSingularSchema_;
     bool allowSingular_;
+    SchemaArray allowWrappedSchema_;
+    bool allowWrapped_;
     SingularFlag isSingular_;
     PointerType singularPtr_;
     const SchemaType* parentSchema_;
@@ -10212,19 +10447,20 @@ public:
 		     const ValueType* err = nullptr,
 		     ErrorType* nonTypeError = nullptr,
 		     ErrorType* typeError = nullptr,
-		     bool isSingular = false) const {
+		     bool isSingular = false,
+		     bool isWrapped = false) const {
       typedef typename ValueType::ConstMemberIterator MemberIter;
       if (!err)
 	err = &error_;
       RAPIDJSON_ASSERT(err->IsObject());
-      if ((!isSingular) && (err->MemberCount() > 1))
+      if ((!isSingular) && (!isWrapped) && (err->MemberCount() > 1))
 	out.SetArray();
-      bool hasSingular = false;
+      bool hasSingular = false, hasWrapped = false;
       ErrorType nonTypeError_target;
       ErrorType typeError_target;
-      ErrorType nonTypeError_singular;
-      ErrorType typeError_singular;
-      SizeType idx_singular = 0;
+      ErrorType nonTypeError_singular, nonTypeError_wrapped;
+      ErrorType typeError_singular, typeError_wrapped;
+      SizeType idx_singular = 0, idx_wrapped;
       if (!nonTypeError)
 	nonTypeError = &nonTypeError_target;
       if (!typeError)
@@ -10241,12 +10477,20 @@ public:
 			   &nonTypeError_singular, &typeError_singular,
 			   true))
 	    return false;
+	} else if (ierrTyp->name == GetWrappedString()) {
+	  hasWrapped = true;
+	  if (out.IsArray())
+	    idx_wrapped = out.Size();
+	  if (!GetErrorMsg(iout, allocator, &(ierrTyp->value),
+			   &nonTypeError_wrapped, &typeError_wrapped,
+			   false, true))
+	    return false;
 	} else {
 	  if (!GetErrorMsg_(iout, allocator, &(ierrTyp->value),
-			    nonTypeError, typeError, isSingular))
+			    nonTypeError, typeError, isSingular, isWrapped))
 	    return false;
 	}
-	if ((!isSingular) && (err->MemberCount() > 1))
+	if ((!isSingular) && (!isWrapped) && (err->MemberCount() > 1))
 	  out.PushBack(iout, allocator);
 	else
 	  out.Swap(iout);
@@ -10268,6 +10512,23 @@ public:
 	CheckErrorReplace_(nonTypeError, &nonTypeError_singular, allocator);
 	CheckErrorReplace_(typeError, &typeError_singular, allocator);
       }
+      if (hasWrapped) {
+	SizeType maxOther = getMaxLen_(typeError, nonTypeError);
+	SizeType maxSingu = getMaxLen_(&typeError_wrapped,
+				       &nonTypeError_wrapped);
+	if (nonTypeError_wrapped.IsNull() &&
+	    ((maxSingu < maxOther) || (*typeError == typeError_wrapped))) {
+	  if (out.IsArray())
+	    out.Erase(out.Begin() + idx_wrapped);
+	} else if (nonTypeError->IsNull() && (maxOther < maxSingu)) {
+	  if (out.IsArray()) {
+	    ErrorType tmp(out[idx_wrapped], allocator);
+	    out.Swap(tmp);
+	  }
+	}
+	CheckErrorReplace_(nonTypeError, &nonTypeError_wrapped, allocator);
+	CheckErrorReplace_(typeError, &typeError_wrapped, allocator);
+      }
       return true;
     }
 
@@ -10277,7 +10538,8 @@ public:
 		      const ValueType* err,
 		      ErrorType* nonTypeError,
 		      ErrorType* typeError,
-		      bool isSingular = false) const {
+		      bool isSingular = false,
+		      bool isWrapped = false) const {
       typedef typename ValueType::ConstMemberIterator MemberIter;
       typedef typename ValueType::ConstValueIterator ValueIter;
       out.SetObject();
@@ -10381,6 +10643,13 @@ public:
 				GetSingularString().length,
 				allocator).Move(),
 		      ErrorType(isSingular).Move(),
+		      allocator);
+      }
+      if (isWrapped) {
+	out.AddMember(ErrorType(GetWrappedString(),
+				GetWrappedString().length,
+				allocator).Move(),
+		      ErrorType(isWrapped).Move(),
 		      allocator);
       }
       MemberIter errArray = err->FindMember(GetErrorsString());
@@ -10879,6 +11148,23 @@ public:
 		     GetStateAllocator());
     return vcode;
   }
+  ValidateErrorCode NotWrappedItem(ISchemaValidator** subvalidator) {
+    error_.CopyFrom(static_cast<GenericSchemaValidator*>(subvalidator[0])->GetError(), GetStateAllocator(), true);
+    RAPIDJSON_ASSERT(error_.IsObject());
+    ValidateErrorCode vcode = kValidateErrors;
+    if (error_.MemberCount() == 1) {
+      typename ValueType::ConstMemberIterator m = error_.MemberBegin();
+      RAPIDJSON_ASSERT(m->value.IsObject());
+      typename ValueType::ConstMemberIterator m_vcode = m->value.FindMember(GetErrorCodeString());
+      RAPIDJSON_ASSERT(m_vcode != m->value.MemberEnd());
+      vcode = static_cast<ValidateErrorCode>(m_vcode->value.GetUint());
+    }
+    error_.AddMember(GetWrappedString(),
+		     ValueType(static_cast<GenericSchemaValidator*>(subvalidator[1])->GetError(),
+			       GetStateAllocator()).Move(),
+		     GetStateAllocator());
+    return vcode;
+  }
   void NormalizationMergeConflict(const typename SchemaType::ValueType& cond,
 				  const SValue& expected, const SValue& actual) {
     currentError_.SetObject();
@@ -10931,6 +11217,7 @@ public:
     RAPIDJSON_STRING_(Warning, 'w', 'a', 'r', 'n', 'i', 'n', 'g')
     RAPIDJSON_STRING_(Warnings, 'w', 'a', 'r', 'n', 'i', 'n', 'g', 's')
     RAPIDJSON_STRING_(Singular, 's', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
+    RAPIDJSON_STRING_(Wrapped, 'w', 'r', 'a', 'p', 'p', 'e', 'd')
     RAPIDJSON_STRING_(Message, 'm', 'e', 's', 's', 'a', 'g', 'e')
     RAPIDJSON_STRING_(Property, 'p', 'r', 'o', 'p', 'e', 'r', 't', 'y')
 #endif //RAPIDJSON_YGGDRASIL

@@ -890,6 +890,38 @@ TEST(SchemaNormalizer, AliasConflict) {
 		     "}}");
 }
 
+TEST(SchemaNormalizer, ArrayWrapped) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"streets\": { \"type\": \"string\","
+	"                    \"allowWrapped\": true,"
+	"                    \"aliases\": [\"street\"] }},"
+	"  \"required\": [\"streets\"]"
+        "}");
+  SchemaDocument s(sd);
+  NORMALIZE(s, "{ \"streets\": [\"1600 Pennsylvania Ave.\"] }", true,
+	    "{ \"streets\": \"1600 Pennsylvania Ave.\" }");
+}
+
+TEST(SchemaNormalizer, ObjectWrapped) {
+  Document sd;
+  sd.Parse(
+        "{"
+        "  \"type\": \"object\","
+	"  \"properties\": {"
+	"     \"streets\": { \"type\": \"string\","
+	"                    \"allowWrapped\": \"key\","
+	"                    \"aliases\": [\"street\"] }},"
+	"  \"required\": [\"streets\"]"
+        "}");
+  SchemaDocument s(sd);
+  NORMALIZE(s, "{ \"streets\": {\"key\": \"1600 Pennsylvania Ave.\"} }", true,
+	    "{ \"streets\": \"1600 Pennsylvania Ave.\" }");
+}
+
 TEST(SchemaNormalizer, SingularArray) {
   Document sd;
   sd.Parse(
