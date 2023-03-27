@@ -6034,6 +6034,14 @@ public:
 	if (!not_->GenerateData(data, context, allocator, data_set, !isNot))
 	  return false;
       }
+      if (allowSingularSchema_.schemas) {
+	if (!allowSingularSchema_.schemas[0]->GenerateData(data, context, allocator, data_set, isNot))
+	  return false;
+      }
+      if (allowWrappedSchema_.schemas) {
+	if (!allowWrappedSchema_.schemas[0]->GenerateData(data, context, allocator, data_set, isNot))
+	  return false;
+      }
       return true;
 #undef GET_VALUE_
 #undef GET_VALUE__
