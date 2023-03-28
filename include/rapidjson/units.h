@@ -23,7 +23,6 @@
 #include "precision.h"
 #include <wchar.h>
 #include <locale.h>
-#include <typeindex>
 #include <map>
 #include <vector>
 #include <set>
@@ -265,7 +264,7 @@ namespace units {
       base_.insert(base_.end(), base->begin(), base->end());
     }
     ~CachedLUT() {
-      for (std::map<std::type_index, void*>::iterator it = cache_.begin(); it != cache_.end(); it++)
+      for (std::map<int32_t, void*>::iterator it = cache_.begin(); it != cache_.end(); it++)
         free(it->second);
     }
   private:
@@ -283,8 +282,8 @@ namespace units {
     { return &base_; }
     template<typename T2>
     const std::vector<T2>* get(RAPIDJSON_DISABLEIF((internal::IsSame<T, T2>))) {
-      std::type_index idx = std::type_index(typeid(typename T2::EncodingType));
-      std::map<std::type_index, void*>::iterator match = cache_.find(idx);
+      int32_t idx = T2::EncodingType::HashCode();
+      std::map<int32_t, void*>::iterator match = cache_.find(idx);
       if (match == cache_.end()) {
         std::vector<T2>* new_entry = (std::vector<T2>*)malloc(sizeof(std::vector<T2*>));
 	RAPIDJSON_ASSERT(new_entry);
@@ -299,7 +298,7 @@ namespace units {
     }
   private:
     std::vector<T> base_;
-    std::map<std::type_index, void*> cache_;
+    std::map<int32_t, void*> cache_;
   };
 
 // Forward declarations

@@ -8,7 +8,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
-#include <string>
+#include <cstdlib>
 #include <typeinfo>
 
 RAPIDJSON_NAMESPACE_BEGIN
@@ -1320,7 +1320,7 @@ bool ObjPropertyType::read(std::istream& in) {
     if (!(second & ObjTypeInt) || (second & ObjTypeList)) return false;
     std::string valS;
     in >> valS;
-    ((int*)mem)[0] = (valS == "off") ? 0 : std::stoi(valS);
+    ((int*)mem)[0] = (valS == "off") ? 0 : std::atoi(valS.c_str());
     return true;
   } else if (second & ObjTypeList) {
     if (second & ObjTypeString) {
@@ -3654,7 +3654,7 @@ public:
   ObjMergingGroup(const T& value0, const double& resolution0,
 		  const ObjGroupBase* parent0 = NULL,
 		  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
-    ObjElement("mg", parent0), value((value0 == "off") ? 0 : std::stoi(value0)), resolution(resolution0) {
+    ObjElement("mg", parent0), value((value0 == "off") ? 0 : std::atoi(value0.c_str())), resolution(resolution0) {
     this->_init_properties();
   }
   //! \brief Initialize the smoothing group from an integer.

@@ -8,9 +8,6 @@
 #include <iostream>
 #include <cfloat>
 #include <typeinfo>
-#ifndef RAPIDJSON_NO_INT64DEFINE
-#include <cstdint>
-#endif
 
 // 8 bit
 #ifndef INT8_MAX

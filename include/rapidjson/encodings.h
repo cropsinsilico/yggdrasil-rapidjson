@@ -87,6 +87,39 @@ concept Encoding {
 \endcode
 */
 
+#ifdef RAPIDJSON_YGGDRASIL
+enum EncodingCode {
+  kUTF8Code,
+  kUTF16Code,
+  kUTF16LECode,
+  kUTF16BECode,
+  kUTF32Code,
+  kUTF32LECode,
+  kUTF32BECode,
+  kASCIICode,
+  kAutoUTFCode
+};
+enum CharacterCode {
+  kCharCode,
+  kWCharCode,
+  kUnsignedCode
+};
+#define ADD_ENCODING_CODE_(name)				\
+  static int32_t HashCode() {					\
+    int32_t out = k ## name ## Code;				\
+    out <<= 16;							\
+    if (internal::IsSame<CharType, char>::Value)		\
+      out |= kCharCode;						\
+    else if (internal::IsSame<CharType, wchar_t>::Value)	\
+      out |= kWCharCode;					\
+    else if (internal::IsSame<CharType, unsigned>::Value)	\
+      out |= kUnsignedCode;					\
+    return out;							\
+  }
+#else // RAPIDJSON_YGGDRASIL
+#define ADD_ENCODING_CODE_(name)
+#endif // RAPIDJSON_YGGDRASIL
+
 ///////////////////////////////////////////////////////////////////////////////
 // UTF8
 
@@ -104,6 +137,7 @@ struct UTF8 {
 #ifdef RAPIDJSON_YGGDRASIL
     enum { fixedWidth = 0 };
 #endif // RAPIDJSON_YGGDRASIL
+    ADD_ENCODING_CODE_(UTF8)
 
     template<typename OutputStream>
     static void Encode(OutputStream& os, unsigned codepoint) {
@@ -281,6 +315,7 @@ struct UTF16 {
 #ifdef RAPIDJSON_YGGDRASIL
     enum { fixedWidth = 0 };
 #endif // RAPIDJSON_YGGDRASIL
+    ADD_ENCODING_CODE_(UTF16)
 
     template<typename OutputStream>
     static void Encode(OutputStream& os, unsigned codepoint) {
@@ -350,6 +385,7 @@ struct UTF16 {
 //! UTF-16 little endian encoding.
 template<typename CharType = wchar_t>
 struct UTF16LE : UTF16<CharType> {
+    ADD_ENCODING_CODE_(UTF16LE)
     template <typename InputByteStream>
     static CharType TakeBOM(InputByteStream& is) {
         RAPIDJSON_STATIC_ASSERT(sizeof(typename InputByteStream::Ch) == 1);
@@ -383,6 +419,7 @@ struct UTF16LE : UTF16<CharType> {
 //! UTF-16 big endian encoding.
 template<typename CharType = wchar_t>
 struct UTF16BE : UTF16<CharType> {
+    ADD_ENCODING_CODE_(UTF16BE)
     template <typename InputByteStream>
     static CharType TakeBOM(InputByteStream& is) {
         RAPIDJSON_STATIC_ASSERT(sizeof(typename InputByteStream::Ch) == 1);
@@ -433,6 +470,7 @@ struct UTF32 {
 #ifdef RAPIDJSON_YGGDRASIL
     enum { fixedWidth = 1 };
 #endif // RAPIDJSON_YGGDRASIL
+    ADD_ENCODING_CODE_(UTF32)
 
     template<typename OutputStream>
     static void Encode(OutputStream& os, unsigned codepoint) {
@@ -468,6 +506,7 @@ struct UTF32 {
 //! UTF-32 little endian enocoding.
 template<typename CharType = unsigned>
 struct UTF32LE : UTF32<CharType> {
+    ADD_ENCODING_CODE_(UTF32LE)
     template <typename InputByteStream>
     static CharType TakeBOM(InputByteStream& is) {
         RAPIDJSON_STATIC_ASSERT(sizeof(typename InputByteStream::Ch) == 1);
@@ -507,6 +546,7 @@ struct UTF32LE : UTF32<CharType> {
 //! UTF-32 big endian encoding.
 template<typename CharType = unsigned>
 struct UTF32BE : UTF32<CharType> {
+    ADD_ENCODING_CODE_(UTF32BE)
     template <typename InputByteStream>
     static CharType TakeBOM(InputByteStream& is) {
         RAPIDJSON_STATIC_ASSERT(sizeof(typename InputByteStream::Ch) == 1);
@@ -559,6 +599,7 @@ struct ASCII {
 #ifdef RAPIDJSON_YGGDRASIL
     enum { fixedWidth = 1 };
 #endif // RAPIDJSON_YGGDRASIL
+    ADD_ENCODING_CODE_(ASCII)
 
     template<typename OutputStream>
     static void Encode(OutputStream& os, unsigned codepoint) {
@@ -635,6 +676,7 @@ struct AutoUTF {
 #ifdef RAPIDJSON_YGGDRASIL
     enum { fixedWidth = 0 };
 #endif // RAPIDJSON_YGGDRASIL
+    ADD_ENCODING_CODE_(AutoUTF)
 
 #define RAPIDJSON_ENCODINGS_FUNC(x) UTF8<Ch>::x, UTF16LE<Ch>::x, UTF16BE<Ch>::x, UTF32LE<Ch>::x, UTF32BE<Ch>::x
 
