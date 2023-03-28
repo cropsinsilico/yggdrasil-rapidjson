@@ -188,8 +188,9 @@ class HasYggdrasilMethodImpl
   template <typename T, typename VT>
   static Yes HasYggdrasil(decltype(&T::template YggdrasilString<VT>));
 #else // RAPIDJSON_HAS_CXX11
+  template<typename T, typename VT, bool (T::*)(const typename T::Ch*, SizeType, bool, VT&)> struct SFINAE {};
   template <typename T, typename VT>
-  static Yes HasYggdrasil(__typeof__(&T::template YggdrasilString<VT>));
+  static Yes HasYggdrasil(SFINAE<T, VT, &T::template YggdrasilString<VT> >*);
 #endif // RAPIDJSON_HAS_CXX11
   template <typename T, typename VT>
   static No  HasYggdrasil(...);

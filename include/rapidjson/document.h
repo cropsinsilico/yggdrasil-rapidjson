@@ -28,6 +28,7 @@
 #include <compare>
 #endif
 #ifdef RAPIDJSON_YGGDRASIL
+#include <sstream> // required for ostringstream
 #include "stringbuffer.h"
 #include "base64.h"
 #include "ply.h"
@@ -4817,7 +4818,9 @@ public:
 	    error = true;
 	    goto cleanup;
 	  }
-	  new_itype_str += std::to_string((int)max_len);
+	  std::ostringstream ostr;
+	  ostr << (int)max_len;
+	  new_itype_str += ostr.str();
 	  new_itype = PyUnicode_FromString(new_itype_str.c_str());
 	  if (new_itype == NULL) {
 	    error = true;

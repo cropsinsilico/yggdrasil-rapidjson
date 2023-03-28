@@ -12010,6 +12010,13 @@ public:
       normalized_.FinalizeFromStack();
     return true;
   }
+
+  // Explicit to satisfy HasYggdrasilMethod
+  template <typename YggSchemaValueType>
+  bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema)
+  {
+    return GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>::YggdrasilString(str, length, copy, schema);
+  }
   
   //! Implementation of ISchemaValidator
   unsigned GetValidatorID() const OVERRIDE_CXX11 { return validator_index_; }

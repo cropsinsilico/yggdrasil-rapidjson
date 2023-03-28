@@ -399,7 +399,8 @@ private:
   }
 public:
   template <typename SchemaValueType>
-  bool YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>))) {
+  RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
+  YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType& schema) {
     RAPIDJSON_ASSERT(str != 0);
     if (yggdrasilMode_) {
       return yggdrasilMode_->YggdrasilString(str, length, copy, schema);
@@ -413,7 +414,8 @@ public:
     return true;
   }
   template <typename SchemaValueType>
-  bool YggdrasilStartObject(SchemaValueType& schema, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>))) {
+  RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
+  YggdrasilStartObject(SchemaValueType& schema) {
     if (yggdrasilMode_) {
       return yggdrasilMode_->YggdrasilStartObject(schema);
     } else {
@@ -910,10 +912,12 @@ public:
   bool EndArray(SizeType elementCount = 0)
   { RAPIDJSON_WRAP_BASE64_(EndArray, (elementCount)); }
   template <typename SchemaValueType>
-  bool YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType&, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>)))
+  RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
+  YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType&)
   { RAPIDJSON_WRAP_BASE64_(String, (str, length, copy)); }
   template <typename SchemaValueType>
-  bool YggdrasilStartObject(SchemaValueType&, RAPIDJSON_DISABLEIF((internal::HasYggdrasilMethod<OutputStream,SchemaValueType>)))
+  RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
+  YggdrasilStartObject(SchemaValueType&)
   { RAPIDJSON_WRAP_BASE64_(StartObject, ()); }
   bool YggdrasilEndObject(SizeType memberCount = 0)
   { RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount)); }

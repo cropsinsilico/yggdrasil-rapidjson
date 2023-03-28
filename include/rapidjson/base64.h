@@ -618,9 +618,10 @@ public:
     buffer_empty_[1] = true;
     buffer_empty_[2] = true;
   }
-  //! \brief Dummy yggdrasil method.
+  //! \brief Dummy yggdrasil method used by HasYggdrasil.
   template <typename SchemaValueType>
-  bool YggdrasilString() { return false; }
+  bool YggdrasilString(const Ch*, SizeType, bool, SchemaValueType&)
+  { return false; }
 
   //! \brief Wrapper for stream
   UTFType GetType() const { return stream_.GetType(); }
