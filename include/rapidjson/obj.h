@@ -1,6 +1,7 @@
 #ifndef RAPIDJSON_OBJ_H_
 #define RAPIDJSON_OBJ_H_
 
+#include "internal/meta.h"
 #include <iostream>
 #include <set>
 #include <iterator>
@@ -9,7 +10,6 @@
 #include <algorithm>
 #include <string>
 #include <typeinfo>
-#include "internal/meta.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
 

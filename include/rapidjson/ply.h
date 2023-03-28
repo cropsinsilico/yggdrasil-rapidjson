@@ -1,11 +1,11 @@
 #ifndef RAPIDJSON_PLY_H_
 #define RAPIDJSON_PLY_H_
 
+#include "internal/meta.h"
 #include <iostream>
 #include <map>
 #include <vector>
 #include <algorithm>
-#include "internal/meta.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
 

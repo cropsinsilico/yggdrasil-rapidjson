@@ -673,14 +673,12 @@ bool parseYggdrasilString(const typename Encoding::Ch* str, SizeType length, boo
     // std::cerr << "Reading schema (encoded_len = " << len_schema
     // 	  << ", decoded_len = " << elen_schema
     // 	  << ")" << std::endl;
-    SizeType nempty_schema = 0;
     for (SizeType j = 0; j < elen_schema; j++) {
       // std::cerr << "    char " << j << " " << is64.Peek() << std::endl;
       if (is64.Peek() != '\0') {
 	os_schema.Put(is64.Take());
       } else { 
 	is64.Take();
-	nempty_schema++;
       }
     }
     is.src_ += len_ygg;
