@@ -463,7 +463,7 @@ public:
     }
     static GenericPointer FromRelative(const Ch* source, size_t length,
 				       Allocator& allocator) {
-      Ch* str = nullptr;
+      Ch* str = NULL;
       if (length > 0 && source[0] == (Ch)'!') {
 	length--;
 	str = (Ch*)allocator.Malloc((length + 1) * sizeof(Ch));
@@ -1120,7 +1120,7 @@ public:
 		      vStack = v;
 		    } else {
 		      v = &m->value;
-		      vStack = nullptr;
+		      vStack = NULL;
 		    }
                 }
                 continue;
@@ -1129,7 +1129,7 @@ public:
 		  if (t->index == kPointerInvalidIndex || t->index >= v->Size())
                     break;
 		  v = &((*v)[t->index]);
-		  vStack = nullptr;
+		  vStack = NULL;
 		} else {
 		  SizeType i = 0;
 		  typename DocumentType::ValueType* s = vStack + 1;

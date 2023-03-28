@@ -7,6 +7,7 @@
 #include "rapidjson.h"
 #include <iostream>
 #include <cfloat>
+#include <typeinfo>
 #ifndef RAPIDJSON_NO_INT64DEFINE
 #include <cstdint>
 #endif

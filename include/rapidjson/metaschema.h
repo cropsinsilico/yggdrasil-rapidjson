@@ -7,7 +7,7 @@ template<class T>
 struct item_return{ typedef T type; };
 
 template<typename T>
-inline const typename item_return<T>::type* get_metaschema() { return nullptr; }
+inline const typename item_return<T>::type* get_metaschema() { return NULL; }
 
 template<>
 inline const item_return<char>::type* get_metaschema<char>() {
@@ -828,7 +828,7 @@ inline const item_return<wchar_t>::type* get_metaschema<wchar_t>() {
 }
 
 template<typename T>
-inline const typename item_return<T>::type* get_standard_metaschema() { return nullptr; }
+inline const typename item_return<T>::type* get_standard_metaschema() { return NULL; }
 
 template<>
 inline const item_return<char>::type* get_standard_metaschema<char>() {

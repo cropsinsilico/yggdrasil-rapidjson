@@ -233,7 +233,7 @@ namespace units {
     va_start(args, first);
     while (true) {
       Ch* i = va_arg(args, Ch*);
-      if (i == nullptr) break;
+      if (i == NULL) break;
       out.push_back(i);
     }
     va_end(args);
@@ -587,7 +587,7 @@ inline std::ostream & operator << (std::ostream& os, const GenericUnitPrefix<Enc
       PACK_PREFIX("a", 1e-18, "atto"),
       PACK_PREFIX("z", 1e-21, "zepto"),
       PACK_PREFIX("y", 1e-24, "yocto"),
-      (void*)nullptr
+      (void*)NULL
     );
 
 #undef PACK_PREFIX
@@ -1436,7 +1436,7 @@ GenericUnits<Encoding> operator/(const GenericUnit<Encoding>& a, const GenericUn
 typedef GenericUnits<UTF8<char> > Units;
 
 #define PACK_UNIT(...) PACK_LUT(Unit, (__VA_ARGS__))
-#define VSTR(...) pack_strings<char>(__VA_ARGS__, (char*)nullptr)
+#define VSTR(...) pack_strings<char>(__VA_ARGS__, (char*)NULL)
 
   // MKS as base, units that can have SI prefixes
   static CachedLUT<Unit> _base_units (
@@ -1448,7 +1448,7 @@ typedef GenericUnits<UTF8<char> > Units;
       PACK_UNIT("mole", "mol", dimensions::number, 1.0 / constants::amu_grams),
       PACK_UNIT("candela", "cd", dimensions::luminous_intensity),
       PACK_UNIT("radian", "rad", dimensions::angle),
-      (void*)nullptr
+      (void*)NULL
     );
   
   static CachedLUT<Unit> _prefixable_units (
@@ -1492,7 +1492,7 @@ typedef GenericUnits<UTF8<char> > Units;
       PACK_UNIT(VSTR("jansky"), VSTR("J", "j"), dimensions::specific_flux, constants::jansky_mks),
       PACK_UNIT("sievert", "Sv", dimensions::specific_energy),
       PACK_UNIT("molar", "M", dimensions::number_density, 100.0 / constants::amu_grams),
-      (void*)nullptr
+      (void*)NULL
     );
   
   static CachedLUT<Unit> _unprefixable_units(
@@ -1570,7 +1570,7 @@ typedef GenericUnits<UTF8<char> > Units;
     PACK_UNIT("are", "a", dimensions::area, 100.0),
     PACK_UNIT("hectare", "ha", dimensions::area, 10000.0),
     PACK_UNIT(VSTR(""), VSTR("", "n/a", "dimensionless"), dimensions::dimensionless, 1.0),
-    (void*)nullptr
+    (void*)NULL
   );
 
 #undef PACK_UNIT
@@ -1648,7 +1648,7 @@ class TokenBase {
 private:
   TokenBase(const TokenBase<Encoding>& rhs);
 public:
-  TokenBase(const TokenType t0, TokenBase *parent0=nullptr) : t(t0), units(), finalized(kTokenFinalizeNull), parent(parent0), value_(0.0), errorFlag(false) {}
+  TokenBase(const TokenType t0, TokenBase *parent0=NULL) : t(t0), units(), finalized(kTokenFinalizeNull), parent(parent0), value_(0.0), errorFlag(false) {}
   virtual ~TokenBase() {}
   virtual TokenBase<Encoding>* current_token() { return this; }
   virtual GenericUnits<Encoding> finalize(TokenFinalization x) {
@@ -1693,7 +1693,7 @@ template<typename Encoding>
 class OperatorToken : public TokenBase<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
-  OperatorToken(const Ch op0, TokenBase<Encoding> *parent0=nullptr) : TokenBase<Encoding>(kOperatorToken, parent0), op(op0) { this->finalize(kTokenFinalizeAlways); }
+  OperatorToken(const Ch op0, TokenBase<Encoding> *parent0=NULL) : TokenBase<Encoding>(kOperatorToken, parent0), op(op0) { this->finalize(kTokenFinalizeAlways); }
   void append(const Ch c) OVERRIDE_CXX11 { RAPIDJSON_ASSERT(!c); (void)c; } // GCOVR_EXCL_LINE
   GenericUnits<Encoding> operate(const GenericUnits<Encoding>& a, const GenericUnits<Encoding>& b) {
     switch (op) {
@@ -1750,7 +1750,7 @@ template<typename Encoding>
 class WordToken : public TokenBase<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
-  WordToken(const Ch c, TokenBase<Encoding> *parent0=nullptr) : TokenBase<Encoding>(kWordToken, parent0), word() {
+  WordToken(const Ch c, TokenBase<Encoding> *parent0=NULL) : TokenBase<Encoding>(kWordToken, parent0), word() {
     word.push_back(c);
   }
   void append(const Ch c) OVERRIDE_CXX11 {
@@ -1776,7 +1776,7 @@ template<typename Encoding>
 class NumberToken : public WordToken<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
-  NumberToken(const Ch c, TokenBase<Encoding> *parent0=nullptr) : WordToken<Encoding>(c, parent0) {}
+  NumberToken(const Ch c, TokenBase<Encoding> *parent0=NULL) : WordToken<Encoding>(c, parent0) {}
   bool is_numeric() OVERRIDE_CXX11 { return true; }
   GenericUnits<Encoding> finalize(TokenFinalization x) OVERRIDE_CXX11 {
     if (!(this->finalized))
@@ -1793,7 +1793,7 @@ template<typename Encoding>
 class GroupToken : public TokenBase<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
-  GroupToken(TokenBase<Encoding> *parent0=nullptr) : TokenBase<Encoding>(kGroupToken, parent0), tokens() {}
+  GroupToken(TokenBase<Encoding> *parent0=NULL) : TokenBase<Encoding>(kGroupToken, parent0), tokens() {}
   ~GroupToken() OVERRIDE_CXX11 {
     for (size_t i = 0; i < tokens.size(); i++)
       delete tokens[i];
@@ -1918,7 +1918,7 @@ public:
 	  for (size_t ii = i - 1; ii <= (i + 1); ii++) {
 	    tokens[ii]->parent = new_group;
 	    new_group->append(tokens[ii]);
-	    tokens[ii] = nullptr;
+	    tokens[ii] = NULL;
 	  }
 	  tokens[i + 1] = (TokenBase<Encoding>*)(new_group);
 	  new_group->finalize(kTokenFinalizeAlways);

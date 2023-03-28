@@ -284,7 +284,7 @@ typename Encoding::Ch* PyUnicode_AsEncoding(PyObject* x, SizeType& length,
     assign_char_PyUnicode<Encoding>(x, py_len, orig, x2);
   }
   length = (SizeType)py_len;
-  typename Encoding::Ch* out = nullptr;
+  typename Encoding::Ch* out = NULL;
   if (orig != NULL) {
     out = (typename Encoding::Ch*)allocator.Malloc(length * sizeof(typename Encoding::Ch));
     memcpy(out, orig, length * sizeof(typename Encoding::Ch));

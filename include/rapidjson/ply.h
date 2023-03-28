@@ -268,7 +268,7 @@ private:
       case (kInt32Flag) :
 	return -1;
       default:
-	if (std::is_same<T, double>::value)
+	if (internal::IsSame<T, double>::Value)
 	  return (T)NAN;
 	return -1;
       }

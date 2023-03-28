@@ -184,8 +184,13 @@ class HasYggdrasilMethodImpl
 {
   typedef char Yes;
   typedef long No;
+#if RAPIDJSON_HAS_CXX11
   template <typename T, typename VT>
   static Yes HasYggdrasil(decltype(&T::template YggdrasilString<VT>));
+#else // RAPIDJSON_HAS_CXX11
+  template <typename T, typename VT>
+  static Yes HasYggdrasil(__typeof__(&T::template YggdrasilString<VT>));
+#endif // RAPIDJSON_HAS_CXX11
   template <typename T, typename VT>
   static No  HasYggdrasil(...);
 public:

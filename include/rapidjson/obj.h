@@ -7,6 +7,8 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <string>
+#include <typeinfo>
 #include "internal/meta.h"
 
 RAPIDJSON_NAMESPACE_BEGIN
@@ -237,7 +239,7 @@ public:
   template<typename T>
   bool _get_scalar_mem(T*& val, bool resize=false) {
     if (!mem) return false;
-    val = nullptr;
+    val = NULL;
     if (second & ObjTypeIdx) {
       std::vector<T>* mem_vect = (std::vector<T>*)mem;
       if (idx >= mem_vect->size()) {
@@ -433,7 +435,7 @@ public:
   virtual bool has_property(const std::string name,
 			    bool dontCheckOrder=false,
 			    bool skipColors=false,
-			    size_t* idx = nullptr) const {
+			    size_t* idx = NULL) const {
     if (dontCheckOrder)
       return true;
     if (skipColors && (name == "red" ||
@@ -456,7 +458,7 @@ public:
     std::vector<std::string> out;
     for (ObjPropertiesMap::const_iterator it = properties.begin();
 	 it != properties.end(); it++) {
-      if (this->has_property(it->first, true, skipColors))
+      if (this->has_property(it->first, true, skipColors, NULL))
 	out.push_back(it->first);
     }
     return out;
@@ -1075,7 +1077,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
 #define HANDLE_VECTOR_SET_TEMPLATE_(T, type)				\
     HANDLE_VECTOR_SET_(T, type, typename)
 #define HANDLE_SCALAR_SET_(T, type)					\
-    type* mem_cast = nullptr;						\
+    type* mem_cast = NULL;						\
     if (!_get_scalar_mem(mem_cast, true)) return false;			\
     if (inc && is_index) {						\
       type vv = static_cast<type>(val);					\
@@ -1102,7 +1104,7 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     }									\
     return true
 #define HANDLE_SCALAR_GET_(T, type)					\
-    type* mem_cast = nullptr;						\
+    type* mem_cast = NULL;						\
     if (!_get_scalar_mem(mem_cast)) return false;			\
     out = static_cast<T>(*mem_cast);					\
     if (dec && is_index) {						\
@@ -1296,7 +1298,7 @@ bool ObjPropertyType::read(std::istream& in) {
     missing = true;							\
     return (second & ObjTypeOpt);					\
   }									\
-  T* val = nullptr;							\
+  T* val = NULL;							\
   if (!_get_scalar_mem(val, true)) return false;			\
   if (!(in >> *val)) {							\
     if (second & ObjTypeIdx) {						\
@@ -1318,7 +1320,7 @@ bool ObjPropertyType::read(std::istream& in) {
     if (!(second & ObjTypeInt) || (second & ObjTypeList)) return false;
     std::string valS;
     in >> valS;
-    ((int*)mem)[0] = (valS == "off") ? 0 : stoi(valS);
+    ((int*)mem)[0] = (valS == "off") ? 0 : std::stoi(valS);
     return true;
   } else if (second & ObjTypeList) {
     if (second & ObjTypeString) {
@@ -1349,7 +1351,7 @@ bool ObjPropertyType::write(std::ostream& out, bool pad) const {
   out.precision(out_prec);			\
   out.flags(out_flags)
 #define HANDLE_SCALAR_WRITE_(T0, T)					\
-  T* val = nullptr;							\
+  T* val = NULL;							\
   if (!_get_scalar_mem(val)) return (second & ObjTypeOpt);		\
   if (second & ObjTypeFloat) {						\
     RECORD_FORMAT_(prec);						\
@@ -1415,8 +1417,8 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   if (first != rhs.first || second != rhs.second) return false;
   if ((!mem) || (!rhs.mem)) return false;
 #define HANDLE_SCALAR_(T0, T)					\
-  T* val_lhs = nullptr;						\
-  T* val_rhs = nullptr;						\
+  T* val_lhs = NULL;						\
+  T* val_rhs = NULL;						\
   bool mem_lhs = _get_scalar_mem(val_lhs);			\
   bool mem_rhs = rhs._get_scalar_mem(val_rhs);			\
   if (!mem_lhs || !mem_rhs)					\
@@ -1481,7 +1483,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
       else if (word == "trace_obj" ) lhs = new ObjTraceFile args;	\
       else if (word == "ctech"     ) lhs = new ObjCTech args;		\
       else if (word == "stech"     ) lhs = new ObjSTech args;		\
-      else if (word == "end"       ) lhs = nullptr;			\
+      else if (word == "end"       ) lhs = NULL;			\
       else if (first) {							\
 	first = false;							\
 	word = obj_alias2base(word);					\
@@ -1518,7 +1520,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
 #define GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, init, props)	\
   /*! \brief Empty constructor. */					\
   /*! \param parent0 The element's parent group. */			\
-  cls(const ObjGroupBase* parent0 = nullptr) :				\
+  cls(const ObjGroupBase* parent0 = NULL) :				\
     base(#codeS, parent0) UNPACK_MACRO init {				\
     this->_init_properties();						\
   }									\
@@ -1532,7 +1534,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
 #define GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, init, props)	\
   /*! \brief Empty constructor. */					\
   /*! \param parent0 The element's parent group. */			\
-  cls(const ObjGroupBase* parent0 = nullptr) :				\
+  cls(const ObjGroupBase* parent0 = NULL) :				\
     base(#codeS, parent0) UNPACK_MACRO init {				\
     this->_init_properties();						\
   }									\
@@ -1555,7 +1557,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
     ObjPropertiesMap::const_iterator rit = rhs->properties.begin();	\
     for (ObjPropertiesMap::iterator lit = properties.begin();		\
 	 lit != properties.end(); lit++, rit++) {			\
-      if (!this->has_property(lit->first, true)) continue;		\
+      if (!this->has_property(lit->first, true, false, NULL)) continue;	\
       if (!lit->copy(*rit)) return false;				\
     }									\
     return true;							\
@@ -1564,14 +1566,14 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   /*! \brief Raise an error. */						\
   template <typename T>							\
   cls(const std::vector<T> &,						\
-      const ObjGroupBase* parent0 = nullptr,				\
+      const ObjGroupBase* parent0 = NULL,				\
       bool = false) : base(#code, parent0) UNPACK_MACRO init {		\
     RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from a vector")); \
   }									\
   /*! \brief Raise an error. */						\
   template <typename T, size_t N>					\
   cls(const T (&)[N],							\
-      const ObjGroupBase* parent0 = nullptr,				\
+      const ObjGroupBase* parent0 = NULL,				\
       bool = false) : base(#code, parent0) UNPACK_MACRO init {		\
     RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from an array")); \
   }
@@ -1584,7 +1586,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   /*! \param parent0 Parent group. */					\
   template <typename T>							\
   cls(const T& value0,							\
-      const ObjGroupBase* parent0 = nullptr,				\
+      const ObjGroupBase* parent0 = NULL,				\
       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, type)))) :		\
   base(#code, parent0), value(value0) {					\
     this->_init_properties();						\
@@ -1594,7 +1596,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   /*! \param parent0 Parent group. */					\
   template <typename T>							\
   cls(const T&,								\
-      const ObjGroupBase* parent0 = nullptr,				\
+      const ObjGroupBase* parent0 = NULL,				\
       RAPIDJSON_DISABLEIF((internal::OrExpr<COMPATIBLE_WITH_TYPE(T, type),\
 			   internal::IsPointer<T> >))) :			\
     base(#code, parent0), value(def) {					\
@@ -1616,7 +1618,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   /*! \param parent0 The element's parent group. */			\
   template <typename T>							\
   cls(const std::vector<T> &values0,					\
-      const ObjGroupBase* parent0 = nullptr,				\
+      const ObjGroupBase* parent0 = NULL,				\
       RAPIDJSON_ENABLEIF((compat))) :					\
   base(#code, parent0) UNPACK_MACRO init {				\
     this->_init_properties();						\
@@ -1627,7 +1629,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   /*! \tparam T Type of vector elements. */				\
   template <typename T>							\
   cls(const std::vector<T>&,						\
-      const ObjGroupBase* parent0 = nullptr,				\
+      const ObjGroupBase* parent0 = NULL,				\
       RAPIDJSON_DISABLEIF((compat))) :					\
     base(#code, parent0) UNPACK_MACRO init {				\
     RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
@@ -1638,7 +1640,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   /*! \param src Array of values. */					\
   template <typename T, size_t N>					\
   cls(const T (&values0)[N],						\
-      const ObjGroupBase* parent0 = nullptr,				\
+      const ObjGroupBase* parent0 = NULL,				\
       RAPIDJSON_ENABLEIF((compat))) :					\
     base(#code, parent0) UNPACK_MACRO init {				\
     this->_init_properties();						\
@@ -1650,7 +1652,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   /*! \tparam N Array size. */						\
   template <typename T, size_t N>					\
   cls(const T (&)[N],							\
-      const ObjGroupBase* parent0 = nullptr,				\
+      const ObjGroupBase* parent0 = NULL,				\
       RAPIDJSON_DISABLEIF((compat))) :					\
     base(#code, parent0) UNPACK_MACRO init {				\
     RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
@@ -1662,7 +1664,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
     size_t out = 0;							\
     for (ObjPropertiesMap::const_iterator it = properties.begin();	\
 	 it != properties.end(); it++) {				\
-      if (!this->has_property(it->first, true, skipColors)) continue;	\
+      if (!this->has_property(it->first, true, skipColors, NULL)) continue; \
       if (it->second & ObjTypeList)					\
 	out += values.size();						\
       else								\
@@ -1795,8 +1797,8 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
     }									\
   }									\
   /*! \copydoc ObjElement::last_subelement */				\
-  ObjPropertyElement* last_subelement(bool* temp = nullptr) OVERRIDE_CXX11 { \
-    if (values.size() == 0) return nullptr;				\
+  ObjPropertyElement* last_subelement(bool* temp = NULL) OVERRIDE_CXX11 { \
+    if (values.size() == 0) return NULL;				\
     if (temp) temp[0] = false;						\
     return &(values[values.size() - 1]);				\
   }									\
@@ -1839,8 +1841,8 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
     }									\
   }									\
   /*! \copydoc ObjElement::last_subelement */				\
-  ObjPropertyElement* last_subelement(bool* temp = nullptr) OVERRIDE_CXX11 { \
-    if (values.size() == 0) return nullptr;				\
+  ObjPropertyElement* last_subelement(bool* temp = NULL) OVERRIDE_CXX11 { \
+    if (values.size() == 0) return NULL;				\
     if (temp) temp[0] = false;						\
     return &(values[values.size() - 1]);				\
   }									\
@@ -1869,8 +1871,8 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
     }									\
   }									\
   /*! \copydoc ObjElement::last_subelement */				\
-  ObjPropertyElement* last_subelement(bool* temp = nullptr) OVERRIDE_CXX11 { \
-    if (values.size() == 0 || (!temp) || this->properties.size() > 1) return nullptr; \
+  ObjPropertyElement* last_subelement(bool* temp = NULL) OVERRIDE_CXX11 { \
+    if (values.size() == 0 || (!temp) || this->properties.size() > 1) return NULL; \
     *temp = true;							\
     return new ObjPropertyElement(&(*(values.end() - 1)),		\
 				  this->properties.begin()->first,	\
@@ -1913,8 +1915,8 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
     }									\
   }									\
   /*! \copydoc ObjElement::last_subelement */				\
-  ObjPropertyElement* last_subelement(bool* temp = nullptr) OVERRIDE_CXX11 { \
-    if (values.size() == 0) return nullptr;				\
+  ObjPropertyElement* last_subelement(bool* temp = NULL) OVERRIDE_CXX11 { \
+    if (values.size() == 0) return NULL;				\
     if (temp) temp[0] = false;						\
     return &(values[values.size() - 1]);				\
   }
@@ -1997,14 +1999,14 @@ class ObjElement : public ObjBase {
 public:
   //! \brief Empty constructor.
   //! \param parent0 The element's parent group.
-  ObjElement(const ObjGroupBase* parent0 = nullptr) :
+  ObjElement(const ObjGroupBase* parent0 = NULL) :
     ObjBase(), code(""), parent(parent0) {}
   //! \brief Initialize an element from an element code.
   //! \tparam Number of properties/
   //! \param code0 Element code.
   //! \param parent0 The element's parent group.
   ObjElement(const std::string& code0,
-	     const ObjGroupBase* parent0 = nullptr) :
+	     const ObjGroupBase* parent0 = NULL) :
     ObjBase(), code(code0), parent(parent0) {}
   //! \brief Copy constructor.
   //! \param rhs Element to copy.
@@ -2015,7 +2017,7 @@ public:
   //! \param parent0 The element's parent group.
   template <typename T, size_t N>
   ObjElement(const std::string& code0, const T (&)[N],
-	     const ObjGroupBase* parent0 = nullptr) :
+	     const ObjGroupBase* parent0 = NULL) :
     ObjBase(), code(code0), parent(parent0) {
     RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
   }
@@ -2024,7 +2026,7 @@ public:
   //! \param parent0 The element's parent group.
   template <typename T>
   ObjElement(const std::string& code0, const std::vector<T> &,
-	     const ObjGroupBase* parent0 = nullptr) :
+	     const ObjGroupBase* parent0 = NULL) :
     ObjBase(), code(code0), parent(parent0) {
     RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
   }
@@ -2119,7 +2121,7 @@ public:
     for (ObjPropertiesMap::iterator it = this->properties.begin();
 	 it != this->properties.end(); it++, i++) {
       if (!it->mem) return false;
-      if (!this->has_property(it->first, true)) continue;
+      if (!this->has_property(it->first, true, false, NULL)) continue;
       if (!it->read(in)) return false;
       if (it->missing) break;
     }
@@ -2134,7 +2136,7 @@ public:
     bool first = true;
     for (ObjPropertiesMap::const_iterator it = this->properties.begin();
 	 it != this->properties.end(); it++, i++) {
-      if (!this->has_property(it->first, true)) continue;
+      if (!this->has_property(it->first, true, false, NULL)) continue;
       if (!it->mem) return false;
       if (!it->write(out, !first)) return false;
       first = false;
@@ -2150,8 +2152,9 @@ public:
     ObjPropertiesMap::const_iterator rit = rhs0->properties.begin();
     for (ObjPropertiesMap::const_iterator lit = this->properties.begin();
 	 lit != this->properties.end(); lit++, rit++) {
-      bool present = this->has_property(lit->first, true);
-      if (present != rhs0->has_property(lit->first, true)) return false;
+      bool present = this->has_property(lit->first, true, false, NULL);
+      if (present != rhs0->has_property(lit->first, true, false, NULL))
+	return false;
       if (!present) continue;
       if (*lit != *rit) return false;
     }
@@ -2175,7 +2178,7 @@ public:
     size_t i = 0;
     for (ObjPropertiesMap::const_iterator it = this->properties.begin();
 	 it != this->properties.end(); it++, i++) {
-      if (!this->has_property(it->first, true)) continue;
+      if (!this->has_property(it->first, true, false, NULL)) continue;
       if (v == arr.end())
 	return (it->second & ObjTypeOpt);
       if (it->second & ObjTypeList) {
@@ -2256,7 +2259,8 @@ public:
     ObjPropertiesMap::const_iterator last = this->properties.begin() + (int)(this->properties.size() - 1);
     for (ObjPropertiesMap::const_iterator it = this->properties.begin();
 	 it != this->properties.end(); it++, i++) {
-      if (!this->has_property(it->first, true, skipColors)) continue;
+      if (!this->has_property(it->first, true, skipColors, NULL))
+	continue;
       // TODO: Automatically cast ints to double when T is double and property
       //   has integer type
       if (it->second & ObjTypeList) {
@@ -2346,7 +2350,7 @@ public:
   //! \param[out] temp Pointer to boolean that signals if the returned
   //!   pointer is a temporary wrapper. If true, the returned pointer
   //!   should be cleaned up by the user.
-  virtual const ObjPropertyElement* last_subelement(bool* temp = nullptr) const {
+  virtual const ObjPropertyElement* last_subelement(bool* temp = NULL) const {
     return const_cast<ObjElement&>(*this).last_subelement(temp);
   }
   //! \brief Get the most recently added sub-element. This is only valid for
@@ -2355,7 +2359,7 @@ public:
   //! \param[out] temp Pointer to boolean that signals if the returned
   //!   pointer is a temporary wrapper. If true, the returned pointer
   //!   should be cleaned up by the user.
-  virtual ObjPropertyElement* last_subelement(bool* = nullptr) {
+  virtual ObjPropertyElement* last_subelement(bool* = NULL) {
     std::cerr << "last_subelement not implemented for this type (code = " << code << ")" << std::endl;
     return NULL;
   }
@@ -2407,7 +2411,7 @@ public:
     for (ObjPropertiesMap::const_iterator it = this->properties.begin();
 	 it != this->properties.end(); it++)
       if ((it->second & (ObjTypeFloat | ObjTypeCurve | ObjTypeSurface))
-	  && this->has_property(it->first, true))
+	  && this->has_property(it->first, true, false, NULL))
 	return true;
     return false;
   }
@@ -2554,13 +2558,13 @@ class ObjGroupBase : public ObjElement {
 public:
   //! \brief Empty constructor.
   //! \param parent0 The element's parent group.
-  ObjGroupBase(const ObjGroupBase* parent0 = nullptr) :
+  ObjGroupBase(const ObjGroupBase* parent0 = NULL) :
     ObjElement(parent0), elements(), finalized(false) {}
   //! \brief Initialize an element group from an element code.
   //! \param code The element code string.
   //! \param parent0 The element's parent group.
   ObjGroupBase(const std::string& code,
-	       const ObjGroupBase* parent0 = nullptr) :
+	       const ObjGroupBase* parent0 = NULL) :
     ObjElement(code, parent0), elements(), finalized(false) {}
   //! \brief Initialize an element group from an element code.
   //! \param code The element code string.
@@ -2568,7 +2572,7 @@ public:
   //! \param parent0 The element's parent group.
   ObjGroupBase(const std::string& code,
 	       const std::vector<ObjElement*> &elements0,
-	       const ObjGroupBase* parent0 = nullptr) :
+	       const ObjGroupBase* parent0 = NULL) :
     ObjElement(code, parent0), elements(), finalized(false) {
     assign_values(elements, elements0);
   }
@@ -2597,7 +2601,7 @@ public:
     if (!this->read_group_header(in))  return false;
     if (!dont_descend) {
       while (!finalized) {
-	ObjElement* x = nullptr;
+	ObjElement* x = NULL;
 	if (!read_obj_element(in, this, true, x)) return false;
 	if (!x) return false;
 	if (x != this)
@@ -2671,11 +2675,11 @@ public:
   //! \return Map between element type and count.
   std::map<std::string,size_t> element_counts() const {
     std::map<std::string,size_t> idx;
-    element_counts(idx);
+    element_counts(idx, NULL);
     return idx;
   }
   void element_counts(std::map<std::string,size_t>& idx,
-		      const ObjGroupBase* stop=nullptr) const {
+		      const ObjGroupBase* stop=NULL) const {
     if (this->parent && stop != this->parent)
       this->parent->element_counts(idx, this);
     for (std::vector<ObjElement*>::const_iterator it = elements.begin();
@@ -2818,7 +2822,7 @@ public:
     for (std::vector<ObjElement*>::const_reverse_iterator it = elements.rbegin(); it != elements.rend(); it++)
       if ((*it)->code == code0)
 	return *it;
-    return nullptr;
+    return NULL;
   }
   //! \brief End a group.
   //! \return true if successful, false otherwise.
@@ -2844,14 +2848,14 @@ public:
       if (last->is_group()) {
 	ObjGroupBase* last_grp = dynamic_cast<ObjGroupBase*>(last);
 	if (!(last_grp->finalized)) {
-	  if ((x != nullptr) && (last_grp->code == "g") && (x->code == "g"))
+	  if ((x != NULL) && (last_grp->code == "g") && (x->code == "g"))
 	    last_grp->finalize();
 	  else
 	    return last_grp->add_element(x, inc);
 	}
       }
     }
-    if (x == nullptr) {
+    if (x == NULL) {
       finalize();
     } else if (this->code == "g" && x->code == "g") {
       finalize();
@@ -3090,7 +3094,7 @@ public:
     }
   }
   //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=nullptr) const  OVERRIDE_CXX11 {
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=NULL) const  OVERRIDE_CXX11 {
     return (ObjElement::has_property(name, dontCheckOrder, skipColors, idx) &&
 	    !(((skipColors || !color.is_set)
 	       && (name == "red" || name == "green" || name == "blue")) ||
@@ -3153,7 +3157,7 @@ public:
   double w;
   
   //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=nullptr) const  OVERRIDE_CXX11 {
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=NULL) const  OVERRIDE_CXX11 {
     return (ObjElement::has_property(name, dontCheckOrder, skipColors, idx) &&
 	    (w >= 0 || name != "w"));
   }
@@ -3210,7 +3214,7 @@ public:
   double w;
   
   //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=nullptr) const  OVERRIDE_CXX11 {
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=NULL) const  OVERRIDE_CXX11 {
     return (ObjElement::has_property(name, dontCheckOrder, skipColors, idx) &&
 	    !((v < 0 && name == "v") || (w < 0 && name == "w")));
   }
@@ -3255,13 +3259,13 @@ class ObjFreeFormElement : public ObjGroupBase {
 public:
   //! \brief Empty constructor.
   //! \param parent0 The element's parent group.
-  ObjFreeFormElement(const ObjGroupBase* parent0 = nullptr) :
+  ObjFreeFormElement(const ObjGroupBase* parent0 = NULL) :
     ObjGroupBase(parent0) { RAPIDJSON_ASSERT(parent0); }
   //! \brief Initialize an element from an element code.
   //! \param code0 Element code.
   //! \param parent0 The element's parent group.
   ObjFreeFormElement(const std::string& code0,
-		     const ObjGroupBase* parent0 = nullptr) :
+		     const ObjGroupBase* parent0 = NULL) :
     ObjGroupBase(code0, parent0) { RAPIDJSON_ASSERT(parent0); }
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjFreeFormElement(const ObjFreeFormElement& rhs) : ObjGroupBase(rhs) {}
@@ -3317,7 +3321,7 @@ public:
   template <typename T>
   ObjCurve(const double& u00, const double& u10,
 	   const std::vector<T> &values0,
-	   const ObjGroupBase* parent0 = nullptr,
+	   const ObjGroupBase* parent0 = NULL,
 	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjFreeFormElement("curv", parent0), values(), u0(u00), u1(u10) {
     this->_init_properties();
@@ -3369,7 +3373,7 @@ public:
   ObjSurface(const double& s00, const double& s10,
 	     const double& t00, const double& t10,
 	     const std::vector<T> &values0,
-	     const ObjGroupBase* parent0 = nullptr,
+	     const ObjGroupBase* parent0 = NULL,
 	     RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_VERT(T)))) :
     ObjFreeFormElement("surf", parent0), values(), s0(s00), s1(s10), t0(t00), t1(t10) {
     this->_init_properties();
@@ -3433,7 +3437,7 @@ public:
   //! \param parent0 The element's parent group.
   template <typename T, size_t N>
   ObjBasisMatrix(const std::string& direction0, const T (&src)[N],
-		 const ObjGroupBase* parent0 = nullptr) :
+		 const ObjGroupBase* parent0 = NULL) :
     ObjElement("bmat", parent0), values(), direction(direction0) {
     this->_init_properties();
     std::vector<T> values0(src, src+N);
@@ -3445,7 +3449,7 @@ public:
   //! \param values0 Vector of values.
   //! \param parent0 The element's parent group.
   ObjBasisMatrix(const std::string& direction0, const std::vector<double> &values0,
-		 const ObjGroupBase* parent0 = nullptr) :
+		 const ObjGroupBase* parent0 = NULL) :
     ObjElement("bmat", parent0), values(), direction(direction0) {
     this->_init_properties();
     assign_values(values, values0);
@@ -3498,7 +3502,7 @@ public:
   //! \param parent0 The element's parent group.
   template<typename T>
   ObjParameter(const std::string& direction0, const std::vector<T> &values0,
-	       const ObjGroupBase* parent0 = nullptr,
+	       const ObjGroupBase* parent0 = NULL,
 	       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("parm", parent0), values(), direction(direction0) {
     this->_init_properties();
@@ -3511,7 +3515,7 @@ public:
   //! \param parent0 The element's parent group.
   template <typename T>
   ObjParameter(const std::string&, const std::vector<T> &,
-	       const ObjGroupBase* parent0 = nullptr,
+	       const ObjGroupBase* parent0 = NULL,
 	       RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("parm", parent0), values(), direction("") {
     RAPIDJSON_ASSERT(sizeof("ObjParameter type is double"));
@@ -3560,7 +3564,7 @@ public:
   //! \param parent0 The element's parent group.
   template<typename T>
   ObjGroup(const T &value,
-	   const ObjGroupBase* parent0 = nullptr,
+	   const ObjGroupBase* parent0 = NULL,
 	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
     ObjGroupBase("g", parent0), values() {
     this->_init_properties();
@@ -3574,7 +3578,7 @@ public:
   //! \param parent0 The element's parent group.
   template<typename T>
   ObjGroup(const T &,
-	   const ObjGroupBase* parent0 = nullptr,
+	   const ObjGroupBase* parent0 = NULL,
 	   RAPIDJSON_DISABLEIF((internal::OrExpr<COMPATIBLE_WITH_TYPE(T, std::string),
 				internal::IsPointer<T> >))) :
     ObjGroupBase("g", parent0), values() {
@@ -3648,9 +3652,9 @@ public:
   //! \param parent0 Parent group.
   template <typename T>
   ObjMergingGroup(const T& value0, const double& resolution0,
-		  const ObjGroupBase* parent0 = nullptr,
+		  const ObjGroupBase* parent0 = NULL,
 		  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
-    ObjElement("mg", parent0), value((value0 == "off") ? 0 : stoi(value0)), resolution(resolution0) {
+    ObjElement("mg", parent0), value((value0 == "off") ? 0 : std::stoi(value0)), resolution(resolution0) {
     this->_init_properties();
   }
   //! \brief Initialize the smoothing group from an integer.
@@ -3658,7 +3662,7 @@ public:
   //! \param parent0 Parent group.
   template <typename T>
   ObjMergingGroup(const T& value0, const double& resolution0,
-		  const ObjGroupBase* parent0 = nullptr,
+		  const ObjGroupBase* parent0 = NULL,
 		  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjElement("mg", parent0), value(value0), resolution(resolution0) {
     this->_init_properties();
@@ -3666,7 +3670,7 @@ public:
   //! \brief Raise an error for non string or integer types.
   template <typename T>
   ObjMergingGroup(const T&, const double&,
-		  const ObjGroupBase* parent0 = nullptr,
+		  const ObjGroupBase* parent0 = NULL,
 		  RAPIDJSON_DISABLEIF((internal::OrExpr<
 				       COMPATIBLE_WITH_INT(T),
 				       COMPATIBLE_WITH_TYPE(T, std::string)>))) :
@@ -3746,7 +3750,7 @@ public:
   template<typename T>
   ObjCTech(const std::string& technique0,
 	   const std::vector<T> &values0,
-	   const ObjGroupBase* parent0 = nullptr,
+	   const ObjGroupBase* parent0 = NULL,
 	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("ctech", parent0), values(), technique(technique0) {
     this->_init_properties();
@@ -3756,13 +3760,13 @@ public:
   template<typename T>
   ObjCTech(const std::string& technique0,
 	   const std::vector<T> &,
-	   const ObjGroupBase* parent0 = nullptr,
+	   const ObjGroupBase* parent0 = NULL,
 	   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("ctech", parent0), values(), technique(technique0) {
     RAPIDJSON_ASSERT(sizeof("ObjCTech type is double"));
   }
   //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=nullptr) const  OVERRIDE_CXX11 {
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=NULL) const  OVERRIDE_CXX11 {
     return (ObjElement::has_property(name, dontCheckOrder, skipColors, idx) &&
 	    ((name == "technique") ||
 	     (technique == "cparm" && name == "resolution") ||
@@ -3797,7 +3801,7 @@ public:
   template<typename T>
   ObjSTech(const std::string& technique0,
 	   const std::vector<T> &values0,
-	   const ObjGroupBase* parent0 = nullptr,
+	   const ObjGroupBase* parent0 = NULL,
 	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("stech", parent0), values(), technique(technique0) {
     this->_init_properties();
@@ -3807,13 +3811,13 @@ public:
   template<typename T>
   ObjSTech(const std::string& technique0,
 	   const std::vector<T> &,
-	   const ObjGroupBase* parent0 = nullptr,
+	   const ObjGroupBase* parent0 = NULL,
 	   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("stech", parent0), values(), technique(technique0) {
     RAPIDJSON_ASSERT(!sizeof("ObjSTech type is double"));
   }
   //! \copydoc ObjElement::has_property
-  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=nullptr) const  OVERRIDE_CXX11 {
+  bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=NULL) const  OVERRIDE_CXX11 {
     return (ObjElement::has_property(name, dontCheckOrder, skipColors, idx) &&
 	    ((name == "technique") ||
 	     (technique == "cparma" && (name == "ures" ||
@@ -3845,7 +3849,7 @@ inline bool read_obj_element(std::istream &in,
 			     const bool& dont_descend,
 			     ObjElement*& out) {
   std::string word = "";
-  out = nullptr;
+  out = NULL;
   if (in >> word) {
     if (word == "end") {
       out = parent;
@@ -4219,14 +4223,14 @@ std::istream & operator >> (std::istream &in, ObjWavefront &p)
 
 inline
 ObjElement* ObjGroupBase::copy_element(const ObjElement* x) {
-  ObjElement* x_cpy = nullptr;
+  ObjElement* x_cpy = NULL;
   std::string name_copy = x->code;
   OBJ_ELEMENT_INIT(name_copy, x_cpy, (x));
   return ObjGroupBase::add_element(x_cpy);
 }
 inline
 ObjElement* ObjGroupBase::add_element(std::string name) {
-  ObjElement* x = nullptr;
+  ObjElement* x = NULL;
   OBJ_ELEMENT_INIT(name, x, (this));
   return ObjGroupBase::add_element(x);
 }
@@ -4234,7 +4238,7 @@ template <typename T>
 ObjElement* ObjGroupBase::add_element(std::string name,
 				      const std::vector<T> &values,
 				      const T* ignore, bool inc) {
-  ObjElement* x = nullptr;
+  ObjElement* x = NULL;
   if (ignore) {
     std::vector<T> values2;
     for (typename std::vector<T>::const_iterator it = values.begin(); it != values.end(); it++) {
@@ -4252,7 +4256,7 @@ ObjElement* ObjGroupBase::add_element(const std::string name,
 				      const double& u0, const double& u1,
 				      const std::vector<T> &values,
 				      bool inc) {
-  ObjElement* x = nullptr;
+  ObjElement* x = NULL;
   if (name == "curv") x = new ObjCurve(u0, u1, values, this);
   else REPORT_UNSUPPORTED_ELEMENT(ObjCurve, name);
   return ObjGroupBase::add_element(x, inc);
@@ -4263,7 +4267,7 @@ ObjElement* ObjGroupBase::add_element(const std::string name,
 				      const double& u2, const double& u3,
 				      const std::vector<T> &values,
 				      bool inc) {
-  ObjElement* x = nullptr;
+  ObjElement* x = NULL;
   if (name == "surf") x = new ObjSurface(u0, u1, u2, u3, values, this);
   else REPORT_UNSUPPORTED_ELEMENT(ObjSurface, name);
   return ObjGroupBase::add_element(x, inc);
@@ -4271,7 +4275,7 @@ ObjElement* ObjGroupBase::add_element(const std::string name,
 template <typename T>
 ObjElement* ObjGroupBase::add_element(std::string name, std::string direction,
 				      const std::vector<T> &values) {
-  ObjElement* x = nullptr;
+  ObjElement* x = NULL;
   if      (name == "parm" ) x = new ObjParameter(direction, values, this);
   else if (name == "ctech") x = new ObjCTech(direction, values, this);
   else if (name == "stech") x = new ObjSTech(direction, values, this);
@@ -4282,7 +4286,7 @@ template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
 			    internal::IsSame<T,std::string> >), (ObjElement*))
   ObjGroupBase::add_element(std::string name, const T& value) {
-  ObjElement* x = nullptr;
+  ObjElement* x = NULL;
   if      (name == "s"         ) x = new ObjSmoothingGroup(value, this);
   else if (name == "lod"       ) x = new ObjLOD(value, this);
   else if ((name == "trim") || (name == "scrv") || (name == "hole")) {
@@ -4295,7 +4299,7 @@ RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
 }
 inline
 ObjElement* ObjGroupBase::add_element(std::string name, const std::string& value) {
-  ObjElement* x = nullptr;
+  ObjElement* x = NULL;
   if      (name == "g"         ) x = new ObjGroup(value, this);
   else if (name == "s"         ) x = new ObjSmoothingGroup(value, this);
   else if (name == "bevel"     ) x = new ObjBevel(value, this);
@@ -4338,7 +4342,7 @@ inline
 ObjElement* ObjGroupBase::add_element(std::string name, const int& value,
 				      const double& resolution,
 				      bool inc) {
-  ObjElement* x = nullptr;
+  ObjElement* x = NULL;
   if      (name == "mg"   ) x = new ObjMergingGroup(value, resolution, this);
   else REPORT_UNSUPPORTED_ELEMENT(ObjMergingGroup, name);
   return ObjGroupBase::add_element(x, inc);
@@ -4347,7 +4351,7 @@ inline
 ObjElement* ObjGroupBase::add_element(std::string name,
 				      const std::string& value,
 				      const double& resolution) {
-  ObjElement* x = nullptr;
+  ObjElement* x = NULL;
   if      (name == "mg"   ) x = new ObjMergingGroup(value, resolution, this);
   else if (name == "parm" ) {
     std::vector<double> vres;

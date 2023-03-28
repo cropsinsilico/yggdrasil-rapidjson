@@ -337,7 +337,7 @@ def make_function(name, base):
     return [
         "template<typename T>",
         "inline const typename item_return<T>::type* " + name + "() {"
-        " return nullptr; }", "",
+        " return NULL; }", "",
         "template<>",
         "inline const item_return<char>::type* " + name + "<char>() {",
         "  const char* out = \""
