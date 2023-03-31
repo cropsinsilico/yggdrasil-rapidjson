@@ -171,8 +171,8 @@ definitions:
       serializer:
         $ref: '#/definitions/serializer'
         description: Class with serialize and deserialize methods that should be used
-          to process sent and received messages. Defaults to None and is constructed
-          using provided 'serializer_kwargs'.
+          to process sent and received messages or a dictionary describing a serializer
+          that obeys the serializer schema.
       transform:
         aliases:
         - recv_converter
@@ -525,6 +525,7 @@ definitions:
         description: '[DEPRECATED] Arguments that should be provided to the driver.'
         type: string
       connection_type:
+        description: Connection between one or more comms/files and one or more comms/files.
         enum:
         - connection
         - file_input
@@ -1083,8 +1084,8 @@ definitions:
         - default: {}
         - $ref: '#/definitions/serializer'
         description: Class with serialize and deserialize methods that should be used
-          to process sent and received messages. Defaults to None and is constructed
-          using provided 'serializer_kwargs'.
+          to process sent and received messages or a dictionary describing a serializer
+          that obeys the serializer schema.
       sort_keys:
         default: true
         description: If True, the serialization of dictionaries will be in key sorted
@@ -1201,8 +1202,8 @@ definitions:
         - default: {}
         - $ref: '#/definitions/serializer'
         description: Class with serialize and deserialize methods that should be used
-          to process sent and received messages. Defaults to None and is constructed
-          using provided 'serializer_kwargs'.
+          to process sent and received messages or a dictionary describing a serializer
+          that obeys the serializer schema.
     pushProperties:
       $properties/serializer: true
     required:
@@ -3657,7 +3658,7 @@ definitions:
           type: string
         type: array
       language:
-        description: Model is dedicated to synchronizingtimesteps between other models.
+        description: Model is dedicated to synchronizing timesteps between other models.
         enum:
         - timesync
         type: string
