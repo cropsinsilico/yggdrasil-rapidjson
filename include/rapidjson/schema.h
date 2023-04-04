@@ -5772,6 +5772,12 @@ public:
       const Ch letters[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
 	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
 	'w', 'x', 'y', 'z'};
+      const char letters_char[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
+	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+	'w', 'x', 'y', 'z'};
+      const wchar_t letters_wchar[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
+	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+	'w', 'x', 'y', 'z'};
       SizeType Nletters = 26;
 #define AFTER_SET_							\
       data_set[0] = true;						\
@@ -6033,9 +6039,17 @@ public:
 #define SET_SCALAR_					\
 	data.SetScalar(value, units_str, units_len)
 #define STRING_SCALAR_							\
-	Ch* value = (Ch*)(allocator.Malloc(sizeof(Ch) * prec));		\
-	memcpy(value, letters, sizeof(Ch) * prec);			\
-	data.SetScalar(value, prec, allocator, encoding_str, encoding_len); \
+	SizeType prec_encoding = 1;					\
+	if (encoding_ != kYggASCIISchemaEncodingType &&			\
+	    encoding_ != kYggNullSchemaEncodingType)			\
+	  prec_encoding = 4;						\
+	Ch* value = (Ch*)(allocator.Malloc(prec * prec_encoding));	\
+	if (prec_encoding == 4) {					\
+	  memcpy(value, letters_wchar, prec * prec_encoding);		\
+	} else {							\
+	  memcpy(value, letters_char, prec);				\
+	}								\
+	data.SetScalar(value, prec * prec_encoding / sizeof(Ch), allocator, encoding_str, encoding_len); \
 	allocator.Free(value)
 	SWITCH_SUBTYPE_(GET_SCALAR_, SET_SCALAR_, STRING_SCALAR_)
 #undef GET_SCALAR_

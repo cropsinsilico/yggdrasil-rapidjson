@@ -4374,7 +4374,8 @@ public:
 	  return NULL;
 	if (typenum == NPY_STRING) {
 	  return PyBytes_FromStringAndSize(GetString(), GetStringLength());
-	} else if (typenum == NPY_UNICODE) {
+	} else if (typenum == NPY_UNICODE &&
+		   enc != GetUCS4EncodingString()) {
 	  PyObject* pyBytes = PyBytes_FromStringAndSize(GetString(), GetStringLength());
 	  out = PyUnicode_FromEncodedObject(pyBytes, enc.GetString(), NULL);
 	  Py_DECREF(pyBytes);
