@@ -30,6 +30,12 @@ RAPIDJSON_NAMESPACE_END
 #define PY_ARRAY_UNIQUE_SYMBOL rapidjson_ARRAY_API
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
+#ifdef RAPIDJSON_DONT_IMPORT_NUMPY
+#define CHECK_UNICODE_NO_NUMPY(x) PyUnicode_Check(x)
+#else
+#define CHECK_UNICODE_NO_NUMPY(x) PyUnicode_Check(x) && !PyArray_CheckScalar(x)
+#endif
+
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 extern "C" {
 #endif

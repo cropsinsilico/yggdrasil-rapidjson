@@ -4532,7 +4532,7 @@ public:
                   *allocator);
       }
       Py_DECREF(keys);
-    } else if (PyUnicode_Check(x)) {
+    } else if (CHECK_UNICODE_NO_NUMPY(x)) {
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
@@ -5161,7 +5161,11 @@ public:
 				SizeType itemsize,
 				Allocator& allocator) {
     if (desc->type_num == NPY_STRING || desc->type_num == NPY_UNICODE) {
-      if (itemsize == 0) return false;
+      if (itemsize == 0) {
+	if (desc->elsize == 0)
+	  return false;
+	itemsize = (SizeType)(desc->elsize);
+      }
       precision = itemsize;
       if (desc->type_num == NPY_UNICODE)
 	encoding.CopyFrom(GetUCS4EncodingString(), allocator);
