@@ -5782,7 +5782,7 @@ public:
       const char letters_char[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
 	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
 	'w', 'x', 'y', 'z'};
-#ifdef RAPIDJSON_HAS_CXX11
+#if RAPIDJSON_HAS_CXX11
       const char32_t
 #else // RAPIDJSON_HAS_CXX11
       const wchar_t
@@ -10119,20 +10119,20 @@ public:
 
     //! Default error method
     void SchemaError(const SchemaErrorCode code, const PointerType& location) {
-      currentError_ = GValue(kObjectType);
+      currentError_.SetObject();
       AddCurrentError(code, location);
     }
 
     //! Method for error with single string value insert
     void SchemaErrorValue(const SchemaErrorCode code, const PointerType& location, const Ch* value, SizeType length) {
-      currentError_ = GValue(kObjectType);
+      currentError_.SetObject();
       currentError_.AddMember(GetValueString(), GValue(value, length, *allocator_).Move(), *allocator_);
       AddCurrentError(code, location);
     }
 
     //! Method for error with invalid pointer
     void SchemaErrorPointer(const SchemaErrorCode code, const PointerType& location, const Ch* value, SizeType length, const PointerType& pointer) {
-      currentError_ = GValue(kObjectType);
+      currentError_.SetObject();
       currentError_.AddMember(GetValueString(), GValue(value, length, *allocator_).Move(), *allocator_);
       currentError_.AddMember(GetOffsetString(), static_cast<SizeType>(pointer.GetParseErrorOffset() / sizeof(Ch)), *allocator_);
       AddCurrentError(code, location);
