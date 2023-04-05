@@ -5440,6 +5440,8 @@ public:
 	RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), key, rhs.key)
       if (this == &rhs) return true;
       bool native_scalar = false;
+      bool lhs_any = (type_ == ((1 << kTotalSchemaType) - 1));
+      bool rhs_any = (rhs.type_ == ((1 << kTotalSchemaType) - 1));
       // Type
       if (!(((type_ || rhs.type_) && (type_ & rhs.type_)) ||
 	    ((yggtype_ || rhs.yggtype_) && (yggtype_ & rhs.yggtype_)))) {
@@ -5453,8 +5455,8 @@ public:
 	}
       }
       if ((!native_scalar) &&
-	  ((subtype_ != kYggNullSubType && rhs.type_ != ((1 << kTotalSchemaType) - 1)) ||
-	   (rhs.subtype_ != kYggNullSubType && type_ != ((1 << kTotalSchemaType) - 1)))
+	  ((subtype_ != kYggNullSubType && !rhs_any) ||
+	   (rhs.subtype_ != kYggNullSubType && !lhs_any))
 	  && (subtype_ != rhs.subtype_)) {
 	const ValueType& lhs_subtype = SubType2String(subtype_);
 	const ValueType& rhs_subtype = SubType2String(rhs.subtype_);
@@ -5483,13 +5485,15 @@ public:
 	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(ndim_).Move(), SValue(rhs.shape_.Size()).Move());
       if ((!shape_.IsNull()) && rhs.ndim_ != 0 && shape_.Size() != rhs.ndim_)
 	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(shape_.Size()).Move(), SValue(rhs.ndim_).Move());
-      if (encoding_ != rhs.encoding_) {
-	const ValueType& lhs_encoding = EncodingType2String(encoding_);
-	const ValueType& rhs_encoding = EncodingType2String(rhs.encoding_);
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetEncodingString(), lhs_encoding, rhs_encoding);
+      if (!(rhs_any || lhs_any)) {
+	if (encoding_ != rhs.encoding_) {
+	  const ValueType& lhs_encoding = EncodingType2String(encoding_);
+	  const ValueType& rhs_encoding = EncodingType2String(rhs.encoding_);
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetEncodingString(), lhs_encoding, rhs_encoding);
+	}
+	if (class_ != rhs.class_)
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPythonClassString(), class_, rhs.class_);
       }
-      if (class_ != rhs.class_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPythonClassString(), class_, rhs.class_);
       // Enum
       if (enumCount_ || rhs.enumCount_) {
 	for (SizeType i = 0; i < enumCount_; i++) {
@@ -5499,7 +5503,7 @@ public:
 	  }
 	}
 	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetEnumString(), enumValues_, rhs.enumValues_);
-        foundEnum:;
+      foundEnum:;
       }
       // Schema logic
       if (not_) {
@@ -5588,6 +5592,9 @@ public:
 	context.error_handler.ResetError();
 	return Compare(*(rhs.allowWrappedSchema_.schemas[0]), context);
       }
+      // Early exit if types not constrained
+      // if (lhs_any || rhs_any)
+      // 	return true;
       
       // Properties
       if (properties_) {
@@ -5775,7 +5782,12 @@ public:
       const char letters_char[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
 	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
 	'w', 'x', 'y', 'z'};
-      const wchar_t letters_wchar[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
+#ifdef RAPIDJSON_HAS_CXX11
+      const char32_t
+#else // RAPIDJSON_HAS_CXX11
+      const wchar_t
+#endif // RAPIDJSON_HAS_CXX11
+	letters_wchar[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
 	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
 	'w', 'x', 'y', 'z'};
       SizeType Nletters = 26;
