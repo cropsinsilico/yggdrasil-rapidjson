@@ -4602,6 +4602,7 @@ public:
 	Py_INCREF(x);
 	scalar = x;
       }
+      Py_INCREF(desc);
       if (desc == NULL || scalar == NULL) {
 	Py_XDECREF(desc);
 	Py_XDECREF(scalar);
@@ -4621,12 +4622,15 @@ public:
 	Py_DECREF(desc);
 	return false;
       }
+      if (PyDataType_ISFLEXIBLE(desc)) {
+	// PyArray_CastScalarToCtype seems to DECREF desc for strings
+	Py_INCREF(desc);
+      }
       PyArray_CastScalarToCtype(scalar, data, desc);
-      Py_DECREF(scalar);
-      Py_INCREF(desc);
       SetStringRaw(StringRef(static_cast<Ch*>(data), precision / sizeof(Ch)),
 		   schema_->GetAllocator());
       schema_->GetAllocator().Free(data);
+      Py_DECREF(scalar);
       data = NULL;
       if (desc->type_num == NPY_UNICODE && encoding == GetUTF8EncodingString()) {
 	Py_DECREF(desc);
