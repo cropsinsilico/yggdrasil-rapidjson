@@ -2661,8 +2661,8 @@ public:
 	  obj->AddMember(ValueType(SchemaType::GetEncodingString().GetString(),
 				   SchemaType::GetEncodingString().GetStringLength(),
 				   document_.GetAllocator()).Move(),
-			 ValueType(SchemaType::GetUTF8EncodingString().GetString(),
-				   SchemaType::GetUTF8EncodingString().GetStringLength(),
+			 ValueType(SchemaType::GetUCS4EncodingString().GetString(),
+				   SchemaType::GetUCS4EncodingString().GetStringLength(),
 				   document_.GetAllocator()).Move(),
 			 document_.GetAllocator());
 	}
@@ -7628,7 +7628,7 @@ protected:
     else if (subtype == GetBytesString()         ) return kYggStringSchemaSubType;
     else if (subtype == GetUnicodeString()       ) {
       if (encoding)
-	encoding[0] = kYggUTF8SchemaEncodingType;
+	encoding[0] = kYggUCS4SchemaEncodingType;
       return kYggStringSchemaSubType;
     }
     return kYggNullSubType;

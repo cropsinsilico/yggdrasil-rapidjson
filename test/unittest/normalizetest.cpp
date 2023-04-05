@@ -1583,7 +1583,7 @@ TEST(SchemaNormalizer, Schema) {
   NORMALIZE(s,
 	    "{\"type\": \"unicode\"}",
 	    true,
-	    "{\"type\": \"scalar\", \"subtype\": \"string\", \"encoding\": \"UTF8\"}");
+	    "{\"type\": \"scalar\", \"subtype\": \"string\", \"encoding\": \"UCS4\"}");
   NORMALIZE(s,
 	    "{\"type\": \"float\"}",
 	    true,
