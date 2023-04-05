@@ -5782,12 +5782,12 @@ public:
       const char letters_char[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
 	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
 	'w', 'x', 'y', 'z'};
-#if RAPIDJSON_HAS_CXX11
-      const char32_t
-#else // RAPIDJSON_HAS_CXX11
-      const wchar_t
-#endif // RAPIDJSON_HAS_CXX11
-	letters_wchar[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
+// #if RAPIDJSON_HAS_CXX11
+//       const char32_t
+// #else // RAPIDJSON_HAS_CXX11
+//       const wchar_t
+// #endif // RAPIDJSON_HAS_CXX11
+      int32_t letters_wchar[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
 	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
 	'w', 'x', 'y', 'z'};
       SizeType Nletters = 26;
