@@ -1548,7 +1548,13 @@ public:
     add_element_set("face", faces);
     add_element_set("edge", edges);
   }
-
+  //! \brief Copy assignment
+  //! \param[in] rhs Instance to copy.
+  Ply& operator=(const Ply& rhs) {
+    this->~Ply();
+    new (this) Ply(rhs);
+    return *this;
+  }
   //! \brief Copy from an ObjWavefront instance.
   //! \param rhs Instance to copy.
   void fromObjWavefront(const ObjWavefront& rhs);

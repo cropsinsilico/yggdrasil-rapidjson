@@ -16,6 +16,9 @@
 #include "rapidjson/pointer.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/ostreamwrapper.h"
+#ifdef RAPIDJSON_YGGDRASIL
+#include "rapidjson/prettywriter.h"
+#endif // RAPIDJSON_YGGDRASIL
 #include <sstream>
 #include <map>
 #include <algorithm>

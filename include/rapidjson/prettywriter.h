@@ -17,6 +17,11 @@
 
 #include "writer.h"
 
+#ifdef RAPIDJSON_YGGDRASIL
+#include "istreamwrapper.h"
+#include "document.h"
+#endif // RAPIDJSON_YGGDRASIL
+
 #ifdef __GNUC__
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(effc++)
@@ -287,6 +292,29 @@ private:
     PrettyWriter(const PrettyWriter&);
     PrettyWriter& operator=(const PrettyWriter&);
 };
+
+#ifdef RAPIDJSON_YGGDRASIL
+
+template <typename Encoding, typename Allocator>
+inline
+std::ostream & operator << (std::ostream &out,
+			    const GenericValue<Encoding, Allocator>& p) {
+  StringBuffer sb;
+  PrettyWriter<StringBuffer, Encoding, UTF8<> > w(sb);
+  w.SetYggdrasilMode(true);
+  p.Accept(w);
+  return out << sb.GetString();
+}
+template <typename Encoding, typename Allocator, typename StackAllocator>
+inline
+std::istream & operator >> (std::istream &in,
+			    GenericDocument<Encoding, Allocator, StackAllocator> &p) {
+  IStreamWrapper sb(in);
+  p.template ParseStream<kParseDefaultFlags, UTF8<>, IStreamWrapper>(sb);
+  return in;
+}
+
+#endif // RAPIDJSON_YGGDRASIL
 
 RAPIDJSON_NAMESPACE_END
 

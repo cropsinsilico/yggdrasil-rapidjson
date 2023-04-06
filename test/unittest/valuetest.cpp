@@ -14,6 +14,9 @@
 
 #include "unittest.h"
 #include "rapidjson/document.h"
+#ifdef RAPIDJSON_YGGDRASIL
+#include "rapidjson/prettywriter.h"
+#endif // RAPIDJSON_YGGDRASIL
 #include <algorithm>
 
 #ifdef __clang__

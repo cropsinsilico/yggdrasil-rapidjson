@@ -5990,6 +5990,10 @@ public:
     AddSchemaMember(GetTypeString(), GetSchemaString());
     return *this; }
 
+  template <typename Encoding2, typename Allocator2>
+  friend std::ostream & operator << (std::ostream &out,
+				     const GenericValue<Encoding2, Allocator2>& p);
+
 // protected:
   SchemaValueType* schema_;
 
@@ -6603,6 +6607,10 @@ public:
     return EndObject(memberCount);
   }
 
+  template <typename Encoding2, typename Allocator2, typename StackAllocator2>
+  friend std::istream & operator >> (std::istream &in,
+				     GenericDocument<Encoding2, Allocator2, StackAllocator> &p);
+  
 #endif // RAPIDJSON_YGGDRASIL
 
 #undef RAPIDJSON_YGG_DOCUMENT_

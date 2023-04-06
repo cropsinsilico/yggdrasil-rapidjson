@@ -3931,6 +3931,13 @@ public:
     add_element_set("f", faces);
     add_element_set("l", edges);
   }
+  //! \brief Copy assignment
+  //! \param[in] rhs Instance to copy.
+  ObjWavefront& operator=(const ObjWavefront& rhs) {
+    this->~ObjWavefront();
+    new (this) ObjWavefront(rhs);
+    return *this;
+  }
   //! \brief Copy from ply.
   //! \param rhs Instance to copy.
   void fromPly(const Ply& p);
@@ -4180,7 +4187,6 @@ public:
     in >> std::ws;
     return ObjGroupBase::read(in, dont_descend);
   }
-  
 
   friend bool operator == (const ObjWavefront& lhs, const ObjWavefront& rhs);
   friend bool operator != (const ObjWavefront& lhs, const ObjWavefront& rhs);
