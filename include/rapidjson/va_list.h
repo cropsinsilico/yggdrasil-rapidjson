@@ -41,9 +41,10 @@ enum VarArgsFlag {
 //! pointer list from fortran.
 class VarArgList {
 public:
-  VarArgList(size_t nargs0=0, bool allow_realloc0=false) :
+  VarArgList(size_t nargs0=0, bool allow_realloc0=false,
+	     bool for_c0=false) :
     va(), nargs_(nargs0), nargs(NULL),
-    ptrs(NULL), iptr(0), for_fortran(false), for_c(false),
+    ptrs(NULL), iptr(0), for_fortran(false), for_c(for_c0),
     allow_realloc(allow_realloc0), is_empty(false) {
     nargs = &nargs_;
   }
