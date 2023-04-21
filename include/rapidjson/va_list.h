@@ -179,9 +179,10 @@ public:
     if (nargs[0] > 0)
       nargs[0]--;
     RAPIDJSON_ASSERT((out != NULL) || (allow_null != 0));
-    // if ((out == NULL) && (allow_null == 0)) {
-    //   ygglog_throw_error("pop_ptr_cpp: Argument %d is NULL.", iptr - 1);
-    // }
+    if ((out == NULL) && (allow_null == 0)) {
+      std::cerr << "pop_ptr_cpp: Argument " << iptr - 1 << " is NULL" << std::endl;
+      // ygglog_throw_error("pop_ptr_cpp: Argument %d is NULL.", iptr - 1);
+    }
     return out;
   }
   
@@ -209,9 +210,10 @@ public:
     if (nargs[0] > 0)
       nargs[0]--;
     RAPIDJSON_ASSERT(((out != NULL) && (*out != NULL)) || (allow_null != 0));
-    // if ((out == NULL) || ((*out == NULL) && (allow_null == 0))) {
-    //   ygglog_throw_error("pop_ptr_ref_cpp: Argument is NULL.");
-    // }
+    if ((out == NULL) || ((*out == NULL) && (allow_null == 0))) {
+      std::cerr << "pop_ptr_ref_cpp: Argument is NULL." << std::endl;
+      // ygglog_throw_error("pop_ptr_ref_cpp: Argument is NULL.");
+    }
     return out;
   }
 
