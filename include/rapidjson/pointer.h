@@ -469,8 +469,11 @@ public:
 	length++;
 	str = (Ch*)allocator.Realloc(str, (prev_length + 1) * sizeof(Ch),
 				     (length + 1) * sizeof(Ch));
-	std::memmove(str + 1, str, prev_length * sizeof(Ch));
-	str[0] = (Ch)'/';
+	size_t new_size = prev_length * sizeof(Ch);
+	if (new_size < PTRDIFF_MAX) {
+	  std::memmove(str + 1, str, new_size);
+	  str[0] = (Ch)'/';
+	}
       }
       if (length > 0 && str[length - 1] == (Ch)'/')
 	length--;
