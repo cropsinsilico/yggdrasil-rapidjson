@@ -793,8 +793,9 @@ public:
 	out << " ";
       if (it == properties.end()) {
 	std::map<std::string, uint16_t>::const_iterator it_flag = property_flags.find(*name);
-	if ((it_flag != property_flags.end()) ||
-	    (it_flag->second & (kFloatFlag | kDoubleFlag)))
+	if (it_flag == property_flags.end())
+	  out << Number::default_value<int>(kFloatFlag);
+	else if (it_flag->second & (kFloatFlag | kDoubleFlag))
 	  out << Number::default_value<double>(it_flag->second);
 	else
 	  out << Number::default_value<int>(it_flag->second);

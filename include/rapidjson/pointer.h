@@ -465,10 +465,11 @@ public:
 	std::memmove(str, str + 1, length * sizeof(Ch));
       }
       if (length > 0 && str[0] != (Ch)'/') {
+	size_t prev_length = length;
 	length++;
-	str = (Ch*)allocator.Realloc(str, length * sizeof(Ch),
+	str = (Ch*)allocator.Realloc(str, (prev_length + 1) * sizeof(Ch),
 				     (length + 1) * sizeof(Ch));
-	std::memmove(str + 1, str, (length - 1) * sizeof(Ch));
+	std::memmove(str + 1, str, prev_length * sizeof(Ch));
 	str[0] = (Ch)'/';
       }
       if (length > 0 && str[length - 1] == (Ch)'/')
