@@ -642,23 +642,34 @@ public:
         return r;
     }
 
+private:
+  template<typename Ch2>GenericPointer Replace_dispatch(
+	   SizeType index, SizeType tokenIndex, Allocator* allocator,
+	   char* buffer, SizeType length,
+	   RAPIDJSON_ENABLEIF((internal::IsSame<Ch2, char>))) const {
+    Token token = { reinterpret_cast<Ch*>(buffer), length, tokenIndex };
+    return Replace(index, token, allocator);
+  }
+  template<typename Ch2>GenericPointer Replace_dispatch(
+	   SizeType index, SizeType tokenIndex, Allocator* allocator,
+	   char* buffer, SizeType length,
+	   RAPIDJSON_DISABLEIF((internal::IsSame<Ch2, char>))) const {
+    Ch name[21];
+    for (size_t i = 0; i <= length; i++)
+      name[i] = static_cast<Ch>(buffer[i]);
+    Token token = { name, length, tokenIndex };
+    return Replace(index, token, allocator);
+  }							
+public:
+
     GenericPointer Replace(SizeType index, SizeType tokenIndex,
 			   Allocator* allocator = 0) const {
         char buffer[21];
         char* end = sizeof(SizeType) == 4 ? internal::u32toa(tokenIndex, buffer) : internal::u64toa(tokenIndex, buffer);
         SizeType length = static_cast<SizeType>(end - buffer);
         buffer[length] = '\0';
-#if Ch == char
-	Token token = { reinterpret_cast<Ch*>(buffer), length, tokenIndex };
-	return Replace(index, token, allocator);
-#else
-	Ch name[21];
-	for (size_t i = 0; i <= length; i++)
-	  name[i] = static_cast<Ch>(buffer[i]);
-	Token token = { name, length, tokenIndex };
-	return Replace(index, token, allocator);
-#endif
-	
+	return Replace_dispatch<Ch>(index, tokenIndex, allocator,
+				    buffer, length);
     }
     GenericPointer Replace(SizeType index, const Ch* name, SizeType length,
 			   Allocator* allocator = 0) const {
