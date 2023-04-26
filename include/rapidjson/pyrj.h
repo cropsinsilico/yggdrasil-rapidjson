@@ -24,6 +24,10 @@ RAPIDJSON_NAMESPACE_END
 
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
 
+#ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
+extern "C" {
+#endif
+
 #ifndef RAPIDJSON_FORCE_IMPORT_ARRAY
 #define NO_IMPORT_ARRAY
 #endif // RAPIDJSON_FORCE_IMPORT_ARRAY
@@ -34,10 +38,6 @@ RAPIDJSON_NAMESPACE_END
 #define CHECK_UNICODE_NO_NUMPY(x) PyUnicode_Check(x)
 #else
 #define CHECK_UNICODE_NO_NUMPY(x) PyUnicode_Check(x) && !PyArray_CheckScalar(x)
-#endif
-
-#ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
-extern "C" {
 #endif
 
 #ifdef _DEBUG
