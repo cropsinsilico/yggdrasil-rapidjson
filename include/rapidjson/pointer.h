@@ -283,6 +283,26 @@ public:
     }
 #endif
 
+private:
+    template<typename Ch2>
+    GenericPointer Append_dispatch(SizeType index, Allocator* allocator,
+				   char* buffer, SizeType length,
+				   RAPIDJSON_ENABLEIF((internal::IsSame<Ch2, char>))) const {
+	Token token = { reinterpret_cast<Ch*>(buffer), length, index };
+	return Append(token, allocator);
+    }
+    template<typename Ch2>
+    GenericPointer Append_dispatch(SizeType index, Allocator* allocator,
+				   char* buffer, SizeType length,
+				   RAPIDJSON_DISABLEIF((internal::IsSame<Ch2, char>))) const {
+	Ch name[21];
+	for (size_t i = 0; i <= length; i++)
+	  name[i] = static_cast<Ch>(buffer[i]);
+	Token token = { name, length, index };
+	return Append(token, allocator);
+    }
+public:
+  
     //! Append a index token, and return a new Pointer
     /*!
         \param index Index to be appended.
@@ -294,17 +314,7 @@ public:
         char* end = sizeof(SizeType) == 4 ? internal::u32toa(index, buffer) : internal::u64toa(index, buffer);
         SizeType length = static_cast<SizeType>(end - buffer);
         buffer[length] = '\0';
-
-#if Ch == char
-	Token token = { reinterpret_cast<Ch*>(buffer), length, index };
-	return Append(token, allocator);
-#else
-	Ch name[21];
-	for (size_t i = 0; i <= length; i++)
-	  name[i] = static_cast<Ch>(buffer[i]);
-	Token token = { name, length, index };
-	return Append(token, allocator);
-#endif
+	return Append_dispatch<Ch>(index, allocator, buffer, length);
     }
 
     //! Append a token by value, and return a new Pointer
