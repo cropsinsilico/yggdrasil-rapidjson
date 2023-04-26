@@ -9873,19 +9873,17 @@ struct TokenHelper {
 // Partial specialized version for char to prevent buffer copying.
 template <typename Stack>
 struct TokenHelper<Stack, char> {
-    RAPIDJSON_FORCEINLINE static void AppendIndexToken(Stack& documentStack, SizeType index) {
-        if (sizeof(SizeType) == 4) {
-            char *buffer = documentStack.template Push<char>(1 + 10); // '/' + uint
-            *buffer++ = '/';
-            const char* end = internal::u32toa(index, buffer);
-             documentStack.template Pop<char>(static_cast<size_t>(10 - (end - buffer)));
-        }
-        else {
-            char *buffer = documentStack.template Push<char>(1 + 20); // '/' + uint64
-            *buffer++ = '/';
-            const char* end = internal::u64toa(index, buffer);
-            documentStack.template Pop<char>(static_cast<size_t>(20 - (end - buffer)));
-        }
+    RAPIDJSON_FORCEINLINE static void AppendIndexToken(Stack& documentStack, unsigned index) {
+        char *buffer = documentStack.template Push<char>(1 + 10); // '/' + uint
+	*buffer++ = '/';
+	const char* end = internal::u32toa(index, buffer);
+	documentStack.template Pop<char>(static_cast<size_t>(10 - (end - buffer)));
+    }
+    RAPIDJSON_FORCEINLINE static void AppendIndexToken(Stack& documentStack, uint64_t index) {
+        char *buffer = documentStack.template Push<char>(1 + 20); // '/' + uint64
+	*buffer++ = '/';
+	const char* end = internal::u64toa(index, buffer);
+	documentStack.template Pop<char>(static_cast<size_t>(20 - (end - buffer)));
     }
 };
 

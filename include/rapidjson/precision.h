@@ -220,7 +220,17 @@ const T2 castPrecision(const T1& v1,
 
 template <typename T1, typename T2>
 void changePrecision(const unsigned char* bytes, T2* dst, SizeType nelements,
-		     RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T1,T2)))) {
+		     RAPIDJSON_ENABLEIF((internal::IsSame<T1, T2>))) {
+  CAST_SOURCE;
+  memcpy((void*)dst, (void*)src, nelements * sizeof(T2));
+}
+
+template <typename T1, typename T2>
+void changePrecision(const unsigned char* bytes, T2* dst, SizeType nelements,
+		     RAPIDJSON_ENABLEIF((internal::AndExpr<
+					 internal::NotExpr<
+					 internal::IsSame<T1, T2>>,
+					 YGGDRASIL_IS_CASTABLE(T1,T2)>))) {
   CAST_SOURCE;
   SAME_PRECISION;
   DIFF_PRECISION;

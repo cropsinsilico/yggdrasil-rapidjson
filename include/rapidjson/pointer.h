@@ -295,17 +295,16 @@ public:
         SizeType length = static_cast<SizeType>(end - buffer);
         buffer[length] = '\0';
 
-        if (sizeof(Ch) == 1) {
-            Token token = { reinterpret_cast<Ch*>(buffer), length, index };
-            return Append(token, allocator);
-        }
-        else {
-            Ch name[21];
-            for (size_t i = 0; i <= length; i++)
-                name[i] = static_cast<Ch>(buffer[i]);
-            Token token = { name, length, index };
-            return Append(token, allocator);
-        }
+#if Ch == char
+	Token token = { reinterpret_cast<Ch*>(buffer), length, index };
+	return Append(token, allocator);
+#else
+	Ch name[21];
+	for (size_t i = 0; i <= length; i++)
+	  name[i] = static_cast<Ch>(buffer[i]);
+	Token token = { name, length, index };
+	return Append(token, allocator);
+#endif
     }
 
     //! Append a token by value, and return a new Pointer
@@ -639,17 +638,16 @@ public:
         char* end = sizeof(SizeType) == 4 ? internal::u32toa(tokenIndex, buffer) : internal::u64toa(tokenIndex, buffer);
         SizeType length = static_cast<SizeType>(end - buffer);
         buffer[length] = '\0';
-        if (sizeof(Ch) == 1) {
-            Token token = { reinterpret_cast<Ch*>(buffer), length, tokenIndex };
-	    return Replace(index, token, allocator);
-        }
-        else {
-            Ch name[21];
-            for (size_t i = 0; i <= length; i++)
-                name[i] = static_cast<Ch>(buffer[i]);
-            Token token = { name, length, tokenIndex };
-	    return Replace(index, token, allocator);
-        }
+#if Ch == char
+	Token token = { reinterpret_cast<Ch*>(buffer), length, tokenIndex };
+	return Replace(index, token, allocator);
+#else
+	Ch name[21];
+	for (size_t i = 0; i <= length; i++)
+	  name[i] = static_cast<Ch>(buffer[i]);
+	Token token = { name, length, tokenIndex };
+	return Replace(index, token, allocator);
+#endif
 	
     }
     GenericPointer Replace(SizeType index, const Ch* name, SizeType length,
