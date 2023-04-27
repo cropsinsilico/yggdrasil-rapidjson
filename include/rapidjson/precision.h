@@ -213,10 +213,13 @@ const T2 castPrecision(const T1& v1,
     return;								\
   }
 #define DIFF_PRECISION				\
-  if (sizeof(T2) < sizeof(T1))			\
-    printf("WARNING: Loosing precision.");	\
   for (SizeType i = 0; i < nelements; i++)	\
     dst[i] = castPrecision<T1, T2>(src[i]);
+
+/*
+  if (sizeof(T2) < sizeof(T1))			\
+    printf("WARNING: Loosing precision.");	\
+*/
 
 template <typename T1, typename T2>
 void changePrecision(const unsigned char* bytes, T2* dst, SizeType nelements,
