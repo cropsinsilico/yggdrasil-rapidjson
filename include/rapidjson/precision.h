@@ -88,6 +88,7 @@ RAPIDJSON_NAMESPACE_BEGIN
     CASE_SUBTYPE_PRECISION((long double), function, param, args)	\
     default: { error; }							\
     }									\
+    break;								\
   }
 #define CASE_COMPLEX_SUBTYPE(precision, function, param, args, error)	\
   case kYggComplexSubType: {						\
@@ -97,6 +98,7 @@ RAPIDJSON_NAMESPACE_BEGIN
     CASE_SUBTYPE_PRECISION(std::complex<long double>, function, param, args) \
     default: { error; }							\
     }									\
+    break;								\
   }
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #define CASE_FLOAT_SUBTYPE(precision, function, param, args, error)	\
@@ -107,6 +109,7 @@ RAPIDJSON_NAMESPACE_BEGIN
     CASE_SUBTYPE_PRECISION(double, function, param, args)	        \
     default: { error; }							\
     }									\
+    break;								\
   }
 #define CASE_COMPLEX_SUBTYPE(precision, function, param, args, error)	\
   case kYggComplexSubType: {						\
@@ -115,6 +118,7 @@ RAPIDJSON_NAMESPACE_BEGIN
     CASE_SUBTYPE_PRECISION(std::complex<double>, function, param, args) \
     default: { error; }							\
     }									\
+    break;								\
   }
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 
@@ -128,6 +132,7 @@ RAPIDJSON_NAMESPACE_BEGIN
     CASE_SUBTYPE_PRECISION(int64_t, function, param, args)      	\
     default: { error; }							\
     }									\
+    break;								\
   }									\
   case kYggUintSubType: {						\
     switch (precision) {						\
@@ -137,6 +142,7 @@ RAPIDJSON_NAMESPACE_BEGIN
     CASE_SUBTYPE_PRECISION(uint64_t, function, param, args)    	        \
     default: { error; }							\
     }									\
+    break;								\
   }									\
   CASE_FLOAT_SUBTYPE(precision, function, param, args, error);	        \
   CASE_COMPLEX_SUBTYPE(precision, function, param, args, error) 	\
