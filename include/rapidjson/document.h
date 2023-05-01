@@ -4264,13 +4264,8 @@ public:
     RAPIDJSON_ASSERT(isPythonInitialized());
     return NULL;
   }
-  bool SetPythonObjectRaw(PyObject* x, Allocator* allocator = 0,
-#ifdef RAPIDJSON_DONT_IMPORT_NUMPY
-			  bool=false,
-#else // RAPIDJSON_DONT_IMPORT_NUMPY
-			  bool skipTitle=false,
-#endif // RAPIDJSON_DONT_IMPORT_NUMPY
-			  bool allowPickle=true) {
+  bool SetPythonObjectRaw(PyObject*, Allocator* = 0,
+			  bool=false, bool=true) {
     RAPIDJSON_ASSERT(isPythonInitialized());
     return false;
   }
