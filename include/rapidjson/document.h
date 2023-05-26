@@ -670,12 +670,14 @@ struct TypeHelper<ValueType, uint8_t> {
   static bool Is(const ValueType& v) { return v.template IsScalar<uint8_t>(); }
   static uint8_t Get(const ValueType& v) { return v.template GetScalar<uint8_t>(); }
   static ValueType& Set(ValueType& v, uint8_t data) { return v.SetScalar(data); }
+  static ValueType& Set(ValueType& v, uint8_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, allocator); }
 };
 template<typename ValueType>
 struct TypeHelper<ValueType, uint16_t> {
   static bool Is(const ValueType& v) { return v.template IsScalar<uint16_t>(); }
   static uint16_t Get(const ValueType& v) { return v.template GetScalar<uint16_t>(); }
   static ValueType& Set(ValueType& v, uint16_t data) { return v.SetScalar(data); }
+  static ValueType& Set(ValueType& v, uint16_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, allocator); }
 };
 // int
 template<typename ValueType>
@@ -683,12 +685,14 @@ struct TypeHelper<ValueType, int8_t> {
   static bool Is(const ValueType& v) { return v.template IsScalar<int8_t>(); }
   static int8_t Get(const ValueType& v) { return v.template GetScalar<int8_t>(); }
   static ValueType& Set(ValueType& v, int8_t data) { return v.SetScalar(data); }
+  static ValueType& Set(ValueType& v, int8_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, allocator); }
 };
 template<typename ValueType>
 struct TypeHelper<ValueType, int16_t> {
   static bool Is(const ValueType& v) { return v.template IsScalar<int16_t>(); }
   static int16_t Get(const ValueType& v) { return v.template GetScalar<int16_t>(); }
   static ValueType& Set(ValueType& v, int16_t data) { return v.SetScalar(data); }
+  static ValueType& Set(ValueType& v, int16_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, allocator); }
 };
 // float
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
@@ -697,6 +701,7 @@ struct TypeHelper<ValueType, long double> {
   static bool Is(const ValueType& v) { return v.template IsScalar<long double>(); }
   static long double Get(const ValueType& v) { return v.template GetScalar<long double>(); }
   static ValueType& Set(ValueType& v, long double data) { return v.SetScalar(data); }
+  static ValueType& Set(ValueType& v, long double data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, allocator); }
 };
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 // complex
@@ -705,12 +710,14 @@ struct TypeHelper<ValueType, std::complex<float> > {
   static bool Is(const ValueType& v) { return v.template IsScalar<std::complex<float> >(); }
   static std::complex<float> Get(const ValueType& v) { return v.template GetScalar<std::complex<float> >(); }
   static ValueType& Set(ValueType& v, std::complex<float> data) { return v.SetScalar(data); }
+  static ValueType& Set(ValueType& v, std::complex<float> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, allocator); }
 };
 template<typename ValueType>
 struct TypeHelper<ValueType, std::complex<double> > {
   static bool Is(const ValueType& v) { return v.template IsScalar<std::complex<double> >(); }
   static std::complex<double> Get(const ValueType& v) { return v.template GetScalar<std::complex<double> >(); }
   static ValueType& Set(ValueType& v, std::complex<double> data) { return v.SetScalar(data); }
+  static ValueType& Set(ValueType& v, std::complex<double> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, allocator); }
 };
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
 template<typename ValueType>
@@ -718,6 +725,7 @@ struct TypeHelper<ValueType, std::complex<long double> > {
   static bool Is(const ValueType& v) { return v.template IsScalar<std::complex<long double> >(); }
   static std::complex<long double> Get(const ValueType& v) { return v.template GetScalar<std::complex<long double> >(); }
   static ValueType& Set(ValueType& v, std::complex<long double> data) { return v.SetScalar(data); }
+  static ValueType& Set(ValueType& v, std::complex<long double> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, allocator); }
 };
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
@@ -727,6 +735,7 @@ struct TypeHelper<ValueType, PyObject*> {
   static bool Is(const ValueType& v) { return v.template IsPythonInstance(); }
   static PyObject* Get(const ValueType& v) { return v.template GetPythonInstance(); }
   static ValueType& Set(ValueType& v, PyObject* data) { return v.SetPythonInstance(data); }
+  static ValueType& Set(ValueType& v, PyObject* data, typename ValueType::AllocatorType& allocator) { return v.SetPythonInstance(data, &allocator); }
 };
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 // obj & ply
@@ -735,12 +744,14 @@ struct TypeHelper<ValueType, ObjWavefront> {
   static bool Is(const ValueType& v) { return v.template IsObjWavefront(); }
   static ObjWavefront Get(const ValueType& v) { return v.template GetObjWavefront(); }
   static ValueType& Set(ValueType& v, ObjWavefront data) { return v.SetObj(data); }
+  static ValueType& Set(ValueType& v, ObjWavefront data, typename ValueType::AllocatorType& allocator) { return v.SetObj(data, &allocator); }
 };
 template<typename ValueType>
 struct TypeHelper<ValueType, Ply> {
   static bool Is(const ValueType& v) { return v.template IsPly(); }
   static Ply Get(const ValueType& v) { return v.template GetPly(); }
   static ValueType& Set(ValueType& v, Ply data) { return v.SetPly(data); }
+  static ValueType& Set(ValueType& v, Ply data, typename ValueType::AllocatorType& allocator) { return v.SetPly(data, &allocator); }
 };
 
 #endif // RAPIDJSON_YGGDRASIL
