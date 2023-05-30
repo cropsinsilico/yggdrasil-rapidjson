@@ -3673,6 +3673,9 @@ public:
     }
 #define BASE_STD_(method, type)			\
     BASE_(Get ## method(), Is ## method(), Set ## method(tmp), type)
+#define BASE_STD_SCALAR_(method, type)					\
+    BASE_(Get ## method(), (Is ## method() || IsScalar<type>()),	\
+	  Set ## method(tmp), type)
 #define CASE_STRING_							\
     const char* tmp = NULL;						\
     size_t tmp_len = 0;							\
@@ -3728,10 +3731,10 @@ public:
       BASE_STD_(Bool, bool)
     }
     else if (schema_type == std::string("integer")) {
-      BASE_STD_(Int, int);
+      BASE_STD_SCALAR_(Int, int);
     }
     else if (schema_type == std::string("number")) {
-      BASE_STD_(Double, double)
+      BASE_STD_SCALAR_(Double, double)
     }
     // else if (schema_type == std::string("integer") ||
     // 	     schema_type == std::string("number")) {
