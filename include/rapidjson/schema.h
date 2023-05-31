@@ -6162,6 +6162,7 @@ public:
 	  return false;
 	data.SetPly(x, &allocator);
 	AFTER_SET_;
+#undef ARRAYS_3D
       } else if (YGGTYPE_CHECK_(Schema)) {
 	data.SetObject();
 	data.AddMember(VT(GetTypeString().GetString(),
