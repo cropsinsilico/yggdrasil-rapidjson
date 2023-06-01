@@ -3647,7 +3647,7 @@ public:
   template <typename DocumentType>
   bool ApplyVarArgs(ValueType& schema, VarArgList &ap,
 		    const uint16_t flag, DocumentType* parent,
-		    size_t table_nelements=0) {
+		    size_t table_nelements=0, bool is_nested=false) {
     if (!(schema.IsObject() && schema.HasMember("type") &&
 	  schema["type"].IsString())) {
       // ygglog_throw_error("ApplyVarArgs: Schema must be an object "
@@ -3704,6 +3704,10 @@ public:
 	schema["use_generic"].GetBool()) {
       use_generic = true;
     }
+    if (is_nested &&
+	(schema_type == std::string("array") ||
+	 schema_type == std::string("object")))
+      use_generic = true;
     if (use_generic ||
 	schema_type == std::string("any") ||
 	schema_type == std::string("schema")) {
@@ -3807,11 +3811,11 @@ public:
       for (SizeType i = 0; i < total; i++) {
 	if (schema["items"].IsArray()) {
 	  if (!it->ApplyVarArgs(schema["items"][i], ap, flag,
-				parent, nelements))
+				parent, nelements, true))
 	    return false;
 	} else {
 	  if (!it->ApplyVarArgs(schema["items"], ap, flag,
-				parent, nelements))
+				parent, nelements, true))
 	    return false;
 	}
 	if (advance)
@@ -3861,10 +3865,10 @@ public:
 	  value = this;
 	}
 	if (!value->ApplyVarArgs(schema["properties"][*name], ap,
-				 flag, parent))
+				 flag, parent, true))
 	  return false;
 	// if (!it->value.ApplyVarArgs(schema["properties"][it->name], ap,
-	// 			    flag, parent))
+	// 			    flag, parent, true))
 	//   return false;
 	// if (advance)
 	it++;
