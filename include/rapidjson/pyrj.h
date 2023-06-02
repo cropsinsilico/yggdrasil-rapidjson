@@ -9,7 +9,7 @@
 #ifdef YGGDRASIL_DISABLE_PYTHON_C_API
 
 #include "rapidjson.h"
-
+#include <iostream>
 #ifndef PyObject
 #define PyObject void*
 #endif
