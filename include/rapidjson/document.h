@@ -4067,11 +4067,14 @@ public:
 	      src_shape[i] = static_cast<size_t>(it->GetUint());
 	    }
 	  } else {
+	    free(src_shape);
 	    return false;
 	  }
 	  if (!ap.set_mem(mem_shape, mem_shape_ref, mem_ndim,
-			  src_shape, src_shape_len))
+			  src_shape, src_shape_len)) {
+	    free(src_shape);
 	    return false;
+	  }
 	  free(src_shape);
 	}
 	const char* tmp = GetString();
