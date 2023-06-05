@@ -116,6 +116,15 @@ public:
     return nargs_;
   }
 
+  //! @brief Set the number of arguments.
+  //! @param[in] new_nargs New number of arguments.
+  void set_nargs(const size_t new_nargs) {
+    if (nargs)
+      nargs[0] = new_nargs;
+    else
+      nargs_ = new_nargs;
+  }
+
   //! @brief Increment the number of arguments.
   void inc_nargs() {
     if (nargs)
