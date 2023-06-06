@@ -814,8 +814,8 @@ struct TypeHelper<ValueType, Ply> {
 	   it != data.end(); it++) {					\
 	typename ValueType::ValueType key;				\
 	typename ValueType::ValueType item;				\
-	key.template Set(it->first, allocator);				\
-	item.template Set(it->second, allocator);			\
+	key.template Set<std::basic_string<typename ValueType::Ch>>(it->first, allocator); \
+	item.template Set<T>(it->second, allocator);			\
 	v.AddMember(key, item, allocator);				\
       }									\
       return v;								\
