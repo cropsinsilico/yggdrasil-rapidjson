@@ -55,6 +55,35 @@ TEST(Value, Size) {
 #define TEMPLATE_CXX11
 #endif // RAPIDJSON_HAS_CXX11
 
+#define YGGDRASIL_VECTOR_TEST(type, value)		\
+  {							\
+    Value vv;						\
+    Value::AllocatorType allocator;			\
+    std::vector<type> x_vect(3, value);			\
+    vv.Set<std::vector<type>>(x_vect, allocator);	\
+    EXPECT_TRUE(vv.Is<std::vector<type> >());		\
+    EXPECT_EQ(vv.Get<std::vector<type> >(), x_vect);	\
+  }
+#if RAPIDJSON_HAS_STDSTRING
+#define YGGDRASIL_MAP_TEST(type, value)				\
+  {								\
+    Value vv;							\
+    Value::AllocatorType allocator;				\
+    std::map<std::string, type> x_map;				\
+    x_map["a"] = value;						\
+    x_map["b"] = value;						\
+    x_map["c"] = value;						\
+    vv.Set<std::map<std::string, type> >(x_map, allocator);	\
+    EXPECT_TRUE((vv.Is<std::map<std::string, type> >()));	\
+    EXPECT_EQ((vv.Get<std::map<std::string, type> >()), x_map);	\
+  }
+#else // RAPIDJSON_HAS_STDSTRING
+#define YGGDRASIL_MAP_TEST(type, value)
+#endif // RAPIDJSON_HAS_STDSTRING
+#define YGGDRASIL_STD_CONT_TEST(type, value)	\
+  YGGDRASIL_VECTOR_TEST(type, value)		\
+  YGGDRASIL_MAP_TEST(type, value)
+
 #define YGGDRASIL_SCALAR_UNIT_TEST(type, value)				\
   {									\
     units::GenericQuantity<type, Value::EncodingType> q1(value, "g");	\
@@ -70,7 +99,8 @@ TEST(Value, Size) {
     EXPECT_EQ(q2, zq1.TEMPLATE_CXX11 GetScalarQuantity<type>("ug"));	\
     EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetScalarQuantity<type>("ug"));	\
     EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetScalarQuantity<type>());	\
-  }
+  }									\
+  YGGDRASIL_STD_CONT_TEST(type, value)
 #define YGGDRASIL_1DARRAY_EXPECT_EQ(a, a_len, v, type, units)		\
   {									\
     SizeType b_len = 0;							\
@@ -1266,6 +1296,8 @@ TEST(Value, ScalarUInt) {
   EXPECT_FALSE(x.IsTrue());
   EXPECT_FALSE(x.IsObject());
   EXPECT_FALSE(x.IsArray());
+
+  YGGDRASIL_STD_CONT_TEST(uint8_t, uint8_t(13u))
 }
 TEST(Value, ScalarInt) {
   Value x(int8_t(12));
@@ -1299,6 +1331,8 @@ TEST(Value, ScalarInt) {
   EXPECT_FALSE(x.IsTrue());
   EXPECT_FALSE(x.IsObject());
   EXPECT_FALSE(x.IsArray());
+
+  YGGDRASIL_STD_CONT_TEST(int8_t, int8_t(13))
 }
 TEST(Value, ScalarComplex) {
   Value x(std::complex<double>(2.2, 3.4));
@@ -1345,6 +1379,8 @@ TEST(Value, ScalarComplex) {
   EXPECT_EQ(q2, zq1.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >("ug"));
   EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >("ug"));
   EXPECT_EQ(q2, zq2.TEMPLATE_CXX11 GetScalarQuantity<std::complex<double> >());
+  
+  YGGDRASIL_STD_CONT_TEST(std::complex<double>, std::complex<double>(2.2, 3.4))
 }
 
 #define YGGDRASIL_1D_ARRAY_TEST_BODY(name, precision, type, value)\

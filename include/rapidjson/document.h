@@ -743,16 +743,127 @@ template<typename ValueType>
 struct TypeHelper<ValueType, ObjWavefront> {
   static bool Is(const ValueType& v) { return v.template IsObjWavefront(); }
   static ObjWavefront Get(const ValueType& v) { return v.template GetObjWavefront(); }
-  static ValueType& Set(ValueType& v, ObjWavefront data) { return v.SetObj(data); }
-  static ValueType& Set(ValueType& v, ObjWavefront data, typename ValueType::AllocatorType& allocator) { return v.SetObj(data, &allocator); }
+  static ValueType& Set(ValueType& v, const ObjWavefront& data) { return v.SetObj(data); }
+  static ValueType& Set(ValueType& v, const ObjWavefront& data, typename ValueType::AllocatorType& allocator) { return v.SetObj(data, &allocator); }
 };
 template<typename ValueType>
 struct TypeHelper<ValueType, Ply> {
   static bool Is(const ValueType& v) { return v.template IsPly(); }
   static Ply Get(const ValueType& v) { return v.template GetPly(); }
-  static ValueType& Set(ValueType& v, Ply data) { return v.SetPly(data); }
-  static ValueType& Set(ValueType& v, Ply data, typename ValueType::AllocatorType& allocator) { return v.SetPly(data, &allocator); }
+  static ValueType& Set(ValueType& v, const Ply& data) { return v.SetPly(data); }
+  static ValueType& Set(ValueType& v, const Ply& data, typename ValueType::AllocatorType& allocator) { return v.SetPly(data, &allocator); }
 };
+#define YGG_STD_VECTOR_(T)						\
+  template<typename ValueType>						\
+  struct TypeHelper<ValueType, std::vector<T> > {			\
+    static bool Is(const ValueType& v) {				\
+      if (!v.IsArray()) return false;					\
+      for (typename ValueType::ConstValueIterator it = v.Begin();	\
+	   it != v.End(); it++) {					\
+	if (!it->template Is<T>()) return false;			\
+      }									\
+      return true;							\
+    }									\
+    static std::vector<T> Get(const ValueType& v) {			\
+      std::vector<T> out;						\
+      for (typename ValueType::ConstValueIterator it = v.Begin();	\
+	   it != v.End(); it++) {					\
+	out.push_back(it->template Get<T>());				\
+      }									\
+      return out;							\
+    }									\
+    static ValueType& Set(ValueType& v, const std::vector<T>& data,	\
+			  typename ValueType::AllocatorType& allocator) { \
+      v.SetArray();							\
+      v.Reserve(static_cast<SizeType>(data.size()), allocator);		\
+      for (typename std::vector<T>::const_iterator it = data.begin();	\
+	   it != data.end(); it++) {					\
+	typename ValueType::ValueType item;				\
+	item.template Set<T>(*it, allocator);				\
+	v.PushBack(item, allocator);					\
+      }									\
+      return v;								\
+    }									\
+  };
+#if RAPIDJSON_HAS_STDSTRING
+#define YGG_STD_MAP_(T)							\
+  template<typename ValueType>						\
+  struct TypeHelper<ValueType, std::map<std::basic_string<typename ValueType::Ch>, T> > { \
+    static bool Is(const ValueType& v) {				\
+      if (!v.IsObject()) return false;					\
+      for (typename ValueType::ConstMemberIterator it = v.MemberBegin(); \
+	   it != v.MemberEnd(); it++) {					\
+	if (!it->value.template Is<T>()) return false;			\
+      }									\
+      return true;							\
+    }									\
+    static std::map<std::basic_string<typename ValueType::Ch>, T> Get(const ValueType& v) { \
+      std::map<std::basic_string<typename ValueType::Ch>, T> out;		\
+      for (typename ValueType::ConstMemberIterator it = v.MemberBegin(); \
+	   it != v.MemberEnd(); it++) {					\
+	out[it->name.GetString()] = it->value.template Get<T>();	\
+      }									\
+      return out;							\
+}									\
+    static ValueType& Set(ValueType& v,					\
+			  const std::map<std::basic_string<typename ValueType::Ch>, T>& data, \
+			  typename ValueType::AllocatorType& allocator) { \
+      v.SetObject();							\
+      v.MemberReserve(static_cast<SizeType>(data.size()), allocator);	\
+      for (typename std::map<std::basic_string<typename ValueType::Ch>, T>::const_iterator it = data.begin(); \
+	   it != data.end(); it++) {					\
+	typename ValueType::ValueType key;				\
+	typename ValueType::ValueType item;				\
+	key.template Set(it->first, allocator);				\
+	item.template Set(it->second, allocator);			\
+	v.AddMember(key, item, allocator);				\
+      }									\
+      return v;								\
+    }									\
+  };
+#else // #if RAPIDJSON_HAS_STDSTRING
+#define YGG_STD_MAP_(T)
+#endif // #if RAPIDJSON_HAS_STDSTRING
+#define YGG_STD_HELPERS_(T)			\
+  YGG_STD_VECTOR_(T)				\
+  YGG_STD_MAP_(T)
+YGG_STD_HELPERS_(bool)
+YGG_STD_HELPERS_(int)
+YGG_STD_HELPERS_(unsigned)
+#ifdef _MSC_VER
+RAPIDJSON_STATIC_ASSERT(sizeof(long) == sizeof(int));
+YGG_STD_HELPERS_(long)
+YGG_STD_HELPERS_(unsigned long)
+#endif
+YGG_STD_HELPERS_(int64_t)
+YGG_STD_HELPERS_(uint64_t)
+YGG_STD_HELPERS_(double)
+YGG_STD_HELPERS_(float)
+YGG_STD_HELPERS_(const typename ValueType::Ch*)
+#if RAPIDJSON_HAS_STDSTRING
+YGG_STD_HELPERS_(std::basic_string<typename ValueType::Ch>)
+#endif
+YGG_STD_HELPERS_(uint8_t)
+YGG_STD_HELPERS_(uint16_t)
+YGG_STD_HELPERS_(int8_t)
+YGG_STD_HELPERS_(int16_t)
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+YGG_STD_HELPERS_(long double)
+#endif
+YGG_STD_HELPERS_(std::complex<float>)
+YGG_STD_HELPERS_(std::complex<double>)
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+YGG_STD_HELPERS_(std::complex<long double>)
+#endif
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
+YGG_STD_HELPERS_(PyObject*)
+#endif
+YGG_STD_HELPERS_(ObjWavefront)
+YGG_STD_HELPERS_(Ply)
+#undef YGG_STD_HELPERS_
+#undef YGG_STD_VECTOR_
+#undef YGG_STD_MAP_
+
 
 #endif // RAPIDJSON_YGGDRASIL
 
