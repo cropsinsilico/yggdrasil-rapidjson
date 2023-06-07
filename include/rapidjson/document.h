@@ -785,6 +785,64 @@ struct TypeHelper<ValueType, Ply> {
       return v;								\
     }									\
   };
+#define YGG_STD_VECTOR_SCALAR_(T)					\
+  template<typename ValueType>						\
+  struct TypeHelper<ValueType, std::vector<T> > {			\
+    static bool Is(const ValueType& v)					\
+    { return v.template IsNDArray<T>(); }				\
+    static std::vector<T> Get(const ValueType& v) {			\
+      std::vector<T> out;						\
+      out.resize(static_cast<size_t>(v.GetNElements()));		\
+      memcpy(out.data(), v.GetString(), v.GetNBytes());			\
+      return out;							\
+    }									\
+    static ValueType& Set(ValueType& v, const std::vector<T>& data,	\
+			  typename ValueType::AllocatorType& allocator) { \
+      SizeType shape[1];						\
+      shape[0] = static_cast<SizeType>(data.size());			\
+      v.SetNDArray(data.data(), shape, 1,				\
+		   NULL, 0, &allocator);				\
+      return v;								\
+    }									\
+  };
+#define YGG_STD_VECTOR_STRING_(T)					\
+  template<typename ValueType>						\
+  struct TypeHelper<ValueType, std::vector<T> > {			\
+    static bool Is(const ValueType& v)					\
+    { return v.template IsNDArray<typename ValueType::Ch>(); }		\
+    static std::vector<T> Get(const ValueType& v) {			\
+      std::vector<T> out;						\
+      out.resize(static_cast<size_t>(v.GetNElements()));		\
+      SizeType prec = v.GetPrecision() /				\
+	sizeof(typename ValueType::Ch);					\
+      typename ValueType::Ch* data = v.GetString();			\
+      for (size_t i = 0; i < out.size(); i++) {				\
+	out[i].assign(data + (i * prec), prec);				\
+      }									\
+      return out;							\
+    }									\
+    static ValueType& Set(ValueType& v, const std::vector<T>& data,	\
+			  typename ValueType::AllocatorType& allocator) { \
+      size_t prec = 0;							\
+      for (typename std::vector<T>::const_iterator it = data.begin();	\
+	   it != data.end(); it++) {					\
+	prec = std::max(prec, it->size());				\
+      }									\
+      typename ValueType::Ch* buf = reinterpret_cast<typename ValueType::Ch*>(allocator.Malloc(data.size() * prec * sizeof(typename ValueType::Ch))); \
+      size_t i = 0;							\
+      for (typename std::vector<T>::const_iterator it = data.begin();	\
+	   it != data.end(); it++, i++) {				\
+	memcpy(buf + (i * prec), it->c_str(), prec * sizeof(typename ValueType::Ch)); \
+      }									\
+      SizeType shape[1];						\
+      /* TODO: encoding? */						\
+      shape[0] = static_cast<SizeType>(data.size());			\
+      v.SetNDArray(buf, static_cast<SizeType>(prec),			\
+		   shape, 1, &allocator);				\
+      allocator.Free(buf);						\
+      return v;								\
+    }									\
+  };
 #if RAPIDJSON_HAS_STDSTRING
 #define YGG_STD_MAP_(T)							\
   template<typename ValueType>						\
@@ -827,33 +885,39 @@ struct TypeHelper<ValueType, Ply> {
 #define YGG_STD_HELPERS_(T)			\
   YGG_STD_VECTOR_(T)				\
   YGG_STD_MAP_(T)
+#define YGG_STD_HELPERS_SCALAR_(T)		\
+  YGG_STD_VECTOR_SCALAR_(T)			\
+  YGG_STD_MAP_(T)
+#define YGG_STD_HELPERS_STRING_(T)		\
+  YGG_STD_VECTOR_STRING_(T)			\
+  YGG_STD_MAP_(T)
+  // TODO: Special treatment of vectors of scalars
 YGG_STD_HELPERS_(bool)
-YGG_STD_HELPERS_(int)
-YGG_STD_HELPERS_(unsigned)
+YGG_STD_HELPERS_SCALAR_(int)
+YGG_STD_HELPERS_SCALAR_(unsigned)
 #ifdef _MSC_VER
 RAPIDJSON_STATIC_ASSERT(sizeof(long) == sizeof(int));
-YGG_STD_HELPERS_(long)
-YGG_STD_HELPERS_(unsigned long)
+YGG_STD_HELPERS_SCALAR_(long)
+YGG_STD_HELPERS_SCALAR_(unsigned long)
 #endif
-YGG_STD_HELPERS_(int64_t)
-YGG_STD_HELPERS_(uint64_t)
-YGG_STD_HELPERS_(double)
-YGG_STD_HELPERS_(float)
-YGG_STD_HELPERS_(const typename ValueType::Ch*)
+YGG_STD_HELPERS_SCALAR_(int64_t)
+YGG_STD_HELPERS_SCALAR_(uint64_t)
+YGG_STD_HELPERS_SCALAR_(double)
+YGG_STD_HELPERS_SCALAR_(float)
 #if RAPIDJSON_HAS_STDSTRING
-YGG_STD_HELPERS_(std::basic_string<typename ValueType::Ch>)
+YGG_STD_HELPERS_STRING_(std::basic_string<typename ValueType::Ch>)
 #endif
-YGG_STD_HELPERS_(uint8_t)
-YGG_STD_HELPERS_(uint16_t)
-YGG_STD_HELPERS_(int8_t)
-YGG_STD_HELPERS_(int16_t)
+YGG_STD_HELPERS_SCALAR_(uint8_t)
+YGG_STD_HELPERS_SCALAR_(uint16_t)
+YGG_STD_HELPERS_SCALAR_(int8_t)
+YGG_STD_HELPERS_SCALAR_(int16_t)
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-YGG_STD_HELPERS_(long double)
+YGG_STD_HELPERS_SCALAR_(long double)
 #endif
-YGG_STD_HELPERS_(std::complex<float>)
-YGG_STD_HELPERS_(std::complex<double>)
+YGG_STD_HELPERS_SCALAR_(std::complex<float>)
+YGG_STD_HELPERS_SCALAR_(std::complex<double>)
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-YGG_STD_HELPERS_(std::complex<long double>)
+YGG_STD_HELPERS_SCALAR_(std::complex<long double>)
 #endif
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 YGG_STD_HELPERS_(PyObject*)
@@ -861,7 +925,11 @@ YGG_STD_HELPERS_(PyObject*)
 YGG_STD_HELPERS_(ObjWavefront)
 YGG_STD_HELPERS_(Ply)
 #undef YGG_STD_HELPERS_
+#undef YGG_STD_HELPERS_SCALAR_
+#undef YGG_STD_HELPERS_STRING_
 #undef YGG_STD_VECTOR_
+#undef YGG_STD_VECTOR_SCALAR_
+#undef YGG_STD_VECTOR_STRING_
 #undef YGG_STD_MAP_
 
 
@@ -2447,6 +2515,11 @@ public:
 
     template <typename T>
     T Get() { return internal::TypeHelper<ValueType, T>::Get(*this); }
+
+#ifdef RAPIDJSON_YGGDRASIL
+    template <typename T>
+    void Get(T& data) { data = Get<T>(); }
+#endif  
 
     template<typename T>
     ValueType& Set(const T& data) { return internal::TypeHelper<ValueType, T>::Set(*this, data); }
