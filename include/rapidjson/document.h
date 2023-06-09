@@ -3619,6 +3619,20 @@ public:
       schema_ = NULL;
       schema_allocator = NULL;
     }
+    switch(data_.f.flags) {
+    case kArrayFlag: {
+      for (ValueIterator it = Begin(); it != End(); it++)
+	it->DestroySchema();
+      break;
+    }
+    case kObjectFlag: {
+      for (MemberIterator it = MemberBegin(); it != MemberEnd(); it++)
+	it->value.DestroySchema();
+      break;
+    }
+    default:
+      break;
+    }
   }
   void ResetSchema(Allocator* allocator = 0) {
     DestroySchema();

@@ -3931,6 +3931,12 @@ public:
     add_element_set("f", faces);
     add_element_set("l", edges);
   }
+  //! \brief Create an ObjWavefront instance from a 3D mesh.
+  //! \param xyz Vector of vertex information for faces in the structure.
+  ObjWavefront(const std::vector<std::vector<double> > xyz) :
+    ObjGroupBase("") {
+    add_mesh(xyz);
+  }
   //! \brief Copy assignment
   //! \param[in] rhs Instance to copy.
   ObjWavefront& operator=(const ObjWavefront& rhs) {
@@ -4048,7 +4054,7 @@ public:
   //! \param v Vertex to search for.
   //! \returns Index of existing vertex that matches v, -1 if a match
   //!   cannot be found.
-  int find_vertex(const std::vector<double> v) {
+  int find_vertex(const std::vector<double> v) const {
     int idx = 0;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
       if ((*it)->code == "v") {
@@ -4063,15 +4069,15 @@ public:
     return -1;
   }
   //! \brief Add elements from a mesh.
-  //! \param mesh Vector of vectors containing vertices for each point
+  //! \param xyz Vector of vectors containing vertices for each point
   //!   in the faces.
   //! \param prune_duplicates If true, existing vertices will be checked
   //!   before adding new ones.
-  void add_mesh(const std::vector<std::vector<double> > mesh,
+  void add_mesh(const std::vector<std::vector<double> > xyz,
 		bool prune_duplicates=false) {
     size_t nVerts = count_elements("vertex");
-    for (std::vector<std::vector<double> >::const_iterator it = mesh.begin();
-	 it != mesh.end(); it++) {
+    for (std::vector<std::vector<double> >::const_iterator it = xyz.begin();
+	 it != xyz.end(); it++) {
       size_t verts_per_face = it->size() / 3;
       std::vector<ObjRef> iface;
       for (size_t i = 0; i < verts_per_face; i++) {
@@ -4120,37 +4126,11 @@ public:
     }
     return out;
   }
+  //! \brief Get the areas for each face in the structure.
+  //! \return Vector of areas for each face.
   std::vector<double> areas() const {
-    std::vector<double> out;
-    std::vector<std::vector<double> > xyz = mesh();
-    for (std::vector<std::vector<double> >::const_iterator it = xyz.begin();
-	 it != xyz.end(); it++) {
-      std::vector<double> v0(it->begin(), it->begin() + 3);
-      std::vector<double> v1(it->begin() + 3, it->begin() + 6);
-      std::vector<double> v2(it->begin() + 6, it->begin() + 9);
-      double a = std::sqrt(std::pow(v0[0] - v1[0], 2) +
-			   std::pow(v0[1] - v1[1], 2) +
-			   std::pow(v0[2] - v1[2], 2));
-      double b = std::sqrt(std::pow(v1[0] - v2[0], 2) +
-			   std::pow(v1[1] - v2[1], 2) +
-			   std::pow(v1[2] - v2[2], 2));
-      double c = std::sqrt(std::pow(v2[0] - v0[0], 2) +
-			   std::pow(v2[1] - v0[1], 2) +
-			   std::pow(v2[2] - v0[2], 2));
-      double s = (a + b + c) / 2.0;
-      out.push_back(std::sqrt(s * (s - a) * (s - b) * (s - c)));
-    }
-    return out;
+    return mesh2areas(mesh());
   }
-  // v0 = np.array([self['vertices'][fv[0]][k] for k in 'xyz'])
-  //   v1 = np.array([self['vertices'][fv[1]][k] for k in 'xyz'])
-  //   v2 = np.array([self['vertices'][fv[2]][k] for k in 'xyz'])
-  //   a = np.sqrt(np.sum((v0 - v1)**2))
-  //   b = np.sqrt(np.sum((v1 - v2)**2))
-  //   c = np.sqrt(np.sum((v2 - v0)**2))
-  //   s = (a + b + c) / 2.0
-  //   area = np.sqrt(s * (s - a) * (s - b) * (s - c))
-  //                   scalar_arr[i] = area * scalar_arr[i]
   //! \copydoc ObjElement::has_colors
   bool has_colors() const OVERRIDE_CXX11 {
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {

@@ -111,6 +111,34 @@ std::string ply_alias2base(const std::string& alias) {
   return std::string(alias);
 }
 
+//! \brief Get the areas for each face in the structure.
+//! \param mesh Mesh describine structure.
+//! \return Vector of areas for each face.
+static inline
+std::vector<double> mesh2areas(const std::vector<std::vector<double> > mesh) {
+  std::vector<double> out;
+  for (std::vector<std::vector<double> >::const_iterator it = mesh.begin();
+       it != mesh.end(); it++) {
+    // TODO: Handle faces with more than 3 vertices
+    std::vector<double> v0(it->begin(), it->begin() + 3);
+    std::vector<double> v1(it->begin() + 3, it->begin() + 6);
+    std::vector<double> v2(it->begin() + 6, it->begin() + 9);
+    double a = std::sqrt(std::pow(v0[0] - v1[0], 2) +
+			 std::pow(v0[1] - v1[1], 2) +
+			 std::pow(v0[2] - v1[2], 2));
+    double b = std::sqrt(std::pow(v1[0] - v2[0], 2) +
+			 std::pow(v1[1] - v2[1], 2) +
+			 std::pow(v1[2] - v2[2], 2));
+    double c = std::sqrt(std::pow(v2[0] - v0[0], 2) +
+			 std::pow(v2[1] - v0[1], 2) +
+			 std::pow(v2[2] - v0[2], 2));
+    double s = (a + b + c) / 2.0;
+    out.push_back(std::sqrt(s * (s - a) * (s - b) * (s - c)));
+  }
+  return out;
+}
+
+
 //! Generic ply geometry element
 class PlyElement {
 public:
@@ -1549,6 +1577,12 @@ public:
     add_element_set("face", faces);
     add_element_set("edge", edges);
   }
+  //! \brief Create a Ply instance from a 3D mesh.
+  //! \param xyz Vector of vertex information for faces in the structure.
+  Ply(const std::vector<std::vector<double> > xyz) :
+    comments(), format("ascii 1.0"), elements(), element_order() {
+    add_mesh(xyz);
+  }
   //! \brief Copy assignment
   //! \param[in] rhs Instance to copy.
   Ply& operator=(const Ply& rhs) {
@@ -2021,6 +2055,53 @@ public:
     }
     return true;
   }
+  //! \brief Locate existing vertex that matches the provided vertex.
+  //! \param v Vertex to search for.
+  //! \returns Index of existing vertex that matches v, -1 if a match
+  //!   cannot be found.
+  int find_vertex(const std::vector<double> v) const {
+    int idx = 0;
+    const PlyElementSet* vertices = get_element_set("vertex");
+    if (vertices) {
+      for (std::vector<PlyElement>::const_iterator it = vertices->elements.begin();
+	   it != vertices->elements.end(); it++) {
+	std::vector<double> iv = it->get_double_array(true);
+	if (internal::values_eq(v[0], iv[0]) and
+	    internal::values_eq(v[1], iv[1]) and
+	    internal::values_eq(v[2], iv[2]))
+	  return idx;
+	idx++;
+      }
+    }
+    return -1;
+  }
+  //! \brief Add elements from a mesh.
+  //! \param xyz Vector of vectors containing vertices for each point
+  //!   in the faces.
+  //! \param prune_duplicates If true, existing vertices will be checked
+  //!   before adding new ones.
+  void add_mesh(const std::vector<std::vector<double> > xyz,
+		bool prune_duplicates=false) {
+    size_t nVerts = count_elements("vertex");
+    for (std::vector<std::vector<double> >::const_iterator it = xyz.begin();
+	 it != xyz.end(); it++) {
+      size_t verts_per_face = it->size() / 3;
+      std::vector<int> iface;
+      for (size_t i = 0; i < verts_per_face; i++) {
+	std::vector<double> ivert(it->begin() + static_cast<long>(i * 3),
+				  it->begin() + static_cast<long>((i + 1) * 3));
+	int idxVert = -1;
+	if (prune_duplicates)
+	  idxVert = find_vertex(ivert);
+	if (idxVert < 0)
+	  idxVert = static_cast<int>(nVerts);
+	iface.push_back(idxVert);
+	add_element("vertex", ivert);
+	nVerts++;
+      }
+      add_element("face", iface);
+    }
+  }
   //! \brief Get the mesh for the structure.
   //! \return Structure mesh with each row representing a face with vertex
   //!    information provided in sequence for each face.
@@ -2044,6 +2125,11 @@ public:
       }
     }
     return out;
+  }
+  //! \brief Get the areas for each face in the structure.
+  //! \return Vector of areas for each face.
+  std::vector<double> areas() const {
+    return mesh2areas(mesh());
   }
   //! \brief Append elements from another structure to this one.
   //! \param other Structure to append.
