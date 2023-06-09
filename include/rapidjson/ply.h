@@ -2066,8 +2066,8 @@ public:
       for (std::vector<PlyElement>::const_iterator it = vertices->elements.begin();
 	   it != vertices->elements.end(); it++) {
 	std::vector<double> iv = it->get_double_array(true);
-	if (internal::values_eq(v[0], iv[0]) and
-	    internal::values_eq(v[1], iv[1]) and
+	if (internal::values_eq(v[0], iv[0]) &&
+	    internal::values_eq(v[1], iv[1]) &&
 	    internal::values_eq(v[2], iv[2]))
 	  return idx;
 	idx++;

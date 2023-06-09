@@ -4059,8 +4059,8 @@ public:
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
       if ((*it)->code == "v") {
 	const ObjVertex* iv = dynamic_cast<const ObjVertex*>(*it);
-	if (internal::values_eq(v[0], iv->x) and
-	    internal::values_eq(v[1], iv->y) and
+	if (internal::values_eq(v[0], iv->x) &&
+	    internal::values_eq(v[1], iv->y) &&
 	    internal::values_eq(v[2], iv->z))
 	  return idx;
 	idx++;
