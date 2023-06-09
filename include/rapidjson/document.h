@@ -4427,7 +4427,9 @@ public:
 		     const Ch* encoding_str = NULL,
 		     const SizeType encoding_len = 0,
 		     RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
-    ResetSchema(allocator);
+    ResetSchema();
+    if (!allocator)
+      allocator = &(schema_->GetAllocator());
     SizeType nbytes = 0;
     if (precision == 0)
       precision = (SizeType)sizeof(T);
@@ -4439,7 +4441,7 @@ public:
     }
     SetStringRaw(StringRef(reinterpret_cast<const Ch*>(data),
 			   nbytes / sizeof(Ch)),
-		 schema_->GetAllocator());
+		 *allocator);
     // Update schema
     schema_->MemberReserve(5, schema_->GetAllocator());
     if (ndim == 0) {
@@ -4743,7 +4745,7 @@ public:
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
-      ResetSchema(allocator);
+      ResetSchema();
       Py_ssize_t x_size = 0;
       if (PyBytes_Check(x)) {
 	x_size = PyBytes_Size(x);
@@ -4772,7 +4774,9 @@ public:
       RAPIDJSON_ASSERT(PyErr_Occurred() == NULL);
     } else if (PyType_Check(x) || PyFunction_Check(x)) {
       SetString("");
-      ResetSchema(allocator);
+      ResetSchema();
+      if (!allocator)
+	allocator = &(schema_->GetAllocator());
       Ch* mod_cls = NULL;
       SizeType mod_cls_siz = 0;
       out = export_python_object<Encoding,Allocator>(x, mod_cls,
@@ -4785,12 +4789,14 @@ public:
 	AddSchemaMember(GetTypeString(), GetPythonClassString());
       else
 	AddSchemaMember(GetTypeString(), GetPythonFunctionString());
-      SetStringRaw(StringRefType(mod_cls, mod_cls_siz), schema_->GetAllocator());
+      SetStringRaw(StringRefType(mod_cls, mod_cls_siz), *allocator);
       schema_->GetAllocator().Free(mod_cls);
       mod_cls = NULL;
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
     } else if (PyArray_CheckScalar(x)) {
-      ResetSchema(allocator);
+      ResetSchema();
+      if (!allocator)
+	allocator = &(schema_->GetAllocator());
       PyArray_Descr* desc = NULL;
       PyObject* scalar = NULL;
       if (PyObject_IsInstance(x, (PyObject*)&PyArray_Type)) {
@@ -4828,7 +4834,7 @@ public:
       }
       PyArray_CastScalarToCtype(scalar, data, desc);
       SetStringRaw(StringRef(static_cast<Ch*>(data), precision / sizeof(Ch)),
-		   schema_->GetAllocator());
+		   *allocator);
       schema_->GetAllocator().Free(data);
       Py_DECREF(scalar);
       data = NULL;
@@ -4852,8 +4858,10 @@ public:
 	bool single = (PyDict_Size(desc->fields) == 1);
 	if (!single) {
 	  SetArray();
-	  ResetSchema(allocator);
-	  Reserve((SizeType)PyDict_Size(desc->fields), schema_->GetAllocator());
+	  ResetSchema();
+	  if (!allocator)
+	    allocator = &(schema_->GetAllocator());
+	  Reserve((SizeType)PyDict_Size(desc->fields), *allocator);
 	}
 	PyObject *kw_key, *kw_val;
 	Py_ssize_t kw_pos = 0;
@@ -4899,12 +4907,14 @@ public:
 				   schema_->GetAllocator());
 	      pyField.AddSchemaMember(GetTitleString(), field_name);
 	    }
-	    PushBack(pyField, schema_->GetAllocator());
+	    PushBack(pyField, *allocator);
 	  }
 	}
 	return true;
       }
-      ResetSchema(allocator);
+      ResetSchema();
+      if (!allocator)
+	allocator = &(schema_->GetAllocator());
       SizeType precision;
       ValueType subtype;
       ValueType encoding;
@@ -4931,7 +4941,7 @@ public:
       }
       SetStringRaw(StringRef(static_cast<Ch*>(data),
 			     precision * nelements / sizeof(Ch)),
-		   schema_->GetAllocator());
+		   *allocator);
       if (!PyArray_IS_C_CONTIGUOUS((PyArrayObject*)x))
 	Py_DECREF(cpy);
       schema_->MemberReserve(5, schema_->GetAllocator());
@@ -5104,7 +5114,9 @@ public:
 	}
       }
       SetObject();
-      ResetSchema(allocator);
+      ResetSchema();
+      if (!allocator)
+	allocator = &(schema_->GetAllocator());
       AddSchemaMember(GetTypeString(), GetPythonInstanceString());
       RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__class__"));
       if (!PyObject_HasAttrString(x, "__class__"))
@@ -5123,7 +5135,7 @@ public:
       // RAPIDJSON_ASSERT(out && (mod_cls_ref != NULL));
       if (!out && (mod_cls_ref == NULL))
 	return false;
-      ValueType mod_cls(mod_cls_ref, mod_cls_siz, schema_->GetAllocator());
+      ValueType mod_cls(mod_cls_ref, mod_cls_siz, *allocator);
       schema_->GetAllocator().Free(mod_cls_ref);
       mod_cls_ref = NULL;
       ValueType args;
@@ -5141,25 +5153,25 @@ public:
 	"get_input_keyword_arguments",
 	"get_input_kwargs"};
       for (SizeType i = 0; i < 6; i++) {
-	if (GetPythonObjectClassAttr(x, args_keys[i], schema_->GetAllocator(), args, true))
+	if (GetPythonObjectClassAttr(x, args_keys[i], *allocator, args, true))
 	  break;
       }
       for (SizeType i = 0; i < 6; i++) {
-	if (GetPythonObjectClassAttr(x, kwargs_keys[i], schema_->GetAllocator(), kwargs, true))
+	if (GetPythonObjectClassAttr(x, kwargs_keys[i], *allocator, kwargs, true))
 	  break;
       }
       if (args.IsNull() && kwargs.IsNull()) {
 	goto pickle;
       }
-      AddMember(GetPythonClassString(), mod_cls, schema_->GetAllocator());
+      AddMember(GetPythonClassString(), mod_cls, *allocator);
       if (!(args.IsNull())) {
-	AddMember(GetArgsString(), args, schema_->GetAllocator());
+	AddMember(GetArgsString(), args, *allocator);
 	if (args.HasSchemaNested())
 	  AddSchemaMember(GetArgsString(),
 			  args.GetSchemaNested(schema_->GetAllocator()));
       }
       if (!(kwargs.IsNull())) {
-	AddMember(GetKwargsString(), kwargs, schema_->GetAllocator());
+	AddMember(GetKwargsString(), kwargs, *allocator);
 	if (kwargs.HasSchemaNested())
 	  AddSchemaMember(GetKwargsString(),
 			  kwargs.GetSchemaNested(schema_->GetAllocator()));
@@ -5179,7 +5191,7 @@ public:
       return false;
     }
     SetStringRaw(StringRef((Ch*)buffer, (SizeType)((size_t)buffer_len / sizeof(Ch))),
-		 schema_->GetAllocator());
+		 *allocator);
     Py_DECREF(py_str);
     return true;
   }
@@ -5188,18 +5200,20 @@ public:
     std::stringstream ss;
     ss << x;
     std::string s = ss.str();
-    ResetSchema(allocator);
-    SetStringRaw(StringRef(s.c_str(), s.size()),
-                 schema_->GetAllocator());
+    ResetSchema();
+    if (!allocator)
+      allocator = &(schema_->GetAllocator());
+    SetStringRaw(StringRef(s.c_str(), s.size()), *allocator);
     AddSchemaMember(GetTypeString(), GetObjString());
   }
   void SetPlyRaw(const Ply& x, Allocator* allocator = 0) {
     std::stringstream ss;
     ss << x;
     std::string s = ss.str();
-    ResetSchema(allocator);
-    SetStringRaw(StringRef(s.c_str(), s.size()),
-		 schema_->GetAllocator());
+    ResetSchema();
+    if (!allocator)
+      allocator = &(schema_->GetAllocator());
+    SetStringRaw(StringRef(s.c_str(), s.size()), *allocator);
     AddSchemaMember(GetTypeString(), GetPlyString());
   }
 
