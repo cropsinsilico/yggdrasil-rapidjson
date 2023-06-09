@@ -4427,7 +4427,7 @@ public:
 		     const Ch* encoding_str = NULL,
 		     const SizeType encoding_len = 0,
 		     RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
-    ResetSchema();
+    ResetSchema(allocator);
     if (!allocator)
       allocator = &(schema_->GetAllocator());
     SizeType nbytes = 0;
@@ -4745,7 +4745,9 @@ public:
       RAPIDJSON_ASSERT(allocator);
       if (!allocator)
 	return false;
-      ResetSchema();
+      ResetSchema(allocator);
+      if (!allocator)
+	allocator = &(schema_->GetAllocator());
       Py_ssize_t x_size = 0;
       if (PyBytes_Check(x)) {
 	x_size = PyBytes_Size(x);
@@ -4774,7 +4776,7 @@ public:
       RAPIDJSON_ASSERT(PyErr_Occurred() == NULL);
     } else if (PyType_Check(x) || PyFunction_Check(x)) {
       SetString("");
-      ResetSchema();
+      ResetSchema(allocator);
       if (!allocator)
 	allocator = &(schema_->GetAllocator());
       Ch* mod_cls = NULL;
@@ -4794,7 +4796,7 @@ public:
       mod_cls = NULL;
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
     } else if (PyArray_CheckScalar(x)) {
-      ResetSchema();
+      ResetSchema(allocator);
       if (!allocator)
 	allocator = &(schema_->GetAllocator());
       PyArray_Descr* desc = NULL;
@@ -4858,7 +4860,7 @@ public:
 	bool single = (PyDict_Size(desc->fields) == 1);
 	if (!single) {
 	  SetArray();
-	  ResetSchema();
+	  ResetSchema(allocator);
 	  if (!allocator)
 	    allocator = &(schema_->GetAllocator());
 	  Reserve((SizeType)PyDict_Size(desc->fields), *allocator);
@@ -4912,7 +4914,7 @@ public:
 	}
 	return true;
       }
-      ResetSchema();
+      ResetSchema(allocator);
       if (!allocator)
 	allocator = &(schema_->GetAllocator());
       SizeType precision;
@@ -5114,7 +5116,7 @@ public:
 	}
       }
       SetObject();
-      ResetSchema();
+      ResetSchema(allocator);
       if (!allocator)
 	allocator = &(schema_->GetAllocator());
       AddSchemaMember(GetTypeString(), GetPythonInstanceString());
@@ -5202,7 +5204,7 @@ public:
     std::stringstream ss;
     ss << x;
     std::string s = ss.str();
-    ResetSchema();
+    ResetSchema(allocator);
     if (!allocator)
       allocator = &(schema_->GetAllocator());
     SetStringRaw(StringRef(s.c_str(), s.size()), *allocator);
@@ -5212,7 +5214,7 @@ public:
     std::stringstream ss;
     ss << x;
     std::string s = ss.str();
-    ResetSchema();
+    ResetSchema(allocator);
     if (!allocator)
       allocator = &(schema_->GetAllocator());
     SetStringRaw(StringRef(s.c_str(), s.size()), *allocator);
