@@ -3619,23 +3619,6 @@ public:
       schema_ = NULL;
       schema_allocator = NULL;
     }
-    if (!(Allocator::kNeedFree || (RAPIDJSON_USE_MEMBERSMAP+0 &&
-				   internal::IsRefCounted<Allocator>::Value))) {
-      switch(data_.f.flags) {
-      case kArrayFlag: {
-	for (ValueIterator it = Begin(); it != End(); it++)
-	  it->DestroySchema();
-	break;
-      }
-      case kObjectFlag: {
-	for (MemberIterator it = MemberBegin(); it != MemberEnd(); it++)
-	  it->value.DestroySchema();
-	break;
-      }
-      default:
-	break;
-      }
-    }
   }
   void ResetSchema(Allocator* allocator = 0) {
     DestroySchema();
@@ -5170,11 +5153,13 @@ public:
 	"get_input_keyword_arguments",
 	"get_input_kwargs"};
       for (SizeType i = 0; i < 6; i++) {
-	if (GetPythonObjectClassAttr(x, args_keys[i], *allocator, args, true))
+	if (GetPythonObjectClassAttr(x, args_keys[i],
+				     *allocator, args, true))
 	  break;
       }
       for (SizeType i = 0; i < 6; i++) {
-	if (GetPythonObjectClassAttr(x, kwargs_keys[i], *allocator, kwargs, true))
+	if (GetPythonObjectClassAttr(x, kwargs_keys[i],
+				     *allocator, kwargs, true))
 	  break;
       }
       if (args.IsNull() && kwargs.IsNull()) {
