@@ -58,9 +58,9 @@ TEST(Value, Size) {
 #define YGGDRASIL_VECTOR_TEST(type, value)		\
   {							\
     Value vv;						\
-    Value::AllocatorType allocator;			\
+    Value::AllocatorType v_allocator;			\
     std::vector<type> x_vect(3, value);			\
-    vv.Set<std::vector<type>>(x_vect, allocator);	\
+    vv.Set<std::vector<type>>(x_vect, v_allocator);	\
     EXPECT_TRUE(vv.Is<std::vector<type> >());		\
     EXPECT_EQ(vv.Get<std::vector<type> >(), x_vect);	\
   }
@@ -68,12 +68,12 @@ TEST(Value, Size) {
 #define YGGDRASIL_MAP_TEST(type, value)				\
   {								\
     Value vv;							\
-    Value::AllocatorType allocator;				\
+    Value::AllocatorType v_allocator;				\
     std::map<std::string, type> x_map;				\
     x_map["a"] = value;						\
     x_map["b"] = value;						\
     x_map["c"] = value;						\
-    vv.Set<std::map<std::string, type> >(x_map, allocator);	\
+    vv.Set<std::map<std::string, type> >(x_map, v_allocator);	\
     EXPECT_TRUE((vv.Is<std::map<std::string, type> >()));	\
     EXPECT_EQ((vv.Get<std::map<std::string, type> >()), x_map);	\
   }
@@ -86,12 +86,12 @@ TEST(Value, Size) {
 
 #define YGGDRASIL_SCALAR_UNIT_TEST(type, value)				\
   {									\
-    Value::AllocatorType allocator;					\
+    Value::AllocatorType v_allocator;					\
     units::GenericQuantity<type, Value::EncodingType> q1(value, "g");	\
     units::GenericQuantity<type, Value::EncodingType> q2(1000000 * value, "ug"); \
     EXPECT_TRUE(q1.equivalent_to(q2));					\
-    Value zq1(value, "g", allocator);					\
-    Value zq2(q2, allocator);						\
+    Value zq1(value, "g", v_allocator);					\
+    Value zq2(q2, v_allocator);						\
     EXPECT_EQ(1000000 * value, zq1.TEMPLATE_CXX11 GetScalar<type>("ug")); \
     EXPECT_EQ(value, zq2.TEMPLATE_CXX11 GetScalar<type>("g"));		\
     EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetScalarQuantity<type>("g"));	\

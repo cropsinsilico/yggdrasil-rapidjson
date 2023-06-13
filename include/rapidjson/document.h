@@ -6695,9 +6695,10 @@ public:
     return out;
   }
   template <typename YggSchemaValueType>
-  bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema) {
-    copy = true; // Always copy
-    RAPIDJSON_YGG_DOCUMENT_(YggdrasilString, str, length, copy, schema);
+  bool YggdrasilString(const Ch* str, SizeType length, bool,
+		       YggSchemaValueType& schema) {
+    // copy = true; // Always copy
+    RAPIDJSON_YGG_DOCUMENT_(YggdrasilString, str, length, schema);
     new (stack_.template Push<ValueType>()) ValueType(str, length,
 						      GetAllocator(),
 						      schema);
