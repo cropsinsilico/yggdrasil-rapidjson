@@ -3489,11 +3489,6 @@ public:
   }
 
   // TODO: Pass stack allocator?
-  void InitSchema() {
-    Allocator* allocator = RAPIDJSON_NEW(Allocator)();
-    InitSchema(*allocator);
-    OwnSchemaAllocator();
-  }
   void InitSchema(Allocator& allocator) {
     schema_ = new SchemaValueType(kObjectType, &allocator,
 				  1024, &allocator);
@@ -3514,29 +3509,14 @@ public:
       schema_allocator = NULL;
     }
   }
-  void ResetSchema() {
-    DestroySchema();
-    InitSchema();
-  }
   void ResetSchema(Allocator& allocator) {
     DestroySchema();
     InitSchema(allocator);
   }
-  // TODO: additional location where setschema called without allocator
   template <typename SourceStackAllocator>
   void SetValueSchema(GenericDocument<Encoding, Allocator, SourceStackAllocator>& schema) {
     return SetValueSchema(schema, schema.GetAllocator());
   }
-  // Non-copy version
-  // template <typename SourceAllocator>
-  // void SetValueSchema(GenericValue<Encoding,SourceAllocator>& schema,
-  // 		 SourceAllocator* allocator = 0) {
-  //   RAPIDJSON_ASSERT(schema.IsObject());
-  //   if (schema_ == NULL)
-  //     InitSchema(allocator);
-  //   schema_ = schema;
-  // }
-  // Copy version
   template <typename SourceAllocator>
   void SetValueSchema(const GenericValue<Encoding,SourceAllocator>& schema,
 		      Allocator& allocator) {
