@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add test for conflicting aliases in allOf set
 * Add test for array of strings & complex
 * Allow for different character types in Ply & ObjWavefront classes
+* Require allocator for yggdrasil types
 
 ### IN PROGRESS
 * Add docstrings to new methods

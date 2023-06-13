@@ -3600,9 +3600,11 @@ public:
       allocator = RAPIDJSON_NEW(Allocator)();
       allocator_created = true;
     }
-    schema_ = reinterpret_cast<SchemaValueType*>(allocator->Malloc(sizeof(SchemaValueType)));
-    new (schema_) SchemaValueType(kObjectType, allocator,
+    schema_ = new SchemaValueType(kObjectType, allocator,
 				  1024, allocator);
+    // schema_ = reinterpret_cast<SchemaValueType*>(allocator->Malloc(sizeof(SchemaValueType)));
+    // new (schema_) SchemaValueType(kObjectType, allocator,
+    // 				  1024, allocator);
     // Force document to clean up allocator (and thereby it's
     // own memory for the MemoryPoolAllocator)
     if (allocator_created)
@@ -3612,9 +3614,10 @@ public:
     if (schema_ != NULL) {
       Allocator* schema_allocator = schema_->ownAllocator_;
       schema_->ownAllocator_ = NULL;
-      schema_->ClearStack();
-      schema_->~GenericDocument();
-      Allocator::Free(schema_);
+      // schema_->ClearStack();
+      // schema_->~GenericDocument();
+      RAPIDJSON_DELETE(schema_);
+      // Allocator::Free(schema_);
       RAPIDJSON_DELETE(schema_allocator);
       schema_ = NULL;
       schema_allocator = NULL;
