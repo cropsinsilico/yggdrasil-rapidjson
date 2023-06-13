@@ -669,30 +669,26 @@ template<typename ValueType>
 struct TypeHelper<ValueType, uint8_t> {
   static bool Is(const ValueType& v) { return v.template IsScalar<uint8_t>(); }
   static uint8_t Get(const ValueType& v) { return v.template GetScalar<uint8_t>(); }
-  static ValueType& Set(ValueType& v, uint8_t data) { return v.SetScalar(data); }
-  static ValueType& Set(ValueType& v, uint8_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, &allocator); }
+  static ValueType& Set(ValueType& v, uint8_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
 };
 template<typename ValueType>
 struct TypeHelper<ValueType, uint16_t> {
   static bool Is(const ValueType& v) { return v.template IsScalar<uint16_t>(); }
   static uint16_t Get(const ValueType& v) { return v.template GetScalar<uint16_t>(); }
-  static ValueType& Set(ValueType& v, uint16_t data) { return v.SetScalar(data); }
-  static ValueType& Set(ValueType& v, uint16_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, &allocator); }
+  static ValueType& Set(ValueType& v, uint16_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
 };
 // int
 template<typename ValueType>
 struct TypeHelper<ValueType, int8_t> {
   static bool Is(const ValueType& v) { return v.template IsScalar<int8_t>(); }
   static int8_t Get(const ValueType& v) { return v.template GetScalar<int8_t>(); }
-  static ValueType& Set(ValueType& v, int8_t data) { return v.SetScalar(data); }
-  static ValueType& Set(ValueType& v, int8_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, &allocator); }
+  static ValueType& Set(ValueType& v, int8_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
 };
 template<typename ValueType>
 struct TypeHelper<ValueType, int16_t> {
   static bool Is(const ValueType& v) { return v.template IsScalar<int16_t>(); }
   static int16_t Get(const ValueType& v) { return v.template GetScalar<int16_t>(); }
-  static ValueType& Set(ValueType& v, int16_t data) { return v.SetScalar(data); }
-  static ValueType& Set(ValueType& v, int16_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, &allocator); }
+  static ValueType& Set(ValueType& v, int16_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
 };
 // float
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
@@ -700,8 +696,7 @@ template<typename ValueType>
 struct TypeHelper<ValueType, long double> {
   static bool Is(const ValueType& v) { return v.template IsScalar<long double>(); }
   static long double Get(const ValueType& v) { return v.template GetScalar<long double>(); }
-  static ValueType& Set(ValueType& v, long double data) { return v.SetScalar(data); }
-  static ValueType& Set(ValueType& v, long double data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, &allocator); }
+  static ValueType& Set(ValueType& v, long double data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
 };
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 // complex
@@ -709,23 +704,20 @@ template<typename ValueType>
 struct TypeHelper<ValueType, std::complex<float> > {
   static bool Is(const ValueType& v) { return v.template IsScalar<std::complex<float> >(); }
   static std::complex<float> Get(const ValueType& v) { return v.template GetScalar<std::complex<float> >(); }
-  static ValueType& Set(ValueType& v, std::complex<float> data) { return v.SetScalar(data); }
-  static ValueType& Set(ValueType& v, std::complex<float> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, &allocator); }
+  static ValueType& Set(ValueType& v, std::complex<float> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
 };
 template<typename ValueType>
 struct TypeHelper<ValueType, std::complex<double> > {
   static bool Is(const ValueType& v) { return v.template IsScalar<std::complex<double> >(); }
   static std::complex<double> Get(const ValueType& v) { return v.template GetScalar<std::complex<double> >(); }
-  static ValueType& Set(ValueType& v, std::complex<double> data) { return v.SetScalar(data); }
-  static ValueType& Set(ValueType& v, std::complex<double> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, &allocator); }
+  static ValueType& Set(ValueType& v, std::complex<double> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
 };
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
 template<typename ValueType>
 struct TypeHelper<ValueType, std::complex<long double> > {
   static bool Is(const ValueType& v) { return v.template IsScalar<std::complex<long double> >(); }
   static std::complex<long double> Get(const ValueType& v) { return v.template GetScalar<std::complex<long double> >(); }
-  static ValueType& Set(ValueType& v, std::complex<long double> data) { return v.SetScalar(data); }
-  static ValueType& Set(ValueType& v, std::complex<long double> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, &allocator); }
+  static ValueType& Set(ValueType& v, std::complex<long double> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
 };
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
@@ -734,8 +726,7 @@ template<typename ValueType>
 struct TypeHelper<ValueType, PyObject*> {
   static bool Is(const ValueType& v) { return v.template IsPythonInstance(); }
   static PyObject* Get(const ValueType& v) { return v.template GetPythonInstance(); }
-  static ValueType& Set(ValueType& v, PyObject* data) { return v.SetPythonInstance(data); }
-  static ValueType& Set(ValueType& v, PyObject* data, typename ValueType::AllocatorType& allocator) { return v.SetPythonInstance(data, &allocator); }
+  static ValueType& Set(ValueType& v, PyObject* data, typename ValueType::AllocatorType& allocator) { return v.SetPythonInstance(data, allocator); }
 };
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 // obj & ply
@@ -743,15 +734,13 @@ template<typename ValueType>
 struct TypeHelper<ValueType, ObjWavefront> {
   static bool Is(const ValueType& v) { return v.template IsObjWavefront(); }
   static ObjWavefront Get(const ValueType& v) { return v.template GetObjWavefront(); }
-  static ValueType& Set(ValueType& v, const ObjWavefront& data) { return v.SetObj(data); }
-  static ValueType& Set(ValueType& v, const ObjWavefront& data, typename ValueType::AllocatorType& allocator) { return v.SetObj(data, &allocator); }
+  static ValueType& Set(ValueType& v, const ObjWavefront& data, typename ValueType::AllocatorType& allocator) { return v.SetObj(data, allocator); }
 };
 template<typename ValueType>
 struct TypeHelper<ValueType, Ply> {
   static bool Is(const ValueType& v) { return v.template IsPly(); }
   static Ply Get(const ValueType& v) { return v.template GetPly(); }
-  static ValueType& Set(ValueType& v, const Ply& data) { return v.SetPly(data); }
-  static ValueType& Set(ValueType& v, const Ply& data, typename ValueType::AllocatorType& allocator) { return v.SetPly(data, &allocator); }
+  static ValueType& Set(ValueType& v, const Ply& data, typename ValueType::AllocatorType& allocator) { return v.SetPly(data, allocator); }
 };
 #define YGG_STD_VECTOR_(T)						\
   template<typename ValueType>						\
@@ -801,7 +790,7 @@ struct TypeHelper<ValueType, Ply> {
       SizeType shape[1];						\
       shape[0] = static_cast<SizeType>(data.size());			\
       v.SetNDArray(data.data(), shape, 1,				\
-		   NULL, 0, &allocator);				\
+		   NULL, 0, allocator);					\
       return v;								\
     }									\
   };
@@ -838,7 +827,7 @@ struct TypeHelper<ValueType, Ply> {
       /* TODO: encoding? */						\
       shape[0] = static_cast<SizeType>(data.size());			\
       v.SetNDArray(buf, static_cast<SizeType>(prec),			\
-		   shape, 1, &allocator);				\
+		   shape, 1, allocator);				\
       allocator.Free(buf);						\
       return v;								\
     }									\
@@ -1138,7 +1127,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
         YGG_SCHEMA_INIT_CONSTRUCT;
 	if (rhs.HasSchema())
-	  SetValueSchema(rhs.GetValueSchema(), &allocator);
+	  SetValueSchema(rhs.GetValueSchema(), allocator);
 #endif // RAPIDJSON_YGGDRASIL
         switch (rhs.GetType()) {
         case kObjectType:
@@ -3196,51 +3185,38 @@ public:
   }
 
   //! Constructors for strings w/ schema
-  GenericValue(const Ch* s, SizeType length,
-	       const Ch* schema, SizeType schema_length) RAPIDJSON_NOEXCEPT :
-    data_() YGG_SCHEMA_INIT {
-    SetStringRaw(StringRef(s, length));
-    SetValueSchemaRaw(schema, schema_length);
-  }
-  explicit GenericValue(StringRefType s,
+  explicit GenericValue(StringRefType s, Allocator& allocator,
 			const Ch* schema, SizeType schema_length) RAPIDJSON_NOEXCEPT :
     data_() YGG_SCHEMA_INIT {
-    SetStringRaw(s);
-    SetValueSchemaRaw(schema, schema_length);
+    SetStringRaw(s, allocator);
+    SetValueSchemaRaw(schema, schema_length, allocator);
   }
   GenericValue(const Ch* s, SizeType length, Allocator& allocator,
 	       const Ch* schema, SizeType schema_length) RAPIDJSON_NOEXCEPT :
     data_() YGG_SCHEMA_INIT {
     SetStringRaw(StringRef(s, length), allocator);
-    SetValueSchemaRaw(schema, schema_length, &allocator);
+    SetValueSchemaRaw(schema, schema_length, allocator);
   }
   GenericValue(const Ch* s, Allocator& allocator,
-	       const Ch* schema, SizeType schema_length) RAPIDJSON_NOEXCEPT :
+	       const Ch* schema,
+	       SizeType schema_length) RAPIDJSON_NOEXCEPT :
     data_() YGG_SCHEMA_INIT {
     SetStringRaw(StringRef(s), allocator);
-    SetValueSchemaRaw(schema, schema_length, &allocator);
+    SetValueSchemaRaw(schema, schema_length, allocator);
   }
 #if RAPIDJSON_HAS_STDSTRING
   GenericValue(const std::basic_string<Ch>& s, Allocator& allocator,
-	       const Ch* schema, SizeType schema_length) RAPIDJSON_NOEXCEPT :
+	       const Ch* schema,
+	       SizeType schema_length) RAPIDJSON_NOEXCEPT :
     data_() YGG_SCHEMA_INIT {
     SetStringRaw(StringRef(s), allocator);
-    SetValueSchemaRaw(schema, schema_length, &allocator);
+    SetValueSchemaRaw(schema, schema_length, allocator);
   }
 #endif
   // Units
   template <typename T>
   explicit GenericValue(const units::GenericQuantity<T, EncodingType> &x,
 			Allocator& allocator,
-			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType nelements = 1;
-    SetNDArrayRaw(&x, &nelements, 1, &allocator);
-  }
-  template <typename T>
-  explicit GenericValue(const units::GenericQuantity<T, EncodingType> &x,
-			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
@@ -3254,15 +3230,6 @@ public:
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType nelements = N;
-    SetNDArrayRaw(&(x[0]), &nelements, 1, &allocator);
-  }
-  template <typename T, SizeType N>
-  explicit GenericValue(const units::GenericQuantity<T, EncodingType> (&x)[N],
-			Allocator* allocator = 0,
-			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType nelements = N;
     SetNDArrayRaw(&(x[0]), &nelements, 1, allocator);
   }
   template <typename T>
@@ -3271,26 +3238,10 @@ public:
 			Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, &nelements, 1, &allocator); }
-  template <typename T>
-  explicit GenericValue(const units::GenericQuantity<T, EncodingType>* x,
-			SizeType nelements,
-			Allocator* allocator = 0,
-			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetNDArrayRaw(x, &nelements, 1, allocator); }
   template <typename T, SizeType M, SizeType N>
   explicit GenericValue(const units::GenericQuantity<T, EncodingType> (&x)[M][N],
 			Allocator& allocator,
-			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[2] = {M, N};
-    SetNDArrayRaw(&(x[0][0]), &(shape[0]), 2, &allocator);
-  }
-  template <typename T, SizeType M, SizeType N>
-  explicit GenericValue(const units::GenericQuantity<T, EncodingType> (&x)[M][N],
-			Allocator* allocator = 0,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
@@ -3303,13 +3254,6 @@ public:
 			Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, &(shape[0]), N, &allocator); }
-  template <typename T, SizeType N>
-  explicit GenericValue(const units::GenericQuantity<T, EncodingType>* x,
-			SizeType shape[N],
-			Allocator* allocator = 0,
-			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetNDArrayRaw(x, &(shape[0]), N, allocator); }
   template <typename T>
   explicit GenericValue(const units::GenericQuantity<T, EncodingType>* x,
@@ -3317,78 +3261,66 @@ public:
 			SizeType ndim, Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, shape, ndim, &allocator); }
+  { SetNDArrayRaw(x, shape, ndim, allocator); }
   template <typename T>
   explicit GenericValue(const units::GenericQuantityArray<T, EncodingType>& x,
-			Allocator* allocator = 0,
+			Allocator& allocator,
 			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetNDArrayRaw(&x, allocator); }
-  template <typename T>
-  explicit GenericValue(const units::GenericQuantity<T, EncodingType>* x,
-			const SizeType* shape, const SizeType ndim,
-			Allocator* allocator = 0,
-			RAPIDJSON_DISABLEIF((internal::IsPointer<T>)))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, shape, ndim, allocator); }
 
   // Scalars not covered by rapidjson & units
   template <typename T>
   explicit GenericValue(const T x,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(&x, NULL, 0, NULL, 0); }
-  template <typename T>
-  explicit GenericValue(const T x,
-			const Ch* units_str, const SizeType units_len=0,
-			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(&x, NULL, 0, units_str, units_len); }
+  {
+    Allocator* allocator = RAPIDJSON_NEW(Allocator)();
+    SetNDArrayRaw(&x, NULL, 0, NULL, 0, *allocator);
+    OwnSchemaAllocator();
+  }
   template <typename T>
   explicit GenericValue(const T x, Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(&x, NULL, 0, NULL, 0, &allocator); }
+  { SetNDArrayRaw(&x, NULL, 0, NULL, 0, allocator); }
+  template <typename T>
+  explicit GenericValue(const T x,
+			const Ch* units_str,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  { SetNDArrayRaw(&x, NULL, 0, units_str, 0, allocator); }
   template <typename T>
   explicit GenericValue(const T x,
 			const Ch* units_str, const SizeType units_len,
 			Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(&x, NULL, 0, units_str, units_len, &allocator); }
+  { SetNDArrayRaw(&x, NULL, 0, units_str, units_len, allocator); }
   // Scalar string
   explicit GenericValue(const Ch* x, const SizeType precision,
 			const Ch* encoding, const SizeType encoding_len,
 			Allocator& allocator)
-  { SetNDArrayRaw(x, NULL, 0, 0, 0, &allocator, kYggStringSubType, precision, encoding, encoding_len); }
+  { SetNDArrayRaw(x, NULL, 0, 0, 0, allocator,
+		  kYggStringSubType, precision, encoding, encoding_len); }
   // Explicit 1D Array
   template <typename T, SizeType N>
-  explicit GenericValue(const T (&x)[N],
-			const Ch* units_str=NULL, const SizeType units_len=0,
+  explicit GenericValue(const T (&x)[N], Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType nelements = N;
-    SetNDArrayRaw(&(x[0]), &nelements, 1, units_str, units_len);
+    SetNDArrayRaw(&(x[0]), &nelements, 1, NULL, 0, allocator);
   }
   template <typename T, SizeType N>
-  explicit GenericValue(const T (&x)[N],
+  explicit GenericValue(const T (&x)[N], const Ch* units_str,
 			Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType nelements = N;
-    SetNDArrayRaw(&(x[0]), &nelements, 1, NULL, 0, &allocator);
-  }
-  template <typename T, SizeType N>
-  explicit GenericValue(const T (&x)[N],
-			const Ch* units_str,
-			Allocator& allocator,
-			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType nelements = N;
-    SetNDArrayRaw(&(x[0]), &nelements, 1, units_str, 0, &allocator);
+    SetNDArrayRaw(&(x[0]), &nelements, 1, units_str, 0, allocator);
   }
   template <typename T, SizeType N>
   explicit GenericValue(const T (&x)[N],
@@ -3398,49 +3330,38 @@ public:
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType nelements = N;
-    SetNDArrayRaw(&(x[0]), &nelements, 1, units_str, units_len, &allocator);
+    SetNDArrayRaw(&(x[0]), &nelements, 1, units_str, units_len,
+		  allocator);
   }
   // 1D Array as pointer
   template <typename T>
   explicit GenericValue(const T* x, SizeType nelements,
-			const Ch* units_str=NULL, const SizeType units_len=0,
+			Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, &nelements, 1, units_str, units_len); }
-  template <typename T>
-  explicit GenericValue(const T* x, SizeType nelements, Allocator& allocator,
-			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, &nelements, 1, NULL, 0, &allocator); }
+  { SetNDArrayRaw(x, &nelements, 1, NULL, 0, allocator); }
   template <typename T>
   explicit GenericValue(const T* x, const SizeType nelements,
 			const Ch* units_str,
 			Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, &nelements, 1, units_str, 0, &allocator); }
+  { SetNDArrayRaw(x, &nelements, 1, units_str, 0, allocator); }
   template <typename T>
   explicit GenericValue(const T* x, const SizeType nelements,
 			const Ch* units_str, const SizeType units_len,
 			Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, &nelements, 1, units_str, units_len, &allocator); }
+  { SetNDArrayRaw(x, &nelements, 1, units_str, units_len, allocator); }
   // 1D array of strings
   explicit GenericValue(const Ch* x, const SizeType precision,
 			const SizeType nelements, Allocator& allocator,
 			const Ch* encoding=0, const SizeType encoding_len=0)
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT {
     SizeType shape[] = {nelements};
-    SetNDArrayRaw(x, shape, 1, NULL, 0, &allocator, kYggStringSubType, precision, encoding, encoding_len);
-  }
-  template <SizeType M, SizeType N>
-  explicit GenericValue(const Ch (&x)[M][N],
-			const Ch* encoding=0, const SizeType encoding_len=0)
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {M};
-    SetNDArrayRaw(&(x[0][0]), shape, 1, NULL, 0, 0, kYggStringSubType, N, encoding, encoding_len);
+    SetNDArrayRaw(x, shape, 1, NULL, 0, allocator,
+		  kYggStringSubType, precision, encoding, encoding_len);
   }
   template <SizeType M, SizeType N>
   explicit GenericValue(const Ch (&x)[M][N], Allocator& allocator,
@@ -3448,18 +3369,10 @@ public:
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {M};
-    SetNDArrayRaw(&(x[0][0]), shape, 1, NULL, 0, &allocator, kYggStringSubType, N, encoding, encoding_len);
+    SetNDArrayRaw(&(x[0][0]), shape, 1, NULL, 0, allocator,
+		  kYggStringSubType, N, encoding, encoding_len);
   }
   // Explicit 2D array
-  template <typename T, SizeType M, SizeType N>
-  explicit GenericValue(const T (&x)[M][N],
-			const Ch* units_str=NULL, const SizeType units_len=0,
-			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {M, N};
-    SetNDArrayRaw(&(x[0][0]), shape, 2, units_str, units_len);
-  }
   template <typename T, SizeType M, SizeType N>
   explicit GenericValue(const T (&x)[M][N],
 			Allocator& allocator,
@@ -3493,17 +3406,10 @@ public:
   template <typename T>
   explicit GenericValue(const T* x,
 			const SizeType shape[], const SizeType ndim,
-			const Ch* units_str=NULL, const SizeType units_len=0,
-			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, shape, ndim, units_str, units_len); }
-  template <typename T>
-  explicit GenericValue(const T* x,
-			const SizeType shape[], const SizeType ndim,
 			Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, shape, ndim, NULL, 0, &allocator); }
+  { SetNDArrayRaw(x, shape, ndim, NULL, 0, allocator); }
   template <typename T>
   explicit GenericValue(const T* x,
 			const SizeType shape[], const SizeType ndim,
@@ -3511,7 +3417,7 @@ public:
 			Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, shape, ndim, units_str, 0, &allocator); }
+  { SetNDArrayRaw(x, shape, ndim, units_str, 0, allocator); }
   template <typename T>
   explicit GenericValue(const T* x,
 			const SizeType shape[], const SizeType ndim,
@@ -3519,7 +3425,7 @@ public:
 			Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, shape, ndim, units_str, units_len, &allocator); }
+  { SetNDArrayRaw(x, shape, ndim, units_str, units_len, allocator); }
   // Get ndim from template
   template <typename T, SizeType N>
   explicit GenericValue(const T* x,
@@ -3535,46 +3441,35 @@ public:
 			Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, shape, ndim, units_str, units_len, &allocator); }
+  { SetNDArrayRaw(x, shape, ndim, units_str, units_len, allocator); }
   // ND array of strings
   explicit GenericValue(const Ch* x, const SizeType precision,
 			const SizeType shape[], const SizeType ndim,
 			Allocator& allocator,
 			const Ch* encoding=0, const SizeType encoding_len=0)
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetNDArrayRaw(x, shape, ndim, NULL, 0, &allocator, kYggStringSubType, precision, encoding, encoding_len); }
-  template <SizeType L, SizeType M, SizeType N>
-  explicit GenericValue(const Ch (&x)[L][M][N],
-			const Ch* encoding=0, const SizeType encoding_len=0)
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    SizeType shape[] = {L, M};
-    SetNDArrayRaw(&(x[0][0][0]), shape, 2, NULL, 0, 0, kYggStringSubType, N, encoding, encoding_len);
-  }
+  { SetNDArrayRaw(x, shape, ndim, NULL, 0, allocator,
+		  kYggStringSubType, precision, encoding, encoding_len); }
   template <SizeType L, SizeType M, SizeType N>
   explicit GenericValue(const Ch (&x)[L][M][N], Allocator& allocator,
 			const Ch* encoding=0, const SizeType encoding_len=0)
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType shape[] = {L, M};
-    SetNDArrayRaw(&(x[0][0][0]), shape, 2, NULL, 0, &allocator, kYggStringSubType, N, encoding, encoding_len);
+    SetNDArrayRaw(&(x[0][0][0]), shape, 2, NULL, 0, allocator,
+		  kYggStringSubType, N, encoding, encoding_len);
   }
   // Other types with dedicated classes
-  explicit GenericValue(PyObject* x) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetPythonObjectRaw(x); }
   explicit GenericValue(PyObject* x, Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  { SetPythonObjectRaw(x, &allocator); }
-  explicit GenericValue(const ObjWavefront& x, Allocator* allocator = 0) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  { SetPythonObjectRaw(x, allocator); }
+  explicit GenericValue(const ObjWavefront& x, Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetObjRaw(x, allocator); }
-  explicit GenericValue(const Ply& x, Allocator* allocator = 0) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  explicit GenericValue(const Ply& x, Allocator& allocator) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetPlyRaw(x, allocator); }
   // Explicit schema provided
   template <typename SourceAllocator>
   explicit GenericValue(const Ch* s, SizeType length, Allocator& allocator,
-			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length), allocator); SetValueSchema(schema, &allocator); }
-  template <typename SourceAllocator>
-  explicit GenericValue(const Ch* s, SizeType length,
-			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length)); SetValueSchema(schema); }
+			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length), allocator); SetValueSchema(schema, allocator); }
   template <typename SourceAllocator>
   explicit GenericValue(Type type,
 			const GenericValue<Encoding,SourceAllocator>& schema,
@@ -3590,40 +3485,40 @@ public:
     // Use ShortString to store empty string.
     if (type == kStringType)
       data_.ss.SetLength(0);
-    SetValueSchema(schema, &allocator);
+    SetValueSchema(schema, allocator);
   }
 
   // TODO: Pass stack allocator?
-  void InitSchema(Allocator* allocator = 0) {
-    bool allocator_created = false;
-    if (!allocator) {
-      allocator = RAPIDJSON_NEW(Allocator)();
-      allocator_created = true;
-    }
-    schema_ = new SchemaValueType(kObjectType, allocator,
-				  1024, allocator);
-    // schema_ = reinterpret_cast<SchemaValueType*>(allocator->Malloc(sizeof(SchemaValueType)));
-    // new (schema_) SchemaValueType(kObjectType, allocator,
-    // 				  1024, allocator);
+  void InitSchema() {
+    Allocator* allocator = RAPIDJSON_NEW(Allocator)();
+    InitSchema(*allocator);
+    OwnSchemaAllocator();
+  }
+  void InitSchema(Allocator& allocator) {
+    schema_ = new SchemaValueType(kObjectType, &allocator,
+				  1024, &allocator);
+  }
+  void OwnSchemaAllocator() {
+    RAPIDJSON_ASSERT(!(schema_->ownAllocator_));
     // Force document to clean up allocator (and thereby it's
     // own memory for the MemoryPoolAllocator)
-    if (allocator_created)
-      schema_->ownAllocator_ = schema_->allocator_;
+    schema_->ownAllocator_ = schema_->allocator_;
   }
   void DestroySchema() {
     if (schema_ != NULL) {
       Allocator* schema_allocator = schema_->ownAllocator_;
       schema_->ownAllocator_ = NULL;
-      // schema_->ClearStack();
-      // schema_->~GenericDocument();
       RAPIDJSON_DELETE(schema_);
-      // Allocator::Free(schema_);
       RAPIDJSON_DELETE(schema_allocator);
       schema_ = NULL;
       schema_allocator = NULL;
     }
   }
-  void ResetSchema(Allocator* allocator = 0) {
+  void ResetSchema() {
+    DestroySchema();
+    InitSchema();
+  }
+  void ResetSchema(Allocator& allocator) {
     DestroySchema();
     InitSchema(allocator);
   }
@@ -3644,7 +3539,7 @@ public:
   // Copy version
   template <typename SourceAllocator>
   void SetValueSchema(const GenericValue<Encoding,SourceAllocator>& schema,
-		      Allocator* allocator = 0) {
+		      Allocator& allocator) {
     RAPIDJSON_ASSERT(schema.IsObject());
     if (schema_ == NULL)
       InitSchema(allocator);
@@ -3774,7 +3669,7 @@ public:
   }
   template <typename SourceEncoding, typename SourceAllocator>
   bool AddSchema(GenericValue<SourceEncoding, SourceAllocator>& schema,
-		 SourceAllocator* allocator = 0) {
+		 SourceAllocator& allocator = 0) {
     switch(GetType()) {
     case kObjectType:
       if (schema.IsObject() &&
@@ -3825,7 +3720,7 @@ public:
   }
 
   void SetValueSchemaRaw(const Ch* s, SizeType,
-		    Allocator* allocator = 0) {
+			 Allocator& allocator) {
     ResetSchema(allocator);
     schema_ = &(schema_->Parse(s));
   }
@@ -4132,7 +4027,7 @@ public:
 				 parent->GetAllocator());
 	  }
 	  schema_cpy["precision"].SetUint64(mem_len);
-	  SetValueSchema(schema_cpy, &(parent->GetAllocator()));
+	  SetValueSchema(schema_cpy, parent->GetAllocator());
 	}
       }
       else {
@@ -4338,7 +4233,7 @@ public:
 	return false;							\
       }									\
       if (flag == kGetVarArgsFlag) {					\
-	SetPythonObjectRaw(tmp);					\
+	SetPythonObjectRaw(tmp, parent->GetAllocator());		\
       }									\
     }
     else CASE_PYTHON_(PythonClass)
@@ -4363,7 +4258,7 @@ public:
       } else if (flag == kGetVarArgsFlag) {			\
 	if (tmp == NULL)					\
 	  return false;						\
-	Set ## str(*tmp);					\
+	Set ## str(*tmp, parent->GetAllocator());		\
       }								\
     }
     else CASE_GEOMETRY_(ObjWavefront)
@@ -4380,7 +4275,7 @@ public:
   
   template <typename T>
   bool SetNDArrayRaw(const units::GenericQuantityArray<T, EncodingType>* x,
-		     Allocator* allocator = 0,
+		     Allocator& allocator,
 		     RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
     std::basic_string<Ch> units_str = x->unitsStr();
     bool out = false;
@@ -4397,7 +4292,7 @@ public:
   template <typename T>
   bool SetNDArrayRaw(const units::GenericQuantity<T, EncodingType>* x,
 		     const SizeType* shape, const SizeType ndim,
-		     Allocator* allocator = 0,
+		     Allocator& allocator,
 		     RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
     SizeType nelements = 1;
     for (SizeType i = 0; i < ndim; i++)
@@ -4423,16 +4318,14 @@ public:
   template <typename T>
   bool SetNDArrayRaw(const T* data,
 		     const SizeType* shape, const SizeType& ndim,
-		     const Ch* units_str=NULL, const SizeType units_len=0,
-		     Allocator* allocator = 0,
+		     const Ch* units_str, const SizeType units_len,
+		     Allocator& allocator,
 		     enum YggSubType subtype = kYggNullSubType,
 		     SizeType precision = 0,
 		     const Ch* encoding_str = NULL,
 		     const SizeType encoding_len = 0,
 		     RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
     ResetSchema(allocator);
-    if (!allocator)
-      allocator = &(schema_->GetAllocator());
     SizeType nbytes = 0;
     if (precision == 0)
       precision = (SizeType)sizeof(T);
@@ -4440,13 +4333,13 @@ public:
     ValueType shape_array(kArrayType);
     for (SizeType i = 0; i < ndim; i++) {
       nbytes = nbytes * shape[i];
-      shape_array.PushBack(shape[i], schema_->GetAllocator());
+      shape_array.PushBack(shape[i], allocator);
     }
     SetStringRaw(StringRef(reinterpret_cast<const Ch*>(data),
 			   nbytes / sizeof(Ch)),
-		 *allocator);
+		 allocator);
     // Update schema
-    schema_->MemberReserve(5, schema_->GetAllocator());
+    schema_->MemberReserve(5, allocator);
     if (ndim == 0) {
       AddSchemaMember(GetTypeString(), GetScalarString());
     } else {
@@ -4465,7 +4358,9 @@ public:
       AddSchemaMember(GetShapeString(), shape_array);
     }
     if (encoding_len > 0) {
-      AddSchemaMember(GetEncodingString(), ValueType(encoding_str, encoding_len, schema_->GetAllocator()).Move());
+      AddSchemaMember(GetEncodingString(),
+		      ValueType(encoding_str, encoding_len,
+				allocator).Move());
     }
     return true;
   }
@@ -4474,7 +4369,7 @@ public:
     RAPIDJSON_ASSERT(isPythonInitialized());
     return NULL;
   }
-  bool SetPythonObjectRaw(PyObject*, Allocator* = 0,
+  bool SetPythonObjectRaw(PyObject*, Allocator&,
 			  bool=false, bool=true) {
     RAPIDJSON_ASSERT(isPythonInitialized());
     return false;
@@ -4499,7 +4394,7 @@ public:
       }
       x_attr = x_attr_res;
     }
-    bool ret = out.SetPythonObjectRaw(x_attr, &allocator);
+    bool ret = out.SetPythonObjectRaw(x_attr, allocator);
     Py_DECREF(x_attr);
     return ret;
   }
@@ -4690,7 +4585,7 @@ public:
     }
     return out;
   }
-  bool SetPythonObjectRaw(PyObject* x, Allocator* allocator = 0,
+  bool SetPythonObjectRaw(PyObject* x, Allocator& allocator,
 #ifdef RAPIDJSON_DONT_IMPORT_NUMPY
 			  bool=false,
 #else // RAPIDJSON_DONT_IMPORT_NUMPY
@@ -4708,60 +4603,45 @@ public:
     } else if (PyBool_Check(x)) {
       SetBool(x == Py_True);
     } else if (PyList_CheckExact(x)) {
-      RAPIDJSON_ASSERT(allocator);
-      if (!allocator)
-	return false;
       SetArray();
       for (SizeType i = 0; i < PyList_Size(x); i++) {
-        PushBack(ValueType(PyList_GetItem(x, i), *allocator).Move(), *allocator);
+        PushBack(ValueType(PyList_GetItem(x, i), allocator).Move(),
+		 allocator);
       }
     } else if (PyTuple_CheckExact(x)) {
-      RAPIDJSON_ASSERT(allocator);
-      if (!allocator)
-	return false;
       SetArray();
       for (SizeType i = 0; i < PyTuple_Size(x); i++) {
-        PushBack(ValueType(PyTuple_GetItem(x, i), *allocator).Move(), *allocator);
+        PushBack(ValueType(PyTuple_GetItem(x, i), allocator).Move(),
+		 allocator);
       }
     } else if (PyDict_CheckExact(x)) {
-      RAPIDJSON_ASSERT(allocator);
-      if (!allocator)
-	return false;
       SetObject();
       PyObject* keys = PyDict_Keys(x);
       PyObject* ikey;
       for (SizeType i = 0; i < PyDict_Size(x); i++) {
         ikey = PyList_GetItem(keys, i);
-        AddMember(ValueType(ikey, *allocator),
-                  ValueType(PyDict_GetItem(x, ikey), *allocator).Move(),
-                  *allocator);
+        AddMember(ValueType(ikey, allocator),
+                  ValueType(PyDict_GetItem(x, ikey), allocator).Move(),
+                  allocator);
       }
       Py_DECREF(keys);
     } else if (CHECK_UNICODE_NO_NUMPY(x)) {
-      RAPIDJSON_ASSERT(allocator);
-      if (!allocator)
-	return false;
       Py_ssize_t x_size = 0;
       const char* x_bytes = PyUnicode_AsUTF8AndSize(x, &x_size);
-      SetStringRaw(StringRef(x_bytes, (size_t)x_size), *allocator);
+      SetStringRaw(StringRef(x_bytes, (size_t)x_size), allocator);
     } else if (PyBytes_Check(x) || PyByteArray_Check(x)) {
-      RAPIDJSON_ASSERT(allocator);
-      if (!allocator)
-	return false;
       ResetSchema(allocator);
-      if (!allocator)
-	allocator = &(schema_->GetAllocator());
       Py_ssize_t x_size = 0;
       if (PyBytes_Check(x)) {
 	x_size = PyBytes_Size(x);
 	SetStringRaw(StringRef(PyBytes_AsString(x), (size_t)x_size),
-		     *allocator);
+		     allocator);
       } else {
 	x_size = PyByteArray_Size(x);
 	SetStringRaw(StringRef(PyByteArray_AsString(x), (size_t)x_size),
-		     *allocator);
+		     allocator);
       }
-      schema_->MemberReserve(5, schema_->GetAllocator());
+      schema_->MemberReserve(5, allocator);
       AddSchemaMember(GetTypeString(), GetScalarString());
       AddSchemaMember(GetSubTypeString(), GetStringSubTypeString());
       AddSchemaMember(GetPrecisionString(), GetStringLength());
@@ -4775,18 +4655,17 @@ public:
       RAPIDJSON_ASSERT(PyErr_Occurred() == NULL);
     } else if (PyComplex_Check(x)) {
       Set(std::complex<double>(PyComplex_RealAsDouble(x),
-                               PyComplex_ImagAsDouble(x)));
+                               PyComplex_ImagAsDouble(x)),
+	  allocator);
       RAPIDJSON_ASSERT(PyErr_Occurred() == NULL);
     } else if (PyType_Check(x) || PyFunction_Check(x)) {
       SetString("");
       ResetSchema(allocator);
-      if (!allocator)
-	allocator = &(schema_->GetAllocator());
       Ch* mod_cls = NULL;
       SizeType mod_cls_siz = 0;
       out = export_python_object<Encoding,Allocator>(x, mod_cls,
 						     mod_cls_siz,
-						     schema_->GetAllocator());
+						     allocator);
       RAPIDJSON_ASSERT(out && (mod_cls != NULL));
       if (!out || (mod_cls == NULL))
 	return out;
@@ -4794,14 +4673,12 @@ public:
 	AddSchemaMember(GetTypeString(), GetPythonClassString());
       else
 	AddSchemaMember(GetTypeString(), GetPythonFunctionString());
-      SetStringRaw(StringRefType(mod_cls, mod_cls_siz), *allocator);
-      schema_->GetAllocator().Free(mod_cls);
+      SetStringRaw(StringRefType(mod_cls, mod_cls_siz), allocator);
+      allocator.Free(mod_cls);
       mod_cls = NULL;
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
     } else if (PyArray_CheckScalar(x)) {
       ResetSchema(allocator);
-      if (!allocator)
-	allocator = &(schema_->GetAllocator());
       PyArray_Descr* desc = NULL;
       PyObject* scalar = NULL;
       if (PyObject_IsInstance(x, (PyObject*)&PyArray_Type)) {
@@ -4823,12 +4700,12 @@ public:
       ValueType subtype;
       ValueType encoding;
       if (!NumpyType2SubType(desc, subtype, precision, encoding, 0,
-			     schema_->GetAllocator())) {
+			     allocator)) {
 	Py_DECREF(desc);
 	Py_DECREF(scalar);
 	return false;
       }
-      void* data = schema_->GetAllocator().Malloc(precision);
+      void* data = allocator.Malloc(precision);
       if (!data) {
 	Py_DECREF(desc);
 	return false;
@@ -4839,8 +4716,8 @@ public:
       }
       PyArray_CastScalarToCtype(scalar, data, desc);
       SetStringRaw(StringRef(static_cast<Ch*>(data), precision / sizeof(Ch)),
-		   *allocator);
-      schema_->GetAllocator().Free(data);
+		   allocator);
+      allocator.Free(data);
       Py_DECREF(scalar);
       data = NULL;
       if (desc->type_num == NPY_UNICODE && encoding == GetUTF8EncodingString()) {
@@ -4848,7 +4725,7 @@ public:
 	return true;
       }
       Py_DECREF(desc);
-      schema_->MemberReserve(5, schema_->GetAllocator());
+      schema_->MemberReserve(5, allocator);
       AddSchemaMember(GetTypeString(), GetScalarString());
       AddSchemaMember(GetSubTypeString(), subtype);
       AddSchemaMember(GetPrecisionString(), precision);
@@ -4864,9 +4741,7 @@ public:
 	if (!single) {
 	  SetArray();
 	  ResetSchema(allocator);
-	  if (!allocator)
-	    allocator = &(schema_->GetAllocator());
-	  Reserve((SizeType)PyDict_Size(desc->fields), *allocator);
+	  Reserve((SizeType)PyDict_Size(desc->fields), allocator);
 	}
 	PyObject *kw_key, *kw_val;
 	Py_ssize_t kw_pos = 0;
@@ -4895,37 +4770,35 @@ public:
 	  if (field == NULL)
 	    return false;
 	  if (single) {
-	    if (!SetPythonObjectRaw(field))
+	    if (!SetPythonObjectRaw(field, allocator))
 	      return false;
 	    if (!skipTitle) {
 	      ValueType field_name(kw_keyS,
 				   static_cast<SizeType>(kw_keyS_len),
-				   schema_->GetAllocator());
+				   allocator);
 	      AddSchemaMember(GetTitleString(), field_name);
 	    }
 	  } else {
-	    ValueType pyField(field);
+	    ValueType pyField(field, allocator);
 	    Py_DECREF(field);
 	    if (!skipTitle) {
 	      ValueType field_name(kw_keyS,
 				   static_cast<SizeType>(kw_keyS_len),
-				   schema_->GetAllocator());
+				   allocator);
 	      pyField.AddSchemaMember(GetTitleString(), field_name);
 	    }
-	    PushBack(pyField, *allocator);
+	    PushBack(pyField, allocator);
 	  }
 	}
 	return true;
       }
       ResetSchema(allocator);
-      if (!allocator)
-	allocator = &(schema_->GetAllocator());
       SizeType precision;
       ValueType subtype;
       ValueType encoding;
       if (!NumpyType2SubType(desc, subtype, precision, encoding,
 			     (SizeType)PyArray_ITEMSIZE((PyArrayObject*)x),
-			     schema_->GetAllocator()))
+			     allocator))
 	return false;
       SizeType nelements = (SizeType)PyArray_SIZE((PyArrayObject*)x);
       ValueType shape(kArrayType);
@@ -4934,7 +4807,7 @@ public:
       if (np_shape == NULL)
 	return false;
       for (int i = 0; i < ndim; i++)
-	shape.PushBack((SizeType)np_shape[i], schema_->GetAllocator());
+	shape.PushBack((SizeType)np_shape[i], allocator);
       PyArrayObject* cpy = PyArray_GETCONTIGUOUS((PyArrayObject*)x);
       if (cpy == NULL)
 	return false;
@@ -4946,10 +4819,10 @@ public:
       }
       SetStringRaw(StringRef(static_cast<Ch*>(data),
 			     precision * nelements / sizeof(Ch)),
-		   *allocator);
+		   allocator);
       if (!PyArray_IS_C_CONTIGUOUS((PyArrayObject*)x))
 	Py_DECREF(cpy);
-      schema_->MemberReserve(5, schema_->GetAllocator());
+      schema_->MemberReserve(5, allocator);
       AddSchemaMember(GetTypeString(), GetNDArrayString());
       AddSchemaMember(GetSubTypeString(), subtype);
       AddSchemaMember(GetPrecisionString(), precision);
@@ -5120,8 +4993,6 @@ public:
       }
       SetObject();
       ResetSchema(allocator);
-      if (!allocator)
-	allocator = &(schema_->GetAllocator());
       AddSchemaMember(GetTypeString(), GetPythonInstanceString());
       RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__class__"));
       if (!PyObject_HasAttrString(x, "__class__"))
@@ -5135,13 +5006,13 @@ public:
       out = export_python_object<Encoding,Allocator>(inst_class,
 						     mod_cls_ref,
 						     mod_cls_siz,
-						     schema_->GetAllocator());
+						     allocator);
       Py_DECREF(inst_class);
       // RAPIDJSON_ASSERT(out && (mod_cls_ref != NULL));
       if (!out && (mod_cls_ref == NULL))
 	return false;
-      ValueType mod_cls(mod_cls_ref, mod_cls_siz, *allocator);
-      schema_->GetAllocator().Free(mod_cls_ref);
+      ValueType mod_cls(mod_cls_ref, mod_cls_siz, allocator);
+      allocator.Free(mod_cls_ref);
       mod_cls_ref = NULL;
       ValueType args;
       ValueType kwargs;
@@ -5159,29 +5030,29 @@ public:
 	"get_input_kwargs"};
       for (SizeType i = 0; i < 6; i++) {
 	if (GetPythonObjectClassAttr(x, args_keys[i],
-				     *allocator, args, true))
+				     allocator, args, true))
 	  break;
       }
       for (SizeType i = 0; i < 6; i++) {
 	if (GetPythonObjectClassAttr(x, kwargs_keys[i],
-				     *allocator, kwargs, true))
+				     allocator, kwargs, true))
 	  break;
       }
       if (args.IsNull() && kwargs.IsNull()) {
 	goto pickle;
       }
-      AddMember(GetPythonClassString(), mod_cls, *allocator);
+      AddMember(GetPythonClassString(), mod_cls, allocator);
       if (!(args.IsNull())) {
-	AddMember(GetArgsString(), args, *allocator);
+	AddMember(GetArgsString(), args, allocator);
 	if (args.HasSchemaNested())
 	  AddSchemaMember(GetArgsString(),
-			  args.GetSchemaNested(schema_->GetAllocator()));
+			  args.GetSchemaNested(allocator));
       }
       if (!(kwargs.IsNull())) {
-	AddMember(GetKwargsString(), kwargs, *allocator);
+	AddMember(GetKwargsString(), kwargs, allocator);
 	if (kwargs.HasSchemaNested())
 	  AddSchemaMember(GetKwargsString(),
-			  kwargs.GetSchemaNested(schema_->GetAllocator()));
+			  kwargs.GetSchemaNested(allocator));
       }
     }
     return out;
@@ -5198,29 +5069,25 @@ public:
       return false;
     }
     SetStringRaw(StringRef((Ch*)buffer, (SizeType)((size_t)buffer_len / sizeof(Ch))),
-		 *allocator);
+		 allocator);
     Py_DECREF(py_str);
     return true;
   }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
-  void SetObjRaw(const ObjWavefront& x, Allocator* allocator = 0) {
+  void SetObjRaw(const ObjWavefront& x, Allocator& allocator) {
     std::stringstream ss;
     ss << x;
     std::string s = ss.str();
     ResetSchema(allocator);
-    if (!allocator)
-      allocator = &(schema_->GetAllocator());
-    SetStringRaw(StringRef(s.c_str(), s.size()), *allocator);
+    SetStringRaw(StringRef(s.c_str(), s.size()), allocator);
     AddSchemaMember(GetTypeString(), GetObjString());
   }
-  void SetPlyRaw(const Ply& x, Allocator* allocator = 0) {
+  void SetPlyRaw(const Ply& x, Allocator& allocator) {
     std::stringstream ss;
     ss << x;
     std::string s = ss.str();
     ResetSchema(allocator);
-    if (!allocator)
-      allocator = &(schema_->GetAllocator());
-    SetStringRaw(StringRef(s.c_str(), s.size()), *allocator);
+    SetStringRaw(StringRef(s.c_str(), s.size()), allocator);
     AddSchemaMember(GetTypeString(), GetPlyString());
   }
 
@@ -6127,14 +5994,22 @@ public:
     return *this; }
 
   template<typename T>
-  GenericValue& SetScalar(const T x, const Ch* units_str=NULL,
-			  const SizeType units_len=0,
-			  Allocator* allocator = 0) {
+  GenericValue& SetScalar(const T x, Allocator& allocator) {
     this->~GenericValue();
-    if (allocator)
-      new (this) GenericValue(x, units_str, units_len, *allocator);
-    else
-      new (this) GenericValue(x, units_str, units_len);
+    new (this) GenericValue(x, allocator);
+    return *this; }
+  template<typename T>
+  GenericValue& SetScalar(const T x, const Ch* units_str,
+			  Allocator& allocator) {
+    this->~GenericValue();
+    new (this) GenericValue(x, units_str, allocator);
+    return *this; }
+  template<typename T>
+  GenericValue& SetScalar(const T x, const Ch* units_str,
+			  const SizeType units_len,
+			  Allocator& allocator) {
+    this->~GenericValue();
+    new (this) GenericValue(x, units_str, units_len, allocator);
     return *this; }
   GenericValue& SetScalar(const Ch* x, SizeType precision, Allocator& allocator,
 			  const Ch* encoding=NULL, SizeType encoding_len=0) {
@@ -6149,33 +6024,48 @@ public:
     new (this) GenericValue(x, allocator);
     return *this; }
   template<typename T>
-  GenericValue& SetScalar(const units::GenericQuantity<T, EncodingType> &x,
-			  Allocator* allocator = 0,
-			  RAPIDJSON_DISABLEIF((internal::IsPointer<T>))) {
+  GenericValue& Set1DArray(const T* x, SizeType nelements,
+			   Allocator& allocator) {
     this->~GenericValue();
-    new (this) GenericValue(x, allocator);
+    new (this) GenericValue(x, nelements, NULL, 0, allocator);
     return *this; }
   template<typename T>
   GenericValue& Set1DArray(const T* x, SizeType nelements,
-			   const Ch* units_str=NULL,
-			   const SizeType units_len=0,
-			   Allocator* allocator = 0) {
+			   const Ch* units_str,
+			   Allocator& allocator) {
     this->~GenericValue();
-    if (allocator)
-      new (this) GenericValue(x, nelements, units_str, units_len, *allocator);
-    else
-      new (this) GenericValue(x, nelements, units_str, units_len);
+    new (this) GenericValue(x, nelements, units_str, 0, allocator);
+    return *this; }
+  template<typename T>
+  GenericValue& Set1DArray(const T* x, SizeType nelements,
+			   const Ch* units_str,
+			   const SizeType units_len,
+			   Allocator& allocator) {
+    this->~GenericValue();
+    new (this) GenericValue(x, nelements, units_str, units_len,
+			    allocator);
     return *this; }
   template<typename T>
   GenericValue& SetNDArray(const T* x, SizeType shape[], SizeType ndim,
-			   const Ch* units_str=NULL,
-			   const SizeType units_len=0,
-			   Allocator* allocator = 0) {
+			   Allocator& allocator) {
     this->~GenericValue();
-    if (allocator)
-      new (this) GenericValue(x, shape, ndim, units_str, units_len, *allocator);
-    else
-      new (this) GenericValue(x, shape, ndim, units_str, units_len);
+    new (this) GenericValue(x, shape, ndim, NULL, 0, *allocator);
+    return *this; }
+  template<typename T>
+  GenericValue& SetNDArray(const T* x, SizeType shape[], SizeType ndim,
+			   const Ch* units_str,
+			   Allocator& allocator) {
+    this->~GenericValue();
+    new (this) GenericValue(x, shape, ndim, units_str, 0, *allocator);
+    return *this; }
+  template<typename T>
+  GenericValue& SetNDArray(const T* x, SizeType shape[], SizeType ndim,
+			   const Ch* units_str,
+			   const SizeType units_len,
+			   Allocator& allocator) {
+    this->~GenericValue();
+    new (this) GenericValue(x, shape, ndim, units_str, units_len,
+			    allocator);
     return *this; }
   GenericValue& SetNDArray(const Ch* x, SizeType precision,
 			   SizeType shape[], SizeType ndim,
@@ -6186,25 +6076,22 @@ public:
     new (this) GenericValue(x, precision, shape, ndim, allocator, encoding, encoding_len);
     return *this; }
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
-  GenericValue& SetPythonInstance(PyObject* x, Allocator* allocator = 0) {
+  GenericValue& SetPythonInstance(PyObject* x, Allocator& allocator) {
     this->~GenericValue();
-    if (allocator)
-      new (this) GenericValue(x, *allocator);
-    else
-      new (this) GenericValue(x);
+    new (this) GenericValue(x, allocator);
     return *this; }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
-  GenericValue& SetObjWavefront(ObjWavefront x, Allocator* allocator = 0) {
+  GenericValue& SetObjWavefront(ObjWavefront x, Allocator& allocator) {
     this->~GenericValue();
     new (this) GenericValue(x, allocator);
     return *this; }
-  GenericValue& SetObj(ObjWavefront x, Allocator* allocator = 0) {
+  GenericValue& SetObj(ObjWavefront x, Allocator& allocator) {
     return SetObjWavefront(x, allocator); }
-  GenericValue& SetPly(Ply x, Allocator* allocator = 0) {
+  GenericValue& SetPly(Ply x, Allocator& allocator) {
     this->~GenericValue();
     new (this) GenericValue(x, allocator);
     return *this; }
-  GenericValue& SetSchema(Allocator* allocator = 0) {
+  GenericValue& SetSchema(Allocator& allocator) {
     this->~GenericValue();
     new (this) GenericValue(kObjectType);
     ResetSchema(allocator);
@@ -6811,10 +6698,9 @@ public:
   bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema) {
     copy = true; // Always copy
     RAPIDJSON_YGG_DOCUMENT_(YggdrasilString, str, length, copy, schema);
-    if (copy)
-      new (stack_.template Push<ValueType>()) ValueType(str, length, GetAllocator(), schema);
-    else
-      new (stack_.template Push<ValueType>()) ValueType(str, length, schema);
+    new (stack_.template Push<ValueType>()) ValueType(str, length,
+						      GetAllocator(),
+						      schema);
     return true;
   }
   template <typename YggSchemaValueType>

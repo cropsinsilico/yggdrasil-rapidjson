@@ -86,11 +86,12 @@ TEST(Value, Size) {
 
 #define YGGDRASIL_SCALAR_UNIT_TEST(type, value)				\
   {									\
+    Value::AllocatorType allocator;					\
     units::GenericQuantity<type, Value::EncodingType> q1(value, "g");	\
     units::GenericQuantity<type, Value::EncodingType> q2(1000000 * value, "ug"); \
     EXPECT_TRUE(q1.equivalent_to(q2));					\
-    Value zq1(value, "g");						\
-    Value zq2(q2);							\
+    Value zq1(value, "g", allocator);					\
+    Value zq2(q2, allocator);						\
     EXPECT_EQ(1000000 * value, zq1.TEMPLATE_CXX11 GetScalar<type>("ug")); \
     EXPECT_EQ(value, zq2.TEMPLATE_CXX11 GetScalar<type>("g"));		\
     EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetScalarQuantity<type>("g"));	\
@@ -116,8 +117,8 @@ TEST(Value, Size) {
     units::GenericQuantityArray<type, Value::EncodingType> q1(value1, "g"); \
     units::GenericQuantityArray<type, Value::EncodingType> q2(value2, "ug"); \
     EXPECT_TRUE(q1.equivalent_to(q2));					\
-    Value zq1(value1, "g");						\
-    Value zq2(q2);							\
+    Value zq1(value1, "g", allocator);					\
+    Value zq2(q2, allocator);						\
     YGGDRASIL_1DARRAY_EXPECT_EQ(value2, 4u, zq1, type, "ug");		\
     YGGDRASIL_1DARRAY_EXPECT_EQ(value1, 4u, zq2, type, "g");		\
     EXPECT_EQ(q1, zq1.TEMPLATE_CXX11 GetArrayQuantity<type>(allocator, "g")); \
@@ -153,8 +154,8 @@ TEST(Value, Size) {
     units::GenericQuantityArray<type, Value::EncodingType> q1(value1, "g"); \
     units::GenericQuantityArray<type, Value::EncodingType> q2(value2, "ug"); \
     EXPECT_TRUE(q1.equivalent_to(q2));					\
-    Value zq1(value1, "g");						\
-    Value zq2(q2);							\
+    Value zq1(value1, "g", allocator);					\
+    Value zq2(q2, allocator);						\
     std::cout << "q1 = " << q1 << ", display(q2) = ";			\
     q2.display(std::cout);						\
     std::cout << std::endl;						\
@@ -1265,9 +1266,10 @@ static void TestArray(T& x, Allocator& allocator) {
 #ifdef RAPIDJSON_YGGDRASIL
 
 TEST(Value, ScalarUInt) {
-  Value x(uint8_t(12));
-  Value y(uint8_t(12), "umol");
-  Value z(uint8_t(12), "g");
+  Value::AllocatorType allocator;
+  Value x(uint8_t(12), allocator);
+  Value y(uint8_t(12), "umol", allocator);
+  Value z(uint8_t(12), "g", allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(kYggUintSubType, x.GetSubTypeCode());
@@ -1300,9 +1302,10 @@ TEST(Value, ScalarUInt) {
   YGGDRASIL_STD_CONT_TEST(uint8_t, uint8_t(13u))
 }
 TEST(Value, ScalarInt) {
-  Value x(int8_t(12));
-  Value y(int8_t(12), "umol");
-  Value z(int8_t(12), "g");
+  Value::AllocatorType allocator;
+  Value x(int8_t(12), allocator);
+  Value y(int8_t(12), "umol", allocator);
+  Value z(int8_t(12), "g", allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(kYggIntSubType, x.GetSubTypeCode());
@@ -1335,9 +1338,10 @@ TEST(Value, ScalarInt) {
   YGGDRASIL_STD_CONT_TEST(int8_t, int8_t(13))
 }
 TEST(Value, ScalarComplex) {
-  Value x(std::complex<double>(2.2, 3.4));
-  Value y(std::complex<double>(2.2, 3.4), "cm");
-  Value z(std::complex<double>(2.2, 3.4), "g");
+  Value::AllocatorType allocator;
+  Value x(std::complex<double>(2.2, 3.4), allocator);
+  Value y(std::complex<double>(2.2, 3.4), "cm", allocator);
+  Value z(std::complex<double>(2.2, 3.4), "g", allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(kYggComplexSubType, x.GetSubTypeCode());
@@ -1366,8 +1370,8 @@ TEST(Value, ScalarComplex) {
   units::GenericQuantity<std::complex<double>,Value::EncodingType> q1(std::complex<double>(2.2, 3.4), "g");
   units::GenericQuantity<std::complex<double>,Value::EncodingType> q2(std::complex<double>(2.2e6, 3.4e6), "ug");
   EXPECT_TRUE(q1.equivalent_to(q2));
-  Value zq1(std::complex<double>(2.2, 3.4), "g");
-  Value zq2(q2);
+  Value zq1(std::complex<double>(2.2, 3.4), "g", allocator);
+  Value zq2(q2, allocator);
   // EXPECT_EQ failes for complex values
   EXPECT_TRUE(internal::values_eq(std::complex<double>(2.2e6, 3.4e6),
 				  zq1.TEMPLATE_CXX11 GetScalar<std::complex<double> >("ug")));
@@ -1386,12 +1390,12 @@ TEST(Value, ScalarComplex) {
 #define YGGDRASIL_1D_ARRAY_TEST_BODY(name, precision, type, value)\
   Value::AllocatorType allocator;				  \
   type arr[] = {value, value, value, value};			  \
-  Value u(&(arr[0]), 4u);					  \
-  Value v(&(arr[0]), 4u, "umol");				  \
-  Value w(&(arr[0]), 4u, "g");					  \
-  Value x(arr);							  \
-  Value y(arr, "umol");						  \
-  Value z(arr, "g");						  \
+  Value u(&(arr[0]), 4u, allocator);				  \
+  Value v(&(arr[0]), 4u, "umol", allocator);			  \
+  Value w(&(arr[0]), 4u, "g", allocator);				\
+  Value x(arr, allocator);						\
+  Value y(arr, "umol", allocator);					\
+  Value z(arr, "g", allocator);						\
   EXPECT_TRUE(x.IsYggdrasil());					  \
   EXPECT_EQ(kStringType, x.GetType());				  \
   EXPECT_EQ(kYgg ## name ## SubType, x.GetSubTypeCode());	  \
@@ -1440,12 +1444,12 @@ TEST(Value, ScalarComplex) {
   type arr[2][3] = {{value, value, value},			     \
 		    {value, value, value}};			     \
   SizeType shape[] = {2, 3};					     \
-  Value u(&(arr[0][0]), &(shape[0]), 2);			     \
-  Value v(&(arr[0][0]), &(shape[0]), 2, "umol");		     \
-  Value w(&(arr[0][0]), &(shape[0]), 2, "g");			     \
-  Value x(arr);							     \
-  Value y(arr, "umol");						     \
-  Value z(arr, "g");						     \
+  Value u(&(arr[0][0]), &(shape[0]), 2, allocator);			\
+  Value v(&(arr[0][0]), &(shape[0]), 2, "umol", allocator);		\
+  Value w(&(arr[0][0]), &(shape[0]), 2, "g", allocator);		\
+  Value x(arr, allocator);						\
+  Value y(arr, "umol", allocator);					\
+  Value z(arr, "g", allocator);						\
   EXPECT_TRUE(x.IsYggdrasil());					     \
   EXPECT_EQ(kStringType, x.GetType());				     \
   EXPECT_EQ(kYgg ## name ## SubType, x.GetSubTypeCode());	     \
@@ -1508,7 +1512,7 @@ TEST(Value, OneDArrayString) {
   strcpy(arr[0], "red");
   strcpy(arr[1], "green");
   strcpy(arr[2], "blue");
-  Value x(arr);
+  Value x(arr, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.Is1DArray());
   EXPECT_EQ(kStringType, x.GetType());
@@ -1539,7 +1543,7 @@ TEST(Value, NDArrayString) {
   strcpy(arr[0][1], "brown");
   strcpy(arr[1][1], "grey");
   strcpy(arr[2][1], "black");
-  Value x(arr);
+  Value x(arr, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.IsNDArray());
   EXPECT_EQ(kStringType, x.GetType());
@@ -1664,11 +1668,12 @@ TEST(Value, NDArrayString) {
 #endif // RAPIDJSON_HAS_CXX11
 
 TEST(Value, ObjWavefront) {
+  Value::AllocatorType allocator;
   ARRAYS_3D(0);
   ARRAYS_3D(1);
   rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   rapidjson::Document doc;
-  rapidjson::Value x(obj);
+  rapidjson::Value x(obj, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.IsObjWavefront());
   EXPECT_EQ(kStringType, x.GetType());
@@ -1944,17 +1949,18 @@ TEST(Value, ObjWavefront) {
   // obj.add_element("usemtl", "wood");
   // obj.add_element("f", C_ARR(ObjRefVertex(1, 2, 0), ObjRefVertex(2, 2, 0),
   // 			     ObjRefVertex(3, 3, 0), ObjRefVertex(4, 4, 0)));
-  rapidjson::Value x2(obj);
+  rapidjson::Value x2(obj, allocator);
   rapidjson::ObjWavefront cpy2;
   x2.GetObjWavefront(cpy2);
   EXPECT_EQ(obj, cpy2);
 }
     
 TEST(Value, ObjWavefrontW) {
+  Value::AllocatorType allocator;
   ARRAYS_3D_W(1);
   rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   rapidjson::Document doc;
-  rapidjson::Value x(obj);
+  rapidjson::Value x(obj, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.IsObjWavefront());
   EXPECT_EQ(kStringType, x.GetType());
@@ -1965,10 +1971,11 @@ TEST(Value, ObjWavefrontW) {
 }
 
 TEST(Value, ObjWavefrontColor) {
+  Value::AllocatorType allocator;
   ARRAYS_3D_COLOR(1);
   rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   rapidjson::Document doc;
-  rapidjson::Value x(obj);
+  rapidjson::Value x(obj, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.IsObjWavefront());
   EXPECT_EQ(kStringType, x.GetType());
@@ -1979,10 +1986,11 @@ TEST(Value, ObjWavefrontColor) {
 }
 
 TEST(Value, ObjWavefrontColorW) {
+  Value::AllocatorType allocator;
   ARRAYS_3D_COLOR_W(1);
   rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   rapidjson::Document doc;
-  rapidjson::Value x(obj);
+  rapidjson::Value x(obj, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.IsObjWavefront());
   EXPECT_EQ(kStringType, x.GetType());
@@ -1993,11 +2001,12 @@ TEST(Value, ObjWavefrontColorW) {
 }
 
 TEST(Value, Ply) {
+  Value::AllocatorType allocator;
   ARRAYS_3D(0);
   ARRAYS_3D(1);
   rapidjson::Ply ply(vertices_0, faces_0, edges_0);
   rapidjson::Document doc;
-  rapidjson::Value x(ply);
+  rapidjson::Value x(ply, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(x.GetPlyString(), x.GetYggType());
@@ -2013,9 +2022,10 @@ TEST(Value, Ply) {
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 // Python objects
 TEST(Value, PythonFunction) {
+  Value::AllocatorType allocator;
   PyObject* pyfunc = import_python_class("example_python", "example_function");
   RAPIDJSON_ASSERT(pyfunc);
-  Value y(pyfunc);
+  Value y(pyfunc, allocator);
   EXPECT_TRUE(y.IsPythonFunction());
   EXPECT_EQ(kStringType, y.GetType());
   PyObject* pyfunc_cpy = y.GetPythonFunction();
@@ -2025,9 +2035,10 @@ TEST(Value, PythonFunction) {
 }
 
 TEST(Value, PythonClass) {
+  Value::AllocatorType allocator;
   PyObject* pyclass = import_python_class("example_python", "ExampleClass");
   RAPIDJSON_ASSERT(pyclass);
-  Value x(pyclass);
+  Value x(pyclass, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.HasSchema());
   EXPECT_TRUE(x.IsPythonClass());
@@ -2039,14 +2050,16 @@ TEST(Value, PythonClass) {
 }
 
 TEST(Value, PythonInstanceFailed) {
+  Value::AllocatorType allocator;
   CREATE_PYTHON_INSTANCE(FailedClass, pyinst)
   Value x;
-  EXPECT_FALSE(x.SetPythonObjectRaw(pyinst));
+  EXPECT_FALSE(x.SetPythonObjectRaw(pyinst, allocator));
   Py_DECREF(pyinst);
 }
 TEST(Value, PythonInstance) {
+  Value::AllocatorType allocator;
   CREATE_PYTHON_INSTANCE(ExampleClass, pyinst)
-  Value z(pyinst);
+  Value z(pyinst, allocator);
   EXPECT_TRUE(z.IsPythonInstance());
   EXPECT_EQ(kObjectType, z.GetType());
   PyObject* pyinst_cpy = z.GetPythonInstance();
@@ -2063,7 +2076,7 @@ TEST(Value, Schema) {
   a.AddMember("type", "int", allocator);
   a.AddMember("precision", 8, allocator);
   Value x(kObjectType);
-  x.SetSchema(&allocator);
+  x.SetSchema(allocator);
   x.AddMember("type", "int", allocator);
   x.AddMember("precision", 8, allocator);
   EXPECT_TRUE(x.IsSchema());

@@ -2561,7 +2561,8 @@ public:
       typename SchemaType::SValue v;
       if (SchemaType::NormRelativePath(context, str, length, v, allocator)) {
 	RecordModified(kModificationTypeValue);
-	NORM_BODY_(YggdrasilString, (v.GetString(), v.GetStringLength(), true, valueSchema));
+	NORM_BODY_(YggdrasilString, (v.GetString(), v.GetStringLength(),
+				     true, valueSchema));
 	NORM_END_(YggdrasilString);
       }
     } else if (typeV != valueSchema.MemberEnd() &&
@@ -3397,11 +3398,11 @@ public:
 			 (current->GetValueSchema() == valueSchema),
 			 (str, length, GetAllocator(), valueSchema));
     } else {
-      current->SetValueSchema(valueSchema, &GetAllocator());
+      current->SetValueSchema(valueSchema, GetAllocator());
     }
     REQUIRED_PROPERTY_(YggdrasilString,
 		       (internal::StrCmp(str, current->GetString()) == 0),
-		       (str, length, valueSchema));
+		       (str, length, GetAllocator(), valueSchema));
     EXTEND_END_(YggdrasilString);
   }
   template <typename YggSchemaValueType>
@@ -3415,7 +3416,7 @@ public:
 			 (current->GetValueSchema() == valueSchema),
 			 (kObjectType, valueSchema, GetAllocator()));
     } else {
-      current->SetValueSchema(valueSchema, &GetAllocator());
+      current->SetValueSchema(valueSchema, GetAllocator());
     }
     return true;
   }
@@ -6049,7 +6050,7 @@ public:
 #define GET_SCALAR_(type)			\
 	type value = __val
 #define SET_SCALAR_					\
-	data.SetScalar(value, units_str, units_len)
+	data.SetScalar(value, units_str, units_len, allocator)
 #define STRING_SCALAR_							\
 	SizeType prec_encoding = 1;					\
 	if (encoding_ != kYggASCIISchemaEncodingType &&			\
@@ -6092,7 +6093,7 @@ public:
 	type* value = (type*)(allocator.Malloc(nelements * sizeof(type))); \
 	std::fill(value, value + nelements, __val)
 #define SET_ARRAY_							\
-	data.SetNDArray(value, shape.data(), ndim, units_str, units_len, &allocator); \
+	data.SetNDArray(value, shape.data(), ndim, units_str, units_len, allocator); \
 	allocator.Free(value)
 #define STRING_ARRAY_							\
 	Ch* value = (Ch*)(allocator.Malloc(nelements * sizeof(Ch) * prec)); \
@@ -6116,7 +6117,7 @@ public:
 					       "GenerateData: ", true);
 	if (pyobj == NULL)
 	  return false;
-	data.SetPythonInstance(pyobj);
+	data.SetPythonInstance(pyobj, allocator);
 	AFTER_SET_;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
       } else if (YGGTYPE_CHECK_(PythonInstance)) {
@@ -6145,7 +6146,7 @@ public:
 	Py_DECREF(args);
 	if (pyobj == NULL)
 	  return false;
-	data.SetPythonInstance(pyobj);
+	data.SetPythonInstance(pyobj, allocator);
 	AFTER_SET_;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
       } else if (YGGTYPE_CHECK_(Obj)) {
@@ -6153,14 +6154,14 @@ public:
 	ObjWavefront x(vertices, faces, edges);
 	if (!x.is_valid())
 	  return false;
-	data.SetObjWavefront(x, &allocator);
+	data.SetObjWavefront(x, allocator);
 	AFTER_SET_;
       } else if (YGGTYPE_CHECK_(Ply)) {
 	ARRAYS_3D(0);
 	Ply x(vertices, faces, edges);
 	if (!x.is_valid())
 	  return false;
-	data.SetPly(x, &allocator);
+	data.SetPly(x, allocator);
 	AFTER_SET_;
 #undef ARRAYS_3D
       } else if (YGGTYPE_CHECK_(Schema)) {
