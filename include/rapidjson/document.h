@@ -3474,11 +3474,12 @@ public:
   }
   void ResetSchema(Allocator& allocator) {
     if (schema_ != NULL) {
-      Allocator* schema_allocator = schema_->ownAllocator_;
+      Allocator* schema_allocator = schema_->allocator_;
+      RAPIDJSON_ASSERT(schema_->ownAllocator_ == NULL);
       schema_->ownAllocator_ = NULL;
+      schema_->ClearStack();
       schema_->~GenericDocument();
-      Allocator::Free(schema_);
-      RAPIDJSON_DELETE(schema_allocator);
+      schema_allocator->Free(schema_);
     }
     DestroySchema();
     InitSchema(allocator);
