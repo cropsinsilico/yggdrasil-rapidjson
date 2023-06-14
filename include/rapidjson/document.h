@@ -3469,30 +3469,17 @@ public:
 				    1024, &allocator);
     }
   }
-  // void OwnSchemaAllocator() {
-  //   RAPIDJSON_ASSERT(!(schema_->ownAllocator_));
-  //   // Force document to clean up allocator (and thereby it's
-  //   // own memory for the MemoryPoolAllocator)
-  //   schema_->ownAllocator_ = schema_->allocator_;
-  // }
   void DestroySchema() {
     schema_ = NULL;
-    // if (schema_ != NULL) {
-    //   // Allocator* schema_allocator = schema_->ownAllocator_;
-    //   // schema_->ownAllocator_ = NULL;
-    //   // schema_->~GenericDocument();
-    //   // RAPIDJSON_DELETE(schema_allocator);
-    //   // if (schema_allocator) {
-    //   // 	schema_->ClearStack();
-    //   //        schema_->~GenericDocument();
-    //   // 	Allocator::Free(schema_);
-    //   // 	RAPIDJSON_DELETE(schema_allocator);
-    //   // }
-    //   schema_ = NULL;
-    //   // schema_allocator = NULL;
-    // }
   }
   void ResetSchema(Allocator& allocator) {
+    if (schema_ != NULL) {
+      Allocator* schema_allocator = schema_->ownAllocator_;
+      schema_->ownAllocator_ = NULL;
+      schema_->~GenericDocument();
+      Allocator::Free(schema_);
+      RAPIDJSON_DELETE(schema_allocator);
+    }
     DestroySchema();
     InitSchema(allocator);
   }
@@ -3504,9 +3491,10 @@ public:
   void SetValueSchema(const GenericValue<Encoding,SourceAllocator>& schema,
 		      Allocator& allocator) {
     RAPIDJSON_ASSERT(schema.IsObject());
-    if (schema_ == NULL)
-      InitSchema(allocator);
-    schema_->CopyFrom(schema, schema_->GetAllocator(), true);
+    ResetSchema(allocator);
+    // if (schema_ == NULL)
+    //   InitSchema(allocator);
+    schema_->CopyFrom(schema, allocator, true);
   }
   bool HasSchema() const {
     if (schema_ == NULL) return false;
