@@ -3490,8 +3490,9 @@ public:
 
   // TODO: Pass stack allocator?
   void InitSchema(Allocator& allocator) {
-    schema_ = new SchemaValueType(kObjectType, &allocator,
-				  1024, &allocator);
+    if (!schema_)
+      schema_ = new SchemaValueType(kObjectType, &allocator,
+				    1024, &allocator);
   }
   void OwnSchemaAllocator() {
     RAPIDJSON_ASSERT(!(schema_->ownAllocator_));
@@ -3702,7 +3703,8 @@ public:
   void SetValueSchemaRaw(const Ch* s, SizeType,
 			 Allocator& allocator) {
     ResetSchema(allocator);
-    schema_ = &(schema_->Parse(s));
+    schema_->Parse(s);
+    // schema_ = &(schema_->Parse(s));
   }
 
   //! Variable argument setting/getting
