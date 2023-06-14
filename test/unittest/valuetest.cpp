@@ -1564,7 +1564,7 @@ TEST(Value, NDArrayString) {
   }
 }
 
-#define ARRAYS_3D(zero)						\
+#define VERTICES_3D(zero)					\
   double vertices_ ## zero[8][3] =				\
     {{0.0, 0.0, 0.0},						\
      {0.0, 0.0, 1.0},						\
@@ -1573,18 +1573,8 @@ TEST(Value, NDArrayString) {
      {1.0, 0.0, 0.0},						\
      {1.0, 0.0, 1.0},						\
      {1.0, 1.0, 1.0},						\
-     {1.0, 1.0, 0.0}};						\
-  int faces_ ## zero[2][3] =					\
-    {{3 + zero, 0 + zero, 1 + zero},				\
-     {3 + zero, 0 + zero, 2 + zero}};				\
-  int edges_ ## zero[5][2] =					\
-    {{0 + zero, 1 + zero},					\
-     {1 + zero, 2 + zero},					\
-     {2 + zero, 3 + zero},					\
-     {3 + zero, 0 + zero},					\
-     {2 + zero, 0 + zero}};
-
-#define ARRAYS_3D_W(zero)						\
+     {1.0, 1.0, 0.0}};
+#define VERTICES_3D_W(zero)						\
   double vertices_ ## zero[8][4] =					\
     {{0.0, 0.0, 0.0, 0.3},						\
      {0.0, 0.0, 1.0, 0.3},						\
@@ -1593,18 +1583,8 @@ TEST(Value, NDArrayString) {
      {1.0, 0.0, 0.0, 0.3},						\
      {1.0, 0.0, 1.0, 0.3},						\
      {1.0, 1.0, 1.0, 0.3},						\
-     {1.0, 1.0, 0.0, 0.3}};						\
-  int faces_ ## zero[2][3] =						\
-    {{3 + zero, 0 + zero, 1 + zero},					\
-     {3 + zero, 0 + zero, 2 + zero}};					\
-  int edges_ ## zero[5][2] =						\
-    {{0 + zero, 1 + zero},						\
-     {1 + zero, 2 + zero},						\
-     {2 + zero, 3 + zero},						\
-     {3 + zero, 0 + zero},						\
-     {2 + zero, 0 + zero}};
-
-#define ARRAYS_3D_COLOR(zero)						\
+     {1.0, 1.0, 0.0, 0.3}};
+#define VERTICES_3D_COLOR(zero)						\
   double vertices_ ## zero[8][6] =					\
     {{0.0, 0.0, 0.0, 0, 123, 255},					\
      {0.0, 0.0, 1.0, 0, 123, 255},					\
@@ -1613,18 +1593,8 @@ TEST(Value, NDArrayString) {
      {1.0, 0.0, 0.0, 0, 123, 255},					\
      {1.0, 0.0, 1.0, 0, 123, 255},					\
      {1.0, 1.0, 1.0, 0, 123, 255},					\
-     {1.0, 1.0, 0.0, 0, 123, 255}};					\
-  int faces_ ## zero[2][3] =						\
-    {{3 + zero, 0 + zero, 1 + zero},					\
-     {3 + zero, 0 + zero, 2 + zero}};					\
-  int edges_ ## zero[5][2] =						\
-    {{0 + zero, 1 + zero},						\
-     {1 + zero, 2 + zero},						\
-     {2 + zero, 3 + zero},						\
-     {3 + zero, 0 + zero},						\
-     {2 + zero, 0 + zero}};
-
-#define ARRAYS_3D_COLOR_W(zero)						\
+     {1.0, 1.0, 0.0, 0, 123, 255}};
+#define VERTICES_3D_COLOR_W(zero)					\
   double vertices_ ## zero[8][7] =					\
     {{0.0, 0.0, 0.0, 0, 123, 255, 0.3},					\
      {0.0, 0.0, 1.0, 0, 123, 255, 0.3},					\
@@ -1633,16 +1603,37 @@ TEST(Value, NDArrayString) {
      {1.0, 0.0, 0.0, 0, 123, 255, 0.3},					\
      {1.0, 0.0, 1.0, 0, 123, 255, 0.3},					\
      {1.0, 1.0, 1.0, 0, 123, 255, 0.3},					\
-     {1.0, 1.0, 0.0, 0, 123, 255, 0.3}};				\
-  int faces_ ## zero[2][3] =						\
-    {{3 + zero, 0 + zero, 1 + zero},					\
-     {3 + zero, 0 + zero, 2 + zero}};					\
-  int edges_ ## zero[5][2] =						\
-    {{0 + zero, 1 + zero},						\
-     {1 + zero, 2 + zero},						\
-     {2 + zero, 3 + zero},						\
-     {3 + zero, 0 + zero},						\
-     {2 + zero, 0 + zero}};
+     {1.0, 1.0, 0.0, 0, 123, 255, 0.3}};
+#define FACES_3D(zero)						\
+  int faces_ ## zero[4][3] =					\
+    {{0 + zero, 1 + zero, 2 + zero},				\
+     {3 + zero, 0 + zero, 2 + zero},				\
+     {0 + zero, 4 + zero, 5 + zero},				\
+     {0 + zero, 6 + zero, 7 + zero}};				\
+  int edges_ ## zero[5][2] =					\
+    {{0 + zero, 1 + zero},					\
+     {1 + zero, 2 + zero},					\
+     {2 + zero, 3 + zero},					\
+     {3 + zero, 0 + zero},					\
+     {2 + zero, 0 + zero}};					\
+  double areas_ ## zero[4] =					\
+    {0.5, 0.5, 0.5, 0.7071067811865476};
+
+#define ARRAYS_3D(zero)						\
+  VERTICES_3D(zero)						\
+  FACES_3D(zero)
+
+#define ARRAYS_3D_W(zero)						\
+  VERTICES_3D_W(zero)							\
+  FACES_3D(zero)
+
+#define ARRAYS_3D_COLOR(zero)						\
+  VERTICES_3D_COLOR(zero)						\
+  FACES_3D(zero)
+
+#define ARRAYS_3D_COLOR_W(zero)						\
+  VERTICES_3D_COLOR_W(zero)						\
+  FACES_3D(zero)
 
 #if RAPIDJSON_HAS_CXX11
 #define C_ARR(...) {__VA_ARGS__}
@@ -1666,6 +1657,14 @@ TEST(Value, NDArrayString) {
     obj.add_element(name, names);		\
   }
 #endif // RAPIDJSON_HAS_CXX11
+#define CHECK_AREAS(x, zero)					\
+  {								\
+    std::vector<double> areas = x.areas();			\
+    EXPECT_EQ(areas.size(), x.count_elements("face"));		\
+    for (size_t i = 0; i < areas.size(); i++) {			\
+      EXPECT_NEAR(areas[i], areas_ ## zero[i], 1.0e-15);	\
+    }								\
+  }
 
 TEST(Value, ObjWavefront) {
   Value::AllocatorType allocator;
@@ -1678,9 +1677,14 @@ TEST(Value, ObjWavefront) {
   EXPECT_TRUE(x.IsObjWavefront());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(x.GetObjString(), x.GetYggType());
+  CHECK_AREAS(obj, 1)
   rapidjson::ObjWavefront cpy;
   x.GetObjWavefront(cpy);
   EXPECT_EQ(obj, cpy);
+  rapidjson::ObjWavefront obj_faces(vertices_1, faces_1);
+  std::vector<std::vector<double> > mesh = obj.mesh();
+  rapidjson::ObjWavefront cpy_mesh(mesh, true);
+  EXPECT_EQ(obj_faces, cpy_mesh);
   rapidjson::Ply ply(vertices_0, faces_0, edges_0);
   rapidjson::Ply cpy_ply;
   x.GetPly(cpy_ply);
@@ -2010,9 +2014,14 @@ TEST(Value, Ply) {
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(x.GetPlyString(), x.GetYggType());
+  CHECK_AREAS(ply, 0)
   rapidjson::Ply cpy = rapidjson::Ply();
   x.GetPly(cpy);
   EXPECT_EQ(ply, cpy);
+  rapidjson::Ply ply_faces(vertices_0, faces_0);
+  std::vector<std::vector<double> > mesh = ply.mesh();
+  rapidjson::Ply cpy_mesh(mesh, true);
+  EXPECT_EQ(ply_faces, cpy_mesh);
   rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   rapidjson::ObjWavefront cpy_obj;
   x.GetObjWavefront(cpy_obj);

@@ -1579,9 +1579,12 @@ public:
   }
   //! \brief Create a Ply instance from a 3D mesh.
   //! \param xyz Vector of vertex information for faces in the structure.
-  Ply(const std::vector<std::vector<double> > xyz) :
+  //! \param prune_duplicates If true, existing vertices will be checked
+  //!   before adding new ones.
+  Ply(const std::vector<std::vector<double> > xyz,
+      bool prune_duplicates=false) :
     comments(), format("ascii 1.0"), elements(), element_order() {
-    add_mesh(xyz);
+    add_mesh(xyz, prune_duplicates);
   }
   //! \brief Copy assignment
   //! \param[in] rhs Instance to copy.
@@ -2093,11 +2096,12 @@ public:
 	int idxVert = -1;
 	if (prune_duplicates)
 	  idxVert = find_vertex(ivert);
-	if (idxVert < 0)
+	if (idxVert < 0) {
 	  idxVert = static_cast<int>(nVerts);
+	  add_element("vertex", ivert);
+	  nVerts++;
+	}
 	iface.push_back(idxVert);
-	add_element("vertex", ivert);
-	nVerts++;
       }
       add_element("face", iface);
     }

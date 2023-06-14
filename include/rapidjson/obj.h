@@ -3933,9 +3933,12 @@ public:
   }
   //! \brief Create an ObjWavefront instance from a 3D mesh.
   //! \param xyz Vector of vertex information for faces in the structure.
-  ObjWavefront(const std::vector<std::vector<double> > xyz) :
+  //! \param prune_duplicates If true, existing vertices will be checked
+  //!   before adding new ones.
+  ObjWavefront(const std::vector<std::vector<double> > xyz,
+	       bool prune_duplicates=false) :
     ObjGroupBase("") {
-    add_mesh(xyz);
+    add_mesh(xyz, prune_duplicates);
   }
   //! \brief Copy assignment
   //! \param[in] rhs Instance to copy.
@@ -4076,6 +4079,7 @@ public:
   void add_mesh(const std::vector<std::vector<double> > xyz,
 		bool prune_duplicates=false) {
     size_t nVerts = count_elements("vertex");
+    std::vector<std::vector<ObjRef> > faces;
     for (std::vector<std::vector<double> >::const_iterator it = xyz.begin();
 	 it != xyz.end(); it++) {
       size_t verts_per_face = it->size() / 3;
@@ -4086,14 +4090,18 @@ public:
 	int idxVert = -1;
 	if (prune_duplicates)
 	  idxVert = find_vertex(ivert);
-	if (idxVert < 0)
+	if (idxVert < 0) {
 	  idxVert = static_cast<int>(nVerts);
-	iface.push_back(static_cast<ObjRef>(idxVert));
-	add_element("vertex", ivert);
-	nVerts++;
+	  add_element("vertex", ivert);
+	  nVerts++;
+	}
+	iface.push_back(static_cast<ObjRef>(idxVert + 1));
       }
-      add_element("face", iface);
+      faces.push_back(iface);
     }
+    for (std::vector<std::vector<ObjRef> >::const_iterator it = faces.begin();
+	 it != faces.end(); it++)
+      add_element("face", *it);
   }
   //! \brief Get the mesh for the structure.
   //! \return Structure mesh with each row representing a face with vertex

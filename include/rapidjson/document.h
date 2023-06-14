@@ -664,84 +664,49 @@ static bool __StaticFalse = false;
 static bool __StaticTrue = true;
 
 // Yggdrasil TypeHelper structs
-// uint
-template<typename ValueType>
-struct TypeHelper<ValueType, uint8_t> {
-  static bool Is(const ValueType& v) { return v.template IsScalar<uint8_t>(); }
-  static uint8_t Get(const ValueType& v) { return v.template GetScalar<uint8_t>(); }
-  static ValueType& Set(ValueType& v, uint8_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
-};
-template<typename ValueType>
-struct TypeHelper<ValueType, uint16_t> {
-  static bool Is(const ValueType& v) { return v.template IsScalar<uint16_t>(); }
-  static uint16_t Get(const ValueType& v) { return v.template GetScalar<uint16_t>(); }
-  static ValueType& Set(ValueType& v, uint16_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
-};
-// int
-template<typename ValueType>
-struct TypeHelper<ValueType, int8_t> {
-  static bool Is(const ValueType& v) { return v.template IsScalar<int8_t>(); }
-  static int8_t Get(const ValueType& v) { return v.template GetScalar<int8_t>(); }
-  static ValueType& Set(ValueType& v, int8_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
-};
-template<typename ValueType>
-struct TypeHelper<ValueType, int16_t> {
-  static bool Is(const ValueType& v) { return v.template IsScalar<int16_t>(); }
-  static int16_t Get(const ValueType& v) { return v.template GetScalar<int16_t>(); }
-  static ValueType& Set(ValueType& v, int16_t data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
-};
-// float
+#define YGG_GENERIC_HELPER(T, name)					\
+  template<typename ValueType>						\
+  struct TypeHelper<ValueType, T> {					\
+    static bool Is(const ValueType& v) { return v.template Is ## name(); } \
+    static T Get(const ValueType& v) { return v.template Get ## name(); } \
+    static ValueType& Set(ValueType& v, const T& data,			\
+			  typename ValueType::AllocatorType& allocator)	\
+    { return v.template Set ## name(data, allocator); }			\
+  };
+#define YGG_SCALAR_HELPER(T)						\
+  YGG_GENERIC_HELPER(T, Scalar<T>)
+  /*
+  template<typename ValueType>						\
+  struct TypeHelper<ValueType, T> {					\
+    static bool Is(const ValueType& v) { return v.template IsScalar<T>(); } \
+    static T Get(const ValueType& v) { return v.template GetScalar<T>(); } \
+    static ValueType& Set(ValueType& v, T data,				\
+			  typename ValueType::AllocatorType& allocator)	\
+    { return v.SetScalar(data, NULL, 0, allocator); }			\
+  };
+  */
+
+YGG_SCALAR_HELPER(uint8_t)
+YGG_SCALAR_HELPER(uint16_t)
+YGG_SCALAR_HELPER(int8_t)
+YGG_SCALAR_HELPER(int16_t)
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-template<typename ValueType>
-struct TypeHelper<ValueType, long double> {
-  static bool Is(const ValueType& v) { return v.template IsScalar<long double>(); }
-  static long double Get(const ValueType& v) { return v.template GetScalar<long double>(); }
-  static ValueType& Set(ValueType& v, long double data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
-};
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-// complex
-template<typename ValueType>
-struct TypeHelper<ValueType, std::complex<float> > {
-  static bool Is(const ValueType& v) { return v.template IsScalar<std::complex<float> >(); }
-  static std::complex<float> Get(const ValueType& v) { return v.template GetScalar<std::complex<float> >(); }
-  static ValueType& Set(ValueType& v, std::complex<float> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
-};
-template<typename ValueType>
-struct TypeHelper<ValueType, std::complex<double> > {
-  static bool Is(const ValueType& v) { return v.template IsScalar<std::complex<double> >(); }
-  static std::complex<double> Get(const ValueType& v) { return v.template GetScalar<std::complex<double> >(); }
-  static ValueType& Set(ValueType& v, std::complex<double> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
-};
+YGG_SCALAR_HELPER(long double)
+#endif
+YGG_SCALAR_HELPER(std::complex<float>)
+YGG_SCALAR_HELPER(std::complex<double>)
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-template<typename ValueType>
-struct TypeHelper<ValueType, std::complex<long double> > {
-  static bool Is(const ValueType& v) { return v.template IsScalar<std::complex<long double> >(); }
-  static std::complex<long double> Get(const ValueType& v) { return v.template GetScalar<std::complex<long double> >(); }
-  static ValueType& Set(ValueType& v, std::complex<long double> data, typename ValueType::AllocatorType& allocator) { return v.SetScalar(data, NULL, 0, allocator); }
-};
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+YGG_SCALAR_HELPER(std::complex<long double>)
+#endif
+#undef YGG_SCALAR_HELPER
+  
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
-// python instance
-template<typename ValueType>
-struct TypeHelper<ValueType, PyObject*> {
-  static bool Is(const ValueType& v) { return v.template IsPythonInstance(); }
-  static PyObject* Get(const ValueType& v) { return v.template GetPythonInstance(); }
-  static ValueType& Set(ValueType& v, PyObject* data, typename ValueType::AllocatorType& allocator) { return v.SetPythonInstance(data, allocator); }
-};
+YGG_GENERIC_HELPER(PyObject*, PythonInstance)
+YGG_GENERIC_HELPER(ObjWavefront, ObjWavefront)
+YGG_GENERIC_HELPER(Ply, Ply)
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
-// obj & ply
-template<typename ValueType>
-struct TypeHelper<ValueType, ObjWavefront> {
-  static bool Is(const ValueType& v) { return v.template IsObjWavefront(); }
-  static ObjWavefront Get(const ValueType& v) { return v.template GetObjWavefront(); }
-  static ValueType& Set(ValueType& v, const ObjWavefront& data, typename ValueType::AllocatorType& allocator) { return v.SetObj(data, allocator); }
-};
-template<typename ValueType>
-struct TypeHelper<ValueType, Ply> {
-  static bool Is(const ValueType& v) { return v.template IsPly(); }
-  static Ply Get(const ValueType& v) { return v.template GetPly(); }
-  static ValueType& Set(ValueType& v, const Ply& data, typename ValueType::AllocatorType& allocator) { return v.SetPly(data, allocator); }
-};
+#undef YGG_GENERIC_HELPER
+  
 #define YGG_STD_VECTOR_(T)						\
   template<typename ValueType>						\
   struct TypeHelper<ValueType, std::vector<T> > {			\
@@ -3497,8 +3462,6 @@ public:
       schema_ = reinterpret_cast<SchemaValueType*>(allocator.Malloc(sizeof(SchemaValueType)));
       new (schema_) SchemaValueType(kObjectType, &allocator,
 				    1024, &allocator);
-      // schema_ = new SchemaValueType(kObjectType, &allocator,
-      // 				    1024, &allocator);
     }
   }
   void OwnSchemaAllocator() {
@@ -3511,11 +3474,14 @@ public:
     if (schema_ != NULL) {
       Allocator* schema_allocator = schema_->ownAllocator_;
       schema_->ownAllocator_ = NULL;
-      schema_->ClearStack();
       schema_->~GenericDocument();
-      Allocator::Free(schema_);
-      // RAPIDJSON_DELETE(schema_);
       RAPIDJSON_DELETE(schema_allocator);
+      // if (schema_allocator) {
+      // 	schema_->ClearStack();
+      //        schema_->~GenericDocument();
+      // 	Allocator::Free(schema_);
+      // 	RAPIDJSON_DELETE(schema_allocator);
+      // }
       schema_ = NULL;
       schema_allocator = NULL;
     }
