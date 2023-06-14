@@ -1446,8 +1446,12 @@ public:
     //! Equal-to operator with primitive types
     /*! \tparam T Either \ref Type, \c int, \c unsigned, \c int64_t, \c uint64_t, \c double, \c true, \c false
     */
+#ifdef RAPIDJSON_YGGDRASIL
     template <typename T> RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::OrExpr<internal::IsPointer<T>,internal::IsGenericValue<T> >, YGGDRASIL_IS_SCALAR_TYPE(T)>), (bool)) operator==(const T& rhs) const { return *this == GenericValue(rhs); }
     template <typename T> RAPIDJSON_ENABLEIF_RETURN((YGGDRASIL_IS_SCALAR_TYPE(T)), (bool)) operator==(const T& rhs) const { Allocator allocator; return *this == GenericValue(rhs, allocator); }
+#else // RAPIDJSON_YGGDRASIL
+    template <typename T> RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,internal::IsGenericValue<T> >), (bool)) operator==(const T& rhs) const { return *this == GenericValue(rhs); }
+#endif // RAPIDJSON_YGGDRASIL
 
 #ifndef __cpp_impl_three_way_comparison
     //! Not-equal-to operator
@@ -3460,8 +3464,6 @@ public:
   // TODO: Pass stack allocator?
   void InitSchema(Allocator& allocator) {
     if (!schema_) {
-      // schema_ = new SchemaValueType(kObjectType, &allocator,
-      // 				    1024, &allocator);
       schema_ = reinterpret_cast<SchemaValueType*>(allocator.Malloc(sizeof(SchemaValueType)));
       new (schema_) SchemaValueType(kObjectType, &allocator,
 				    1024, &allocator);
@@ -3474,30 +3476,12 @@ public:
   //   schema_->ownAllocator_ = schema_->allocator_;
   // }
   void DestroySchema() {
-    // switch(data_.f.flags) {
-    // case kArrayFlag: {
-    //   GenericValue* e = GetElementsPointer();
-    //   for (GenericValue* v = e; v != e + data_.a.size; ++v)
-    // 	v->DestroySchema();
-    //   break;
-    // }
-    // case kObjectFlag: {
-    //   if (Member* members = GetMembersPointer()) {
-    // 	for (SizeType i = 0; i < data_.o.size; i++) {
-    // 	  members[i].value.DestroySchema();
-    // 	}
-    //   }
-    //   break;
-    // }
-    // default:
-    //   break;
-    // }
+    schema_ = NULL;
     // if (schema_ != NULL) {
     //   // Allocator* schema_allocator = schema_->ownAllocator_;
     //   // schema_->ownAllocator_ = NULL;
     //   // schema_->~GenericDocument();
     //   // RAPIDJSON_DELETE(schema_allocator);
-    //   RAPIDJSON_DELETE(schema_);
     //   // if (schema_allocator) {
     //   // 	schema_->ClearStack();
     //   //        schema_->~GenericDocument();
