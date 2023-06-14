@@ -3459,9 +3459,11 @@ public:
   // TODO: Pass stack allocator?
   void InitSchema(Allocator& allocator) {
     if (!schema_) {
-      schema_ = reinterpret_cast<SchemaValueType*>(allocator.Malloc(sizeof(SchemaValueType)));
-      new (schema_) SchemaValueType(kObjectType, &allocator,
+      schema_ = new SchemaValueType(kObjectType, &allocator,
 				    1024, &allocator);
+      // schema_ = reinterpret_cast<SchemaValueType*>(allocator.Malloc(sizeof(SchemaValueType)));
+      // new (schema_) SchemaValueType(kObjectType, &allocator,
+      // 				    1024, &allocator);
     }
   }
   void OwnSchemaAllocator() {
@@ -3471,11 +3473,30 @@ public:
     schema_->ownAllocator_ = schema_->allocator_;
   }
   void DestroySchema() {
+    switch(data_.f.flags) {
+    case kArrayFlag: {
+      GenericValue* e = GetElementsPointer();
+      for (GenericValue* v = e; v != e + data_.a.size; ++v)
+	v->DestroySchema();
+      break;
+    }
+    case kObjectFlag: {
+      if (Member* members = GetMembersPointer()) {
+	for (SizeType i = 0; i < data_.o.size; i++) {
+	  members[i].value.DestroySchema();
+	}
+      }
+      break;
+    }
+    default:
+      break;
+    }
     if (schema_ != NULL) {
-      Allocator* schema_allocator = schema_->ownAllocator_;
-      schema_->ownAllocator_ = NULL;
-      schema_->~GenericDocument();
-      RAPIDJSON_DELETE(schema_allocator);
+      // Allocator* schema_allocator = schema_->ownAllocator_;
+      // schema_->ownAllocator_ = NULL;
+      // schema_->~GenericDocument();
+      // RAPIDJSON_DELETE(schema_allocator);
+      RAPIDJSON_DELETE(schema_);
       // if (schema_allocator) {
       // 	schema_->ClearStack();
       //        schema_->~GenericDocument();
@@ -3483,7 +3504,7 @@ public:
       // 	RAPIDJSON_DELETE(schema_allocator);
       // }
       schema_ = NULL;
-      schema_allocator = NULL;
+      // schema_allocator = NULL;
     }
   }
   void ResetSchema(Allocator& allocator) {
