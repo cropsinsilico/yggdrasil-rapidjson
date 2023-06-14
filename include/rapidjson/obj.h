@@ -4127,7 +4127,10 @@ public:
 	    out.clear();
 	    return out;
 	  }
+	  size_t nPrev = out[iFace].size();
 	  elements[vert_idx[(size_t)(iv)]]->get_double_array(out[iFace], true);
+	  while (out[iFace].size() > (nPrev + 3))
+	    out[iFace].pop_back();
 	}
 	iFace++;
       }

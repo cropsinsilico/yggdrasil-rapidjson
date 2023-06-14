@@ -1689,6 +1689,7 @@ TEST(Value, ObjWavefront) {
   rapidjson::Ply cpy_ply;
   x.GetPly(cpy_ply);
   EXPECT_EQ(ply, cpy_ply);
+  CHECK_AREAS(ply, 0)
   // More complex elements that do not map 1-to-1 with Ply
   obj.add_element("vp", C_ARR(1.0, 2.0));
   obj.add_element("vp", C_ARR(2.0, 1.0, 3.0));
@@ -1972,6 +1973,7 @@ TEST(Value, ObjWavefrontW) {
   rapidjson::ObjWavefront cpy;
   x.GetObjWavefront(cpy);
   EXPECT_EQ(obj, cpy);
+  CHECK_AREAS(obj, 1)
 }
 
 TEST(Value, ObjWavefrontColor) {
@@ -1987,6 +1989,7 @@ TEST(Value, ObjWavefrontColor) {
   rapidjson::ObjWavefront cpy;
   x.GetObjWavefront(cpy);
   EXPECT_EQ(obj, cpy);
+  CHECK_AREAS(obj, 1)
 }
 
 TEST(Value, ObjWavefrontColorW) {
@@ -2002,6 +2005,7 @@ TEST(Value, ObjWavefrontColorW) {
   rapidjson::ObjWavefront cpy;
   x.GetObjWavefront(cpy);
   EXPECT_EQ(obj, cpy);
+  CHECK_AREAS(obj, 1)
 }
 
 TEST(Value, Ply) {
@@ -2026,6 +2030,7 @@ TEST(Value, Ply) {
   rapidjson::ObjWavefront cpy_obj;
   x.GetObjWavefront(cpy_obj);
   EXPECT_EQ(obj, cpy_obj);
+  CHECK_AREAS(obj, 1)
 }
 
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
