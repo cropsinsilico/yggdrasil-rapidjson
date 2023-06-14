@@ -3469,7 +3469,10 @@ public:
   // Explicit schema provided
   template <typename SourceAllocator>
   explicit GenericValue(const Ch* s, SizeType length, Allocator& allocator,
-			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT { SetStringRaw(StringRef(s, length), allocator); SetValueSchema(schema, allocator); }
+			const GenericValue<Encoding,SourceAllocator>& schema) RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT {
+    SetStringRaw(StringRef(s, length), allocator);
+    SetValueSchema(schema, allocator);
+  }
   template <typename SourceAllocator>
   explicit GenericValue(Type type,
 			const GenericValue<Encoding,SourceAllocator>& schema,
@@ -3490,9 +3493,13 @@ public:
 
   // TODO: Pass stack allocator?
   void InitSchema(Allocator& allocator) {
-    if (!schema_)
-      schema_ = new SchemaValueType(kObjectType, &allocator,
+    if (!schema_) {
+      schema_ = reinterpret_cast<SchemaValueType*>(allocator.Malloc(sizeof(SchemaValueType)));
+      new (schema_) SchemaValueType(kObjectType, &allocator,
 				    1024, &allocator);
+      // schema_ = new SchemaValueType(kObjectType, &allocator,
+      // 				    1024, &allocator);
+    }
   }
   void OwnSchemaAllocator() {
     RAPIDJSON_ASSERT(!(schema_->ownAllocator_));
@@ -3504,7 +3511,10 @@ public:
     if (schema_ != NULL) {
       Allocator* schema_allocator = schema_->ownAllocator_;
       schema_->ownAllocator_ = NULL;
-      RAPIDJSON_DELETE(schema_);
+      schema_->ClearStack();
+      schema_->~GenericDocument();
+      Allocator::Free(schema_);
+      // RAPIDJSON_DELETE(schema_);
       RAPIDJSON_DELETE(schema_allocator);
       schema_ = NULL;
       schema_allocator = NULL;
