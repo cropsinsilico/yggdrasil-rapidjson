@@ -1446,7 +1446,8 @@ public:
     //! Equal-to operator with primitive types
     /*! \tparam T Either \ref Type, \c int, \c unsigned, \c int64_t, \c uint64_t, \c double, \c true, \c false
     */
-    template <typename T> RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,internal::IsGenericValue<T> >), (bool)) operator==(const T& rhs) const { return *this == GenericValue(rhs); }
+    template <typename T> RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::OrExpr<internal::IsPointer<T>,internal::IsGenericValue<T> >, YGGDRASIL_IS_SCALAR_TYPE(T)>), (bool)) operator==(const T& rhs) const { return *this == GenericValue(rhs); }
+    template <typename T> RAPIDJSON_ENABLEIF_RETURN((YGGDRASIL_IS_SCALAR_TYPE(T)), (bool)) operator==(const T& rhs) const { Allocator allocator; return *this == GenericValue(rhs, allocator); }
 
 #ifndef __cpp_impl_three_way_comparison
     //! Not-equal-to operator
@@ -3235,15 +3236,15 @@ public:
   { SetNDArrayRaw(&x, allocator); }
 
   // Scalars not covered by rapidjson & units
-  template <typename T>
-  explicit GenericValue(const T x,
-			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T))))
-    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  {
-    Allocator* allocator = RAPIDJSON_NEW(Allocator)();
-    SetNDArrayRaw(&x, NULL, 0, NULL, 0, *allocator);
-    OwnSchemaAllocator();
-  }
+  // template <typename T>
+  // explicit GenericValue(const T x,
+  // 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T))))
+  //   RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  // {
+  //   Allocator* allocator = RAPIDJSON_NEW(Allocator)();
+  //   SetNDArrayRaw(&x, NULL, 0, NULL, 0, *allocator);
+  //   OwnSchemaAllocator();
+  // }
   template <typename T>
   explicit GenericValue(const T x, Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T))))
@@ -3459,53 +3460,53 @@ public:
   // TODO: Pass stack allocator?
   void InitSchema(Allocator& allocator) {
     if (!schema_) {
-      schema_ = new SchemaValueType(kObjectType, &allocator,
-				    1024, &allocator);
-      // schema_ = reinterpret_cast<SchemaValueType*>(allocator.Malloc(sizeof(SchemaValueType)));
-      // new (schema_) SchemaValueType(kObjectType, &allocator,
+      // schema_ = new SchemaValueType(kObjectType, &allocator,
       // 				    1024, &allocator);
+      schema_ = reinterpret_cast<SchemaValueType*>(allocator.Malloc(sizeof(SchemaValueType)));
+      new (schema_) SchemaValueType(kObjectType, &allocator,
+				    1024, &allocator);
     }
   }
-  void OwnSchemaAllocator() {
-    RAPIDJSON_ASSERT(!(schema_->ownAllocator_));
-    // Force document to clean up allocator (and thereby it's
-    // own memory for the MemoryPoolAllocator)
-    schema_->ownAllocator_ = schema_->allocator_;
-  }
+  // void OwnSchemaAllocator() {
+  //   RAPIDJSON_ASSERT(!(schema_->ownAllocator_));
+  //   // Force document to clean up allocator (and thereby it's
+  //   // own memory for the MemoryPoolAllocator)
+  //   schema_->ownAllocator_ = schema_->allocator_;
+  // }
   void DestroySchema() {
-    switch(data_.f.flags) {
-    case kArrayFlag: {
-      GenericValue* e = GetElementsPointer();
-      for (GenericValue* v = e; v != e + data_.a.size; ++v)
-	v->DestroySchema();
-      break;
-    }
-    case kObjectFlag: {
-      if (Member* members = GetMembersPointer()) {
-	for (SizeType i = 0; i < data_.o.size; i++) {
-	  members[i].value.DestroySchema();
-	}
-      }
-      break;
-    }
-    default:
-      break;
-    }
-    if (schema_ != NULL) {
-      // Allocator* schema_allocator = schema_->ownAllocator_;
-      // schema_->ownAllocator_ = NULL;
-      // schema_->~GenericDocument();
-      // RAPIDJSON_DELETE(schema_allocator);
-      RAPIDJSON_DELETE(schema_);
-      // if (schema_allocator) {
-      // 	schema_->ClearStack();
-      //        schema_->~GenericDocument();
-      // 	Allocator::Free(schema_);
-      // 	RAPIDJSON_DELETE(schema_allocator);
-      // }
-      schema_ = NULL;
-      // schema_allocator = NULL;
-    }
+    // switch(data_.f.flags) {
+    // case kArrayFlag: {
+    //   GenericValue* e = GetElementsPointer();
+    //   for (GenericValue* v = e; v != e + data_.a.size; ++v)
+    // 	v->DestroySchema();
+    //   break;
+    // }
+    // case kObjectFlag: {
+    //   if (Member* members = GetMembersPointer()) {
+    // 	for (SizeType i = 0; i < data_.o.size; i++) {
+    // 	  members[i].value.DestroySchema();
+    // 	}
+    //   }
+    //   break;
+    // }
+    // default:
+    //   break;
+    // }
+    // if (schema_ != NULL) {
+    //   // Allocator* schema_allocator = schema_->ownAllocator_;
+    //   // schema_->ownAllocator_ = NULL;
+    //   // schema_->~GenericDocument();
+    //   // RAPIDJSON_DELETE(schema_allocator);
+    //   RAPIDJSON_DELETE(schema_);
+    //   // if (schema_allocator) {
+    //   // 	schema_->ClearStack();
+    //   //        schema_->~GenericDocument();
+    //   // 	Allocator::Free(schema_);
+    //   // 	RAPIDJSON_DELETE(schema_allocator);
+    //   // }
+    //   schema_ = NULL;
+    //   // schema_allocator = NULL;
+    // }
   }
   void ResetSchema(Allocator& allocator) {
     DestroySchema();
