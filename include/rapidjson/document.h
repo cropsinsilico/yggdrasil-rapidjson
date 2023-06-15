@@ -3240,15 +3240,6 @@ public:
   { SetNDArrayRaw(&x, allocator); }
 
   // Scalars not covered by rapidjson & units
-  // template <typename T>
-  // explicit GenericValue(const T x,
-  // 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T))))
-  //   RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
-  // {
-  //   Allocator* allocator = RAPIDJSON_NEW(Allocator)();
-  //   SetNDArrayRaw(&x, NULL, 0, NULL, 0, *allocator);
-  //   OwnSchemaAllocator();
-  // }
   template <typename T>
   explicit GenericValue(const T x, Allocator& allocator,
 			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T))))
@@ -5995,14 +5986,14 @@ public:
   GenericValue& SetNDArray(const T* x, SizeType shape[], SizeType ndim,
 			   Allocator& allocator) {
     this->~GenericValue();
-    new (this) GenericValue(x, shape, ndim, NULL, 0, *allocator);
+    new (this) GenericValue(x, shape, ndim, NULL, 0, allocator);
     return *this; }
   template<typename T>
   GenericValue& SetNDArray(const T* x, SizeType shape[], SizeType ndim,
 			   const Ch* units_str,
 			   Allocator& allocator) {
     this->~GenericValue();
-    new (this) GenericValue(x, shape, ndim, units_str, 0, *allocator);
+    new (this) GenericValue(x, shape, ndim, units_str, 0, allocator);
     return *this; }
   template<typename T>
   GenericValue& SetNDArray(const T* x, SizeType shape[], SizeType ndim,
