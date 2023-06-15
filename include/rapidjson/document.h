@@ -3463,38 +3463,44 @@ public:
 
   // TODO: Pass stack allocator?
   void InitSchema(Allocator& allocator) {
-    if (!schema_) {
+    if (schema_ == NULL) {
       schema_ = reinterpret_cast<SchemaValueType*>(allocator.Malloc(sizeof(SchemaValueType)));
       new (schema_) SchemaValueType(kObjectType, &allocator,
 				    1024, &allocator);
     }
   }
   void DestroySchema() {
+    if (schema_ != NULL) {
+      if (Allocator::kNeedFree || (RAPIDJSON_USE_MEMBERSMAP+0 &&
+				   internal::IsRefCounted<Allocator>::Value)) {
+	schema_->SetNull();
+	if (Allocator::kNeedFree)
+	  Allocator::Free(schema_);
+      }
+    }
     schema_ = NULL;
   }
   void ResetSchema(Allocator& allocator) {
-    if (schema_ != NULL) {
-      Allocator* schema_allocator = schema_->allocator_;
-      RAPIDJSON_ASSERT(schema_->ownAllocator_ == NULL);
-      schema_->ownAllocator_ = NULL;
-      schema_->ClearStack();
-      schema_->~GenericDocument();
-      schema_allocator->Free(schema_);
-    }
+    // if (schema_ != NULL) {
+    //   Allocator* schema_allocator = schema_->allocator_;
+    //   RAPIDJSON_ASSERT(schema_->ownAllocator_ == NULL);
+    //   schema_->ownAllocator_ = NULL;
+    //   schema_->ClearStack();
+    //   schema_->~GenericDocument();
+    //   schema_allocator->Free(schema_);
+    // }
     DestroySchema();
     InitSchema(allocator);
   }
-  template <typename SourceStackAllocator>
-  void SetValueSchema(GenericDocument<Encoding, Allocator, SourceStackAllocator>& schema) {
-    return SetValueSchema(schema, schema.GetAllocator());
-  }
+  // template <typename SourceStackAllocator>
+  // void SetValueSchema(GenericDocument<Encoding, Allocator, SourceStackAllocator>& schema) {
+  //   return SetValueSchema(schema, schema.GetAllocator());
+  // }
   template <typename SourceAllocator>
   void SetValueSchema(const GenericValue<Encoding,SourceAllocator>& schema,
 		      Allocator& allocator) {
     RAPIDJSON_ASSERT(schema.IsObject());
     ResetSchema(allocator);
-    // if (schema_ == NULL)
-    //   InitSchema(allocator);
     schema_->CopyFrom(schema, allocator, true);
   }
   bool HasSchema() const {
