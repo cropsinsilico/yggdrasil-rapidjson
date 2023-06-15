@@ -3481,21 +3481,9 @@ public:
     schema_ = NULL;
   }
   void ResetSchema(Allocator& allocator) {
-    // if (schema_ != NULL) {
-    //   Allocator* schema_allocator = schema_->allocator_;
-    //   RAPIDJSON_ASSERT(schema_->ownAllocator_ == NULL);
-    //   schema_->ownAllocator_ = NULL;
-    //   schema_->ClearStack();
-    //   schema_->~GenericDocument();
-    //   schema_allocator->Free(schema_);
-    // }
     DestroySchema();
     InitSchema(allocator);
   }
-  // template <typename SourceStackAllocator>
-  // void SetValueSchema(GenericDocument<Encoding, Allocator, SourceStackAllocator>& schema) {
-  //   return SetValueSchema(schema, schema.GetAllocator());
-  // }
   template <typename SourceAllocator>
   void SetValueSchema(const GenericValue<Encoding,SourceAllocator>& schema,
 		      Allocator& allocator) {
@@ -3681,7 +3669,6 @@ public:
 			 Allocator& allocator) {
     ResetSchema(allocator);
     schema_->Parse(s);
-    // schema_ = &(schema_->Parse(s));
   }
 
   //! Variable argument setting/getting
