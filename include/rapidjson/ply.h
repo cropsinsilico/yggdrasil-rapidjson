@@ -111,6 +111,16 @@ std::string ply_alias2base(const std::string& alias) {
   return std::string(alias);
 }
 
+static inline
+std::vector<double> cross_product_3d(std::vector<double>& a,
+				     std::vector<double>& b) {
+  std::vector<double> out(3);
+  out[0] = (a[1] * b[2]) - (a[2] * b[1]);
+  out[1] = (a[2] * b[0]) - (a[0] * b[2]);
+  out[2] = (a[0] * b[1]) - (a[1] * b[0]);
+  return out;
+}
+
 //! \brief Get the areas for each face in the structure.
 //! \param mesh Mesh describine structure.
 //! \return Vector of areas for each face.
@@ -119,21 +129,29 @@ std::vector<double> mesh2areas(const std::vector<std::vector<double> > mesh) {
   std::vector<double> out;
   for (std::vector<std::vector<double> >::const_iterator it = mesh.begin();
        it != mesh.end(); it++) {
-    // TODO: Handle faces with more than 3 vertices
-    std::vector<double> v0(it->begin(), it->begin() + 3);
-    std::vector<double> v1(it->begin() + 3, it->begin() + 6);
-    std::vector<double> v2(it->begin() + 6, it->begin() + 9);
-    double a = std::sqrt(std::pow(v0[0] - v1[0], 2) +
-			 std::pow(v0[1] - v1[1], 2) +
-			 std::pow(v0[2] - v1[2], 2));
-    double b = std::sqrt(std::pow(v1[0] - v2[0], 2) +
-			 std::pow(v1[1] - v2[1], 2) +
-			 std::pow(v1[2] - v2[2], 2));
-    double c = std::sqrt(std::pow(v2[0] - v0[0], 2) +
-			 std::pow(v2[1] - v0[1], 2) +
-			 std::pow(v2[2] - v0[2], 2));
-    double s = (a + b + c) / 2.0;
-    out.push_back(std::sqrt(s * (s - a) * (s - b) * (s - c)));
+    long nvert = static_cast<long>(it->size()) / 3;
+    std::vector<double> sum(3, 0.0);
+    std::vector<double> vi(3);
+    std::vector<double> vin1(3);
+    std::vector<double> cross(3);
+    for (long i = 0; i < nvert; i++) {
+      vi.assign(it->begin() + (3 * i), it->begin() + (3 * (i + 1)));
+      if (i == 0)
+	vin1.assign(it->begin() + (3 * (nvert - 1)),
+		    it->begin() + (3 * nvert));
+      else
+	vin1.assign(it->begin() + (3 * (i - 1)),
+		    it->begin() + (3 * i));
+      cross = cross_product_3d(vi, vin1);
+      for (size_t j = 0; j < 3; j++)
+	sum[j] = sum[j] + cross[j];
+    }
+    double total = 0.0;
+    for (size_t j = 0; j < 3; j++) {
+      sum[j] /= 2;
+      total += std::pow(sum[j], 2);
+    }
+    out.push_back(std::sqrt(total));
   }
   return out;
 }
