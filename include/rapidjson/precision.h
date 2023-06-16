@@ -238,7 +238,7 @@ template <typename T1, typename T2>
 void changePrecision(const unsigned char* bytes, T2* dst, SizeType nelements,
 		     RAPIDJSON_ENABLEIF((internal::AndExpr<
 					 internal::NotExpr<
-					 internal::IsSame<T1, T2>>,
+					 internal::IsSame<T1, T2> >,
 					 YGGDRASIL_IS_CASTABLE(T1,T2)>))) {
   CAST_SOURCE;
   SAME_PRECISION;
