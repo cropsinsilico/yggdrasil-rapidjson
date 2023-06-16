@@ -3242,7 +3242,7 @@ public:
   // Scalars not covered by rapidjson & units
   template <typename T>
   explicit GenericValue(const T x, Allocator& allocator,
-			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_SCALAR_TYPE(T))))
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   { SetNDArrayRaw(&x, NULL, 0, NULL, 0, allocator); }
   template <typename T>

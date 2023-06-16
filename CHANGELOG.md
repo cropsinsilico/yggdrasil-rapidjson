@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Add test for array of strings & complex
 * Allow for different character types in Ply & ObjWavefront classes
 * Add units to ply/obj
+* Store scalars in standard yggdrasil data
 
 ### IN PROGRESS
 * Add docstrings to new methods
