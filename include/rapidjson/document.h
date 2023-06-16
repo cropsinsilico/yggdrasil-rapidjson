@@ -826,7 +826,7 @@ YGG_GENERIC_HELPER(Ply, Ply)
 	   it != data.end(); it++) {					\
 	typename ValueType::ValueType key;				\
 	typename ValueType::ValueType item;				\
-	key.template Set<std::basic_string<typename ValueType::Ch>>(it->first, allocator); \
+	key.template Set<std::basic_string<typename ValueType::Ch> >(it->first, allocator); \
 	item.template Set<T>(it->second, allocator);			\
 	v.AddMember(key, item, allocator);				\
       }									\
