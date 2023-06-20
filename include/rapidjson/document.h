@@ -701,9 +701,9 @@ YGG_SCALAR_HELPER(std::complex<long double>)
   
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 YGG_GENERIC_HELPER(PyObject*, PythonInstance)
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 YGG_GENERIC_HELPER(ObjWavefront, ObjWavefront)
 YGG_GENERIC_HELPER(Ply, Ply)
-#endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #undef YGG_GENERIC_HELPER
   
 #define YGG_STD_VECTOR_(T)						\
