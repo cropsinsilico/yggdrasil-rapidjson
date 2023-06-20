@@ -667,24 +667,23 @@ static bool __StaticTrue = true;
 #define YGG_GENERIC_HELPER(T, name)					\
   template<typename ValueType>						\
   struct TypeHelper<ValueType, T> {					\
-    static bool Is(const ValueType& v) { return v.template Is ## name(); } \
-    static T Get(const ValueType& v) { return v.template Get ## name(); } \
+    static bool Is(const ValueType& v) { return v.Is ## name(); }	\
+    static T Get(const ValueType& v) { return v.Get ## name(); }	\
     static ValueType& Set(ValueType& v, const T& data,			\
 			  typename ValueType::AllocatorType& allocator)	\
-    { return v.template Set ## name(data, allocator); }			\
+    { return v.Set ## name(data, allocator); }				\
   };
 #define YGG_SCALAR_HELPER(T)						\
-  YGG_GENERIC_HELPER(T, Scalar<T>)
-  /*
   template<typename ValueType>						\
   struct TypeHelper<ValueType, T> {					\
-    static bool Is(const ValueType& v) { return v.template IsScalar<T>(); } \
-    static T Get(const ValueType& v) { return v.template GetScalar<T>(); } \
+    static bool Is(const ValueType& v)					\
+    { return v.template IsScalar<T>(); }				\
+    static T Get(const ValueType& v)					\
+    { return v.template GetScalar<T>(); }				\
     static ValueType& Set(ValueType& v, T data,				\
 			  typename ValueType::AllocatorType& allocator)	\
-    { return v.SetScalar(data, NULL, 0, allocator); }			\
+    { return v.SetScalar(data, allocator); }				\
   };
-  */
 
 YGG_SCALAR_HELPER(uint8_t)
 YGG_SCALAR_HELPER(uint16_t)
