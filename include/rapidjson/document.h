@@ -5138,7 +5138,8 @@ public:
   }
   bool IsNDArray() const {
     if (!IsYggdrasil()) return false;
-    return (GetYggType() == GetNDArrayString());
+    return (GetYggType() == GetNDArrayString() ||
+	    GetYggType() == Get1DArrayString());
   }
   template <typename T>
   bool IsNDArray() const {
