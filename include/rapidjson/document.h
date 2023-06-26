@@ -5079,6 +5079,58 @@ public:
     ConstMemberIterator title = schema_->FindMember(GetTitleString());
     return title->value;
   }
+  bool IsSubType(const Ch* subtype, SizeType precision) const {
+    ValueType subV(subtype, internal::StrLen(subtype));
+    if (IsYggdrasil()) {
+      if (GetSubType() != subV)
+	return false;
+      if (precision != GetPrecision())
+	return false;
+    } else if (!((IsDouble() && subV == "float" && precision == 8) ||
+		 (IsInt() && subV == "int" && precision == 4) ||
+		 (IsInt64() && subV == "int" && precision == 8) ||
+		 (IsUint() && subV == "uint" && precision == 4) ||
+		 (IsUint64() && subV == "uint" && precision == 8))) {
+      return false;
+    }
+    return true;
+  }
+  bool IsType(const Ch* type) const {
+    ValueType typeV(type, internal::StrLen(type));
+#define CASE_(method, name)                                             \
+    if (Is ## method()) {						\
+      if (typeV != #name) {						\
+	return false;							\
+      }									\
+    }
+#define CASE_SCALAR_(method, name)                                      \
+    if (Is ## method()) {						\
+      if (typeV != #name && typeV != "scalar") {			\
+	return false;							\
+      }									\
+    }
+    if (IsYggdrasil()) {
+      if (typeV != GetYggType() &&
+	  !((typeV == "number" && IsScalar("double")) ||
+	    (typeV == "integer" && IsScalar("int")) ||
+	    (typeV == "1darray" && Is1DArray()))) {
+	return false;
+      }
+    }
+    else CASE_(Null, null)
+    else CASE_(Bool, boolean)
+    else CASE_SCALAR_(String, string)
+    else CASE_(Array, array)
+    else CASE_(Object, object)
+    else CASE_SCALAR_(Double, number)
+    else CASE_SCALAR_(Int, integer)
+    else {
+      return false;
+    }
+    return true;
+#undef CASE_SCALAR_
+#undef CASE_
+  }
   bool IsScalar() const {
     if (!IsYggdrasil()) return false;
     if (GetYggType() == GetScalarString())
