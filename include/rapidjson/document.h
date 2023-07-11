@@ -5476,6 +5476,47 @@ public:
     }
     return NULL;
   }
+
+  void* GetDataPtr(Allocator& allocator) const {
+    switch (GetType()) {
+    case kNullType:     return (void*)(&internal::__StaticNull);
+    case kFalseType:    return (void*)(&internal::__StaticFalse);
+    case kTrueType:     return (void*)(&internal::__StaticTrue);
+    case kStringType: {
+      if (IsObjWavefront()) {
+	ObjWavefront* tmp = (ObjWavefront*)(allocator.Malloc(sizeof(ObjWavefront)));
+	new (tmp) ObjWavefront();
+	GetObjWavefront(*tmp);
+	return (void*)tmp;
+      } else if (IsPly()) {
+	Ply* tmp = (Ply*)(allocator.Malloc(sizeof(Ply)));
+	new (tmp) Ply();
+	GetPly(*tmp);
+	return (void*)tmp;
+      } else if (IsPythonFunction()) {
+	// TODO: Have allocator handle Python refs
+	// return (void*)GetPythonObjectRaw();
+	return NULL;
+      } else if (IsPythonInstance()) {
+	// TODO: Have allocator handle Python refs
+	// return (void*)GetPythonObjectRaw();
+	return NULL;
+      } else {
+	return (void*)(GetString());
+      }
+    }
+    case kNumberType: {
+      if (IsDouble())         return (void*)(&data_.n.d);
+      else if (IsInt())       return (void*)(&data_.n.i.i);
+      else if (IsUint())      return (void*)(&data_.n.u.u);
+      else if (IsInt64())     return (void*)(&data_.n.i64);
+      else                    return (void*)(&data_.n.u64);
+    }
+    default:
+      return (void*)this;
+    }
+    return NULL;
+  }
   
   SizeType GetNBytes() const {
     switch (GetType()) {
