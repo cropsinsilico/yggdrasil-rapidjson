@@ -5460,6 +5460,7 @@ public:
     else if (CMP_(Any) || CMP_(Schema) || CMP_(Array) || CMP_(Object)) {
       CopyFrom(((ValueType*)value)[0], allocator, true);
     }
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
     else if (CMP_(PythonClass) ||
 	     CMP_(PythonFunction) ||
 	     CMP_(PythonInstance)) {
@@ -5467,6 +5468,7 @@ public:
       SetPythonObjectRaw(tmp, allocator);
       Py_XDECREF(tmp);
     }
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
     else {
       return false;
     }
