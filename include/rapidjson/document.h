@@ -3066,6 +3066,11 @@ public:
   RAPIDJSON_STRING_(Array, 'a', 'r', 'r', 'a', 'y')
   RAPIDJSON_STRING_(Properties, 'p', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
   RAPIDJSON_STRING_(Items, 'i', 't', 'e', 'm', 's')
+  RAPIDJSON_STRING_(Null, 'n', 'u', 'l', 'l')
+  RAPIDJSON_STRING_(Boolean, 'b', 'o', 'o', 'l', 'e', 'a', 'n')
+  RAPIDJSON_STRING_(Number, 'n', 'u', 'm', 'b', 'e', 'r')
+  RAPIDJSON_STRING_(Integer, 'i', 'n', 't', 'e', 'g', 'e', 'r')
+  RAPIDJSON_STRING_(String, 's', 't', 'r', 'i', 'n', 'g')
   RAPIDJSON_STRING_(Scalar, 's', 'c', 'a', 'l', 'a', 'r')
   RAPIDJSON_STRING_(1DArray, '1', 'd', 'a', 'r', 'r', 'a', 'y')
   RAPIDJSON_STRING_(NDArray, 'n', 'd', 'a', 'r', 'r', 'a', 'y')
@@ -5430,6 +5435,47 @@ public:
     return out;
   }
 
+  bool SetDataPtr(const Ch* type, void*& value, Allocator& allocator) {
+#define CMP_(name)					\
+    (internal::StrCmp(type, Get ## name ## String().GetString()) == 0)
+#define CASE_(name, method)				\
+    if (CMP_(name)) {					\
+      method;						\
+    }
+#define GEOMETRY_(name)					      \
+    if (CMP_(name)) {					      \
+      name* tmp = (name*)value;				      \
+      Set ## name(*tmp, allocator);			      \
+      delete tmp;					      \
+    }
+    CASE_(Null, SetNull())
+    else CASE_(Boolean, SetBool(((bool*)value)[0]))
+    else CASE_(Number, SetDouble(((double*)value)[0]))
+    else CASE_(Integer, SetInt(((int*)value)[0]))
+    else CASE_(String, SetString(((Ch*)value),
+				 internal::StrLen((Ch*)value),
+				 allocator))
+    else GEOMETRY_(Ply)
+    else GEOMETRY_(ObjWavefront)
+    else if (CMP_(Any) || CMP_(Schema) || CMP_(Array) || CMP_(Object)) {
+      CopyFrom(((ValueType*)value)[0], allocator, true);
+    }
+    else if (CMP_(PythonClass) ||
+	     CMP_(PythonFunction) ||
+	     CMP_(PythonInstance)) {
+      PyObject* tmp = (PyObject*)value;
+      SetPythonObjectRaw(tmp, allocator);
+      Py_XDECREF(tmp);
+    }
+    else {
+      return false;
+    }
+    value = NULL;
+    return true;
+#undef GEOMETRY_
+#undef CASE_
+#undef CMP_
+  }
   void* GetDataPtr(bool& requires_freeing) const {
     switch (GetType()) {
     case kNullType:     return (void*)(&internal::__StaticNull);
@@ -5463,61 +5509,12 @@ public:
       else if (IsInt64())     return (void*)(&data_.n.i64);
       else                    return (void*)(&data_.n.u64);
     }
-    // case kObjectType: {
-    // 	if (IsPythonInstance()) {
-    // 	  requires_freeing = true;
-    // 	  return (void*)GetPythonObjectRaw();
-    // 	} else {
-    // 	  return (void*)this;
-    // 	}
-    // }
     default:
       return (void*)this;
     }
     return NULL;
   }
 
-  void* GetDataPtr(Allocator& allocator) const {
-    switch (GetType()) {
-    case kNullType:     return (void*)(&internal::__StaticNull);
-    case kFalseType:    return (void*)(&internal::__StaticFalse);
-    case kTrueType:     return (void*)(&internal::__StaticTrue);
-    case kStringType: {
-      if (IsObjWavefront()) {
-	ObjWavefront* tmp = (ObjWavefront*)(allocator.Malloc(sizeof(ObjWavefront)));
-	new (tmp) ObjWavefront();
-	GetObjWavefront(*tmp);
-	return (void*)tmp;
-      } else if (IsPly()) {
-	Ply* tmp = (Ply*)(allocator.Malloc(sizeof(Ply)));
-	new (tmp) Ply();
-	GetPly(*tmp);
-	return (void*)tmp;
-      } else if (IsPythonFunction()) {
-	// TODO: Have allocator handle Python refs
-	// return (void*)GetPythonObjectRaw();
-	return NULL;
-      } else if (IsPythonInstance()) {
-	// TODO: Have allocator handle Python refs
-	// return (void*)GetPythonObjectRaw();
-	return NULL;
-      } else {
-	return (void*)(GetString());
-      }
-    }
-    case kNumberType: {
-      if (IsDouble())         return (void*)(&data_.n.d);
-      else if (IsInt())       return (void*)(&data_.n.i.i);
-      else if (IsUint())      return (void*)(&data_.n.u.u);
-      else if (IsInt64())     return (void*)(&data_.n.i64);
-      else                    return (void*)(&data_.n.u64);
-    }
-    default:
-      return (void*)this;
-    }
-    return NULL;
-  }
-  
   SizeType GetNBytes() const {
     switch (GetType()) {
     case kNullType:     return (SizeType)(sizeof(void*));
