@@ -1671,6 +1671,7 @@ TEST(Value, ObjWavefront) {
   ARRAYS_3D(0);
   ARRAYS_3D(1);
   rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
+  std::cout << obj.as_string("\t") << std::endl;
   rapidjson::Document doc;
   rapidjson::Value x(obj, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
@@ -2013,6 +2014,7 @@ TEST(Value, Ply) {
   ARRAYS_3D(0);
   ARRAYS_3D(1);
   rapidjson::Ply ply(vertices_0, faces_0, edges_0);
+  std::cout << ply.as_string("\t") << std::endl;
   rapidjson::Document doc;
   rapidjson::Value x(ply, allocator);
   EXPECT_TRUE(x.IsYggdrasil());

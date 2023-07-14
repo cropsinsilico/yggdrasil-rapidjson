@@ -2500,11 +2500,23 @@ public:
     return true;
   }
   //! \brief Get a string representation of the element.
+  //! \param[in] indent Indentation to use on each line.
   //! \return String representation.
-  std::string as_string() const {
+  std::string as_string(std::string indent = "") const {
     std::string out;
     std::stringstream ss(out);
     write(ss);
+    if (!indent.empty()) {
+      size_t idx = 0;
+      while (true) {
+	idx = out.find("\n", idx);
+	if (idx == std::string::npos)
+	  break;
+	idx++;
+	out.insert(idx, indent);
+	idx += indent.size();
+      }
+    }
     return out;
   }
   //! \brief Get the colors for an element set in array form.

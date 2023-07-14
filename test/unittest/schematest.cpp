@@ -7655,11 +7655,17 @@ TEST(SchemaGenerateData, Ply) {
 	   "\"-YGG-eyJ0eXBlIjoicGx5In0=-YGG-cGx5CmZvcm1hdCBhc2NpaSAxLjAKZWxlbWVudCB2ZXJ0ZXggOApwcm9wZXJ0eSBkb3VibGUgeApwcm9wZXJ0eSBkb3VibGUgeQpwcm9wZXJ0eSBkb3VibGUgegplbGVtZW50IGZhY2UgMgpwcm9wZXJ0eSBsaXN0IHVjaGFyIGludCB2ZXJ0ZXhfaW5kZXgKZWxlbWVudCBlZGdlIDUKcHJvcGVydHkgaW50IHZlcnRleDEKcHJvcGVydHkgaW50IHZlcnRleDIKZW5kX2hlYWRlcgowIDAgMAowIDAgMQowIDEgMQowIDEgMAoxIDAgMAoxIDAgMQoxIDEgMQoxIDEgMAozIDMgMCAxCjMgMyAwIDIKMCAxCjEgMgoyIDMKMyAwCjIgMAo=-YGG-\"");
 }
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
-TEST(SchemaGenerateData, PythonImport) {
+TEST(SchemaGenerateData, PythonClass) {
   GENERATE_NOCMP("{"
 		 "  \"type\": \"class\""
 		 "}",
 		 "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-L1VzZXJzL2xhbmdtbS9tYW1iYWZvcmdlL2VudnMvcHlyai9saWIvcHl0aG9uMy45L2NvbGxlY3Rpb25zL19faW5pdF9fLnB5OmNvbGxlY3Rpb25zOk9yZGVyZWREaWN0-YGG-\"");
+}
+TEST(SchemaGenerateData, PythonFunction) {
+  GENERATE_NOCMP("{"
+		 "  \"type\": \"function\""
+		 "}",
+		 "\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-L1VzZXJzL2xhbmdtbS9tYW1iYWZvcmdlL2VudnMvcHlyai9saWIvcHl0aG9uMy45L29zLnB5Om9zOnN0YXQ=-YGG-\"");
 }
 TEST(SchemaGenerateData, PythonInstance) {
   GENERATE_NOCMP("{"
