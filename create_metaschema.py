@@ -146,9 +146,9 @@ def get_ygg_tests():
                           'datatype': default_datatype,
                           'filter': {
                               'function': (
-                                  '-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-'
-                                  'ZXhhbXBsZV9weXRob246ZXhhbXBsZV9maW'
-                                  'x0ZXI=-YGG-')},
+                                  '-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ=='
+                                  '-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9'
+                                  'maWx0ZXI=-YGG-')},
                           'field_names': ['a', 'b'],
                           'field_units': ['cm', 'g']}],
              'working_dir': os.getcwd()},

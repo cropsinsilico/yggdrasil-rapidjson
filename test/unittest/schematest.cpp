@@ -2242,6 +2242,14 @@ TEST(SchemaValidator, PythonFunction) { // 32
     VALIDATE(s, "\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-ZXhhbXBsZV9weXRob246ZXhhbXBsZV9mdW5jdGlvbgA=-YGG-\"", true);
     VALIDATE(s, "\"example_python:example_function\"", true);
     INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-aW52YWxpZA==-YGG-\"",
+	       "", "type", "",
+	       "{ \"type\" : {"
+	       "    \"expected\": [\"function\"],"
+	       "    \"actual\": \"class\","
+	       "    \"errorCode\": 20,"
+	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\""
+	       "}}");
+    INVALIDATE(s, "\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-aW52YWxpZA==-YGG-\"",
 	       "", "class", "",
 	       "{ \"class\" : {"
 	       "    \"errorCode\": 32,"

@@ -2442,22 +2442,26 @@ public:
   { NORM_SCALAR_(Double, (d), SchemaType::kYggFloatSchemaSubType); }
   bool NormString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy)
   {
-    // Normalize function name
-    if (schema.yggtype_ & (1 << SchemaType::kYggPythonImportSchemaType) &&
+    // Normalize function/class name
+    if (schema.yggtype_ & ((1 << SchemaType::kYggPythonClassSchemaType) |
+			   (1 << SchemaType::kYggPythonFunctionSchemaType)) &&
 	schema.yggtype_ != (1 << SchemaType::kYggTotalSchemaType) - 1) {
       bool isString = false;
       if (schema.type_ & (1 << SchemaType::kStringSchemaType)) {
 	isString = (!schema.CheckPythonImport(context, str, length));
+      }
+      SValue typeString;
+      if (schema.yggtype_ & (1 << SchemaType::kYggPythonClassSchemaType)) {
+	typeString.CopyFrom(schema.GetPythonClassString(), GetAllocator(), true);
+      } else {
+	typeString.CopyFrom(schema.GetPythonFunctionString(), GetAllocator(), true);
       }
       if (!isString) {
 	GenericDocument<EncodingType, AllocatorType> valueSchema(kObjectType);
 	valueSchema.AddMember(SValue(schema.GetTypeString(),
 				     GetAllocator(),
 				     true).Move(),
-			      SValue(schema.GetPythonClassString(),
-				     GetAllocator(),
-				     true).Move(),
-			      GetAllocator());
+			      typeString, GetAllocator());
 	bool out = NormYggdrasilString(context, schema, str, length, copy, valueSchema);
 	if (out && !schema.isMetaschema_)
 	  RecordModified(kModificationTypeValue);
@@ -2553,10 +2557,12 @@ public:
 	return out_string;
       }
     } else if (typeV != valueSchema.MemberEnd() &&
-	       schema.yggtype_ & (1 << SchemaType::kYggPythonImportSchemaType) &&
 	       schema.yggtype_ != (1 << SchemaType::kYggTotalSchemaType) - 1 &&
-	       (typeV->value == YggSchemaValueType::GetPythonClassString() ||
-		typeV->value == YggSchemaValueType::GetPythonFunctionString())) {
+	       (((schema.yggtype_ & (1 << SchemaType::kYggPythonClassSchemaType)) &&
+		 
+		 (typeV->value == YggSchemaValueType::GetPythonClassString())) ||
+		((schema.yggtype_ & (1 << SchemaType::kYggPythonFunctionSchemaType)) &&
+		 (typeV->value == YggSchemaValueType::GetPythonFunctionString())))) {
       typename SchemaType::AllocatorType allocator;
       typename SchemaType::SValue v;
       if (SchemaType::NormRelativePath(context, str, length, v, allocator)) {
@@ -6107,13 +6113,26 @@ public:
 #undef GET_ARRAY_
 #undef SET_ARRAY_
 #undef STRING_ARRAY_
-      } else if (YGGTYPE_CHECK_(PythonImport)) {
+      } else if (YGGTYPE_CHECK_(PythonClass)) {
 #ifdef YGGDRASIL_DISABLE_PYTHON_C_API
 	return false;
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
 	if (context.python_disabled)
 	  return false;
 	PyObject* pyobj = import_python_object("collections:OrderedDict",
+					       "GenerateData: ", true);
+	if (pyobj == NULL)
+	  return false;
+	data.SetPythonInstance(pyobj, allocator);
+	AFTER_SET_;
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
+      } else if (YGGTYPE_CHECK_(PythonFunction)) {
+#ifdef YGGDRASIL_DISABLE_PYTHON_C_API
+	return false;
+#else // YGGDRASIL_DISABLE_PYTHON_C_API
+	if (context.python_disabled)
+	  return false;
+	PyObject* pyobj = import_python_object("os:stat",
 					       "GenerateData: ", true);
 	if (pyobj == NULL)
 	  return false;
@@ -6538,7 +6557,8 @@ public:
 
   bool RequiresPython() const {
     if (!class_.IsNull() || isMetaschema_ ||
-	(yggtype_ & ((1 << kYggPythonImportSchemaType) |
+	(yggtype_ & ((1 << kYggPythonClassSchemaType) |
+		     (1 << kYggPythonFunctionSchemaType) |
 		     (1 << kYggSchemaSchemaType))))
       return true;
     if (properties_) {
@@ -6679,7 +6699,8 @@ public:
 	(void)copy;
 #ifdef RAPIDJSON_YGGDRASIL
         if (!((type_ & (1 << kStringSchemaType)) ||
-	      (yggtype_ & (1 << kYggPythonImportSchemaType)) ||
+	      (yggtype_ & ((1 << kYggPythonClassSchemaType) |
+			   (1 << kYggPythonFunctionSchemaType))) ||
 	      ((yggtype_ & (1 << kYggScalarSchemaType)) &&
 	       (subtype_ == kYggStringSchemaSubType)))) {
 #else // RAPIDJSON_YGGDRASIL
@@ -6715,7 +6736,8 @@ public:
         }
 
 #ifdef RAPIDJSON_YGGDRASIL
-	if ((yggtype_ & (1 << kYggPythonImportSchemaType)) &&
+	if ((yggtype_ & ((1 << kYggPythonClassSchemaType) |
+			 (1 << kYggPythonFunctionSchemaType))) &&
 	    !(type_ & (1 << kStringSchemaType))) {
 	  if (!CheckPythonImport(context, str, length))
 	    return false;
@@ -6779,9 +6801,10 @@ public:
 	CLEANUP_;
 	return false;
       }
-    } else if (((v == GetPythonClassString()) ||
-		(v == GetPythonFunctionString())) &&
-	       (yggtype_ & (1 << kYggPythonImportSchemaType))) {
+    } else if (((v == GetPythonClassString()) &&
+		(yggtype_ & (1 << kYggPythonClassSchemaType))) ||
+	       ((v == GetPythonFunctionString()) &&
+		(yggtype_ & (1 << kYggPythonFunctionSchemaType)))) {
       if (!CheckPythonImport(context, str, length)) {
 	CLEANUP_;
 	return false;
@@ -7314,7 +7337,8 @@ protected:
         kYggNullSchemaType,
     	kYggScalarSchemaType,
     	kYggNDArraySchemaType,
-    	kYggPythonImportSchemaType,
+    	kYggPythonClassSchemaType,
+    	kYggPythonFunctionSchemaType,
     	kYggPythonInstanceSchemaType,
     	kYggObjSchemaType,
     	kYggPlySchemaType,
@@ -7539,8 +7563,8 @@ protected:
 	  ndim_ = 1;
 	}
 	else if (type == GetNDArrayString() ) yggtype_ |= 1 << kYggNDArraySchemaType;
-	else if (type == GetPythonClassString()    ) yggtype_ |= 1 << kYggPythonImportSchemaType;
-	else if (type == GetPythonFunctionString() ) yggtype_ |= 1 << kYggPythonImportSchemaType;
+	else if (type == GetPythonClassString()    ) yggtype_ |= 1 << kYggPythonClassSchemaType;
+	else if (type == GetPythonFunctionString() ) yggtype_ |= 1 << kYggPythonFunctionSchemaType;
 	else if (type == GetPythonInstanceString() ) yggtype_ |= 1 << kYggPythonInstanceSchemaType;
 	else if (type == GetObjString()    ) yggtype_ |= 1 << kYggObjSchemaType;
 	else if (type == GetPlyString()    ) yggtype_ |= 1 << kYggPlySchemaType;
@@ -7611,7 +7635,8 @@ protected:
       else if (type_ & (1 << kIntegerSchemaType)) ADD_TYPE(GetIntegerString());
       if (yggtype_ & (1 << kYggScalarSchemaType)) ADD_TYPE(GetScalarString());
       if (yggtype_ & (1 << kYggNDArraySchemaType)) ADD_TYPE(GetNDArrayString());
-      if (yggtype_ & (1 << kYggPythonImportSchemaType)) ADD_TYPE(GetPythonClassString());
+      if (yggtype_ & (1 << kYggPythonClassSchemaType)) ADD_TYPE(GetPythonClassString());
+      if (yggtype_ & (1 << kYggPythonFunctionSchemaType)) ADD_TYPE(GetPythonFunctionString());
       if (yggtype_ & (1 << kYggPythonInstanceSchemaType)) ADD_TYPE(GetPythonInstanceString());
       if (yggtype_ & (1 << kYggObjSchemaType)) ADD_TYPE(GetObjString());
       if (yggtype_ & (1 << kYggPlySchemaType)) ADD_TYPE(GetPlyString());
@@ -8076,7 +8101,8 @@ protected:
 #ifdef RAPIDJSON_YGGDRASIL
 	if (yggtype_ & (1 << kYggScalarSchemaType)) eh.AddExpectedType(GetScalarString());
 	if (yggtype_ & (1 << kYggNDArraySchemaType)) eh.AddExpectedType(GetNDArrayString());
-	if (yggtype_ & (1 << kYggPythonImportSchemaType)) eh.AddExpectedType(GetPythonClassString());
+	if (yggtype_ & (1 << kYggPythonClassSchemaType)) eh.AddExpectedType(GetPythonClassString());
+	if (yggtype_ & (1 << kYggPythonFunctionSchemaType)) eh.AddExpectedType(GetPythonFunctionString());
 	if (yggtype_ & (1 << kYggPythonInstanceSchemaType)) eh.AddExpectedType(GetPythonInstanceString());
 	if (yggtype_ & (1 << kYggObjSchemaType)) eh.AddExpectedType(GetObjString());
 	if (yggtype_ & (1 << kYggPlySchemaType)) eh.AddExpectedType(GetPlyString());
