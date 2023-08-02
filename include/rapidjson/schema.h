@@ -6132,8 +6132,10 @@ public:
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
 	if (context.python_disabled)
 	  return false;
-	PyObject* pyobj = import_python_object("os:stat",
+	PyObject* pyobj = import_python_object("base64:b64encode",
 					       "GenerateData: ", true);
+	// PyObject* pyobj = import_python_object("os:stat",
+	// 				       "GenerateData: ", true);
 	if (pyobj == NULL)
 	  return false;
 	data.SetPythonInstance(pyobj, allocator);

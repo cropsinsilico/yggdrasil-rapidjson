@@ -7299,11 +7299,10 @@ TEST(SchemaCompare, NativeScalars) {
       ADD_FAILURE();							\
     }									\
   }
-#define GENERATE_NOCMP(schema, s_expected)				\
+#define GENERATE_NOCMP(schema)						\
   {									\
-    Document sd, expected, actual;					\
+    Document sd, actual;						\
     sd.Parse(schema);							\
-    expected.Parse(s_expected);						\
     SchemaDocument s(sd);						\
     SchemaValidator validator(s);					\
     bool result = validator.GenerateData(actual);			\
@@ -7658,20 +7657,17 @@ TEST(SchemaGenerateData, Ply) {
 TEST(SchemaGenerateData, PythonClass) {
   GENERATE_NOCMP("{"
 		 "  \"type\": \"class\""
-		 "}",
-		 "\"-YGG-eyJ0eXBlIjoiY2xhc3MifQ==-YGG-L1VzZXJzL2xhbmdtbS9tYW1iYWZvcmdlL2VudnMvcHlyai9saWIvcHl0aG9uMy45L2NvbGxlY3Rpb25zL19faW5pdF9fLnB5OmNvbGxlY3Rpb25zOk9yZGVyZWREaWN0-YGG-\"");
+		 "}");
 }
 TEST(SchemaGenerateData, PythonFunction) {
   GENERATE_NOCMP("{"
 		 "  \"type\": \"function\""
-		 "}",
-		 "\"-YGG-eyJ0eXBlIjoiZnVuY3Rpb24ifQ==-YGG-L1VzZXJzL2xhbmdtbS9tYW1iYWZvcmdlL2VudnMvcHlyai9saWIvcHl0aG9uMy45L29zLnB5Om9zOnN0YXQ=-YGG-\"");
+		 "}");
 }
 TEST(SchemaGenerateData, PythonInstance) {
   GENERATE_NOCMP("{"
 		 "  \"type\": \"instance\""
-		 "}",
-		 "\"-YGG-eyJ0eXBlIjoiaW5zdGFuY2UifQ==-YGG-gASVIgAAAAAAAACMC2NvbGxlY3Rpb25zlIwLT3JkZXJlZERpY3SUk5QpUpQu-YGG-\"");
+		 "}");
 }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #endif // RAPIDJSON_YGGDRASIL
