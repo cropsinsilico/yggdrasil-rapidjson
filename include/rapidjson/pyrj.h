@@ -199,17 +199,20 @@ void initialize_python(const std::string error_prefix="") {
   @brief Finalize Python.
   @param[in] error_prefix Prefix to add to error messages.
  */
+#ifdef RAPIDJSON_YGGDRASIL_PYTHON
+inline
+void finalize_python(const std::string="") {}
+#else
 inline
 void finalize_python(const std::string error_prefix="") {
-#ifndef RAPIDJSON_YGGDRASIL_PYTHON
   try {
     if (Py_IsInitialized())
       Py_Finalize();
   } catch (std::exception& e) {
     throw std::runtime_error(error_prefix + "finalize_python: " + e.what()); // GCOVR_EXCL_LINE
   }
-#endif // RAPIDJSON_YGGDRASIL_PYTHON
 }
+#endif // RAPIDJSON_YGGDRASIL_PYTHON
 
 #ifdef RAPIDJSON_YGGDRASIL_PYTHON
 #define PYTHON_ERROR_CLEANUP_(method)				\
