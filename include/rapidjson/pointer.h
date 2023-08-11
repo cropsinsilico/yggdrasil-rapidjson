@@ -460,7 +460,9 @@ public:
     }
     static GenericPointer FromRelative(const Ch* source, size_t length,
 				       Allocator& allocator) {
+#if defined(__GNUC__) || defined(__clang__)
       if (length + 1 == 0) __builtin_unreachable();
+#endif
       Ch* str = NULL;
       if (length > 0 && source[0] == (Ch)'!') {
 	length--;
