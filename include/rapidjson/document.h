@@ -3669,8 +3669,8 @@ public:
   //! Variable argument setting/getting
   template <typename DocumentType>
   bool ApplyVarArgs(ValueType& schema, VarArgList &ap,
-		    const uint16_t flag, DocumentType* parent,
-		    size_t table_nelements=0, bool is_nested=false) {
+		    const uint16_t flag, const DocumentType* parent,
+		    size_t table_nelements=0, bool is_nested=false) const {
     if (!(schema.IsObject() && schema.HasMember("type") &&
 	  schema["type"].IsString())) {
       // ygglog_throw_error("ApplyVarArgs: Schema must be an object "
@@ -3692,7 +3692,7 @@ public:
       return false;						\
     }								\
     if (flag == kGetVarArgsFlag) {				\
-      method_get;						\
+      const_cast<ValueType*>(this)->method_get;			\
     }
 #define BASE_STD_(method, type)			\
     BASE_(Get ## method(), Is ## method(), Set ## method(tmp), type)
@@ -3718,7 +3718,7 @@ public:
       if (!ap.set_mem_term(mem, mem_ref, mem_len, tmp, tmp_len))	\
 	return false;							\
     } else if (flag == kGetVarArgsFlag) {				\
-      SetString(mem, (SizeType)mem_len, parent->GetAllocator());	\
+      const_cast<ValueType*>(this)->SetString(mem, (SizeType)mem_len, const_cast<DocumentType*>(parent)->GetAllocator()); \
     }
     // TODO: Move this to yggdrasil side
     bool use_generic = false;
@@ -3740,14 +3740,14 @@ public:
 	return false;
       if (flag == kSetVarArgsFlag) {
 	if (tmp == NULL) {
-	  if (!(ap.allow_realloc || ap.for_c))
+	  if (!(ap.allow_realloc || ap.for_c || ap.for_fortran))
 	    return false;
 	  tmp = new DocumentType();
 	  tmp_ref[0] = tmp;
 	}
 	tmp->CopyFrom(*this, tmp->GetAllocator());
       } else if (flag == kGetVarArgsFlag) {
-	CopyFrom(*tmp, parent->GetAllocator());
+	const_cast<ValueType*>(this)->CopyFrom(*tmp, const_cast<DocumentType*>(parent)->GetAllocator());
       }
       return true;
     }
@@ -3816,17 +3816,17 @@ public:
 	  return false;
 	total = schema["items"].Size();
 	if (flag == kGetVarArgsFlag) {
-	  SetArray();
-	  Reserve(total, parent->GetAllocator());
+	  const_cast<ValueType*>(this)->SetArray();
+	  const_cast<ValueType*>(this)->Reserve(total, const_cast<DocumentType*>(parent)->GetAllocator());
 	  for (SizeType i = 0; i < total; i++) {
 	    ValueType item;
-	    PushBack(item, parent->GetAllocator());
+	    const_cast<ValueType*>(this)->PushBack(item, const_cast<DocumentType*>(parent)->GetAllocator());
 	  }
 	  advance = true;
 	}
       }
 
-      ValueIterator it;
+      ConstValueIterator it;
       if (advance)
 	it = Begin();
       else
@@ -3860,21 +3860,21 @@ public:
       } else {
 	total = schema["properties"].MemberCount();
 	if (flag == kGetVarArgsFlag) {
-	  SetObject();
-	  MemberReserve(total, parent->GetAllocator());
+	  const_cast<ValueType*>(this)->SetObject();
+	  const_cast<ValueType*>(this)->MemberReserve(total, const_cast<DocumentType*>(parent)->GetAllocator());
 	  for (MemberIterator it = schema["properties"].MemberBegin();
 	       it != schema["properties"].MemberEnd(); it++) {
 	    ValueType item;
-	    AddMember(ValueType(it->name, parent->GetAllocator()).Move(),
-		      item, parent->GetAllocator());
+	    const_cast<ValueType*>(this)->AddMember(ValueType(it->name, const_cast<DocumentType*>(parent)->GetAllocator()).Move(),
+		      item, const_cast<DocumentType*>(parent)->GetAllocator());
 	  }
 	  advance = true;
 	}
       }
 
-      MemberIterator it;
-      ValueType* name = NULL;
-      ValueType* value = NULL;
+      ConstMemberIterator it;
+      const ValueType* name = NULL;
+      const ValueType* value = NULL;
       if (advance)
 	it = MemberBegin();
       else
@@ -3930,15 +3930,15 @@ public:
 	  return false;							\
 	}								\
 	if (flag == kGetVarArgsFlag) {					\
-	  ValueType schema_cpy(schema, parent->GetAllocator());		\
+	  ValueType schema_cpy(schema, const_cast<DocumentType*>(parent)->GetAllocator());		\
 	  if (is_string && !schema_precision) {				\
 	    schema_cpy.AddMember(GetPrecisionString(),			\
 				 ValueType(precision).Move(),		\
-				 parent->GetAllocator());		\
+				 const_cast<DocumentType*>(parent)->GetAllocator());		\
 	  }								\
-	  SetYggdrasilString((const char*)(&tmp),			\
+	  const_cast<ValueType*>(this)->SetYggdrasilString((const char*)(&tmp), \
 			     static_cast<SizeType>(precision),		\
-			     parent->GetAllocator(), schema_cpy);	\
+			     const_cast<DocumentType*>(parent)->GetAllocator(), schema_cpy);	\
 	}								\
       }
       CASE_SCALAR_(int, 1, int8_t)
@@ -3960,15 +3960,15 @@ public:
       else if (is_string) {
 	CASE_STRING_;
 	// TODO: Encoding
-	ValueType schema_cpy(schema, parent->GetAllocator());
+	ValueType schema_cpy(schema, const_cast<DocumentType*>(parent)->GetAllocator());
 	if (flag == kGetVarArgsFlag) {
 	  if (!schema_precision) {
 	    schema_cpy.AddMember(GetPrecisionString(),
 				 ValueType(0).Move(),
-				 parent->GetAllocator());
+				 const_cast<DocumentType*>(parent)->GetAllocator());
 	  }
 	  schema_cpy["precision"].SetUint64(mem_len);
-	  SetValueSchema(schema_cpy, parent->GetAllocator());
+	  const_cast<ValueType*>(this)->SetValueSchema(schema_cpy, const_cast<DocumentType*>(parent)->GetAllocator());
 	}
       }
       else {
@@ -4127,23 +4127,23 @@ public:
 	      mem_len *= mem_shape[i];
 	  }
 	}
-	ValueType schema_cpy(schema, parent->GetAllocator());
+	ValueType schema_cpy(schema, const_cast<DocumentType*>(parent)->GetAllocator());
 	if (exchange_prec) {
 	  if (!schema_precision)
 	    schema_cpy.AddMember(GetPrecisionString(),
 				 ValueType(0).Move(),
-				 parent->GetAllocator());
+				 const_cast<DocumentType*>(parent)->GetAllocator());
 	  schema_cpy["precision"].SetUint64(mem_prec);
 	}
 	if (exchange_size || table_nelements) {
 	  if (!has_shape) {
 	    schema_cpy.AddMember(GetShapeString(),
 				 ValueType(kArrayType).Move(),
-				 parent->GetAllocator());
+				 const_cast<DocumentType*>(parent)->GetAllocator());
 	    schema_cpy["shape"].Reserve((SizeType)mem_ndim,
-					parent->GetAllocator());
+					const_cast<DocumentType*>(parent)->GetAllocator());
 	    for (size_t i = 0; i < mem_ndim; i++)
-	      schema_cpy["shape"].PushBack(0, parent->GetAllocator());
+	      schema_cpy["shape"].PushBack(0, const_cast<DocumentType*>(parent)->GetAllocator());
 	  } else {
 	    RAPIDJSON_ASSERT(schema_ndim == mem_ndim);
 	    if (schema_ndim != mem_ndim)
@@ -4159,9 +4159,9 @@ public:
 	      schema_cpy["shape"][static_cast<SizeType>(i)].SetUint64(mem_shape[i]);
 	  }
 	}
-	SetYggdrasilString(mem,
+	const_cast<ValueType*>(this)->SetYggdrasilString(mem,
 			   static_cast<SizeType>(mem_prec * mem_len),
-			   parent->GetAllocator(), schema_cpy);
+			   const_cast<DocumentType*>(parent)->GetAllocator(), schema_cpy);
       }
     }
 #define CASE_PYTHON_(str)						\
@@ -4174,7 +4174,7 @@ public:
 	return false;							\
       }									\
       if (flag == kGetVarArgsFlag) {					\
-	SetPythonObjectRaw(tmp, parent->GetAllocator());		\
+	const_cast<ValueType*>(this)->SetPythonObjectRaw(tmp, const_cast<DocumentType*>(parent)->GetAllocator()); \
       }									\
     }
     else CASE_PYTHON_(PythonClass)
@@ -4199,7 +4199,7 @@ public:
       } else if (flag == kGetVarArgsFlag) {			\
 	if (tmp == NULL)					\
 	  return false;						\
-	Set ## str(*tmp, parent->GetAllocator());		\
+	const_cast<ValueType*>(this)->Set ## str(*tmp, const_cast<DocumentType*>(parent)->GetAllocator()); \
       }								\
     }
     else CASE_GEOMETRY_(ObjWavefront)
@@ -6596,7 +6596,7 @@ public:
   bool Normalize(const ValueType& schema, StringBuffer* error=NULL);
   // TODO: Version where schema not provided when setting from existing
   //   populated document.
-  size_t CountVarArgs(ValueType& schema, bool set) {
+  size_t CountVarArgs(ValueType& schema, bool set) const {
     VarArgList ap;
     ap.is_empty = true;
     uint16_t flag = kCountVarArgsFlag;
@@ -6616,20 +6616,20 @@ public:
       flag |= kGetVarArgsFlag;
     return ApplyVarArgs(schema, ap, flag);
   }
-  bool SetVarArgs(ValueType& schema, VarArgList& ap) {
+  bool SetVarArgs(ValueType& schema, VarArgList& ap) const {
     return ApplyVarArgs(schema, ap, kSetVarArgsFlag);
   }
-  bool SetVarArgs(ValueType* schema, ...) {
+  bool SetVarArgs(ValueType* schema, ...) const {
     size_t nargs = CountVarArgs(*schema, true);
     RAPIDJSON_BEGIN_VAR_ARGS(ap, schema, &nargs, false);
     bool out = SetVarArgs(*schema, ap);
     RAPIDJSON_END_VAR_ARGS(ap);
     return out;
   }
-  bool SetVarArgsRealloc(ValueType& schema, VarArgList& ap) {
-    return ApplyVarArgs(schema, ap, kSetVarArgsFlag);
+  bool SetVarArgsRealloc(ValueType& schema, VarArgList& ap) const {
+    return SetVarArgs(schema, ap);
   }
-  bool SetVarArgsRealloc(ValueType* schema, ...) {
+  bool SetVarArgsRealloc(ValueType* schema, ...) const {
     size_t nargs = CountVarArgs(*schema, true);
     RAPIDJSON_BEGIN_VAR_ARGS(ap, schema, &nargs, true);
     bool out = SetVarArgsRealloc(*schema, ap);
@@ -6647,7 +6647,7 @@ public:
     return out;
   }
   bool ApplyVarArgs(ValueType& schema, VarArgList &ap,
-		    const uint16_t flag) {
+		    const uint16_t flag) const {
     return ValueType::ApplyVarArgs(schema, ap, flag, this);
   }
 		    

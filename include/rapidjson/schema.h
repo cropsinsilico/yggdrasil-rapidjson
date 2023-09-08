@@ -6769,7 +6769,11 @@ public:
     RAPIDJSON_NORMALIZER_CLEANUP_(YggdrasilString, CLEANUP_;, str, length, copy, *schema);
     typename YggSchemaValueType::ConstMemberIterator vs = schema->FindMember(GetTypeString());
     RAPIDJSON_ASSERT(vs != schema->MemberEnd());
-    const ValueType v(vs->value.GetString(), vs->value.GetStringLength());
+    if (vs == schema->MemberEnd())
+      return false;
+    typename ValueType::AllocatorType allocator;
+    const ValueType v(vs->value.GetString(), vs->value.GetStringLength(),
+		      allocator);
     bool isScalar = (v == GetScalarString());
     if (isScalar && (yggtype_ & (1 << kYggScalarSchemaType))) {
       if (!(CheckSubType(context, *schema) &&
@@ -6786,10 +6790,8 @@ public:
 	return false;
       }
     } else if (isScalar && (type_ & (1 << kIntegerSchemaType))) {
-      std::cerr << "Integer" << std::endl;
       if (!(CheckSubType(context, *schema, kYggIntSchemaSubType) &&
 	    CheckPrecision(context, *schema, SValue(8).Move()))) {
-	std::cerr << "failed" << std::endl;
 	CLEANUP_;
 	return false;
       }
@@ -6872,12 +6874,12 @@ public:
         }
       } else {
 	CLEANUP_;
-	DisallowedType(context, v);
+	YggDisallowedType(context, v);
 	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
       }
     } else {
       CLEANUP_;
-      DisallowedType(context, v);
+      YggDisallowedType(context, v);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
     CLEANUP_;
@@ -6898,7 +6900,7 @@ public:
 	    yggtype_ & (1 << kYggPythonInstanceSchemaType)) ||
 	   (v == GetSchemaTypeString() &&
 	    yggtype_ & (1 << kYggSchemaSchemaType))))) {
-      DisallowedType(context, v);
+      YggDisallowedType(context, v);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
     return StartObject(context, true);
@@ -8087,6 +8089,29 @@ protected:
         }
         return true;
     }
+
+#ifdef RAPIDJSON_YGGDRASIL
+    void YggDisallowedType(Context& context, const ValueType& actualType) const {
+#define CHECK_(name)				\
+      if (actualType == Get ## name ## String()) { DisallowedType(context, Get ## name ## String()); }
+      CHECK_(Scalar)
+      else CHECK_(1DArray)
+      else CHECK_(NDArray)
+      else CHECK_(PythonClass)
+      else CHECK_(PythonInstance)
+      else CHECK_(Obj)
+      else CHECK_(Ply)
+      else CHECK_(Any)
+      else CHECK_(SchemaType)
+      else CHECK_(Bytes)
+      else CHECK_(Unicode)
+      else {
+	std::cerr << "WARNING: Unhandled yggdrasil type '" << actualType << "', segfault may occur if type string is freed before error message is formatted" << std::endl;
+	DisallowedType(context, actualType);
+      }
+#undef CHECK_
+    }
+#endif // RAPIDJSON_YGGDRASIL
 
     void DisallowedType(Context& context, const ValueType& actualType) const {
         ErrorHandler& eh = context.error_handler;
