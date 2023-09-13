@@ -2440,7 +2440,7 @@ public:
   { NORM_SCALAR_(Uint64, (u), SchemaType::kYggUintSchemaSubType); }
   bool NormDouble(Context& context, const SchemaType& schema, double d)
   { NORM_SCALAR_(Double, (d), SchemaType::kYggFloatSchemaSubType); }
-  bool NormString(Context& context, const SchemaType& schema, const Ch* str, SizeType length, bool copy)
+  bool NormString(Context& context, const SchemaType& schema, const Ch*& str, SizeType& length, bool copy)
   {
     // Normalize function/class name
     if (schema.yggtype_ & ((1 << SchemaType::kYggPythonClassSchemaType) |
@@ -2465,6 +2465,56 @@ public:
 	bool out = NormYggdrasilString(context, schema, str, length, copy, valueSchema);
 	if (out && !schema.isMetaschema_)
 	  RecordModified(kModificationTypeValue);
+	return out;
+      }
+    }
+    // Normalize string of quantity to quantity
+    if (schema.yggtype_ & (1 << SchemaType::kYggScalarSchemaType) &&
+	schema.subtype_ == SchemaType::kYggFloatSchemaSubType) {
+      units::GenericUnits<EncodingType> unitStr = units::GenericUnits<EncodingType>::parse_units(str, length, true);
+      if (!unitStr.is_empty()) {
+	double factor = unitStr.pull_factor();
+	std::basic_string<Ch> unitStr_ = unitStr.str();
+	GenericDocument<EncodingType, AllocatorType> valueSchema(kObjectType);
+	SizeType factor_size = 8;
+	valueSchema.AddMember(SValue(schema.GetTypeString(),
+				     valueSchema.GetAllocator(),
+				     true).Move(),
+			      SValue(schema.GetScalarString(),
+				     valueSchema.GetAllocator(),
+				     true).Move(),
+			      valueSchema.GetAllocator());
+	valueSchema.AddMember(SValue(schema.GetSubTypeString(),
+				     valueSchema.GetAllocator(),
+				     true).Move(),
+			      SValue(schema.GetFloatSubTypeString(),
+				     valueSchema.GetAllocator(),
+				     true).Move(),
+			      valueSchema.GetAllocator());
+	valueSchema.AddMember(SValue(schema.GetPrecisionString(),
+				     valueSchema.GetAllocator(),
+				     true).Move(),
+			      SValue(factor_size).Move(),
+			      valueSchema.GetAllocator());
+	valueSchema.AddMember(SValue(schema.GetUnitsString(),
+				     valueSchema.GetAllocator(),
+				     true).Move(),
+			      SValue(unitStr_.c_str(),
+				     (SizeType)(unitStr_.size()),
+				     valueSchema.GetAllocator()).Move(),
+			      valueSchema.GetAllocator());
+	Ch* tmp = (Ch*)SetTemporary(factor_size);
+	SizeType tmp_len = factor_size / (SizeType)sizeof(Ch);
+	memcpy(tmp, &factor, factor_size);
+	length = tmp_len;
+	str = (Ch*)tmp;
+	bool out = NormYggdrasilString(context, schema,
+				       str, length,
+				       true, valueSchema);
+	if (out) {
+	  RecordModified(kModificationTypeValue, false);
+	  flags_ |= kNormalizerStateExitAfter;
+	}
 	return out;
       }
     }

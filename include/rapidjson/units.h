@@ -402,13 +402,15 @@ public:
   }
 protected:
   DimArray powers_;
-  friend std::ostream & operator << (std::ostream &os, const Dimension &x);
+  template<typename Ch>
+  friend std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch> &os, const Dimension &x);
 };
-inline std::ostream & operator << (std::ostream& os, const Dimension &x) {
-  os << "[" << x.powers_.values[0];
+template<typename Ch>
+inline std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch>& os, const Dimension &x) {
+  os << '[' << x.powers_.values[0];
   for (size_t i = 1; i < 8; i++)
-    os << "," << x.powers_.values[i];
-  os << "]";
+    os << ',' << x.powers_.values[i];
+  os << ']';
   return os;
 }
 
@@ -544,20 +546,23 @@ public:
 
   //! \brief Write the prefix to an output stream with class information.
   //! \param os Output stream.
-  void display(std::ostream& os) const {
-    os << "GenericUnitPrefix(" << convert_chars<Encoding,UTF8<char> >(name)
-       << ", " << convert_chars<Encoding,UTF8<char> >(abbr)
-       << ", " << factor << ")";
+  template<typename Ch2>
+  void display(std::basic_ostream<Ch2>& os) const {
+    os << 'G' << 'e' << 'n' << 'e' << 'r' << 'i' << 'c' << 'U' <<
+      'n' << 'i' << 't' << 'P' << 'r' << 'e' << 'f' << 'i' << 'x' << '('
+       << convert_chars<Encoding,UTF8<Ch2> >(name)
+       << ',' << ' ' << convert_chars<Encoding,UTF8<Ch2> >(abbr)
+       << ',' << ' ' << factor << ')';
   }
   
   friend class GenericUnit<Encoding>;
-  template<typename Enc2>
-  friend std::ostream & operator << (std::ostream& os, const GenericUnitPrefix<Enc2> &x);
+  template<typename Ch2, typename Enc2>
+  friend std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2>& os, const GenericUnitPrefix<Enc2> &x);
 };
-template<typename Encoding>
-inline std::ostream & operator << (std::ostream& os, const GenericUnitPrefix<Encoding> &x) {
+template<typename Ch, typename Encoding>
+inline std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch>& os, const GenericUnitPrefix<Encoding> &x) {
   if (x.abbr.size() > 0)
-    os << convert_chars<Encoding,UTF8<char> >(x.abbr);
+    os << convert_chars<Encoding,UTF8<Ch> >(x.abbr);
   return os;
 }
 
@@ -711,15 +716,18 @@ public:
   }
   //! \brief Write the unit to an output stream with class information.
   //! \param os Output stream.
-  void display(std::ostream& os) const {
+  template<typename Ch2>
+  void display(std::basic_ostream<Ch2>& os) const {
     RAPIDJSON_ASSERT(names_.size() > 0);
-    os << "GenericUnit(\"";
+    os << 'G' << 'e' << 'n' << 'e' << 'r' << 'i' << 'c' << 'U' <<
+      'n' << 'i' << 't' << '(' << '\"';
     if (delta_ == kActiveDelta)
-      os << "Δ";
+      os << get_delta<Ch2>();
     if (prefix_.name.size() > 0)
-      os << convert_chars<Encoding,UTF8<char> >(prefix_.name);
-    os << convert_chars<Encoding,UTF8<char> >(names_[0]) << "\", " << dim_ << ", "
-       << factor_ << ", " << offset_ << ")**" << power_;
+      os << convert_chars<Encoding,UTF8<Ch2> >(prefix_.name);
+    os << convert_chars<Encoding,UTF8<Ch2> >(names_[0]) << '\"' << ','
+       << '\"' << dim_ << ',' << ' '
+       << factor_ << ',' << ' ' << offset_ << ')' << '*' << '*' << power_;
   }
   //! \brief Get the dimensions of the unit, including the power.
   //! \return The dimensions of the unit.
@@ -939,17 +947,18 @@ private:
     static const Ch s[] = {' ', '\t', '\f', '\v', '\n', '\r', '\0'};
     return std::basic_string<Ch>(s);
   }
-  static const std::basic_string<Ch> get_delta() {
+  template<typename Ch2>
+  static const std::basic_string<Ch2> get_delta() {
     std::string s = "Δ";
-    return convert_chars<UTF8<char>, Encoding>(s);
+    return convert_chars<UTF8<char>, UTF8<Ch2> >(s);
   }
   
   friend class GenericUnits<Encoding>;
-  template<typename Ch2>
-  friend std::ostream & operator << (std::ostream& os, const GenericUnit<Ch2> &x);
+  template<typename Ch2, typename Encoding2>
+  friend std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2>& os, const GenericUnit<Encoding2> &x);
 };
-template<typename Encoding>
-inline std::ostream & operator << (std::ostream& os, const GenericUnit<Encoding> &x) {
+template<typename Ch2, typename Encoding>
+inline std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2>& os, const GenericUnit<Encoding> &x) {
   bool has_factor = x.has_factor();
   bool has_power = x.has_power();
   bool has_delta = x.is_difference();
@@ -957,12 +966,12 @@ inline std::ostream & operator << (std::ostream& os, const GenericUnit<Encoding>
   if (has_factor && (x.abbrs_.size() > 0) && (x.abbrs_[0].size() == 0))
     os << x.factor_;
   if (has_delta)
-    os << "Δ";
+    os << x.template get_delta<Ch2>();
   os << x.prefix_;
   if (x.abbrs_.size() > 0)
-    os << convert_chars<Encoding,UTF8<char> >(x.abbrs_[0]);
+    os << convert_chars<Encoding,UTF8<Ch2> >(x.abbrs_[0]);
   if (has_power)
-    os << "**" << x.power_;
+    os << '*' << '*' << x.power_;
   return os;
 }
 
@@ -1055,14 +1064,16 @@ public:
   }
   //! \brief Display the units instance.
   //! \param os Output stream.
-  void display(std::ostream& os) const {
+  template<typename Ch2>
+  void display(std::basic_ostream<Ch2>& os) const {
     size_t i = 0;
-    os << "GenericUnits([";
+    os << 'G' << 'e' << 'n' << 'e' << 'r' << 'i' << 'c' << 'U' <<
+      'n' << 'i' << 't' << 's' << '(' << '[';
     for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++, i++) {
-      if (i != 0) os << ",";
+      if (i != 0) os << ',';
       it->display(os);
     }
-    os << "])";
+    os << ']' << ')';
   }
   //! \brief Get the units as a string.
   //! \return Units string.
@@ -1221,6 +1232,15 @@ public:
     for (typename std::vector<size_t>::reverse_iterator it = idx_remove.rbegin(); it != idx_remove.rend(); it++)
       units_.erase(units_.begin() + (int)(*it));
     return factor;
+  }
+  void add_factor(double factor) {
+    std::basic_string<Ch> empty;
+#if RAPIDJSON_HAS_CXX11
+    units_.emplace_back(empty);
+#else // RAPIDJSON_HAS_CXX11
+    units_.push_back(GenericUnit<Encoding>(empty));
+#endif // RAPIDJSON_HAS_CXX11
+    units_[units_.size() - 1].factor_ = factor;
   }
   //! \brief Perform multiplication with another set of units.
   //! \param x Units for multiplication.
@@ -1408,20 +1428,20 @@ private:
     return (!(has_offset() && size() > 1));
   }
   
-  template<typename Enc2>
-  friend std::ostream & operator << (std::ostream &os, const GenericUnits<Enc2> &x);
+  template<typename Ch2, typename Enc2>
+  friend std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2> &os, const GenericUnits<Enc2> &x);
 };
-template<typename Encoding>
-inline std::ostream & operator << (std::ostream &os, const GenericUnits<Encoding> &x) {
+template<typename Ch2, typename Encoding>
+inline std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2> &os, const GenericUnits<Encoding> &x) {
     size_t i = 0;
     size_t N = x.units_.size();
     for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = x.units_.begin(); it != x.units_.end(); it++, i++) {
-      if (i != 0) os << "*";
+      if (i != 0) os << '*';
       if ((N > 1) && it->has_power())
-	os << "(";
+	os << '(';
       os << *it;
       if ((N > 1) && it->has_power())
-	os << ")";
+	os << ')';
     }
     return os;
 }
@@ -1597,7 +1617,7 @@ bool GenericUnit<Encoding>::from_table(const std::basic_string<typename Encoding
   if (str.size() == 0) {
     substr = str;
   } else {
-    std::basic_string<Ch> delta_str = get_delta();
+    std::basic_string<Ch> delta_str = get_delta<Ch>();
     std::size_t found = str.find(delta_str, idx_beg);
     if (found != std::string::npos) {
       delta = true;
@@ -1787,8 +1807,10 @@ public:
   NumberToken(const Ch c, TokenBase<Encoding> *parent0=NULL) : WordToken<Encoding>(c, parent0) {}
   bool is_numeric() OVERRIDE_CXX11 { return true; }
   GenericUnits<Encoding> finalize(TokenFinalization x) OVERRIDE_CXX11 {
-    if (!(this->finalized))
+    if (!(this->finalized)) {
       this->value_ = char_to_double<Ch>(this->word);
+      this->units.add_factor(this->value_);
+    }
     return TokenBase<Encoding>::finalize(x);
   }
   std::ostream & display(std::ostream &os) const OVERRIDE_CXX11 {
@@ -2425,12 +2447,14 @@ public:
   }
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
-  void display(std::ostream& os) const {
-    os << "QuantityArray(";
+  template<typename Ch2>
+  void display(std::basic_ostream<Ch2>& os) const {
+    os << 'Q' << 'u' << 'a' << 'n' << 't' << 'i' << 't' << 'y' <<
+      'A' << 'r' << 'r' << 'a' << 'y' << '(';
     _write_array(os);
-    os << ", ";
+    os << ',' << ' ';
     os << units_;
-    os << ")";
+    os << ')';
   }
   //! \brief Get the quantity array as a string.
   //! \return QuantityArray string.
@@ -2479,7 +2503,8 @@ private:
     for (SizeType i = 0; i < N; i++)
       value_[i] = castPrecision<T2,T>(value[i]);
   }
-  void _write_array(std::ostream& os) const {
+  template<typename Ch2>
+  void _write_array(std::basic_ostream<Ch2>& os) const {
     SizeType ndim_ = ndim();
     SizeType N = nelements();
     std::vector<SizeType> idx;
@@ -2489,20 +2514,20 @@ private:
 	if (idx[j] == 0) {
 	  if (j == 0) {
 	    if (i == 0)
-	      os << "[";
+	      os << '[';
 	  } else if (idx[j - 1] == 0) {
-	    os << "[";
+	    os << '[';
 	  } else {
-	    os << "], [";
+	    os << ']' << ',' << ' ' << '[';
 	  }
 	}
       }
       if (idx[ndim_ - 1] > 0)
-	os << ", ";
+	os << ',' << ' ';
       os << value_[i];
     }
     for (SizeType i = 0; i < ndim_; i++)
-      os << "]";
+      os << ']';
   }
   template<typename T2>
   static T2 do_conv(const T2& value, const double& factor, const double& offset,
@@ -2794,15 +2819,15 @@ private:
   std::vector<T> value_;
   UnitsType units_;
   std::vector<SizeType> shape_;
-  template<typename U, typename Encoding2>
-  friend std::ostream & operator << (std::ostream &os, const GenericQuantityArray<U,Encoding2> &x);
+  template<typename Ch2, typename U, typename Encoding2>
+  friend std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2> &os, const GenericQuantityArray<U,Encoding2> &x);
   
   FRIEND_DEFAULT_(QuantityArray)
 };
-template<typename T, typename Encoding>
-inline std::ostream & operator << (std::ostream &os, const GenericQuantityArray<T, Encoding> &x) {
+template<typename Ch, typename T, typename Encoding>
+inline std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch> &os, const GenericQuantityArray<T, Encoding> &x) {
   x._write_array(os);
-  os << " " << x.units_;
+  os << ' ' << x.units_;
   return os;
 }
 
@@ -2842,10 +2867,12 @@ public:
     Base(value, units) {}
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
-  void display(std::ostream& os) const {
-    os << "Quantity(" << value() << ", \"";
+  template<typename Ch2>
+  void display(std::basic_ostream<Ch2>& os) const {
+    os << 'Q' << 'u' << 'a' << 'n' << 't' << 'i' << 't' << 'y' <<
+      '(' << value() << ',' << ' ' << '\"';
     os << this->units();
-    os << "\")";
+    os << '\"' << ')';
   }
   //! \brief Get the quantity value without units.
   //! \return Value.
@@ -2870,14 +2897,14 @@ private:
   static T1 _initialize_value(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
   { return T1(0.0, 0.0); }
   
-  template<typename U, typename Encoding2>
-  friend std::ostream & operator << (std::ostream &os, const GenericQuantity<U,Encoding2> &x);
+  template<typename Ch2, typename U, typename Encoding2>
+  friend std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2> &os, const GenericQuantity<U,Encoding2> &x);
 
   FRIEND_DEFAULT_(Quantity)
 };
-template<typename T, typename Encoding>
-inline std::ostream & operator << (std::ostream &os, const GenericQuantity<T, Encoding> &x) {
-  os << x.value() << " " << x.units();
+template<typename Ch, typename T, typename Encoding>
+inline std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch> &os, const GenericQuantity<T, Encoding> &x) {
+  os << x.value() << ' ' << x.units();
   return os;
 }
 
