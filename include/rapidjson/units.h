@@ -2067,6 +2067,25 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
 	word->finalize(parser::kTokenFinalizeSpace);
       break;
     }
+    case 'e': {
+      if (((i + 1) < len) &&
+	  ((str[i + 1] == '+') || (str[i + 1] == '-') ||
+	   (str[i + 1] == '0') || (str[i + 1] == '1') ||
+	   (str[i + 1] == '2') || (str[i + 1] == '3') ||
+	   (str[i + 1] == '4') || (str[i + 1] == '5') ||
+	   (str[i + 1] == '6') || (str[i + 1] == '7') ||
+	   (str[i + 1] == '8') || (str[i + 1] == '9'))) {
+	parser::TokenBase<Encoding>* curr = token.current_token();
+	if ((curr->t == parser::kWordToken) && curr->is_numeric() &&
+	    (!curr->finalized)) {
+	  curr->append(str[i++]);
+	  curr->append(str[i]);
+	  break;
+	}
+      }
+      // fall through to default
+      RAPIDJSON_DELIBERATE_FALLTHROUGH;
+    }
     case 'n': {
       // Special case of n/a
       if (((i + 2) < len) && (str[i + 1] == '/') && (str[i + 2] == 'a')) {

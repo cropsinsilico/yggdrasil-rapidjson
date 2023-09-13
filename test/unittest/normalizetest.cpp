@@ -1447,6 +1447,10 @@ TEST(SchemaNormalizer, Units) {
 	      "\"10.0 g\"",
 	      true,
 	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImcifQ==-YGG-AAAAAAAAJEA=-YGG-\"");
+    NORMALIZE(s,
+	      "\"5.27e-30 g\"",
+	      true,
+	      "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImZsb2F0IiwicHJlY2lzaW9uIjo4LCJ1bml0cyI6ImcifQ==-YGG-GRhr4tm42jk=-YGG-\"");
 }
 
 TEST(SchemaNormalizer, ScalarFloat) {
