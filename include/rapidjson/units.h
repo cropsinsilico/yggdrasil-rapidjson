@@ -21,6 +21,7 @@
 #include "internal/meta.h"
 #include "internal/strfunc.h"
 #include "precision.h"
+#include "rapidjson.h"
 #include <wchar.h>
 #include <locale.h>
 #include <map>
@@ -31,6 +32,14 @@
 #define _USE_MATH_DEFINES
 #endif
 #include <cmath>
+
+#if defined(__GNUC__) || defined(__clang__)
+#define UNIT_TYPE \
+  static double __attribute__((unused))
+#else
+#define UNIT_TYPE \
+  static double
+#endif
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -53,163 +62,163 @@ namespace units {
   namespace constants {
     
     // Elementary masses
-    static double mass_electron_kg = 9.10938291e-31;
-    static double amu_kg = 1.660538921e-27;
-    static double amu_grams = amu_kg * 1.0e3;
-    static double mass_hydrogen_kg = 1.007947 * amu_kg;
-    // static double mass_proton_kg = 1.672623110e-27;
+    UNIT_TYPE mass_electron_kg = 9.10938291e-31;
+    UNIT_TYPE amu_kg = 1.660538921e-27;
+    UNIT_TYPE amu_grams = amu_kg * 1.0e3;
+    UNIT_TYPE mass_hydrogen_kg = 1.007947 * amu_kg;
+    // UNIT_TYPE mass_proton_kg = 1.672623110e-27;
 
     // Solar values (see Mamajek 2012)
     // https://sites.google.com/site/mamajeksstarnotes/bc-scale
-    static double mass_sun_kg = 1.98841586e30;
-    static double temp_sun_kelvin = 5870.0;
-    static double luminosity_sun_watts = 3.8270e26;
+    UNIT_TYPE mass_sun_kg = 1.98841586e30;
+    UNIT_TYPE temp_sun_kelvin = 5870.0;
+    UNIT_TYPE luminosity_sun_watts = 3.8270e26;
 
     // Consistent with solar abundances used in Cloudy
-    static double metallicity_sun = 0.01295;
+    UNIT_TYPE metallicity_sun = 0.01295;
 
     // Conversion Factors:  X au * mpc_per_au = Y mpc
     // length
-    // static double mpc_per_mpc = 1e0;
-    static double mpc_per_kpc = 1e-3;
-    static double mpc_per_pc = 1e-6;
-    static double mpc_per_au = 4.84813682e-12;
-    static double mpc_per_rsun = 2.253962e-14;
-    static double mpc_per_rearth = 2.06470307893e-16;
-    static double mpc_per_rjup = 2.26566120943e-15;
-    static double mpc_per_miles = 5.21552871e-20;
-    static double mpc_per_km = 3.24077929e-20;
-    static double mpc_per_m = 3.24077929e-23;
-    static double kpc_per_m = mpc_per_m / mpc_per_kpc;
-    static double pc_per_m = mpc_per_m / mpc_per_pc;
-    static double km_per_pc = 3.08567758e13;
-    // static double cm_per_pc = 3.08567758e18;
-    // static double cm_per_mpc = 3.08567758e21;
-    static double km_per_m = 1e-3;
-    static double km_per_cm = 1e-5;
-    static double m_per_cm = 1e-2;
-    static double ly_per_m = 1.05702341e-16;
-    static double rsun_per_m = 1.4378145e-9;
-    static double rearth_per_m = 1.56961033e-7;  // Mean (volumetric) radius
-    static double rjup_per_m = 1.43039006737e-8;  // Mean (volumetric) radius
-    static double au_per_m = 6.68458712e-12;
-    static double ang_per_m = 1.0e10;
+    // UNIT_TYPE mpc_per_mpc = 1e0;
+    UNIT_TYPE mpc_per_kpc = 1e-3;
+    UNIT_TYPE mpc_per_pc = 1e-6;
+    UNIT_TYPE mpc_per_au = 4.84813682e-12;
+    UNIT_TYPE mpc_per_rsun = 2.253962e-14;
+    UNIT_TYPE mpc_per_rearth = 2.06470307893e-16;
+    UNIT_TYPE mpc_per_rjup = 2.26566120943e-15;
+    UNIT_TYPE mpc_per_miles = 5.21552871e-20;
+    UNIT_TYPE mpc_per_km = 3.24077929e-20;
+    UNIT_TYPE mpc_per_m = 3.24077929e-23;
+    UNIT_TYPE kpc_per_m = mpc_per_m / mpc_per_kpc;
+    UNIT_TYPE pc_per_m = mpc_per_m / mpc_per_pc;
+    UNIT_TYPE km_per_pc = 3.08567758e13;
+    // UNIT_TYPE cm_per_pc = 3.08567758e18;
+    // UNIT_TYPE cm_per_mpc = 3.08567758e21;
+    UNIT_TYPE km_per_m = 1e-3;
+    UNIT_TYPE km_per_cm = 1e-5;
+    UNIT_TYPE m_per_cm = 1e-2;
+    UNIT_TYPE ly_per_m = 1.05702341e-16;
+    UNIT_TYPE rsun_per_m = 1.4378145e-9;
+    UNIT_TYPE rearth_per_m = 1.56961033e-7;  // Mean (volumetric) radius
+    UNIT_TYPE rjup_per_m = 1.43039006737e-8;  // Mean (volumetric) radius
+    UNIT_TYPE au_per_m = 6.68458712e-12;
+    UNIT_TYPE ang_per_m = 1.0e10;
 
-    // static double m_per_fpc = 0.0324077929;
+    // UNIT_TYPE m_per_fpc = 0.0324077929;
 
-    static double kpc_per_mpc = 1.0 / mpc_per_kpc;
-    static double pc_per_mpc = 1.0 / mpc_per_pc;
-    static double au_per_mpc = 1.0 / mpc_per_au;
-    static double rsun_per_mpc = 1.0 / mpc_per_rsun;
-    static double rearth_per_mpc = 1.0 / mpc_per_rearth;
-    static double rjup_per_mpc = 1.0 / mpc_per_rjup;
-    static double miles_per_mpc = 1.0 / mpc_per_miles;
-    static double km_per_mpc = 1.0 / mpc_per_km;
-    static double m_per_mpc = 1.0 / mpc_per_m;
-    static double m_per_kpc = 1.0 / kpc_per_m;
-    static double m_per_km = 1.0 / km_per_m;
-    static double cm_per_km = 1.0 / km_per_cm;
-    static double cm_per_m = 1.0 / m_per_cm;
-    static double pc_per_km = 1.0 / km_per_pc;
-    static double m_per_pc = 1.0 / pc_per_m;
-    static double m_per_ly = 1.0 / ly_per_m;
-    static double m_per_rsun = 1.0 / rsun_per_m;
-    static double m_per_rearth = 1.0 / rearth_per_m;
-    static double m_per_rjup = 1.0 / rjup_per_m;
-    static double m_per_au = 1.0 / au_per_m;
-    static double m_per_ang = 1.0 / ang_per_m;
+    UNIT_TYPE kpc_per_mpc = 1.0 / mpc_per_kpc;
+    UNIT_TYPE pc_per_mpc = 1.0 / mpc_per_pc;
+    UNIT_TYPE au_per_mpc = 1.0 / mpc_per_au;
+    UNIT_TYPE rsun_per_mpc = 1.0 / mpc_per_rsun;
+    UNIT_TYPE rearth_per_mpc = 1.0 / mpc_per_rearth;
+    UNIT_TYPE rjup_per_mpc = 1.0 / mpc_per_rjup;
+    UNIT_TYPE miles_per_mpc = 1.0 / mpc_per_miles;
+    UNIT_TYPE km_per_mpc = 1.0 / mpc_per_km;
+    UNIT_TYPE m_per_mpc = 1.0 / mpc_per_m;
+    UNIT_TYPE m_per_kpc = 1.0 / kpc_per_m;
+    UNIT_TYPE m_per_km = 1.0 / km_per_m;
+    UNIT_TYPE cm_per_km = 1.0 / km_per_cm;
+    UNIT_TYPE cm_per_m = 1.0 / m_per_cm;
+    UNIT_TYPE pc_per_km = 1.0 / km_per_pc;
+    UNIT_TYPE m_per_pc = 1.0 / pc_per_m;
+    UNIT_TYPE m_per_ly = 1.0 / ly_per_m;
+    UNIT_TYPE m_per_rsun = 1.0 / rsun_per_m;
+    UNIT_TYPE m_per_rearth = 1.0 / rearth_per_m;
+    UNIT_TYPE m_per_rjup = 1.0 / rjup_per_m;
+    UNIT_TYPE m_per_au = 1.0 / au_per_m;
+    UNIT_TYPE m_per_ang = 1.0 / ang_per_m;
 
     // time
     // "IAU Style Manual" by G.A. Wilkins, Comm. 5, in IAU Transactions XXB (1989)
-    // static double sec_per_Gyr = 31.5576e15;
-    // static double sec_per_Myr = 31.5576e12;
-    // static double sec_per_kyr = 31.5576e9;
-    static double sec_per_year = 31.5576e6;
-    static double sec_per_day = 86400.0;
-    static double sec_per_hr = 3600.0;
-    static double sec_per_min = 60.0;
-    // static double day_per_year = 365.25;
+    // UNIT_TYPE sec_per_Gyr = 31.5576e15;
+    // UNIT_TYPE sec_per_Myr = 31.5576e12;
+    // UNIT_TYPE sec_per_kyr = 31.5576e9;
+    UNIT_TYPE sec_per_year = 31.5576e6;
+    UNIT_TYPE sec_per_day = 86400.0;
+    UNIT_TYPE sec_per_hr = 3600.0;
+    UNIT_TYPE sec_per_min = 60.0;
+    // UNIT_TYPE day_per_year = 365.25;
 
     // velocities, accelerations
-    static double speed_of_light_m_per_s = 2.99792458e8;
-    static double speed_of_light_cm_per_s = speed_of_light_m_per_s * 100.0;
-    static double standard_gravity_m_per_s2 = 9.80665;
+    UNIT_TYPE speed_of_light_m_per_s = 2.99792458e8;
+    UNIT_TYPE speed_of_light_cm_per_s = speed_of_light_m_per_s * 100.0;
+    UNIT_TYPE standard_gravity_m_per_s2 = 9.80665;
 
     // some constants
-    static double newton_mks = 6.67408e-11;
-    static double planck_mks = 6.62606957e-34;
+    UNIT_TYPE newton_mks = 6.67408e-11;
+    UNIT_TYPE planck_mks = 6.62606957e-34;
     // permeability of Free Space
-    static double mu_0 = 4.0e-7 * M_PI;
+    UNIT_TYPE mu_0 = 4.0e-7 * M_PI;
     // permittivity of Free Space
-    static double eps_0 = 1.0 / (pow(speed_of_light_m_per_s, 2) * mu_0);
-    // static double avogadros_number = 6.02214085774e23;
+    UNIT_TYPE eps_0 = 1.0 / (pow(speed_of_light_m_per_s, 2) * mu_0);
+    // UNIT_TYPE avogadros_number = 6.02214085774e23;
 
     // temperature / energy
-    static double boltzmann_constant_J_per_K = 1.3806488e-23;
-    static double erg_per_eV = 1.602176562e-12;
-    static double J_per_eV = erg_per_eV * 1.0e-7;
-    static double erg_per_keV = erg_per_eV * 1.0e3;
-    static double J_per_keV = J_per_eV * 1.0e3;
-    static double K_per_keV = J_per_keV / boltzmann_constant_J_per_K;
-    static double keV_per_K = 1.0 / K_per_keV;
-    static double keV_per_erg = 1.0 / erg_per_keV;
-    static double eV_per_erg = 1.0 / erg_per_eV;
-    static double kelvin_per_rankine = 5.0 / 9.0;
-    static double watt_per_horsepower = 745.69987158227022;
-    static double celcius_zero_kelvin = -273.15;
-    static double farenheit_zero_celcius = 32.0;
-    static double farenheit_zero_kelvin = celcius_zero_kelvin / kelvin_per_rankine + farenheit_zero_celcius;
-    // static double erg_per_s_per_watt = 1e7;
+    UNIT_TYPE boltzmann_constant_J_per_K = 1.3806488e-23;
+    UNIT_TYPE erg_per_eV = 1.602176562e-12;
+    UNIT_TYPE J_per_eV = erg_per_eV * 1.0e-7;
+    UNIT_TYPE erg_per_keV = erg_per_eV * 1.0e3;
+    UNIT_TYPE J_per_keV = J_per_eV * 1.0e3;
+    UNIT_TYPE K_per_keV = J_per_keV / boltzmann_constant_J_per_K;
+    UNIT_TYPE keV_per_K = 1.0 / K_per_keV;
+    UNIT_TYPE keV_per_erg = 1.0 / erg_per_keV;
+    UNIT_TYPE eV_per_erg = 1.0 / erg_per_eV;
+    UNIT_TYPE kelvin_per_rankine = 5.0 / 9.0;
+    UNIT_TYPE watt_per_horsepower = 745.69987158227022;
+    UNIT_TYPE celcius_zero_kelvin = -273.15;
+    UNIT_TYPE farenheit_zero_celcius = 32.0;
+    UNIT_TYPE farenheit_zero_kelvin = celcius_zero_kelvin / kelvin_per_rankine + farenheit_zero_celcius;
+    // UNIT_TYPE erg_per_s_per_watt = 1e7;
 
     // Solar System masses
     // Standish, E.M. (1995) "Report of the IAU WGAS Sub-Group on Numerical
     // Standards", in Highlights of Astronomy (I. Appenzeller, ed.), Table 1,
     // Kluwer Academic Publishers, Dordrecht.
     // REMARK: following masses include whole systems (planet + moons)
-    static double mass_jupiter_kg = mass_sun_kg / 1047.3486;
-    static double mass_mercury_kg = mass_sun_kg / 6023600.0;
-    static double mass_venus_kg = mass_sun_kg / 408523.71;
-    static double mass_earth_kg = mass_sun_kg / 328900.56;
-    static double mass_mars_kg = mass_sun_kg / 3098708.0;
-    static double mass_saturn_kg = mass_sun_kg / 3497.898;
-    static double mass_uranus_kg = mass_sun_kg / 22902.98;
-    static double mass_neptune_kg = mass_sun_kg / 19412.24;
+    UNIT_TYPE mass_jupiter_kg = mass_sun_kg / 1047.3486;
+    UNIT_TYPE mass_mercury_kg = mass_sun_kg / 6023600.0;
+    UNIT_TYPE mass_venus_kg = mass_sun_kg / 408523.71;
+    UNIT_TYPE mass_earth_kg = mass_sun_kg / 328900.56;
+    UNIT_TYPE mass_mars_kg = mass_sun_kg / 3098708.0;
+    UNIT_TYPE mass_saturn_kg = mass_sun_kg / 3497.898;
+    UNIT_TYPE mass_uranus_kg = mass_sun_kg / 22902.98;
+    UNIT_TYPE mass_neptune_kg = mass_sun_kg / 19412.24;
 
     // flux
-    static double jansky_mks = 1.0e-26;
+    UNIT_TYPE jansky_mks = 1.0e-26;
     // Cosmological constants
     // Calculated with H = 100 km/s/Mpc, value given in units of h^2 g cm^-3
     // Multiply by h^2 to get the critical density in units of g cm^-3
-    // static double rho_crit_g_cm3_h2 = 1.8788e-29;
-    // static double primordial_H_mass_fraction = 0.76;
+    // UNIT_TYPE rho_crit_g_cm3_h2 = 1.8788e-29;
+    // UNIT_TYPE primordial_H_mass_fraction = 0.76;
 
     // Misc. Approximations
-    // static double mass_mean_atomic_cosmology = 1.22;
-    // static double mass_mean_atomic_galactic = 2.3;
+    // UNIT_TYPE mass_mean_atomic_cosmology = 1.22;
+    // UNIT_TYPE mass_mean_atomic_galactic = 2.3;
 
     // Miscellaneous
-    // static double HUGE = 1.0e90;
-    // static double TINY = 1.0e-40;
+    // UNIT_TYPE HUGE = 1.0e90;
+    // UNIT_TYPE TINY = 1.0e-40;
 
     // Planck units
-    static double hbar_mks = 0.5 * planck_mks / M_PI;
-    static double planck_mass_kg = sqrt(hbar_mks * speed_of_light_m_per_s / newton_mks);
-    static double planck_length_m = sqrt(hbar_mks * newton_mks / pow(speed_of_light_m_per_s, 3));
-    static double planck_time_s = planck_length_m / speed_of_light_m_per_s;
-    static double planck_energy_J = planck_mass_kg * speed_of_light_m_per_s * speed_of_light_m_per_s;
-    static double planck_temperature_K = planck_energy_J / boltzmann_constant_J_per_K;
-    static double planck_charge_C = sqrt(4.0 * M_PI * eps_0 * hbar_mks * speed_of_light_m_per_s);
+    UNIT_TYPE hbar_mks = 0.5 * planck_mks / M_PI;
+    UNIT_TYPE planck_mass_kg = sqrt(hbar_mks * speed_of_light_m_per_s / newton_mks);
+    UNIT_TYPE planck_length_m = sqrt(hbar_mks * newton_mks / pow(speed_of_light_m_per_s, 3));
+    UNIT_TYPE planck_time_s = planck_length_m / speed_of_light_m_per_s;
+    UNIT_TYPE planck_energy_J = planck_mass_kg * speed_of_light_m_per_s * speed_of_light_m_per_s;
+    UNIT_TYPE planck_temperature_K = planck_energy_J / boltzmann_constant_J_per_K;
+    UNIT_TYPE planck_charge_C = sqrt(4.0 * M_PI * eps_0 * hbar_mks * speed_of_light_m_per_s);
 
     // Imperial and other non-metric units
-    static double kg_per_pound = 0.45359237;
-    static double pascal_per_atm = 101325.0;
-    static double m_per_inch = 0.0254;
-    static double m_per_ft = 0.3048;
+    UNIT_TYPE kg_per_pound = 0.45359237;
+    UNIT_TYPE pascal_per_atm = 101325.0;
+    UNIT_TYPE m_per_inch = 0.0254;
+    UNIT_TYPE m_per_ft = 0.3048;
 
     // logarithmic units
     // IEC 60027-3: https://webstore.iec.ch/publication/94
     // NIST Special Publication 811: https://www.nist.gov/pml/special-publication-811
-    // static double neper_per_bel = log(10) / 2;
+    // UNIT_TYPE neper_per_bel = log(10) / 2;
   }
 
   enum BaseDimension {
