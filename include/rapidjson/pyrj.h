@@ -5,14 +5,12 @@
 #include <omp.h>
 #endif
 
+#include "pyrj_c.h"
 
 #ifdef YGGDRASIL_DISABLE_PYTHON_C_API
 
 #include "rapidjson.h"
 #include <iostream>
-#ifndef PyObject
-#define PyObject void*
-#endif
 
 RAPIDJSON_NAMESPACE_BEGIN
 
@@ -25,40 +23,6 @@ bool isPythonInitialized() {
 RAPIDJSON_NAMESPACE_END
 
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
-
-#ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
-extern "C" {
-#endif
-
-#ifndef RAPIDJSON_FORCE_IMPORT_ARRAY
-#define NO_IMPORT_ARRAY
-#endif // RAPIDJSON_FORCE_IMPORT_ARRAY
-#define PY_ARRAY_UNIQUE_SYMBOL rapidjson_ARRAY_API
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-
-#ifdef RAPIDJSON_DONT_IMPORT_NUMPY
-#define CHECK_UNICODE_NO_NUMPY(x) PyUnicode_Check(x)
-#else
-#define CHECK_UNICODE_NO_NUMPY(x) PyUnicode_Check(x) && !PyArray_CheckScalar(x)
-#endif
-
-#ifdef _DEBUG
-#undef _DEBUG
-#include <Python.h>
-#include <numpy/arrayobject.h>
-#include <numpy/ndarrayobject.h>
-#include <numpy/npy_common.h>
-#define _DEBUG
-#else
-#include <Python.h>
-#include <numpy/arrayobject.h>
-#include <numpy/ndarrayobject.h>
-#include <numpy/npy_common.h>
-#endif
-
-#ifdef __cplusplus /* If this is a C++ compiler, end C linkage */
-}
-#endif
 
 #include <string>
 #include <stdexcept>
