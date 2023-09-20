@@ -1,6 +1,3 @@
-#ifndef RAPIDJSON_PYTHON_C_H_
-#define RAPIDJSON_PYTHON_C_H_
-
 #ifdef YGGDRASIL_DISABLE_PYTHON_C_API
 
 #ifndef PyObject
@@ -16,16 +13,22 @@
 extern "C" {
 #endif
 
-#ifndef RAPIDJSON_FORCE_IMPORT_ARRAY
+#ifdef RAPIDJSON_FORCE_IMPORT_ARRAY
+#ifdef NO_IMPORT_ARRAY
+#undef NO_IMPORT_ARRAY
+#endif
+#else // RAPIDJSON_FORCE_IMPORT_ARRAY
 #define NO_IMPORT_ARRAY
 #endif // RAPIDJSON_FORCE_IMPORT_ARRAY
 #define PY_ARRAY_UNIQUE_SYMBOL rapidjson_ARRAY_API
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
+#ifndef CHECK_UNICODE_NO_NUMPY
 #ifdef RAPIDJSON_DONT_IMPORT_NUMPY
 #define CHECK_UNICODE_NO_NUMPY(x) PyUnicode_Check(x)
 #else
 #define CHECK_UNICODE_NO_NUMPY(x) PyUnicode_Check(x) && !PyArray_CheckScalar(x)
+#endif
 #endif
 
 #ifdef _DEBUG
@@ -47,5 +50,3 @@ extern "C" {
 #endif
 
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
-
-#endif // RAPIDJSON_PYTHON_C_H_
