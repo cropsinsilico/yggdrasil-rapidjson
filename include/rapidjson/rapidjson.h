@@ -812,7 +812,7 @@ typedef struct float16_t {
       tmp.value *= pn122;
 #endif // RAPIDJSON_HAS_CXX17
     }
-    mem = static_cast<uint16_t>(s << 15u) | static_cast<uint16_t>((tmp.enc >> 13u) & Mask_(15u, 16));
+    mem = static_cast<uint16_t>(static_cast<uint16_t>(s << 15u) | static_cast<uint16_t>((tmp.enc >> 13u) & Mask_(15u, 16)));
     // uint32_t e = tmp.enc >> 23 & Mask( 8);
     // uint32_t f = tmp.enc       & Mask(23);
     // f >>= 23 - 10;
