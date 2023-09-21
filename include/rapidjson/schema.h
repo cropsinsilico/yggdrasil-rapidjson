@@ -6118,7 +6118,7 @@ public:
 	} else {							\
 	  memcpy(value, letters_char, prec);				\
 	}								\
-	data.SetScalar(value, prec * prec_encoding / sizeof(Ch), allocator, encoding_str, encoding_len); \
+	data.SetScalar(value, static_cast<SizeType>(prec * prec_encoding / sizeof(Ch)), allocator, encoding_str, encoding_len); \
 	allocator.Free(value)
 	SWITCH_SUBTYPE_(GET_SCALAR_, SET_SCALAR_, STRING_SCALAR_)
 #undef GET_SCALAR_
