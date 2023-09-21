@@ -1,3 +1,17 @@
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES // required for M_PI in units
+#endif
+
+#ifdef __cplusplus
+#include <cmath> // required before Python to allow use of hypot w/ MSVC
+#else
+#include <math.h>
+#endif // __cplusplus
+
+#ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
+extern "C" {
+#endif
+
 #ifdef YGGDRASIL_DISABLE_PYTHON_C_API
 
 #ifndef PyObject
@@ -8,10 +22,6 @@
 #endif
 
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
-
-#ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
-extern "C" {
-#endif
 
 #ifdef RAPIDJSON_FORCE_IMPORT_ARRAY
 #ifdef NO_IMPORT_ARRAY
@@ -45,8 +55,9 @@ extern "C" {
 #include <numpy/npy_common.h>
 #endif
 
+#endif // YGGDRASIL_DISABLE_PYTHON_C_API
+
 #ifdef __cplusplus /* If this is a C++ compiler, end C linkage */
 }
 #endif
 
-#endif // YGGDRASIL_DISABLE_PYTHON_C_API
