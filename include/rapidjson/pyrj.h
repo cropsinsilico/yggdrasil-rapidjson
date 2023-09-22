@@ -134,7 +134,7 @@ void init_python_API() {
 inline
 bool isPythonInitialized() {
   bool out = false;
-#ifdef RAPIDJSON_FORCE_IMPORT_ARRAY
+#if defined(RAPIDJSON_FORCE_IMPORT_ARRAY) && !defined(RAPIDJSON_DONT_IMPORT_NUMPY)
   out = (Py_IsInitialized() && (PY_ARRAY_UNIQUE_SYMBOL != NULL));
 #else
   out = (Py_IsInitialized());
