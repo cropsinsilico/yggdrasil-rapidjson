@@ -8148,6 +8148,7 @@ protected:
       else CHECK_(1DArray)
       else CHECK_(NDArray)
       else CHECK_(PythonClass)
+      else CHECK_(PythonFunction)
       else CHECK_(PythonInstance)
       else CHECK_(Obj)
       else CHECK_(Ply)
