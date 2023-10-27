@@ -4618,7 +4618,8 @@ public:
       allocator.Free(mod_cls);
       mod_cls = NULL;
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
-    } else if (rapidjson_ARRAY_API && PyArray_CheckScalar(x)) {
+    // } else if (rapidjson_ARRAY_API && PyArray_CheckScalar(x)) {
+    } else if (PyArray_CheckScalar(x)) {
       ResetSchema(allocator);
       PyArray_Descr* desc = NULL;
       PyObject* scalar = NULL;
@@ -4673,7 +4674,8 @@ public:
       if (!encoding.IsNull())
 	AddSchemaMember(GetEncodingString(), encoding);
       return true;
-    } else if (rapidjson_ARRAY_API && PyArray_Check(x)) {
+    // } else if (rapidjson_ARRAY_API && PyArray_Check(x)) {
+    } else if (PyArray_Check(x)) {
       PyArray_Descr* desc = PyArray_DESCR((PyArrayObject*)x);
       if (desc == NULL)
 	return false;
