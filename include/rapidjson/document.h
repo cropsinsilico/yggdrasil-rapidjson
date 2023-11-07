@@ -5174,6 +5174,10 @@ public:
   IS_BUILTIN_SCALAR_(unsigned, Uint)
   IS_BUILTIN_SCALAR_(int64_t, Int64)
   IS_BUILTIN_SCALAR_(uint64_t, Uint64)
+#ifdef _MSC_VER
+  IS_BUILTIN_SCALAR_(long, Int)
+  IS_BUILTIN_SCALAR_(unsigned long, Uint)
+#endif // _MSC_VER
 #undef IS_BUILTIN_SCALAR_
   bool Is1DArray() const {
     if (!IsYggdrasil()) return false;
