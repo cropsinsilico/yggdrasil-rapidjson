@@ -1271,6 +1271,12 @@ public:
         new (this) GenericValue(rhs, allocator, copyConstStrings);
         return *this;
     }
+#ifdef RAPIDJSON_YGGDRASIL
+    template <typename SourceAllocator>
+    GenericValue& CopyInto(GenericValue<Encoding, SourceAllocator>& rhs, Allocator& allocator, bool copyConstStrings = false) const {
+      return rhs.CopyFrom(*this, allocator, copyConstStrings);
+    }
+#endif // RAPIDJSON_YGGDRASIL
 
     //! Exchange the contents of this value with those of other.
     /*!
@@ -3675,7 +3681,8 @@ public:
 	}
 	tmp->CopyFrom(*this, tmp->GetAllocator());
       } else if (flag == kGetVarArgsFlag) {
-	const_cast<ValueType*>(this)->CopyFrom(*tmp, const_cast<DocumentType*>(parent)->GetAllocator());
+	tmp->CopyInto(*const_cast<ValueType*>(this),
+		      const_cast<DocumentType*>(parent)->GetAllocator());
       }
       return true;
     }
