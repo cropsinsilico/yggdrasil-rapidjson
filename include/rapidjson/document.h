@@ -674,6 +674,16 @@ static bool __StaticTrue = true;
 			  typename ValueType::AllocatorType& allocator)	\
     { return v.Set ## name(data, allocator); }				\
   };
+#define YGG_PTR_HELPER(T, name)						\
+  template<typename ValueType>						\
+  struct TypeHelper<ValueType, T*> {					\
+    typedef T* PtrType;							\
+    static bool Is(const ValueType& v) { return v.Is ## name(); }	\
+    static PtrType Get(const ValueType& v) { return v.Get ## name(); }	\
+    static ValueType& Set(ValueType& v, const PtrType& data,		\
+			  typename ValueType::AllocatorType& allocator)	\
+    { return v.Set ## name(data, allocator); }				\
+  };
 #define YGG_SCALAR_HELPER(T)						\
   template<typename ValueType>						\
   struct TypeHelper<ValueType, T> {					\
@@ -701,7 +711,7 @@ YGG_SCALAR_HELPER(std::complex<long double>)
 #undef YGG_SCALAR_HELPER
   
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
-YGG_GENERIC_HELPER(PyObject*, PythonInstance)
+YGG_PTR_HELPER(PyObject, PythonInstance)
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 YGG_GENERIC_HELPER(ObjWavefront, ObjWavefront)
 YGG_GENERIC_HELPER(Ply, Ply)
