@@ -5513,7 +5513,6 @@ public:
       dst_nelements *= dst_shape[i].GetUint();
     const Ch* ptr = GetString();
     Ch* dst_ptr = (Ch*)allocator.Malloc(dst_nelements * GetPrecision());
-    SizeType prev = 0, dst_prev = 0;
     std::vector<SizeType> shape_cum(shape.Size(), 1);
     for (int i = (static_cast<int>(shape.Size()) - 2); i >= 0; i--) {
       shape_cum[(size_t)i] = shape_cum[(size_t)(i + 1)] * shape[static_cast<SizeType>(i + 1)].GetUint();

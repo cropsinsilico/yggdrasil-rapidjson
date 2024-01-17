@@ -12858,7 +12858,7 @@ bool GenericDocument<Encoding,Allocator,StackAllocator>::Normalize(const ValueTy
     this->FinalizeFromStack();
   }
   return true;
-};
+}
 
 #endif // RAPIDJSON_YGGDRASIL
 

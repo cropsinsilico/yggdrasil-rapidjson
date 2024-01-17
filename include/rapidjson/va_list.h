@@ -720,7 +720,7 @@ size_t is_document_format_array(ValueType& d,
   if (get_nelements)
     return nelements;
   return 1;
-};
+}
 
 template<typename ValueType>
 size_t is_schema_format_array(ValueType& d,
@@ -763,7 +763,7 @@ size_t is_schema_format_array(ValueType& d,
   if (get_nelements)
     return nelements;
   return 1;
-};
+}
 
 RAPIDJSON_NAMESPACE_END
 

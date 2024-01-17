@@ -78,7 +78,7 @@ size_t countVarArgs(ValueType& schema, bool set) {
 		  typename ValueType::AllocatorType,
 		  RAPIDJSON_DEFAULT_STACK_ALLOCATOR> tmp;
   return tmp.CountVarArgs(schema, set);
-};
+}
 
 template<typename ValueType>
 bool VarArgList::skip(ValueType& schema, bool set) {
