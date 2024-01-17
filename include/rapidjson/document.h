@@ -3026,6 +3026,9 @@ public:
   RAPIDJSON_STRING_(Ply, 'p', 'l', 'y')
   RAPIDJSON_STRING_(Schema, 's', 'c', 'h', 'e', 'm', 'a')
   RAPIDJSON_STRING_(Any, 'a', 'n', 'y')
+  // for backward compat
+  RAPIDJSON_STRING_(Bytes, 'b', 'y', 't', 'e', 's')
+  RAPIDJSON_STRING_(Unicode, 'u', 'n', 'i', 'c', 'o', 'd', 'e')
   // props
   RAPIDJSON_STRING_(Title, 't', 'i', 't', 'l', 'e')
   RAPIDJSON_STRING_(SubType, 's', 'u', 'b', 't', 'y', 'p', 'e')
@@ -4940,7 +4943,6 @@ public:
 	if (x_rep != NULL) {
 	  out = SetPythonObjectRaw(x_rep, allocator);
 	  Py_DECREF(x_rep);
-	  out = false;
 	  goto release;
 	} else {
 	  PyErr_Clear();
