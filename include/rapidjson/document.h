@@ -5468,6 +5468,82 @@ public:
     return out;
   }
 
+  bool GetElement(const SizeType index, ValueType& dst,
+		  Allocator& allocator) {
+    RAPIDJSON_ASSERT(Is1DArray());
+    RAPIDJSON_ASSERT(index < GetNElements());
+    if (!(Is1DArray() && index < GetNElements()))
+      return false;
+    SizeType len = GetPrecision() / sizeof(Ch);
+    const Ch* ptr = GetString() + (index * len);
+    SchemaValueType dst_schema;
+    dst_schema.CopyFrom(*schema_, allocator, true);
+    dst_schema.AddMember(GetTypeString(),
+			 ValueType(GetScalarString().GetString(),
+				   GetScalarString().GetStringLength(),
+				   allocator).Move(),
+			 allocator);
+    if (dst_schema.HasMember(GetLengthString()))
+      dst_schema.RemoveMember(GetLengthString());
+    if (dst_schema.HasMember(GetShapeString()))
+      dst_schema.RemoveMember(GetShapeString());
+    dst.SetYggdrasilString(ptr, len, allocator, dst_schema);
+    return true;
+  }
+  bool GetSubArray(const SizeType index, const SizeType dim,
+		   ValueType& dst, Allocator& allocator) {
+    RAPIDJSON_ASSERT(IsNDArray());
+    if (!IsNDArray())
+      return false;
+    const ValueType& shape = GetShape();
+    RAPIDJSON_ASSERT(dim < shape.Size() &&
+		     index < shape[dim].GetUint());
+    if (!(dim < shape.Size() && index < shape[dim].GetUint()))
+      return false;
+    if (shape.Size() == 1)
+      return GetElement(index, dst, allocator);
+    SizeType nelements = GetNElements();
+    SizeType precision = GetPrecision();
+    SchemaValueType dst_schema;
+    dst_schema.CopyFrom(*schema_, allocator, true);
+    ValueType dst_shape(shape, allocator, true);
+    dst_shape.Erase(dst_shape.Begin() + dim);
+    SizeType dst_nelements = 1;
+    for (SizeType i = 0; i < dst_shape.Size(); i++)
+      dst_nelements *= dst_shape[i].GetUint();
+    const Ch* ptr = GetString();
+    Ch* dst_ptr = (Ch*)allocator.Malloc(dst_nelements * GetPrecision());
+    SizeType prev = 0, dst_prev = 0;
+    std::vector<SizeType> shape_cum(shape.Size(), 1);
+    for (int i = (static_cast<int>(shape.Size()) - 2); i >= 0; i--) {
+      shape_cum[(size_t)i] = shape_cum[(size_t)(i + 1)] * shape[static_cast<SizeType>(i + 1)].GetUint();
+    }
+    std::vector<SizeType> idx(shape.Size(), 0);
+    SizeType dst_i = 0, rem = 0;
+    for (SizeType i = 0; i < nelements; i++) {
+      rem = i;
+      for (SizeType d = 0; d < shape.Size(); d++) {
+	idx[d] = rem / shape_cum[d];
+	rem = rem % shape_cum[d];
+      }
+      if (idx[dim] == index) {
+	memcpy(dst_ptr + (dst_i * precision / sizeof(Ch)),
+	       ptr + (i * precision / sizeof(Ch)),
+	       precision);
+	dst_i++;
+      }
+    }
+    if (dst_schema.HasMember(GetLengthString()))
+      dst_schema.RemoveMember(GetLengthString());
+    if (dst_schema.HasMember(GetShapeString()))
+      dst_schema.RemoveMember(GetShapeString());
+    dst_schema.AddMember(GetShapeString(), dst_shape, allocator);
+    SizeType len = dst_nelements * GetPrecision() / sizeof(Ch);
+    dst.SetYggdrasilString(dst_ptr, len, allocator, dst_schema);
+    allocator.Free((void*)dst_ptr);
+    return true;
+  }
+
   bool SetDataPtr(const Ch* type, void*& value, Allocator& allocator) {
 #define CMP_(name)					\
     (internal::StrCmp(type, Get ## name ## String().GetString()) == 0)
