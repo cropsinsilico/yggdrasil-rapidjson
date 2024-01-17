@@ -4289,22 +4289,29 @@ public:
     if (!isPythonInitialized())
       return NULL;
     PyObject* out = NULL;
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
     switch (GetType()) {
     case kNullType: {
       Py_INCREF(Py_None);
-      return Py_None;
+      out = Py_None;
+      goto release;
     }
     case kFalseType: {
       Py_INCREF(Py_False);
-      return Py_False;
+      out = Py_False;
+      goto release;
     }
     case kTrueType: {
       Py_INCREF(Py_True);
-      return Py_True;
+      out = Py_True;
+      goto release;
     }
     case kObjectType: {
-      if (IsPythonInstance())
-	return GetPythonInstance();
+      if (IsPythonInstance()) {
+	out = GetPythonInstance();
+	goto release;
+      }
       out = PyDict_New();
       RAPIDJSON_ASSERT(out);
       ConstMemberIterator item;
@@ -4317,55 +4324,67 @@ public:
 	Py_DECREF(ival);
       }
       (void)result;
-      return out;
+      goto release;
     }
     case kArrayType: {
       Py_ssize_t len = 0;
       out = PyList_New(len);
-      if (out == NULL)
-	return NULL;
+      if (out == NULL) {
+	out = NULL;
+	goto release;
+      }
       ConstValueIterator item;
       for (item = Begin(); item != End(); item++) {
 	PyObject* ival = item->GetPythonObjectRaw();
 	if (ival == NULL) {
 	  Py_DECREF(out);
-	  return NULL;
+	  out = NULL;
+	  goto release;
 	}
 	if (PyList_Append(out, ival) < 0) {
 	  Py_DECREF(out);
 	  Py_DECREF(ival);
-	  return NULL;
+	  out = NULL;
+	  goto release;
 	}
 	Py_DECREF(ival);
       }
       if (IsStructuredArray(out)) {
 	PyObject* tmp = GetStructuredArray(out);
 	Py_DECREF(out);
-	return tmp;
+	out = tmp;
+	goto release;
       }
-      return out;
+      goto release;
     }
     case kStringType: {
-      if (IsPythonClass())
-	return GetPythonClass();
-      else if (IsPythonFunction())
-	return GetPythonFunction();
-      else if (IsPythonInstance())
-	return GetPythonInstance();
+      if (IsPythonClass()) {
+	out = GetPythonClass();
+	goto release;
+      } else if (IsPythonFunction()) {
+	out = GetPythonFunction();
+	goto release;
+      } else if (IsPythonInstance()) {
+	out = GetPythonInstance();
+	goto release;
+      }
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
       else if (IsScalar()) {
 	ValueType enc;
 	int typenum = GetSubTypeNumpyType(enc);
-	if (typenum < 0)
-	  return NULL;
+	if (typenum < 0) {
+	  out = NULL;
+	  goto release;
+	}
 	if (typenum == NPY_STRING) {
-	  return PyBytes_FromStringAndSize(GetString(), GetStringLength());
+	  out = PyBytes_FromStringAndSize(GetString(), GetStringLength());
+	  goto release;
 	} else if (typenum == NPY_UNICODE &&
 		   enc != GetUCS4EncodingString()) {
 	  PyObject* pyBytes = PyBytes_FromStringAndSize(GetString(), GetStringLength());
 	  out = PyUnicode_FromEncodedObject(pyBytes, enc.GetString(), NULL);
 	  Py_DECREF(pyBytes);
-	  return out;
+	  goto release;
 	}
 	PyArray_Descr* desc = PyArray_DescrNewFromType(typenum);
 	if (desc == NULL) return NULL;
@@ -4376,13 +4395,19 @@ public:
 	//   Py_INCREF(desc);
 	//   out = PyArray_FromScalar(out, desc);
 	// }
-	return out;
+	goto release;
       } else if (IsNDArray()) {
 	ValueType enc;
 	int typenum = GetSubTypeNumpyType(enc);
-	if (typenum < 0) return NULL;
+	if (typenum < 0) {
+	  out = NULL;
+	  goto release;
+	}
 	PyArray_Descr* desc = PyArray_DescrNewFromType(typenum);
-	if (desc == NULL) return NULL;
+	if (desc == NULL) {
+	  out = NULL;
+	  goto release;
+	}
 	if (PyTypeNum_ISFLEXIBLE(typenum))
 	  desc->elsize = static_cast<int>(GetPrecision());
 	if (HasTitle()) {
@@ -4391,7 +4416,10 @@ public:
 							  title.GetStringLength());
 	  PyArray_Descr* sub_desc = desc;
 	  desc = PyArray_DescrNewFromType(NPY_VOID);
-	  if (desc == NULL) return NULL;
+	  if (desc == NULL) {
+	    out = NULL;
+	    goto release;
+	  }
 	  desc->names = PyTuple_Pack(1, titlePy);
 	  desc->fields = PyDict_New();
 	  desc->elsize = sub_desc->elsize;
@@ -4407,14 +4435,16 @@ public:
 	SizeType* shape = GetShape(ndim, schema_->GetAllocator());
 	if (!shape) {
 	  Py_DECREF(desc);
-	  return NULL;
+	  out = NULL;
+	  goto release;
 	}
 	npy_intp* np_shape = (npy_intp*)(schema_->GetAllocator().Malloc(sizeof(npy_intp) * ndim));
 	if (!np_shape) {
 	  schema_->GetAllocator().Free(shape);
 	  shape = NULL;
 	  Py_DECREF(desc);
-	  return NULL;
+	  out = NULL;
+	  goto release;
 	}
 	for (SizeType i = 0; i < ndim; i++)
 	  np_shape[i] = (npy_intp)shape[i];
@@ -4431,7 +4461,8 @@ public:
 				 tmp, tmp_nbytes, GetUTF32EncodingString().GetString(),
 				 schema_->GetAllocator(), true)) {
 	    Py_DECREF(desc);
-	    return NULL;
+	    out = NULL;
+	    goto release;
 	  }
 	  std::cerr << "CHANGING THE ENCODING" << std::endl;
 	  free_data = true;
@@ -4451,10 +4482,11 @@ public:
 	}
 	schema_->GetAllocator().Free(np_shape);
 	np_shape = NULL;
-	return out;
+	goto release;
       }
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
-      return PyUnicode_FromStringAndSize(GetString(), GetStringLength());
+      out = PyUnicode_FromStringAndSize(GetString(), GetStringLength());
+      goto release;
     }
     case kNumberType: {
       if (IsDouble()) {
@@ -4464,11 +4496,13 @@ public:
       } else {
 	out = PyLong_FromLongLong(GetInt64());
       }
-      return out;
+      goto release;
     }
     default:
       RAPIDJSON_ASSERT(!GetType());
     }
+  release:
+    PyGILState_Release(gstate);
     return out;
   }
   bool SetPythonObjectRaw(PyObject* x, Allocator& allocator,
@@ -4484,6 +4518,8 @@ public:
     bool out = true;
     if (x == NULL)
       return false;
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
     if (x == Py_None) {
       SetNull();
     } else if (PyBool_Check(x)) {
@@ -4553,8 +4589,9 @@ public:
 						     mod_cls_siz,
 						     allocator);
       RAPIDJSON_ASSERT(out && (mod_cls != NULL));
-      if (!out || (mod_cls == NULL))
-	return out;
+      if (!out || (mod_cls == NULL)) {
+	goto release;
+      }
       if (PyType_Check(x))
 	AddSchemaMember(GetTypeString(), GetPythonClassString());
       else
@@ -4581,7 +4618,8 @@ public:
       if (desc == NULL || scalar == NULL) {
 	Py_XDECREF(desc);
 	Py_XDECREF(scalar);
-	return false;
+	out = false;
+	goto release;
       }
       SizeType precision;
       ValueType subtype;
@@ -4590,12 +4628,14 @@ public:
 			     allocator)) {
 	Py_DECREF(desc);
 	Py_DECREF(scalar);
-	return false;
+	out = false;
+	goto release;
       }
       void* data = allocator.Malloc(precision);
       if (!data) {
 	Py_DECREF(desc);
-	return false;
+	out = false;
+	goto release;
       }
       if (PyDataType_ISFLEXIBLE(desc)) {
 	// PyArray_CastScalarToCtype seems to DECREF desc for strings
@@ -4609,7 +4649,8 @@ public:
       data = NULL;
       if (desc->type_num == NPY_UNICODE && encoding == GetUTF8EncodingString()) {
 	Py_DECREF(desc);
-	return true;
+	out = true;
+	goto release;
       }
       Py_DECREF(desc);
       schema_->MemberReserve(5, allocator);
@@ -4618,12 +4659,15 @@ public:
       AddSchemaMember(GetPrecisionString(), precision);
       if (!encoding.IsNull())
 	AddSchemaMember(GetEncodingString(), encoding);
-      return true;
+      out = true;
+      goto release;
     // } else if (rapidjson_ARRAY_API && PyArray_Check(x)) {
     } else if (PyArray_Check(x)) {
       PyArray_Descr* desc = PyArray_DESCR((PyArrayObject*)x);
-      if (desc == NULL)
-	return false;
+      if (desc == NULL) {
+	out = false;
+	goto release;
+      }
       if (PyDataType_HASFIELDS(desc)) {
 	bool single = (PyDict_Size(desc->fields) == 1);
 	if (!single) {
@@ -4635,31 +4679,43 @@ public:
 	Py_ssize_t kw_pos = 0;
 	while (PyDict_Next(desc->fields, &kw_pos, &kw_key, &kw_val)) {
 	  PyObject* dtype = PyTuple_GetItem(kw_val, 0);
-	  if (dtype == NULL)
-	    return false;
+	  if (dtype == NULL) {
+	    out = false;
+	    goto release;
+	  }
 	  PyObject* offsetObj = PyTuple_GetItem(kw_val, 1);
-	  if (offsetObj == NULL)
-	    return false;
+	  if (offsetObj == NULL) {
+	    out = false;
+	    goto release;
+	  }
 	  Py_ssize_t offset = PyNumber_AsSsize_t(offsetObj, NULL);
-	  if (offset < 0)
-	    return false;
+	  if (offset < 0) {
+	    out = false;
+	    goto release;
+	  }
 	  Ch* kw_keyS = NULL;
 	  Py_ssize_t kw_keyS_len = 0;
 	  if (sizeof(Ch) == sizeof(wchar_t))
 	    kw_keyS = (Ch*)PyUnicode_AsWideCharString(kw_key, &kw_keyS_len);
 	  else
 	    kw_keyS = (Ch*)PyUnicode_AsUTF8AndSize(kw_key, &kw_keyS_len);
-	  if (kw_keyS == NULL)
-	    return false;
+	  if (kw_keyS == NULL) {
+	    out = false;
+	    goto release;
+	  }
 	  Py_INCREF(dtype);
 	  PyObject* field = PyArray_GetField((PyArrayObject*)x,
 					     (PyArray_Descr*)dtype,
 					     (int)offset);
-	  if (field == NULL)
-	    return false;
+	  if (field == NULL) {
+	    out = false;
+	    goto release;
+	  }
 	  if (single) {
-	    if (!SetPythonObjectRaw(field, allocator))
-	      return false;
+	    if (!SetPythonObjectRaw(field, allocator)) {
+	      out = false;
+	      goto release;
+	    }
 	    if (!skipTitle) {
 	      ValueType field_name(kw_keyS,
 				   static_cast<SizeType>(kw_keyS_len),
@@ -4678,7 +4734,8 @@ public:
 	    PushBack(pyField, allocator);
 	  }
 	}
-	return true;
+	out = true;
+	goto release;
       }
       ResetSchema(allocator);
       SizeType precision;
@@ -4686,24 +4743,31 @@ public:
       ValueType encoding;
       if (!NumpyType2SubType(desc, subtype, precision, encoding,
 			     (SizeType)PyArray_ITEMSIZE((PyArrayObject*)x),
-			     allocator))
-	return false;
+			     allocator)) {
+	out = false;
+	goto release;
+      }
       SizeType nelements = (SizeType)PyArray_SIZE((PyArrayObject*)x);
       ValueType shape(kArrayType);
       int ndim = PyArray_NDIM((PyArrayObject*)x);
       npy_intp* np_shape = PyArray_SHAPE((PyArrayObject*)x);
-      if (np_shape == NULL)
-	return false;
+      if (np_shape == NULL) {
+	out = false;
+	goto release;
+      }
       for (int i = 0; i < ndim; i++)
 	shape.PushBack((SizeType)np_shape[i], allocator);
       PyArrayObject* cpy = PyArray_GETCONTIGUOUS((PyArrayObject*)x);
-      if (cpy == NULL)
-	return false;
+      if (cpy == NULL) {
+	out = false;
+	goto release;
+      }
       void* data = (void*)PyArray_BYTES(cpy);
       if (data == NULL) {
 	if (!PyArray_IS_C_CONTIGUOUS((PyArrayObject*)x))
 	  Py_DECREF(cpy);
-	return false;
+	out = false;
+	goto release;
       }
       SetStringRaw(StringRef(static_cast<Ch*>(data),
 			     precision * nelements / sizeof(Ch)),
@@ -4717,7 +4781,8 @@ public:
       AddSchemaMember(GetShapeString(), shape);
       if (!encoding.IsNull())
 	AddSchemaMember(GetEncodingString(), encoding);
-      return true;
+      out = true;
+      goto release;
     } else if (PyObject_IsInstanceString(x, "pandas.core.frame.DataFrame")) {
       bool error = false;
       PyObject *column_dtypes = NULL, *columns = NULL, *dtypes = NULL,
@@ -4866,7 +4931,8 @@ public:
       Py_XDECREF(args);
       Py_XDECREF(kwargs);
       Py_XDECREF(arr);
-      return (!error);
+      out = (!error);
+      goto release;
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
     } else {
       if (PyObject_HasAttrString(x, "_ygg_rapidjson")) {
@@ -4874,7 +4940,8 @@ public:
 	if (x_rep != NULL) {
 	  out = SetPythonObjectRaw(x_rep, allocator);
 	  Py_DECREF(x_rep);
-	  return out;
+	  out = false;
+	  goto release;
 	} else {
 	  PyErr_Clear();
 	}
@@ -4883,12 +4950,16 @@ public:
       ResetSchema(allocator);
       AddSchemaMember(GetTypeString(), GetPythonInstanceString());
       RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__class__"));
-      if (!PyObject_HasAttrString(x, "__class__"))
-	return false;
+      if (!PyObject_HasAttrString(x, "__class__")) {
+	out = false;
+	goto release;
+      }
       PyObject* inst_class = PyObject_GetAttrString(x, "__class__");
       RAPIDJSON_ASSERT(inst_class);
-      if (inst_class == NULL)
- 	return false;
+      if (inst_class == NULL) {
+	out = false;
+	goto release;
+      }
       Ch* mod_cls_ref = NULL;
       SizeType mod_cls_siz = 0;
       out = export_python_object<Encoding,Allocator>(inst_class,
@@ -4897,8 +4968,10 @@ public:
 						     allocator);
       Py_DECREF(inst_class);
       // RAPIDJSON_ASSERT(out && (mod_cls_ref != NULL));
-      if (!out && (mod_cls_ref == NULL))
-	return false;
+      if (!out && (mod_cls_ref == NULL)) {
+	out = false;
+	goto release;
+      }
       ValueType mod_cls(mod_cls_ref, mod_cls_siz, allocator);
       allocator.Free(mod_cls_ref);
       mod_cls_ref = NULL;
@@ -4943,23 +5016,32 @@ public:
 			  kwargs.GetSchemaNested(allocator));
       }
     }
+    goto release;
+  release:
+    PyGILState_Release(gstate);
     return out;
   pickle:
-    if (!allowPickle)
-      return false;
+    if (!allowPickle) {
+      out = false;
+      goto release;
+    }
     PyObject* py_str = pickle_python_object(x, "SetPythonObjectRaw", true);
-    if (py_str == NULL)
-      return false;
+    if (py_str == NULL) {
+      out = false;
+      goto release;
+    }
     char* buffer = NULL;
     Py_ssize_t buffer_len = 0;
     if (PyBytes_AsStringAndSize(py_str, &buffer, &buffer_len) < 0) {
       Py_DECREF(py_str);
-      return false;
+      out = false;
+      goto release;
     }
     SetStringRaw(StringRef((Ch*)buffer, (SizeType)((size_t)buffer_len / sizeof(Ch))),
 		 allocator);
     Py_DECREF(py_str);
-    return true;
+    out = true;
+    goto release;
   }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
   void SetObjRaw(const ObjWavefront& x, Allocator& allocator) {
@@ -5865,31 +5947,47 @@ public:
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
   PyObject* GetPythonClass(bool allowFunc = false) const {
     const char *mod_class;
+    PyObject* out = NULL;
+    PyObject* py_inst = NULL;
+    PyObject* py_cls = NULL;
+    ConstMemberIterator m;
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
     if (IsPythonInstance()) {
       if (IsObject()) {
-	ConstMemberIterator m = FindMember(GetPythonClassString());
+	m = FindMember(GetPythonClassString());
 	RAPIDJSON_ASSERT(m != MemberEnd());
 	mod_class = reinterpret_cast<const char*>(m->value.GetString());
       } else if (IsString()) {
-	PyObject* py_inst = GetPythonInstance();
-	if (py_inst == NULL)
-	  return NULL;
-	PyObject* py_cls = PyObject_Type(py_inst);
+	py_inst = GetPythonInstance();
+	if (py_inst == NULL) {
+	  out = NULL;
+	  goto release;
+	}
+	py_cls = PyObject_Type(py_inst);
 	Py_DECREF(py_inst);
 	return py_cls;
       } else {
-	return NULL;
+	out = NULL;
+	goto release;
       }
     } else if (IsPythonClass() || (allowFunc && IsPythonFunction())) {
       mod_class = reinterpret_cast<const char*>(GetString());
     } else {
-      return NULL;
+      out = NULL;
+      goto release;
     }
-    PyObject* py_class = import_python_object(mod_class, "GetPythonClass: ", true);
-    return py_class;
+    out = import_python_object(mod_class, "GetPythonClass: ", true);
+    goto release;
+  release:
+    PyGILState_Release(gstate);
+    return out;
   }
   PyObject* GetPythonFunction() const { return GetPythonClass(true); }
   PyObject* GetPythonInstance() const {
+    PyObject* out = NULL;
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
     if (IsObject()) {
       PyObject* py_class = GetPythonClass();
       PyObject* py_args = NULL;
@@ -5919,14 +6017,20 @@ public:
       Py_XDECREF(py_class);
       Py_XDECREF(py_args);
       Py_XDECREF(py_kwargs);
-      return py_inst;
+      out = py_inst;
+      goto release;
     } else if (IsString()) {
-      return unpickle_python_object((char*)GetString(),
-				    (size_t)(GetStringLength() * sizeof(Ch)),
-				    "GetPythonInstance", true);
+      out = unpickle_python_object((char*)GetString(),
+				   (size_t)(GetStringLength() * sizeof(Ch)),
+				   "GetPythonInstance", true);
+      goto release;
     } else {
-      return NULL;
+      out = NULL;
+      goto release;
     }
+  release:
+    PyGILState_Release(gstate);
+    return out;
   }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
   void GetObjWavefront(ObjWavefront &o) const {

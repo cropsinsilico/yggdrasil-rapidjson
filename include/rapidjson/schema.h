@@ -6169,11 +6169,17 @@ public:
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
 	if (context.python_disabled)
 	  return false;
+	bool out = true;
+	PyGILState_STATE gstate;
+	gstate = PyGILState_Ensure();
 	PyObject* pyobj = import_python_object("collections:OrderedDict",
 					       "GenerateData: ", true);
 	if (pyobj == NULL)
-	  return false;
-	data.SetPythonInstance(pyobj, allocator);
+	  out = false;
+	else
+	  data.SetPythonInstance(pyobj, allocator);
+	PyGILState_Release(gstate);
+	if (!out) return out;
 	AFTER_SET_;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
       } else if (YGGTYPE_CHECK_(PythonFunction)) {
@@ -6182,13 +6188,19 @@ public:
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
 	if (context.python_disabled)
 	  return false;
+	bool out = true;
+	PyGILState_STATE gstate;
+	gstate = PyGILState_Ensure();
 	PyObject* pyobj = import_python_object("base64:b64encode",
 					       "GenerateData: ", true);
 	// PyObject* pyobj = import_python_object("os:stat",
 	// 				       "GenerateData: ", true);
 	if (pyobj == NULL)
-	  return false;
-	data.SetPythonInstance(pyobj, allocator);
+	  out = false;
+	else
+	  data.SetPythonInstance(pyobj, allocator);
+	PyGILState_Release(gstate);
+	if (!out) return out;
 	AFTER_SET_;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
       } else if (YGGTYPE_CHECK_(PythonInstance)) {
@@ -6197,6 +6209,9 @@ public:
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
 	if (context.python_disabled)
 	  return false;
+	bool out = true;
+	PyGILState_STATE gstate;
+	gstate = PyGILState_Ensure();
 	PyObject* pycls = NULL;
 	if (class_.IsPythonClass() || class_.IsString()) {
 	  pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
@@ -6205,19 +6220,30 @@ public:
 	  pycls = import_python_object("collections:OrderedDict",
 				       "GenerateData: ", true);
 	}
+	PyObject* args = NULL;
 	if (pycls == NULL)
-	  return false;
-	PyObject* args = PyTuple_New(0);
-	if (args == NULL) {
-	  Py_DECREF(pycls);
-	  return false;
+	  out = false;
+	else {
+	  args = PyTuple_New(0);
+	  if (args == NULL) {
+	    Py_DECREF(pycls);
+	    out = false;
+	  }
 	}
-	PyObject* pyobj = PyObject_Call(pycls, args, NULL);
-	Py_DECREF(pycls);
-	Py_DECREF(args);
-	if (pyobj == NULL)
-	  return false;
-	data.SetPythonInstance(pyobj, allocator);
+	PyObject* pyobj = NULL;
+	if (out) {
+	  pyobj = PyObject_Call(pycls, args, NULL);
+	  Py_DECREF(pycls);
+	  Py_DECREF(args);
+	  if (pyobj == NULL) {
+	    out = false;
+	  }
+	}
+	if (out) {
+	  data.SetPythonInstance(pyobj, allocator);
+	}
+	PyGILState_Release(gstate);
+	if (!out) return out;
 	AFTER_SET_;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
       } else if (YGGTYPE_CHECK_(Obj)) {
@@ -8392,24 +8418,30 @@ protected:
       str = v.GetString();
       length = v.GetStringLength();
     }
+    ValidateErrorCode code = kValidateErrorNone;
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
     PyObject* pyobj = import_python_object(reinterpret_cast<const char*>(str),
 					   "CheckPythonImport: ", true);
     if (!(pyobj)) {
       context.error_handler.InvalidPythonImport(str, length);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonImport);
+      code = kValidateErrorPythonImport;
     }
-    if (class_.IsPythonClass() || class_.IsString()) {
+    if ((code == kValidateErrorNone) &&
+	(class_.IsPythonClass() || class_.IsString())) {
       PyObject* pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
 					     "CheckPythonImport: ", true);
       if (pycls && (PyObject_IsSubclass(pyobj, pycls) <= 0)) {
-	Py_DECREF(pyobj);
-	Py_DECREF(pycls);
 	context.error_handler.InvalidPythonClass(str, length, class_);
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonClass);
+	code = kValidateErrorPythonClass;
       }
       Py_XDECREF(pycls);
     }
-    Py_DECREF(pyobj);
+    Py_XDECREF(pyobj);
+    PyGILState_Release(gstate);
+    if (code != kValidateErrorNone) {
+      RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+    }
     return true;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
   }
@@ -8420,25 +8452,31 @@ protected:
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
     if (context.python_disabled)
       return true;
+    ValidateErrorCode code = kValidateErrorNone;
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
     PyObject* pyobj = unpickle_python_object(reinterpret_cast<const char*>(str),
 					     (size_t)(length * sizeof(Ch)),
 					     "CheckPythonPickle", true);
     if (!(pyobj)) {
       context.error_handler.InvalidPythonImport(str, length);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonImport);
+      code = kValidateErrorPythonImport;
     }
-    if (class_.IsPythonClass() || class_.IsString()) {
+    if ((code == kValidateErrorNone) &&
+	(class_.IsPythonClass() || class_.IsString())) {
       PyObject* pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
 					     "CheckPythonPickle: ", true);
       if (pycls && (PyObject_IsSubclass(pyobj, pycls) <= 0)) {
-	Py_DECREF(pyobj);
-	Py_DECREF(pycls);
 	context.error_handler.InvalidPythonClass(str, length, class_);
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonClass);
+	code = kValidateErrorPythonClass;
       }
       Py_XDECREF(pycls);
     }
-    Py_DECREF(pyobj);
+    Py_XDECREF(pyobj);
+    PyGILState_Release(gstate);
+    if (code != kValidateErrorNone) {
+      RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+    }
     return true;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
   }
