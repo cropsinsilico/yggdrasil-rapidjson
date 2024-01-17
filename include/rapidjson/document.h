@@ -4526,13 +4526,13 @@ public:
       SetBool(x == Py_True);
     } else if (PyList_CheckExact(x)) {
       SetArray();
-      for (SizeType i = 0; i < PyList_Size(x); i++) {
+      for (SizeType i = 0; i < static_cast<SizeType>(PyList_Size(x)); i++) {
         PushBack(ValueType(PyList_GetItem(x, i), allocator).Move(),
 		 allocator);
       }
     } else if (PyTuple_CheckExact(x)) {
       SetArray();
-      for (SizeType i = 0; i < PyTuple_Size(x); i++) {
+      for (SizeType i = 0; i < static_cast<SizeType>(PyTuple_Size(x)); i++) {
         PushBack(ValueType(PyTuple_GetItem(x, i), allocator).Move(),
 		 allocator);
       }
@@ -4540,7 +4540,7 @@ public:
       SetObject();
       PyObject* keys = PyDict_Keys(x);
       PyObject* ikey;
-      for (SizeType i = 0; i < PyDict_Size(x); i++) {
+      for (SizeType i = 0; i < static_cast<SizeType>(PyDict_Size(x)); i++) {
         ikey = PyList_GetItem(keys, i);
         AddMember(ValueType(ikey, allocator),
                   ValueType(PyDict_GetItem(x, ikey), allocator).Move(),
