@@ -251,8 +251,7 @@ void finalize_python(const std::string error_prefix="") {
 
 #define PYTHON_ERROR_SETUP_			\
   std::string err;				\
-  PyGILState_STATE gstate;			\
-  gstate = PyGILState_Ensure()
+  BEGIN_PY_GIL
 #define PYTHON_ERROR_EXIT_(val)			\
   {						\
     out = val;					\
