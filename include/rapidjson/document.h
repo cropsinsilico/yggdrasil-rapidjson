@@ -2429,6 +2429,24 @@ public:
     template<typename T>
     ValueType& Set(const T& data, AllocatorType& allocator) { return internal::TypeHelper<ValueType, T>::Set(*this, data, allocator); }
 
+#ifdef RAPIDJSON_YGGDRASIL
+    template <typename T, SizeType N>
+    ValueType& Set(const T (&data)[N], AllocatorType& allocator) {
+      SetNDArray(data, allocator);
+      return *this;
+    }
+    template <typename T, SizeType M, SizeType N>
+    ValueType& Set(const T (&data)[M][N], AllocatorType& allocator) {
+      SetNDArray(data, allocator);
+      return *this;
+    }
+    template <typename T, SizeType L, SizeType M, SizeType N>
+    ValueType& Set(const T (&data)[L][M][N], AllocatorType& allocator) {
+      SetNDArray(data, allocator);
+      return *this;
+    }
+#endif // RAPIDJSON_YGGDRASIL
+
     //@}
 
     //! Generate events of this value to a Handler.
@@ -3313,6 +3331,36 @@ public:
   {
     SizeType shape[] = {M, N};
     SetNDArrayRaw(&(x[0][0]), shape, 2, units_str, units_len, allocator);
+  }
+  // Explicit 3D array
+  template <typename T, SizeType L, SizeType M, SizeType N>
+  explicit GenericValue(const T (&x)[L][M][N],
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  {
+    SizeType shape[] = {L, M, N};
+    SetNDArrayRaw(&(x[0][0][0]), shape, 3, NULL, 0, allocator);
+  }
+  template <typename T, SizeType L, SizeType M, SizeType N>
+  explicit GenericValue(const T (&x)[L][M][N],
+			const Ch* units_str,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  {
+    SizeType shape[] = {L, M, N};
+    SetNDArrayRaw(&(x[0][0][0]), shape, 3, units_str, 0, allocator);
+  }
+  template <typename T, SizeType L, SizeType M, SizeType N>
+  explicit GenericValue(const T (&x)[L][M][N],
+			const Ch* units_str, const SizeType units_len,
+			Allocator& allocator,
+			RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T))))
+    RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
+  {
+    SizeType shape[] = {L, M, N};
+    SetNDArrayRaw(&(x[0][0][0]), shape, 3, units_str, units_len, allocator);
   }
   // Pointer to ND array
   template <typename T>

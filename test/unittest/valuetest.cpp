@@ -1443,9 +1443,8 @@ TEST(Value, ScalarComplex) {
   TEST(Value, NDArray ## name ## precision ## _SubArray1) {		\
   Value::AllocatorType allocator;					\
   type arr[3] = {val, val + inc, val + 2 * inc};			\
-  SizeType shape[] = {3};						\
   type sub_a = val + inc;						\
-  Value u(&(arr[0]), &(shape[0]), 1, allocator);			\
+  Value u(arr, allocator);						\
   Value usub_a(sub_a, allocator);					\
   Value res_a;								\
   EXPECT_TRUE(u.GetSubArray(1, 0, res_a, allocator));			\
@@ -1456,14 +1455,11 @@ TEST(Value, ScalarComplex) {
   Value::AllocatorType allocator;					\
   type arr[2][3] = {{val, val + inc, val + 2 * inc},			\
 		    {val + 3 * inc, val + 4 * inc, val + 5 * inc}};	\
-  SizeType shape[] = {2, 3};						\
   type sub_a[3] = {val + 3 * inc, val + 4 * inc, val + 5 * inc};	\
   type sub_b[2] = {val + inc, val + 4 * inc};				\
-  SizeType shape_a[] = {3};						\
-  SizeType shape_b[] = {2};						\
-  Value u(&(arr[0][0]), &(shape[0]), 2, allocator);			\
-  Value usub_a(&(sub_a[0]), &(shape_a[0]), 1, allocator);		\
-  Value usub_b(&(sub_b[0]), &(shape_b[0]), 1, allocator);		\
+  Value u(arr, allocator);						\
+  Value usub_a(sub_a, allocator);					\
+  Value usub_b(sub_b, allocator);					\
   Value res_a, res_b;							\
   EXPECT_TRUE(u.GetSubArray(1, 0, res_a, allocator));			\
   EXPECT_EQ(res_a, usub_a);						\
@@ -1477,20 +1473,16 @@ TEST(Value, ScalarComplex) {
 			{val + 3 * inc, val + 4 * inc, val + 5 * inc}},\
 		       {{val + 6 * inc, val + 7 * inc, val + 8 * inc},	\
 			{val + 9 * inc, val + 10 * inc, val + 11 * inc}}}; \
-  SizeType shape[] = {2, 2, 3};						\
   type sub_a[2][3] = {{val + 6 * inc, val + 7 * inc, val + 8 * inc},	\
 		      {val + 9 * inc, val + 10 * inc, val + 11 * inc}};	\
   type sub_b[2][3] = {{val + 3 * inc, val + 4 * inc, val + 5 * inc},	\
 		      {val + 9 * inc, val + 10 * inc, val + 11 * inc}};	\
   type sub_c[2][2] = {{val + inc, val + 4 * inc},			\
 		      {val + 7 * inc, val + 10 * inc}};			\
-  SizeType shape_a[] = {2, 3};						\
-  SizeType shape_b[] = {2, 3};						\
-  SizeType shape_c[] = {2, 2};						\
-  Value u(&(arr[0][0][0]), &(shape[0]), 3, allocator);			\
-  Value usub_a(&(sub_a[0][0]), &(shape_a[0]), 2, allocator);		\
-  Value usub_b(&(sub_b[0][0]), &(shape_b[0]), 2, allocator);		\
-  Value usub_c(&(sub_c[0][0]), &(shape_c[0]), 2, allocator);		\
+  Value u(arr, allocator);						\
+  Value usub_a(sub_a, allocator);					\
+  Value usub_b(sub_b, allocator);					\
+  Value usub_c(sub_c, allocator);					\
   Value res_a, res_b, res_c;						\
   EXPECT_TRUE(u.GetSubArray(1, 0, res_a, allocator));			\
   EXPECT_EQ(res_a, usub_a);						\
@@ -1506,12 +1498,12 @@ TEST(Value, ScalarComplex) {
   type arr[2][3] = {{value, value, value},			     \
 		    {value, value, value}};			     \
   SizeType shape[] = {2, 3};					     \
-  Value u(&(arr[0][0]), &(shape[0]), 2, allocator);			\
-  Value v(&(arr[0][0]), &(shape[0]), 2, "umol", allocator);		\
-  Value w(&(arr[0][0]), &(shape[0]), 2, "g", allocator);		\
-  Value x(arr, allocator);						\
-  Value y(arr, "umol", allocator);					\
-  Value z(arr, "g", allocator);						\
+  Value u(arr, allocator);					     \
+  Value v(arr, "umol", allocator);				     \
+  Value w(arr, "g", allocator);					     \
+  Value x(arr, allocator);					     \
+  Value y(arr, "umol", allocator);				     \
+  Value z(arr, "g", allocator);					     \
   EXPECT_TRUE(x.IsYggdrasil());					     \
   EXPECT_EQ(kStringType, x.GetType());				     \
   EXPECT_EQ(kYgg ## name ## SubType, x.GetSubTypeCode());	     \
