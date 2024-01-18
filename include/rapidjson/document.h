@@ -6206,6 +6206,33 @@ public:
     new (this) GenericValue(x, nelements, units_str, units_len,
 			    allocator);
     return *this; }
+  template<typename T, SizeType N>
+  GenericValue& SetNDArray(const T (&x)[N], Allocator& allocator) {
+    SizeType shape[1] = {N};
+    SizeType ndim = 1;
+    this->~GenericValue();
+    new (this) GenericValue(&(x[0]), shape, ndim, NULL, 0, allocator);
+    return *this; }
+  template<typename T, SizeType M, SizeType N>
+  GenericValue& SetNDArray(const T (&x)[M][N], Allocator& allocator) {
+    SizeType shape[2] = {M, N};
+    SizeType ndim = 2;
+    this->~GenericValue();
+    new (this) GenericValue(&(x[0][0]), shape, ndim, NULL, 0, allocator);
+    return *this; }
+  template<typename T, SizeType L, SizeType M, SizeType N>
+  GenericValue& SetNDArray(const T (&x)[L][M][N], Allocator& allocator) {
+  SizeType shape[3] = {L, M, N};
+    SizeType ndim = 3;
+    this->~GenericValue();
+    new (this) GenericValue(&(x[0][0][0]), shape, ndim, NULL, 0, allocator);
+    return *this; }
+  template<typename T, SizeType ndim>
+  GenericValue& SetNDArray(const T* x, SizeType shape[ndim],
+			   Allocator& allocator) {
+    this->~GenericValue();
+    new (this) GenericValue(x, shape, ndim, NULL, 0, allocator);
+    return *this; }
   template<typename T>
   GenericValue& SetNDArray(const T* x, SizeType shape[], SizeType ndim,
 			   Allocator& allocator) {
