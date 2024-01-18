@@ -5471,7 +5471,7 @@ public:
   }
 
   bool GetElement(const SizeType index, ValueType& dst,
-		  Allocator& allocator) {
+		  Allocator& allocator) const {
     RAPIDJSON_ASSERT(Is1DArray());
     RAPIDJSON_ASSERT(index < GetNElements());
     if (!(Is1DArray() && index < GetNElements()))
@@ -5493,7 +5493,7 @@ public:
     return true;
   }
   bool GetSubArray(const SizeType index, const SizeType dim,
-		   ValueType& dst, Allocator& allocator) {
+		   ValueType& dst, Allocator& allocator) const {
     RAPIDJSON_ASSERT(IsNDArray());
     if (!IsNDArray())
       return false;
