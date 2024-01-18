@@ -6170,15 +6170,14 @@ public:
 	if (context.python_disabled)
 	  return false;
 	bool out = true;
-	PyGILState_STATE gstate;
-	gstate = PyGILState_Ensure();
+	BEGIN_PY_GIL;
 	PyObject* pyobj = import_python_object("collections:OrderedDict",
 					       "GenerateData: ", true);
 	if (pyobj == NULL)
 	  out = false;
 	else
 	  data.SetPythonInstance(pyobj, allocator);
-	PyGILState_Release(gstate);
+	END_PY_GIL;
 	if (!out) return out;
 	AFTER_SET_;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
@@ -6189,8 +6188,7 @@ public:
 	if (context.python_disabled)
 	  return false;
 	bool out = true;
-	PyGILState_STATE gstate;
-	gstate = PyGILState_Ensure();
+	BEGIN_PY_GIL;
 	PyObject* pyobj = import_python_object("base64:b64encode",
 					       "GenerateData: ", true);
 	// PyObject* pyobj = import_python_object("os:stat",
@@ -6199,7 +6197,7 @@ public:
 	  out = false;
 	else
 	  data.SetPythonInstance(pyobj, allocator);
-	PyGILState_Release(gstate);
+	END_PY_GIL;
 	if (!out) return out;
 	AFTER_SET_;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
@@ -6210,8 +6208,7 @@ public:
 	if (context.python_disabled)
 	  return false;
 	bool out = true;
-	PyGILState_STATE gstate;
-	gstate = PyGILState_Ensure();
+	BEGIN_PY_GIL;
 	PyObject* pycls = NULL;
 	if (class_.IsPythonClass() || class_.IsString()) {
 	  pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
@@ -6242,7 +6239,7 @@ public:
 	if (out) {
 	  data.SetPythonInstance(pyobj, allocator);
 	}
-	PyGILState_Release(gstate);
+	END_PY_GIL;
 	if (!out) return out;
 	AFTER_SET_;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
@@ -8419,8 +8416,7 @@ protected:
       length = v.GetStringLength();
     }
     ValidateErrorCode code = kValidateErrorNone;
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
+    BEGIN_PY_GIL;
     PyObject* pyobj = import_python_object(reinterpret_cast<const char*>(str),
 					   "CheckPythonImport: ", true);
     if (!(pyobj)) {
@@ -8438,7 +8434,7 @@ protected:
       Py_XDECREF(pycls);
     }
     Py_XDECREF(pyobj);
-    PyGILState_Release(gstate);
+    END_PY_GIL;
     if (code != kValidateErrorNone) {
       RAPIDJSON_INVALID_KEYWORD_RETURN(code);
     }
@@ -8453,8 +8449,7 @@ protected:
     if (context.python_disabled)
       return true;
     ValidateErrorCode code = kValidateErrorNone;
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
+    BEGIN_PY_GIL;
     PyObject* pyobj = unpickle_python_object(reinterpret_cast<const char*>(str),
 					     (size_t)(length * sizeof(Ch)),
 					     "CheckPythonPickle", true);
@@ -8473,7 +8468,7 @@ protected:
       Py_XDECREF(pycls);
     }
     Py_XDECREF(pyobj);
-    PyGILState_Release(gstate);
+    END_PY_GIL;
     if (code != kValidateErrorNone) {
       RAPIDJSON_INVALID_KEYWORD_RETURN(code);
     }

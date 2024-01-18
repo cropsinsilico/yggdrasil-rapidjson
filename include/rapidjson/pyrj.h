@@ -34,7 +34,76 @@ RAPIDJSON_NAMESPACE_END
 #include "rapidjson.h"
 #include "encodings.h"
 
+#ifdef YGG_CHECK_REF_COUNTS
+#include <map>
+#endif // YGG_CHECK_REF_COUNTS
+
 RAPIDJSON_NAMESPACE_BEGIN
+
+#ifdef YGG_ENSURE_PY_GIL
+#define BEGIN_PY_GIL				\
+  PyGILState_STATE gstate;			\
+  gstate = PyGILState_Ensure()
+#define END_PY_GIL				\
+  PyGILState_Release(gstate)
+#else // YGG_ENSURE_PY_GIL
+#define BEGIN_PY_GIL
+#define END_PY_GIL
+#endif // YGG_ENSURE_PY_GIL
+
+#ifdef YGG_CHECK_REF_COUNTS
+
+inline
+void __add_refs(const std::string& name,
+		std::map<std::string, Py_ssize_t>& reg, PyObject* x) {
+  Py_ssize_t N = 0;
+  if (x != NULL)
+    N = Py_REFCNT(x);
+  if (x != NULL && N > 0) {
+    PyObject* str = PyObject_Str(x);
+    std::string key = "unknown";
+    if (str != NULL && PyUnicode_Check(str)) {
+      key.assign(PyUnicode_AsUTF8(str));
+    }
+    Py_XDECREF(str);
+    reg[key] = N;
+    std::cerr << name << ": " << N << " REFS: " << key << std::endl;
+  }
+}
+
+inline
+void _add_refs(const std::string& name,
+	       std::map<std::string, Py_ssize_t>& reg, PyObject* x) {
+  __add_refs(name, reg, x);
+}
+template<typename... Args>
+inline
+void _add_refs(const std::string& name,
+	       std::map<std::string, Py_ssize_t>& reg, PyObject* x,
+	       Args... args) {
+  __add_refs(name, reg, x);
+  _add_refs(name, reg, args...);
+}
+template<typename... Args>
+inline
+std::map<std::string, Py_ssize_t> _get_refs(const std::string& name,
+					    PyObject* x, Args... args) {
+  std::map<std::string, Py_ssize_t> out;
+  _add_refs(name, out, x, args...);
+  return out;
+}
+// std::map<std::string, Py_ssize_t> _get_refs_diff(
+//   std::map<std::string, Py_ssize_t> a,
+//   std::map<std::string, Py_ssize_t> b) {
+//   std::map<std::string, Py_ssize_t> out;
+  
+// }
+
+#define CHECK_REFS(...)						\
+  _get_refs(__PRETTY_FUNCTION__, __VA_ARGS__)
+#else // YGG_CHECK_REF_COUNTS
+#define CHECK_REFS(...)
+#endif // YGG_CHECK_REF_COUNTS
 
 /*!
   @brief Initialize Numpy arrays if it is not initalized.
@@ -43,8 +112,7 @@ static inline
 void init_numpy_API() {
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
 #ifdef RAPIDJSON_FORCE_IMPORT_ARRAY
-  PyGILState_STATE gstate;
-  gstate = PyGILState_Ensure();
+  BEGIN_PY_GIL;
   std::string err = "";
 #ifdef _OPENMP
 #pragma omp critical (numpy)
@@ -57,7 +125,7 @@ void init_numpy_API() {
 #ifdef _OPENMP
   }
 #endif
-  PyGILState_Release(gstate);
+  END_PY_GIL;
   if (err.length() > 0)
     throw std::runtime_error(err); // GCOVR_EXCL_LINE
 #endif // RAPIDJSON_FORCE_IMPORT_ARRAY
@@ -203,7 +271,7 @@ void finalize_python(const std::string error_prefix="") {
       }								\
     }								\
   }								\
-  PyGILState_Release(gstate)
+  END_PY_GIL
 #else // RAPIDJSON_YGGDRASIL_PYTHON
 #define PYTHON_ERROR_CLEANUP_BASE_(method)			\
   if (ignore_error) {						\
@@ -216,22 +284,25 @@ void finalize_python(const std::string error_prefix="") {
       }								\
     }								\
   }								\
-  PyGILState_Release(gstate)
+  END_PY_GIL
 #endif // RAPIDJSON_YGGDRASIL_PYTHON
-#define PYTHON_ERROR_CLEANUP_(method)		\
+#define PYTHON_ERROR_CLEANUP_(method, before)	\
   cleanup:					\
+  before;					\
   PYTHON_ERROR_CLEANUP_BASE_(method);		\
   if (!err.empty()) {				\
     throw std::runtime_error(err);		\
   }						\
   return out
-#define PYTHON_ERROR_CLEANUP_NOTHROW_BASE_(method)	\
+#define PYTHON_ERROR_CLEANUP_NOTHROW_BASE_(method, before)	\
+  UNUSED(err);							\
+  before;							\
+  END_PY_GIL
+#define PYTHON_ERROR_CLEANUP_NOTHROW_(method, before)	\
+  cleanup:						\
   UNUSED(err);						\
-  PyGILState_Release(gstate)
-#define PYTHON_ERROR_CLEANUP_NOTHROW_(method)	\
-  cleanup:					\
-  UNUSED(err);					\
-  PyGILState_Release(gstate);			\
+  before;						\
+  END_PY_GIL;				\
   return out
 
 
@@ -257,8 +328,7 @@ inline bool assign_char_PyUnicode(PyObject* x, Py_ssize_t& py_len,
 				  PyObject*& x2,
 				  RAPIDJSON_ENABLEIF((internal::IsSame<typename Encoding::Ch,char>))) {
   bool out = false;
-  PyGILState_STATE gstate;
-  gstate = PyGILState_Ensure();
+  BEGIN_PY_GIL;
 #define ENCODING_BRANCH(enc)						\
   else if (internal::IsSame<Encoding, enc<typename Encoding::Ch> >::Value) { \
     x2 = PyUnicode_As ## enc ## String(x);				\
@@ -279,7 +349,7 @@ inline bool assign_char_PyUnicode(PyObject* x, Py_ssize_t& py_len,
   ENCODING_BRANCH(ASCII)
 #undef ENCODING_BRANCH
  release:
-  PyGILState_Release(gstate);
+  END_PY_GIL;
   return out;
 }
 
@@ -290,8 +360,7 @@ typename Encoding::Ch* PyUnicode_AsEncoding(PyObject* x, SizeType& length,
   typename Encoding::Ch* free_orig = NULL;
   const typename Encoding::Ch* orig = NULL;
   Py_ssize_t py_len = 0;
-  PyGILState_STATE gstate;
-  gstate = PyGILState_Ensure();
+  BEGIN_PY_GIL;
   if (assign_wchar_PyUnicode(x, py_len, free_orig)) {
     orig = free_orig;
   } else {
@@ -306,7 +375,7 @@ typename Encoding::Ch* PyUnicode_AsEncoding(PyObject* x, SizeType& length,
       PyMem_Free(free_orig);
   }
   Py_XDECREF(x2);
-  PyGILState_Release(gstate);
+  END_PY_GIL;
   return out;
 }
 
@@ -328,7 +397,7 @@ PyObject* import_python_module(const char* module_name,
   if (!isPythonInitialized())
     goto cleanup;
   out = PyImport_ImportModule(module_name);
-  PYTHON_ERROR_CLEANUP_(import_python_module);
+  PYTHON_ERROR_CLEANUP_(import_python_module, CHECK_REFS(out));
 }
 
 /*!
@@ -354,7 +423,7 @@ PyObject* import_python_class(const char* module_name,
     goto cleanup;
   out = PyObject_GetAttrString(py_module, class_name);
   Py_DECREF(py_module);
-  PYTHON_ERROR_CLEANUP_(import_python_class);
+  PYTHON_ERROR_CLEANUP_(import_python_class, CHECK_REFS(out, py_module));
 }
 
 template<typename Encoding, typename Allocator>
@@ -363,14 +432,13 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
 			  Allocator& allocator) {
   typedef typename Encoding::Ch Ch;
   bool out = true;
-  PyGILState_STATE gstate;
   Ch *mod = NULL, *cls = NULL, *file = NULL, *curr = NULL;
   SizeType mod_len = 0, cls_len = 0, file_len = 0;
   PyObject *mod_py = NULL, *cls_py = NULL, *x_repr = NULL,
     *local_str = NULL, *file_py = NULL, *inspect = NULL,
     *inspect_getfile = NULL, *globals = NULL;
   int is_local = 0;
-  gstate = PyGILState_Ensure();
+  BEGIN_PY_GIL;
   RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__module__"));
   RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__name__"));
   if (!(PyObject_HasAttrString(x, "__module__") && PyObject_HasAttrString(x, "__name__"))) {
@@ -510,7 +578,9 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
     }
   }
  release:
-  PyGILState_Release(gstate);
+  CHECK_REFS(mod_py, cls_py, x_repr, local_str, file_py, inspect,
+	     inspect_getfile, globals);
+  END_PY_GIL;
   return out;
 }
 
@@ -648,23 +718,28 @@ PyObject* import_python_object(const char* mod_class,
     if (path_dir == NULL) {
       Py_DECREF(path);
       Py_DECREF(path_parts);
+      path_dir = NULL;
       goto cleanup;
     }
     if (ends_with_py || module_size == 0) {
+      Py_INCREF(path_dir);
       path_add = path_dir;
     } else {
+      Py_INCREF(path);
       path_add = path;
     }
-    Py_INCREF(path_add); // Before path or path_dir (via path_parts) decref'd
     Py_DECREF(path);
     path_base = PyTuple_GetItem(path_parts, 1);
     if (path_base == NULL) {
       Py_DECREF(path_parts);
+      path_dir = NULL;
       goto cleanup;
     }
     tmp = PyUnicode_AsUTF8AndSize(path_base, &tmp_size);
     if ((tmp == NULL) || (tmp_size >= 100)) {
       Py_DECREF(path_parts);
+      path_base = NULL;
+      path_dir = NULL;
       goto cleanup;
     }
     if (module_size == 0) {
@@ -673,6 +748,8 @@ PyObject* import_python_object(const char* mod_class,
       module_name[module_size] = '\0';
     }
     Py_DECREF(path_parts);
+    path_base = NULL;
+    path_dir = NULL;
     ignore_error_1st = true;
   }
   out = import_python_class(module_name, class_name, error_prefix, ignore_error_1st);
@@ -700,7 +777,11 @@ PyObject* import_python_object(const char* mod_class,
     // Removing added path makes the object un-picklable
     // PyObject_CallMethod(sys_path, "pop", "n", Py_SIZE(sys_path) - 1);
   }
-  PYTHON_ERROR_CLEANUP_(import_python_object);
+  PYTHON_ERROR_CLEANUP_(import_python_object,
+			CHECK_REFS(out, globals, tmpPy, path_add, path,
+				   os_path, path_abspath,
+				   path_abs, path_split, path_parts,
+				   path_dir, path_base, sys_path));
 }
 
 
@@ -721,7 +802,8 @@ PyObject* pickle_python_object(PyObject* x,
   out = PyObject_Call(pickleMethod, args, NULL);
   Py_DECREF(pickleMethod);
   Py_DECREF(args);
-  PYTHON_ERROR_CLEANUP_(pickle_python_object);
+  PYTHON_ERROR_CLEANUP_(pickle_python_object,
+			CHECK_REFS(out, args, pickleMethod));
 }
 
 inline
@@ -748,7 +830,8 @@ PyObject* unpickle_python_object(const char* buffer,
   out = PyObject_Call(pickle, args, NULL);
   Py_DECREF(pickle);
   Py_DECREF(args);
-  PYTHON_ERROR_CLEANUP_(unpickle_python_object);
+  PYTHON_ERROR_CLEANUP_(unpickle_python_object,
+			CHECK_REFS(out, py_str, args, pickle));
 }
 
 
@@ -777,7 +860,8 @@ bool PyObject_IsInstanceString(PyObject* x, std::string class_name) {
   Py_DECREF(inst_class_str);
   check = "<class '" + class_name + "'>";
   out = (check == result);
-  PYTHON_ERROR_CLEANUP_NOTHROW_(PyObject_IsInstanceString);
+  PYTHON_ERROR_CLEANUP_NOTHROW_(PyObject_IsInstanceString,
+				CHECK_REFS(inst_class, inst_class_str));
 }
 inline
 bool IsStructuredArray(PyObject* x) {
@@ -830,7 +914,8 @@ bool IsStructuredArray(PyObject* x) {
       }
     }
   }
-  PYTHON_ERROR_CLEANUP_NOTHROW_(IsStructuredArray);
+  PYTHON_ERROR_CLEANUP_NOTHROW_(IsStructuredArray,
+				CHECK_REFS(x, item));
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
 }
 inline
@@ -939,7 +1024,9 @@ PyObject* GetStructuredArray(PyObject* x) {
   Py_XDECREF(names);
   Py_XDECREF(desc);
   Py_XDECREF(array);
-  PYTHON_ERROR_CLEANUP_NOTHROW_BASE_(GetStructuredArray);
+  PYTHON_ERROR_CLEANUP_NOTHROW_BASE_(GetStructuredArray,
+				     CHECK_REFS(out, names, fields,
+						ikey, idtype, ioffset, ifield));
   return out;
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
 }
@@ -976,13 +1063,12 @@ public:
       if (typeV != valueSchema.MemberEnd() &&
 	  (typeV->value == YggSchemaValueType::GetPythonClassString() ||
 	   typeV->value == YggSchemaValueType::GetPythonFunctionString())) {
-	PyGILState_STATE gstate;
-	gstate = PyGILState_Ensure();
+	BEGIN_PY_GIL;
 	PyObject* globals = PyEval_GetGlobals();
 	if (PyDict_GetItemString(globals, (char*)str) != NULL) {
 	  PyDict_DelItemString(globals, (char*)str);
 	}
-	PyGILState_Release(gstate);
+	END_PY_GIL;
       }
     }
     return true;

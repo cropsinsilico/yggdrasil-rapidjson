@@ -4340,8 +4340,7 @@ public:
     if (!isPythonInitialized())
       return NULL;
     PyObject* out = NULL;
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
+    BEGIN_PY_GIL;
     switch (GetType()) {
     case kNullType: {
       Py_INCREF(Py_None);
@@ -4553,7 +4552,7 @@ public:
       RAPIDJSON_ASSERT(!GetType());
     }
   release:
-    PyGILState_Release(gstate);
+    END_PY_GIL;
     return out;
   }
   bool SetPythonObjectRaw(PyObject* x, Allocator& allocator,
@@ -4569,8 +4568,7 @@ public:
     bool out = true;
     if (x == NULL)
       return false;
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
+    BEGIN_PY_GIL;
     if (x == Py_None) {
       SetNull();
     } else if (PyBool_Check(x)) {
@@ -4598,6 +4596,7 @@ public:
                   allocator);
       }
       Py_DECREF(keys);
+      CHECK_REFS(keys, ikey);
     } else if (CHECK_UNICODE_NO_NUMPY(x)) {
       Py_ssize_t x_size = 0;
       const char* x_bytes = PyUnicode_AsUTF8AndSize(x, &x_size);
@@ -5068,7 +5067,8 @@ public:
     }
     goto release;
   release:
-    PyGILState_Release(gstate);
+    CHECK_REFS(x);
+    END_PY_GIL;
     return out;
   pickle:
     if (!allowPickle) {
@@ -6076,8 +6076,7 @@ public:
     PyObject* py_inst = NULL;
     PyObject* py_cls = NULL;
     ConstMemberIterator m;
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
+    BEGIN_PY_GIL;
     if (IsPythonInstance()) {
       if (IsObject()) {
 	m = FindMember(GetPythonClassString());
@@ -6105,14 +6104,13 @@ public:
     out = import_python_object(mod_class, "GetPythonClass: ", true);
     goto release;
   release:
-    PyGILState_Release(gstate);
+    END_PY_GIL;
     return out;
   }
   PyObject* GetPythonFunction() const { return GetPythonClass(true); }
   PyObject* GetPythonInstance() const {
     PyObject* out = NULL;
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
+    BEGIN_PY_GIL;
     if (IsObject()) {
       PyObject* py_class = GetPythonClass();
       PyObject* py_args = NULL;
@@ -6154,7 +6152,7 @@ public:
       goto release;
     }
   release:
-    PyGILState_Release(gstate);
+    END_PY_GIL;
     return out;
   }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
