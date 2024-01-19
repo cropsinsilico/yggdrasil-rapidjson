@@ -4378,11 +4378,11 @@ public:
 	ival = item->value.GetPythonObjectRaw();
 	result = PyDict_SetItemString(out, ikey, ival);
 	RAPIDJSON_ASSERT(result == 0);
+	Py_CLEAR(ival);
 	if (result != 0) {
 	  Py_CLEAR(out);
 	  goto cleanup;
 	}
-	Py_CLEAR(ival);
       }
       goto cleanup;
     }
@@ -4390,7 +4390,6 @@ public:
       Py_ssize_t len = 0;
       out = PyList_New(len);
       if (out == NULL) {
-	out = NULL;
 	goto cleanup;
       }
       ConstValueIterator item;
@@ -4401,16 +4400,16 @@ public:
 	  goto cleanup;
 	}
 	if (PyList_Append(out, ival) < 0) {
+	  Py_CLEAR(ival);
 	  Py_CLEAR(out);
 	  goto cleanup;
 	}
 	Py_CLEAR(ival);
       }
       if (IsStructuredArray(out)) {
-	tmp = GetStructuredArray(out);
-	Py_CLEAR(out);
-	out = tmp;
-	tmp = NULL;
+	tmp = out;
+	out = GetStructuredArray(tmp);
+	Py_CLEAR(tmp);
 	goto cleanup;
       }
       goto cleanup;
@@ -4783,7 +4782,6 @@ public:
 	    }
 	  } else {
 	    ValueType pyField(field, allocator);
-	    Py_CLEAR(field);
 	    if (!skipTitle) {
 	      ValueType field_name(kw_keyS,
 				   static_cast<SizeType>(kw_keyS_len),
@@ -4792,6 +4790,7 @@ public:
 	    }
 	    PushBack(pyField, allocator);
 	  }
+	  Py_CLEAR(field);
 	}
 	out = true;
 	goto cleanup;
@@ -4979,6 +4978,8 @@ public:
       Py_CLEAR(args);
       Py_CLEAR(kwargs);
       Py_CLEAR(arr);
+      Py_CLEAR(ikey);
+      Py_CLEAR(ival);
       out = (!error);
       goto cleanup;
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
@@ -5062,7 +5063,7 @@ public:
 			  kwargs.GetSchemaNested(allocator));
       }
     }
-    PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(keys, ikey, ival, scalar, dtype,
+    PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(keys, scalar, dtype,
 					offsetObj, field, x_rep,
 					inst_class, desc, cpy);
   pickle:

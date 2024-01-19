@@ -90,8 +90,8 @@ long _check_total_refs(const std::string& src,
   if (PyErr_Occurred())
     return -1;
   long tot = _total_refs();
-  // if (tot >= 0)
-  std::cerr << src << ":" << name << ": TOTAL REFS = " << tot << std::endl;
+  if (tot >= 0)
+    std::cerr << src << ":" << name << ": TOTAL REFS = " << tot << std::endl;
   return tot;
 }
 
@@ -956,15 +956,25 @@ PyObject* GetStructuredArray(PyObject* x) {
     offsets.push_back(offset);
     ioffset = PyLong_FromSsize_t((Py_ssize_t)offset);
     if (ioffset == NULL) {
+      Py_CLEAR(sub_desc);
       goto cleanup;
     }
     idtype = PyTuple_Pack(2, sub_desc, ioffset);
+    Py_CLEAR(sub_desc);
+    Py_CLEAR(ioffset);
     if (idtype == NULL)
       goto cleanup;
     if (PyDict_SetItem(fields, ikey, idtype) < 0) {
+      Py_CLEAR(idtype);
       goto cleanup;
     }
     offset += PyArray_ITEMSIZE(ival);
+    Py_CLEAR(idtype);
+    ikey = NULL;
+    ival = NULL;
+    idesc = NULL;
+    ifield = NULL;
+    isub_desc = NULL;
   }
   desc = PyArray_DescrNewFromType(NPY_VOID);
   if (desc == NULL)
@@ -978,7 +988,7 @@ PyObject* GetStructuredArray(PyObject* x) {
   array = (PyArrayObject*)PyArray_NewFromDescr(&PyArray_Type, desc,
 					       nd, dims, strides,
 					       NULL, 0, NULL);
-  desc = NULL;
+  desc = NULL; // PyArray_NewFromDescr steals ref
   if (array == NULL)
     goto cleanup;
   i = 0;
@@ -996,8 +1006,7 @@ PyObject* GetStructuredArray(PyObject* x) {
   }
   out = (PyObject*)array;
   array = NULL;
-  PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(fields, names, desc, array,
-				      sub_desc, ioffset, idtype);
+  PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(fields, names, desc, array);
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
 }
 
