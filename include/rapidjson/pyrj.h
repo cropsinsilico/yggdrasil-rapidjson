@@ -57,7 +57,7 @@ inline
 void __add_refs(const std::string& name,
 		std::map<std::string, Py_ssize_t>& reg, PyObject* x) {
   Py_ssize_t N = 0;
-  if (x != NULL)
+  if (x != NULL || PyErr_Occurred())
     N = Py_REFCNT(x);
   if (x != NULL && N > 0) {
     PyObject* str = PyObject_Str(x);
@@ -78,8 +78,8 @@ void __add_refs(const std::string& name,
 	}
 	Py_XDECREF(res);
       }
-      Py_DECREF(sys);
     }
+    Py_XDECREF(sys);
     reg[key] = N;
     std::cerr << name << ": " << N << " REFS: " << key <<
       " (total = " << tot << ")" << std::endl;
