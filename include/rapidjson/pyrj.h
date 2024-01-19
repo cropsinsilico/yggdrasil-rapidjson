@@ -68,19 +68,22 @@ long _total_refs() {
   if (PyErr_Occurred())
     return -1;
   long tot = -1;
-  PyObject* sys = PyImport_ImportModule("sys");
-  if (sys != NULL && PyObject_HasAttrString(sys, "gettotalrefcount")) {
-    PyObject* refc = PyObject_GetAttrString(sys, "gettotalrefcount");
-    if (refc != NULL) {
-      PyObject* res = PyObject_CallFunction(refc, NULL);
-      Py_CLEAR(refc);
-      if (res != NULL && PyLong_Check(res)) {
-	tot = PyLong_AsLong(res);
-      }
-      Py_CLEAR(res);
-    }
-  }
-  Py_CLEAR(sys);
+#ifdef Py_REF_DEBUG
+  tot = static_cast<long>(_Py_RefTotal);
+#endif
+  // PyObject* sys = PyImport_ImportModule("sys");
+  // if (sys != NULL && PyObject_HasAttrString(sys, "gettotalrefcount")) {
+  //   PyObject* refc = PyObject_GetAttrString(sys, "gettotalrefcount");
+  //   if (refc != NULL) {
+  //     PyObject* res = PyObject_CallFunction(refc, NULL);
+  //     Py_CLEAR(refc);
+  //     if (res != NULL && PyLong_Check(res)) {
+  // 	tot = PyLong_AsLong(res);
+  //     }
+  //     Py_CLEAR(res);
+  //   }
+  // }
+  // Py_CLEAR(sys);
   return tot;
 }
 
