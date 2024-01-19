@@ -6177,7 +6177,7 @@ public:
 	  out = true;
 	  data.SetPythonInstance(pyobj, allocator);
 	}
-	Py_XDECREF(pyobj);
+	Py_CLEAR(pyobj);
 	END_PY_GIL;
 	if (!out) return out;
 	AFTER_SET_;
@@ -6198,7 +6198,7 @@ public:
 	  out = false;
 	else
 	  data.SetPythonInstance(pyobj, allocator);
-	Py_XDECREF(pyobj);
+	Py_CLEAR(pyobj);
 	END_PY_GIL;
 	if (!out) return out;
 	AFTER_SET_;
@@ -6227,9 +6227,9 @@ public:
 	  out = true;
 	  data.SetPythonInstance(pyobj, allocator);
 	}
-	Py_XDECREF(pycls);
-	Py_XDECREF(args);
-	Py_XDECREF(pyobj);
+	Py_CLEAR(pycls);
+	Py_CLEAR(args);
+	Py_CLEAR(pyobj);
 	END_PY_GIL;
 	if (!out) return out;
 	AFTER_SET_;
@@ -8424,8 +8424,8 @@ protected:
 	code = kValidateErrorPythonClass;
       }
     }
-    Py_XDECREF(pyobj);
-    Py_XDECREF(pycls);
+    Py_CLEAR(pyobj);
+    Py_CLEAR(pycls);
     END_PY_GIL;
     if (code != kValidateErrorNone) {
       RAPIDJSON_INVALID_KEYWORD_RETURN(code);
@@ -8459,8 +8459,8 @@ protected:
 	code = kValidateErrorPythonClass;
       }
     }
-    Py_XDECREF(pyobj);
-    Py_XDECREF(pycls);
+    Py_CLEAR(pyobj);
+    Py_CLEAR(pycls);
     END_PY_GIL;
     if (code != kValidateErrorNone) {
       RAPIDJSON_INVALID_KEYWORD_RETURN(code);

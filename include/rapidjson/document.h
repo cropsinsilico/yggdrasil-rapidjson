@@ -4313,33 +4313,40 @@ public:
   }
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
   bool GetPythonObjectClassAttr(PyObject* x, const char* attr,
-                                Allocator& allocator, ValueType& out,
+                                Allocator& allocator, ValueType& dst,
 				bool call_function = false) {
     if (!attr || !PyObject_HasAttrString(x, attr))
       return false;
-    PyObject* x_attr = PyObject_GetAttrString(x, attr);
+    bool out = true;
+    PyObject *x_attr = NULL, *py_args = NULL, *x_attr_res = NULL;
+    PYTHON_ERROR_SETUP_;
+    x_attr = PyObject_GetAttrString(x, attr);
     RAPIDJSON_ASSERT(x_attr != NULL);
-    if (x_attr == NULL)
-      return false;
-    if (call_function && PyCallable_Check(x_attr)) {
-      PyObject* py_args = PyTuple_New(0);
-      PyObject* x_attr_res = PyObject_Call(x_attr, py_args, NULL);
-      Py_DECREF(py_args);
-      Py_DECREF(x_attr);
-      if (x_attr_res == NULL) {
-	return false;
-      }
-      x_attr = x_attr_res;
+    if (x_attr == NULL) {
+      out = false;
+      goto cleanup;
     }
-    bool ret = out.SetPythonObjectRaw(x_attr, allocator);
-    Py_DECREF(x_attr);
-    return ret;
+    if (call_function && PyCallable_Check(x_attr)) {
+      py_args = PyTuple_New(0);
+      x_attr_res = PyObject_Call(x_attr, py_args, NULL);
+      if (x_attr_res == NULL) {
+	out = false;
+	goto cleanup;
+      }
+      Py_CLEAR(x_attr);
+      x_attr = x_attr_res;
+      x_attr_res = NULL;
+    }
+    out = dst.SetPythonObjectRaw(x_attr, allocator);
+    PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(x_attr, py_args, x_attr_res);
   }
   PyObject* GetPythonObjectRaw() const {
     RAPIDJSON_ASSERT(isPythonInitialized());
     if (!isPythonInitialized())
       return NULL;
-    PyObject* out = NULL;
+    PyObject *out = NULL, *ival = NULL, *tmp = NULL, *pyBytes = NULL,
+      *titlePy = NULL, *offset = NULL, *sub_dtype = NULL;
+    PyArray_Descr *desc = NULL, *sub_desc = NULL;
     PYTHON_ERROR_SETUP_;
     switch (GetType()) {
     case kNullType: {
@@ -4368,12 +4375,15 @@ public:
       int result = 0;
       for (item = MemberBegin(); item != MemberEnd(); item++) {
 	const char* ikey = item->name.GetString();
-	PyObject* ival = item->value.GetPythonObjectRaw();
+	ival = item->value.GetPythonObjectRaw();
 	result = PyDict_SetItemString(out, ikey, ival);
 	RAPIDJSON_ASSERT(result == 0);
-	Py_DECREF(ival);
+	if (result != 0) {
+	  Py_CLEAR(out);
+	  goto cleanup;
+	}
+	Py_CLEAR(ival);
       }
-      (void)result;
       goto cleanup;
     }
     case kArrayType: {
@@ -4385,24 +4395,22 @@ public:
       }
       ConstValueIterator item;
       for (item = Begin(); item != End(); item++) {
-	PyObject* ival = item->GetPythonObjectRaw();
+	ival = item->GetPythonObjectRaw();
 	if (ival == NULL) {
-	  Py_DECREF(out);
-	  out = NULL;
+	  Py_CLEAR(out);
 	  goto cleanup;
 	}
 	if (PyList_Append(out, ival) < 0) {
-	  Py_DECREF(out);
-	  Py_DECREF(ival);
-	  out = NULL;
+	  Py_CLEAR(out);
 	  goto cleanup;
 	}
-	Py_DECREF(ival);
+	Py_CLEAR(ival);
       }
       if (IsStructuredArray(out)) {
-	PyObject* tmp = GetStructuredArray(out);
-	Py_DECREF(out);
+	tmp = GetStructuredArray(out);
+	Py_CLEAR(out);
 	out = tmp;
+	tmp = NULL;
 	goto cleanup;
       }
       goto cleanup;
@@ -4431,20 +4439,21 @@ public:
 	  goto cleanup;
 	} else if (typenum == NPY_UNICODE &&
 		   enc != GetUCS4EncodingString()) {
-	  PyObject* pyBytes = PyBytes_FromStringAndSize(GetString(), GetStringLength());
+	  pyBytes = PyBytes_FromStringAndSize(GetString(), GetStringLength());
+	  if (pyBytes == NULL) {
+	    goto cleanup;
+	  }
 	  out = PyUnicode_FromEncodedObject(pyBytes, enc.GetString(), NULL);
-	  Py_DECREF(pyBytes);
 	  goto cleanup;
 	}
-	PyArray_Descr* desc = PyArray_DescrNewFromType(typenum);
-	if (desc == NULL) return NULL;
+	desc = PyArray_DescrNewFromType(typenum);
+	if (desc == NULL) {
+	  goto cleanup;
+	}
 	if (PyTypeNum_ISFLEXIBLE(typenum))
 	  desc->elsize = static_cast<int>(GetPrecision());
 	out = PyArray_Scalar((void*)GetString(), desc, NULL);
-	// if (out != NULL) {
-	//   Py_INCREF(desc);
-	//   out = PyArray_FromScalar(out, desc);
-	// }
+	desc = NULL; // Stolen by PyArray_Scalar
 	goto cleanup;
       } else if (IsNDArray()) {
 	ValueType enc;
@@ -4453,7 +4462,7 @@ public:
 	  out = NULL;
 	  goto cleanup;
 	}
-	PyArray_Descr* desc = PyArray_DescrNewFromType(typenum);
+	desc = PyArray_DescrNewFromType(typenum);
 	if (desc == NULL) {
 	  out = NULL;
 	  goto cleanup;
@@ -4462,9 +4471,9 @@ public:
 	  desc->elsize = static_cast<int>(GetPrecision());
 	if (HasTitle()) {
 	  const ValueType& title = GetTitle();
-	  PyObject* titlePy = PyUnicode_FromStringAndSize(title.GetString(),
-							  title.GetStringLength());
-	  PyArray_Descr* sub_desc = desc;
+	  titlePy = PyUnicode_FromStringAndSize(title.GetString(),
+						title.GetStringLength());
+	  sub_desc = desc;
 	  desc = PyArray_DescrNewFromType(NPY_VOID);
 	  if (desc == NULL) {
 	    out = NULL;
@@ -4473,58 +4482,53 @@ public:
 	  desc->names = PyTuple_Pack(1, titlePy);
 	  desc->fields = PyDict_New();
 	  desc->elsize = sub_desc->elsize;
-	  PyObject* offset = PyLong_FromSsize_t(0);
-	  PyObject* sub_dtype = PyTuple_Pack(2, sub_desc, offset);
-	  Py_DECREF(sub_desc);
-	  Py_DECREF(offset);
-	  PyDict_SetItem(desc->fields, titlePy, sub_dtype);
-	  Py_DECREF(titlePy);
-	  Py_DECREF(sub_dtype);
+	  offset = PyLong_FromSsize_t(0);
+	  sub_dtype = PyTuple_Pack(2, sub_desc, offset);
+	  Py_CLEAR(sub_desc);
+	  Py_CLEAR(offset);
+	  if (PyDict_SetItem(desc->fields, titlePy, sub_dtype) < 0) {
+	    out = NULL;
+	    goto cleanup;
+	  }
+	  Py_CLEAR(titlePy);
+	  Py_CLEAR(sub_dtype);
 	}
-	SizeType ndim = 0;
-	SizeType* shape = GetShape(ndim, schema_->GetAllocator());
-	if (!shape) {
-	  Py_DECREF(desc);
-	  out = NULL;
-	  goto cleanup;
-	}
+	const ValueType& shape = GetShape();
+	SizeType ndim = shape.Size();
 	npy_intp* np_shape = (npy_intp*)(schema_->GetAllocator().Malloc(sizeof(npy_intp) * ndim));
-	if (!np_shape) {
-	  schema_->GetAllocator().Free(shape);
-	  shape = NULL;
-	  Py_DECREF(desc);
+	if (np_shape == NULL) {
 	  out = NULL;
 	  goto cleanup;
 	}
 	for (SizeType i = 0; i < ndim; i++)
-	  np_shape[i] = (npy_intp)shape[i];
-	schema_->GetAllocator().Free(shape);
-	shape = NULL;
+	  np_shape[i] = static_cast<npy_intp>(shape[i].GetUint64());
 	// don't use allocator so that python array is responsible for freeing
 	bool free_data = false;
 	void* data = (void*)GetString();
 	if (typenum == NPY_UNICODE && (!(enc == GetUCS4EncodingString() ||
 					 enc == GetUTF32EncodingString()))) {
-	  void* tmp = 0;
+	  void* tmp_data = 0;
 	  SizeType tmp_nbytes = 0;
 	  if (!TranslateEncoding(GetString(), GetStringLength() * (SizeType)sizeof(Ch), enc.GetString(),
-				 tmp, tmp_nbytes, GetUTF32EncodingString().GetString(),
+				 tmp_data, tmp_nbytes, GetUTF32EncodingString().GetString(),
 				 schema_->GetAllocator(), true)) {
-	    Py_DECREF(desc);
+	    schema_->GetAllocator().Free(np_shape);
+	    np_shape = NULL;
 	    out = NULL;
 	    goto cleanup;
 	  }
 	  std::cerr << "CHANGING THE ENCODING" << std::endl;
 	  free_data = true;
-	  data = tmp;
+	  data = tmp_data;
 	  desc->elsize = static_cast<int>(tmp_nbytes / GetNElements());
 	}
-	PyObject* tmp = PyArray_NewFromDescr(&PyArray_Type, desc,
-					     (int)ndim, np_shape,
-					     NULL, data, 0, NULL);
-	if (tmp) {
+	tmp = PyArray_NewFromDescr(&PyArray_Type, desc,
+				   (int)ndim, np_shape,
+				   NULL, data, 0, NULL);
+	if (tmp != NULL) {
 	  out = PyArray_NewCopy((PyArrayObject*)tmp, NPY_CORDER);
-	  Py_DECREF(tmp);
+	  desc = NULL; // stolen by PyArray_NewFromDescr
+	  Py_CLEAR(tmp);
 	}
 	if (free_data) {
 	  schema_->GetAllocator().Free(data);
@@ -4551,7 +4555,8 @@ public:
     default:
       RAPIDJSON_ASSERT(!GetType());
     }
-    PYTHON_ERROR_CLEANUP_NOTHROW_;
+    PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(ival, tmp, pyBytes, titlePy,
+					offset, sub_dtype, desc, sub_desc);
   }
   bool SetPythonObjectRaw(PyObject* x, Allocator& allocator,
 #ifdef RAPIDJSON_DONT_IMPORT_NUMPY
@@ -4561,11 +4566,14 @@ public:
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
 			  bool allowPickle=true) {
     RAPIDJSON_ASSERT(isPythonInitialized());
-    if (!isPythonInitialized())
+    if (x == NULL || !isPythonInitialized())
       return false;
     bool out = true;
-    if (x == NULL)
-      return false;
+    PyObject *keys = NULL, *ikey = NULL, *ival = NULL, *scalar = NULL,
+      *dtype = NULL, *offsetObj = NULL, *field = NULL, *x_rep = NULL,
+      *inst_class = NULL;
+    PyArray_Descr *desc = NULL;
+    PyArrayObject *cpy = NULL;
     PYTHON_ERROR_SETUP_;
     if (x == Py_None) {
       SetNull();
@@ -4585,15 +4593,23 @@ public:
       }
     } else if (PyDict_CheckExact(x)) {
       SetObject();
-      PyObject* keys = PyDict_Keys(x);
-      PyObject* ikey;
+      keys = PyDict_Keys(x);
+      if (keys == NULL) {
+	out = false;
+	goto cleanup;
+      }
       for (SizeType i = 0; i < static_cast<SizeType>(PyDict_Size(x)); i++) {
         ikey = PyList_GetItem(keys, i);
+	if (ikey == NULL) {
+	  out = false;
+	  goto cleanup;
+	}
         AddMember(ValueType(ikey, allocator),
                   ValueType(PyDict_GetItem(x, ikey), allocator).Move(),
                   allocator);
+	ikey = NULL;
       }
-      Py_DECREF(keys);
+      Py_CLEAR(keys);
     } else if (CHECK_UNICODE_NO_NUMPY(x)) {
       Py_ssize_t x_size = 0;
       const char* x_bytes = PyUnicode_AsUTF8AndSize(x, &x_size);
@@ -4650,8 +4666,6 @@ public:
     // } else if (rapidjson_ARRAY_API && PyArray_CheckScalar(x)) {
     } else if (PyArray_CheckScalar(x)) {
       ResetSchema(allocator);
-      PyArray_Descr* desc = NULL;
-      PyObject* scalar = NULL;
       if (PyObject_IsInstance(x, (PyObject*)&PyArray_Type)) {
 	desc = PyArray_DESCR((PyArrayObject*)x);
 	Py_INCREF(desc);
@@ -4663,8 +4677,6 @@ public:
       }
       Py_INCREF(desc);
       if (desc == NULL || scalar == NULL) {
-	Py_XDECREF(desc);
-	Py_XDECREF(scalar);
 	out = false;
 	goto cleanup;
       }
@@ -4673,14 +4685,11 @@ public:
       ValueType encoding;
       if (!NumpyType2SubType(desc, subtype, precision, encoding, 0,
 			     allocator)) {
-	Py_DECREF(desc);
-	Py_DECREF(scalar);
 	out = false;
 	goto cleanup;
       }
       void* data = allocator.Malloc(precision);
       if (!data) {
-	Py_DECREF(desc);
 	out = false;
 	goto cleanup;
       }
@@ -4692,14 +4701,14 @@ public:
       SetStringRaw(StringRef(static_cast<Ch*>(data), precision / sizeof(Ch)),
 		   allocator);
       allocator.Free(data);
-      Py_DECREF(scalar);
+      Py_CLEAR(scalar);
       data = NULL;
       if (desc->type_num == NPY_UNICODE && encoding == GetUTF8EncodingString()) {
-	Py_DECREF(desc);
+	Py_CLEAR(desc);
 	out = true;
 	goto cleanup;
       }
-      Py_DECREF(desc);
+      Py_CLEAR(desc);
       schema_->MemberReserve(5, allocator);
       AddSchemaMember(GetTypeString(), GetScalarString());
       AddSchemaMember(GetSubTypeString(), subtype);
@@ -4710,11 +4719,12 @@ public:
       goto cleanup;
     // } else if (rapidjson_ARRAY_API && PyArray_Check(x)) {
     } else if (PyArray_Check(x)) {
-      PyArray_Descr* desc = PyArray_DESCR((PyArrayObject*)x);
+      desc = PyArray_DESCR((PyArrayObject*)x);
       if (desc == NULL) {
 	out = false;
 	goto cleanup;
       }
+      Py_INCREF(desc);
       if (PyDataType_HASFIELDS(desc)) {
 	bool single = (PyDict_Size(desc->fields) == 1);
 	if (!single) {
@@ -4722,20 +4732,21 @@ public:
 	  ResetSchema(allocator);
 	  Reserve((SizeType)PyDict_Size(desc->fields), allocator);
 	}
-	PyObject *kw_key, *kw_val;
 	Py_ssize_t kw_pos = 0;
-	while (PyDict_Next(desc->fields, &kw_pos, &kw_key, &kw_val)) {
-	  PyObject* dtype = PyTuple_GetItem(kw_val, 0);
+	while (PyDict_Next(desc->fields, &kw_pos, &ikey, &ival)) {
+	  dtype = PyTuple_GetItem(ival, 0);
 	  if (dtype == NULL) {
 	    out = false;
 	    goto cleanup;
 	  }
-	  PyObject* offsetObj = PyTuple_GetItem(kw_val, 1);
+	  Py_INCREF(dtype);
+	  offsetObj = PyTuple_GetItem(ival, 1);
 	  if (offsetObj == NULL) {
 	    out = false;
 	    goto cleanup;
 	  }
 	  Py_ssize_t offset = PyNumber_AsSsize_t(offsetObj, NULL);
+	  offsetObj = NULL; // Don't clear borrowed ref
 	  if (offset < 0) {
 	    out = false;
 	    goto cleanup;
@@ -4743,17 +4754,18 @@ public:
 	  Ch* kw_keyS = NULL;
 	  Py_ssize_t kw_keyS_len = 0;
 	  if (sizeof(Ch) == sizeof(wchar_t))
-	    kw_keyS = (Ch*)PyUnicode_AsWideCharString(kw_key, &kw_keyS_len);
+	    kw_keyS = (Ch*)PyUnicode_AsWideCharString(ikey, &kw_keyS_len);
 	  else
-	    kw_keyS = (Ch*)PyUnicode_AsUTF8AndSize(kw_key, &kw_keyS_len);
+	    kw_keyS = (Ch*)PyUnicode_AsUTF8AndSize(ikey, &kw_keyS_len);
 	  if (kw_keyS == NULL) {
 	    out = false;
 	    goto cleanup;
 	  }
-	  Py_INCREF(dtype);
-	  PyObject* field = PyArray_GetField((PyArrayObject*)x,
-					     (PyArray_Descr*)dtype,
-					     (int)offset);
+	  Py_INCREF(dtype); // PyArray_GetField steals ref
+	  field = PyArray_GetField((PyArrayObject*)x,
+				   (PyArray_Descr*)dtype,
+				   (int)offset);
+	  Py_CLEAR(dtype);
 	  if (field == NULL) {
 	    out = false;
 	    goto cleanup;
@@ -4771,7 +4783,7 @@ public:
 	    }
 	  } else {
 	    ValueType pyField(field, allocator);
-	    Py_DECREF(field);
+	    Py_CLEAR(field);
 	    if (!skipTitle) {
 	      ValueType field_name(kw_keyS,
 				   static_cast<SizeType>(kw_keyS_len),
@@ -4804,23 +4816,22 @@ public:
       }
       for (int i = 0; i < ndim; i++)
 	shape.PushBack((SizeType)np_shape[i], allocator);
-      PyArrayObject* cpy = PyArray_GETCONTIGUOUS((PyArrayObject*)x);
+      cpy = PyArray_GETCONTIGUOUS((PyArrayObject*)x);
       if (cpy == NULL) {
 	out = false;
 	goto cleanup;
       }
+      if (PyArray_IS_C_CONTIGUOUS((PyArrayObject*)x))
+	Py_INCREF(cpy); // PyArray_GETCONTIGUOUS returned borrowed ref
       void* data = (void*)PyArray_BYTES(cpy);
       if (data == NULL) {
-	if (!PyArray_IS_C_CONTIGUOUS((PyArrayObject*)x))
-	  Py_DECREF(cpy);
 	out = false;
 	goto cleanup;
       }
       SetStringRaw(StringRef(static_cast<Ch*>(data),
 			     precision * nelements / sizeof(Ch)),
 		   allocator);
-      if (!PyArray_IS_C_CONTIGUOUS((PyArrayObject*)x))
-	Py_DECREF(cpy);
+      Py_CLEAR(cpy);
       schema_->MemberReserve(5, allocator);
       AddSchemaMember(GetTypeString(), GetNDArrayString());
       AddSchemaMember(GetSubTypeString(), subtype);
@@ -4832,11 +4843,10 @@ public:
       goto cleanup;
     } else if (PyObject_IsInstanceString(x, "pandas.core.frame.DataFrame")) {
       bool error = false;
-      PyObject *column_dtypes = NULL, *columns = NULL, *dtypes = NULL,
-	*key = NULL, *itype = NULL, *val = NULL, *skipTitleObject = NULL,
-	*vtype = NULL, *vv = NULL;
-      PyObject *method = NULL, *args = NULL, *kwargs = NULL, *arr = NULL;
-      PyObject* new_itype = NULL;
+      PyObject *column_dtypes = NULL, *columns = NULL,
+	*itype = NULL, *skipTitleObject = NULL, *vtype = NULL, *vv = NULL,
+	*method = NULL, *args = NULL, *kwargs = NULL, *arr = NULL,
+	*new_itype = NULL;
       std::string new_itype_str;
       column_dtypes = PyDict_New();
       if (column_dtypes == NULL) {
@@ -4855,32 +4865,32 @@ public:
       }
       if (skipTitleObject == Py_True)
 	skipTitle = true;
-      Py_DECREF(skipTitleObject);
-      dtypes = PyObject_GetAttrString(x, "dtypes");
-      if (dtypes == NULL || !PyMapping_Check(dtypes)) {
+      Py_CLEAR(skipTitleObject);
+      dtype = PyObject_GetAttrString(x, "dtypes");
+      if (dtype == NULL || !PyMapping_Check(dtype)) {
 	error = true;
 	goto cleanup_array;
       }
       for (Py_ssize_t i = 0; i < PySequence_Size(columns); i++) {
-	key = PySequence_GetItem(columns, i);
-	if (key == NULL) {
+	ikey = PySequence_GetItem(columns, i);
+	if (ikey == NULL) {
 	  error = true;
 	  goto cleanup_array;
 	}
-	itype = PyObject_GetItem(dtypes, key);
+	itype = PyObject_GetItem(dtype, ikey);
 	if (itype == NULL) {
 	  error = true;
 	  goto cleanup_array;
 	}
 	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT) {
-	  val = PyObject_GetItem(x, key);
-	  if (val == NULL) {
+	  ival = PyObject_GetItem(x, ikey);
+	  if (ival == NULL) {
 	    error = true;
 	    goto cleanup_array;
 	  }
 	  Py_ssize_t max_len = 0;
-	  for (Py_ssize_t j = 0; j < PyObject_Size(val); j++) {
-	    vv = PySequence_GetItem(val, j);
+	  for (Py_ssize_t j = 0; j < PyObject_Size(ival); j++) {
+	    vv = PySequence_GetItem(ival, j);
 	    if (vv == NULL) {
 	      error = true;
 	      goto cleanup_array;
@@ -4897,8 +4907,7 @@ public:
 	    } else {
 	      new_len = PyObject_Size(vv);
 	    }
-	    Py_DECREF(vv);
-	    vv = NULL;
+	    Py_CLEAR(vv);
 	    if (new_len > max_len)
 	      max_len = new_len;
 	  }
@@ -4919,21 +4928,16 @@ public:
 	    error = true;
 	    goto cleanup_array;
 	  }
-	  if (PyDict_SetItem(column_dtypes, key, (PyObject*)new_itype) < 0) {
+	  if (PyDict_SetItem(column_dtypes, ikey, (PyObject*)new_itype) < 0) {
 	    error = true;
 	    goto cleanup_array;
 	  }
-	  Py_DECREF(new_itype);
-	  Py_DECREF(vtype);
-	  Py_DECREF(val);
-	  new_itype = NULL;
-	  vtype = NULL;
-	  val = NULL;
+	  Py_CLEAR(new_itype);
+	  Py_CLEAR(vtype);
+	  Py_CLEAR(ival);
 	}
-	Py_DECREF(key);
-	Py_DECREF(itype);
-	key = NULL;
-	itype = NULL;
+	Py_CLEAR(ikey);
+	Py_CLEAR(itype);
       }
       method = PyObject_GetAttrString(x, "to_records");
       if (method == NULL) {
@@ -4965,28 +4969,25 @@ public:
       }
       error = !SetPythonObjectRaw(arr, allocator, skipTitle);
     cleanup_array:
-      Py_XDECREF(column_dtypes);
-      Py_XDECREF(columns);
-      Py_XDECREF(dtypes);
-      Py_XDECREF(key);
-      Py_XDECREF(itype);
-      Py_XDECREF(new_itype);
-      Py_XDECREF(val);
-      Py_XDECREF(vtype);
-      Py_XDECREF(vv);
-      Py_XDECREF(method);
-      Py_XDECREF(args);
-      Py_XDECREF(kwargs);
-      Py_XDECREF(arr);
+      Py_CLEAR(column_dtypes);
+      Py_CLEAR(columns);
+      Py_CLEAR(itype);
+      Py_CLEAR(new_itype);
+      Py_CLEAR(vtype);
+      Py_CLEAR(vv);
+      Py_CLEAR(method);
+      Py_CLEAR(args);
+      Py_CLEAR(kwargs);
+      Py_CLEAR(arr);
       out = (!error);
       goto cleanup;
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
     } else {
       if (PyObject_HasAttrString(x, "_ygg_rapidjson")) {
-	PyObject* x_rep = PyObject_CallMethod(x, "_ygg_rapidjson", NULL);
+	x_rep = PyObject_CallMethod(x, "_ygg_rapidjson", NULL);
 	if (x_rep != NULL) {
 	  out = SetPythonObjectRaw(x_rep, allocator);
-	  Py_DECREF(x_rep);
+	  Py_CLEAR(x_rep);
 	  goto cleanup;
 	} else {
 	  PyErr_Clear();
@@ -5000,7 +5001,7 @@ public:
 	out = false;
 	goto cleanup;
       }
-      PyObject* inst_class = PyObject_GetAttrString(x, "__class__");
+      inst_class = PyObject_GetAttrString(x, "__class__");
       RAPIDJSON_ASSERT(inst_class);
       if (inst_class == NULL) {
 	out = false;
@@ -5012,9 +5013,8 @@ public:
 						     mod_cls_ref,
 						     mod_cls_siz,
 						     allocator);
-      Py_DECREF(inst_class);
-      // RAPIDJSON_ASSERT(out && (mod_cls_ref != NULL));
-      if (!out && (mod_cls_ref == NULL)) {
+      Py_CLEAR(inst_class);
+      if (!out || (mod_cls_ref == NULL)) {
 	out = false;
 	goto cleanup;
       }
@@ -5062,27 +5062,27 @@ public:
 			  kwargs.GetSchemaNested(allocator));
       }
     }
-    PYTHON_ERROR_CLEANUP_NOTHROW_;
+    PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(keys, ikey, ival, scalar, dtype,
+					offsetObj, field, x_rep,
+					inst_class, desc, cpy);
   pickle:
     if (!allowPickle) {
       out = false;
       goto cleanup;
     }
-    PyObject* py_str = pickle_python_object(x, "SetPythonObjectRaw", true);
-    if (py_str == NULL) {
+    x_rep = pickle_python_object(x, "SetPythonObjectRaw", true);
+    if (x_rep == NULL) {
       out = false;
       goto cleanup;
     }
     char* buffer = NULL;
     Py_ssize_t buffer_len = 0;
-    if (PyBytes_AsStringAndSize(py_str, &buffer, &buffer_len) < 0) {
-      Py_DECREF(py_str);
+    if (PyBytes_AsStringAndSize(x_rep, &buffer, &buffer_len) < 0) {
       out = false;
       goto cleanup;
     }
     SetStringRaw(StringRef((Ch*)buffer, (SizeType)((size_t)buffer_len / sizeof(Ch))),
 		 allocator);
-    Py_DECREF(py_str);
     out = true;
     goto cleanup;
   }
@@ -5615,9 +5615,11 @@ public:
     else if (CMP_(PythonClass) ||
 	     CMP_(PythonFunction) ||
 	     CMP_(PythonInstance)) {
+      BEGIN_PY_GIL;
       PyObject* tmp = (PyObject*)value;
       SetPythonObjectRaw(tmp, allocator);
-      Py_XDECREF(tmp);
+      Py_CLEAR(tmp);
+      END_PY_GIL;
     }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
     else {
@@ -6065,9 +6067,7 @@ public:
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
   PyObject* GetPythonClass(bool allowFunc = false) const {
     const char *mod_class;
-    PyObject* out = NULL;
-    PyObject* py_inst = NULL;
-    PyObject* py_cls = NULL;
+    PyObject *out = NULL, *py_inst = NULL;
     ConstMemberIterator m;
     PYTHON_ERROR_SETUP_;
     if (IsPythonInstance()) {
@@ -6081,9 +6081,8 @@ public:
 	  out = NULL;
 	  goto cleanup;
 	}
-	py_cls = PyObject_Type(py_inst);
-	Py_DECREF(py_inst);
-	return py_cls;
+	out = PyObject_Type(py_inst);
+	goto cleanup;
       } else {
 	out = NULL;
 	goto cleanup;
@@ -6095,25 +6094,30 @@ public:
       goto cleanup;
     }
     out = import_python_object(mod_class, "GetPythonClass: ", true);
-    PYTHON_ERROR_CLEANUP_NOTHROW_;
+    PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(py_inst);
   }
   PyObject* GetPythonFunction() const { return GetPythonClass(true); }
   PyObject* GetPythonInstance() const {
-    PyObject* out = NULL;
+    PyObject *out = NULL, *py_class = NULL, *py_args = NULL,
+      *py_kwargs = NULL, *py_args_list = NULL;
     PYTHON_ERROR_SETUP_;
     if (IsObject()) {
-      PyObject* py_class = GetPythonClass();
-      PyObject* py_args = NULL;
-      PyObject* py_kwargs = NULL;
+      py_class = GetPythonClass();
+      if (py_class == NULL)
+	goto cleanup;
       // Args
       ConstMemberIterator ma = FindMember(GetArgsString());
       if (ma != MemberEnd()) {
-	PyObject* py_args_list = ma->value.GetPythonObjectRaw();
+	py_args_list = ma->value.GetPythonObjectRaw();
+	if (py_args_list == NULL)
+	  goto cleanup;
 	py_args = PyList_AsTuple(py_args_list);
-	Py_DECREF(py_args_list);
+	Py_CLEAR(py_args_list);
       } else {
 	py_args = PyTuple_New(0);
       }
+      if (py_args == NULL)
+	goto cleanup;
       // Kwargs
       ConstMemberIterator mk = FindMember(GetKwargsString());
       if (mk != MemberEnd()) {
@@ -6121,16 +6125,13 @@ public:
       } else {
 	py_kwargs = PyDict_New();
       }
-      RAPIDJSON_ASSERT(py_class);
-      RAPIDJSON_ASSERT(py_args);
-      RAPIDJSON_ASSERT(py_kwargs);
-      PyObject* py_inst = NULL;
+      if (py_kwargs == NULL)
+	goto cleanup;
       if (py_class && py_args && py_kwargs)
-	py_inst = PyObject_Call(py_class, py_args, py_kwargs);
-      Py_XDECREF(py_class);
-      Py_XDECREF(py_args);
-      Py_XDECREF(py_kwargs);
-      out = py_inst;
+	out = PyObject_Call(py_class, py_args, py_kwargs);
+      Py_CLEAR(py_class);
+      Py_CLEAR(py_args);
+      Py_CLEAR(py_kwargs);
     } else if (IsString()) {
       out = unpickle_python_object((char*)GetString(),
 				   (size_t)(GetStringLength() * sizeof(Ch)),
@@ -6138,8 +6139,8 @@ public:
     } else {
       out = NULL;
     }
-    PYTHON_ERROR_CLEANUP_NOTHROW_BASE_;
-    return out;
+    PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(py_class, py_args, py_kwargs,
+					py_args_list);
   }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
   void GetObjWavefront(ObjWavefront &o) const {
