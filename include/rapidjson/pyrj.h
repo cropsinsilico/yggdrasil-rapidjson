@@ -68,8 +68,8 @@ long _total_refs() {
   if (PyErr_Occurred())
     return -1;
   long tot = -1;
-#ifdef Py_REF_DEBUG
-  tot = static_cast<long>(_Py_RefTotal);
+#ifdef _Py_GetRefTotal
+  tot = static_cast<long>(_Py_GetRefTotal());
 #endif
   // PyObject* sys = PyImport_ImportModule("sys");
   // if (sys != NULL && PyObject_HasAttrString(sys, "gettotalrefcount")) {
