@@ -55,6 +55,12 @@ RAPIDJSON_NAMESPACE_BEGIN
   CHECK_REFS(cleanup)
 #endif // YGG_ENSURE_PY_GIL
 
+#ifdef _MSC_VER
+#define __RAPIDJSON_PRETTY_FUNCTION__ ""
+#else
+#define __RAPIDJSON_PRETTY_FUNCTION__ __PRETTY_FUNCTION__
+#endif
+
 #ifdef RAPIDJSON_CHECK_PYREFS
 
 inline
@@ -84,8 +90,8 @@ long _check_total_refs(const std::string& src,
   if (PyErr_Occurred())
     return -1;
   long tot = _total_refs();
-  // if (tot >= 0)
-  std::cerr << src << ":" << name << ": TOTAL REFS = " << tot << std::endl;
+  if (tot >= 0)
+    std::cerr << src << ":" << name << ": TOTAL REFS = " << tot << std::endl;
   return tot;
 }
   
@@ -126,7 +132,7 @@ void _check_refs(const std::string& src, PyObject* x, Args... args) {
 }
 
 #define CHECK_REFS(x)						\
-  _check_total_refs(__PRETTY_FUNCTION__, #x)
+  _check_total_refs(__RAPIDJSON_PRETTY_FUNCTION__, #x)
 #else // RAPIDJSON_CHECK_PYREFS
 #define CHECK_REFS(x)
 #endif // RAPIDJSON_CHECK_PYREFS
@@ -296,7 +302,7 @@ void finalize_python(const std::string error_prefix="") {
   } else {								\
     ON_PYTHON_ERROR_DISP_;						\
     if (err.empty()) {							\
-      err = error_prefix + __PRETTY_FUNCTION__ + ": Python error occured"; \
+      err = error_prefix + __RAPIDJSON_PRETTY_FUNCTION__ + ": Python error occured"; \
     }									\
   }
 #define PYTHON_ERROR_CLEANUP_BASE_(on_error, on_success)	\
@@ -385,7 +391,8 @@ typename Encoding::Ch* PyUnicode_AsEncoding(PyObject* x, SizeType& length,
       PyMem_Free(free_orig);
   }
   Py_XDECREF(x2);
-  PYTHON_ERROR_CLEANUP_NOTHROW_;
+  PYTHON_ERROR_CLEANUP_NOTHROW_BASE_;
+  return out;
 }
 
 /*!

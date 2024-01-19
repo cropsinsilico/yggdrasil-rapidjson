@@ -6138,7 +6138,8 @@ public:
     } else {
       out = NULL;
     }
-    PYTHON_ERROR_CLEANUP_NOTHROW_;
+    PYTHON_ERROR_CLEANUP_NOTHROW_BASE_;
+    return out;
   }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
   void GetObjWavefront(ObjWavefront &o) const {
