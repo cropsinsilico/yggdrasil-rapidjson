@@ -6169,14 +6169,15 @@ public:
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
 	if (context.python_disabled)
 	  return false;
-	bool out = true;
+	bool out = false;
 	BEGIN_PY_GIL;
 	PyObject* pyobj = import_python_object("collections:OrderedDict",
 					       "GenerateData: ", true);
-	if (pyobj == NULL)
-	  out = false;
-	else
+	if (pyobj != NULL) {
+	  out = true;
 	  data.SetPythonInstance(pyobj, allocator);
+	}
+	Py_XDECREF(pyobj);
 	END_PY_GIL;
 	if (!out) return out;
 	AFTER_SET_;
@@ -6197,6 +6198,7 @@ public:
 	  out = false;
 	else
 	  data.SetPythonInstance(pyobj, allocator);
+	Py_XDECREF(pyobj);
 	END_PY_GIL;
 	if (!out) return out;
 	AFTER_SET_;
@@ -6207,9 +6209,9 @@ public:
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
 	if (context.python_disabled)
 	  return false;
-	bool out = true;
 	BEGIN_PY_GIL;
-	PyObject* pycls = NULL;
+	PyObject *pycls = NULL, *args = NULL, *pyobj = NULL;
+	bool out = false;
 	if (class_.IsPythonClass() || class_.IsString()) {
 	  pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
 				       "GenerateData: ", true);
@@ -6217,28 +6219,17 @@ public:
 	  pycls = import_python_object("collections:OrderedDict",
 				       "GenerateData: ", true);
 	}
-	PyObject* args = NULL;
-	if (pycls == NULL)
-	  out = false;
-	else {
+	if (pycls != NULL)
 	  args = PyTuple_New(0);
-	  if (args == NULL) {
-	    Py_DECREF(pycls);
-	    out = false;
-	  }
-	}
-	PyObject* pyobj = NULL;
-	if (out) {
+	if (args != NULL)
 	  pyobj = PyObject_Call(pycls, args, NULL);
-	  Py_DECREF(pycls);
-	  Py_DECREF(args);
-	  if (pyobj == NULL) {
-	    out = false;
-	  }
-	}
-	if (out) {
+	if (pyobj != NULL) {
+	  out = true;
 	  data.SetPythonInstance(pyobj, allocator);
 	}
+	Py_XDECREF(pycls);
+	Py_XDECREF(args);
+	Py_XDECREF(pyobj);
 	END_PY_GIL;
 	if (!out) return out;
 	AFTER_SET_;
@@ -8416,24 +8407,25 @@ protected:
       length = v.GetStringLength();
     }
     ValidateErrorCode code = kValidateErrorNone;
+    PyObject *pyobj = NULL, *pycls = NULL;
     BEGIN_PY_GIL;
-    PyObject* pyobj = import_python_object(reinterpret_cast<const char*>(str),
-					   "CheckPythonImport: ", true);
+    pyobj = import_python_object(reinterpret_cast<const char*>(str),
+				 "CheckPythonImport: ", true);
     if (!(pyobj)) {
       context.error_handler.InvalidPythonImport(str, length);
       code = kValidateErrorPythonImport;
     }
     if ((code == kValidateErrorNone) &&
 	(class_.IsPythonClass() || class_.IsString())) {
-      PyObject* pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
-					     "CheckPythonImport: ", true);
+      pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
+				   "CheckPythonImport: ", true);
       if (pycls && (PyObject_IsSubclass(pyobj, pycls) <= 0)) {
 	context.error_handler.InvalidPythonClass(str, length, class_);
 	code = kValidateErrorPythonClass;
       }
-      Py_XDECREF(pycls);
     }
     Py_XDECREF(pyobj);
+    Py_XDECREF(pycls);
     END_PY_GIL;
     if (code != kValidateErrorNone) {
       RAPIDJSON_INVALID_KEYWORD_RETURN(code);
@@ -8449,25 +8441,26 @@ protected:
     if (context.python_disabled)
       return true;
     ValidateErrorCode code = kValidateErrorNone;
+    PyObject *pyobj = NULL, *pycls = NULL;
     BEGIN_PY_GIL;
-    PyObject* pyobj = unpickle_python_object(reinterpret_cast<const char*>(str),
-					     (size_t)(length * sizeof(Ch)),
-					     "CheckPythonPickle", true);
-    if (!(pyobj)) {
+    pyobj = unpickle_python_object(reinterpret_cast<const char*>(str),
+				   (size_t)(length * sizeof(Ch)),
+				   "CheckPythonPickle", true);
+    if (pyobj == NULL) {
       context.error_handler.InvalidPythonImport(str, length);
       code = kValidateErrorPythonImport;
     }
     if ((code == kValidateErrorNone) &&
 	(class_.IsPythonClass() || class_.IsString())) {
-      PyObject* pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
-					     "CheckPythonPickle: ", true);
-      if (pycls && (PyObject_IsSubclass(pyobj, pycls) <= 0)) {
+      pycls = import_python_object(reinterpret_cast<const char*>(class_.GetString()),
+				   "CheckPythonPickle: ", true);
+      if (pycls != NULL && (PyObject_IsSubclass(pyobj, pycls) <= 0)) {
 	context.error_handler.InvalidPythonClass(str, length, class_);
 	code = kValidateErrorPythonClass;
       }
-      Py_XDECREF(pycls);
     }
     Py_XDECREF(pyobj);
+    Py_XDECREF(pycls);
     END_PY_GIL;
     if (code != kValidateErrorNone) {
       RAPIDJSON_INVALID_KEYWORD_RETURN(code);

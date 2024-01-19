@@ -34,91 +34,102 @@ RAPIDJSON_NAMESPACE_END
 #include "rapidjson.h"
 #include "encodings.h"
 
-#ifdef YGG_CHECK_REF_COUNTS
+#ifdef RAPIDJSON_CHECK_PYREFS
 #include <map>
-#endif // YGG_CHECK_REF_COUNTS
+#endif // RAPIDJSON_CHECK_PYREFS
 
 RAPIDJSON_NAMESPACE_BEGIN
 
 #ifdef YGG_ENSURE_PY_GIL
 #define BEGIN_PY_GIL				\
   PyGILState_STATE gstate;			\
-  gstate = PyGILState_Ensure()
+  gstate = PyGILState_Ensure();			\
+  CHECK_REFS(setup)
 #define END_PY_GIL				\
+  CHECK_REFS(cleanup)				\
   PyGILState_Release(gstate)
 #else // YGG_ENSURE_PY_GIL
-#define BEGIN_PY_GIL
-#define END_PY_GIL
+#define BEGIN_PY_GIL				\
+  CHECK_REFS(setup)
+#define END_PY_GIL				\
+  CHECK_REFS(cleanup)
 #endif // YGG_ENSURE_PY_GIL
 
-#ifdef YGG_CHECK_REF_COUNTS
+#ifdef RAPIDJSON_CHECK_PYREFS
 
 inline
-void __add_refs(const std::string& name,
-		std::map<std::string, Py_ssize_t>& reg, PyObject* x) {
-  Py_ssize_t N = 0;
-  if (x != NULL || PyErr_Occurred())
-    N = Py_REFCNT(x);
-  if (x != NULL && N > 0) {
-    PyObject* str = PyObject_Str(x);
-    std::string key = "unknown";
-    if (str != NULL && PyUnicode_Check(str)) {
-      key.assign(PyUnicode_AsUTF8(str));
-    }
-    Py_XDECREF(str);
-    long tot = -1;
-    PyObject* sys = PyImport_ImportModule("sys");
-    if (sys != NULL && PyObject_HasAttrString(sys, "gettotalrefcount")) {
-      PyObject* refc = PyObject_GetAttrString(sys, "gettotalrefcount");
-      if (refc != NULL) {
-	PyObject* res = PyObject_CallFunction(refc, NULL);
-	Py_DECREF(refc);
-	if (res != NULL && PyLong_Check(res)) {
-	  tot = PyLong_AsLong(res);
-	}
-	Py_XDECREF(res);
+long _total_refs() {
+  if (PyErr_Occurred())
+    return -1;
+  long tot = -1;
+  PyObject* sys = PyImport_ImportModule("sys");
+  if (sys != NULL && PyObject_HasAttrString(sys, "gettotalrefcount")) {
+    PyObject* refc = PyObject_GetAttrString(sys, "gettotalrefcount");
+    if (refc != NULL) {
+      PyObject* res = PyObject_CallFunction(refc, NULL);
+      Py_DECREF(refc);
+      if (res != NULL && PyLong_Check(res)) {
+	tot = PyLong_AsLong(res);
       }
+      Py_XDECREF(res);
     }
-    Py_XDECREF(sys);
-    reg[key] = N;
-    std::cerr << name << ": " << N << " REFS: " << key <<
-      " (total = " << tot << ")" << std::endl;
   }
+  Py_XDECREF(sys);
+  return tot;
 }
 
 inline
-void _add_refs(const std::string& name,
-	       std::map<std::string, Py_ssize_t>& reg, PyObject* x) {
-  __add_refs(name, reg, x);
+long _check_total_refs(const std::string& src,
+		       const std::string& name) {
+  if (PyErr_Occurred())
+    return -1;
+  long tot = _total_refs();
+  // if (tot >= 0)
+  std::cerr << src << ":" << name << ": TOTAL REFS = " << tot << std::endl;
+  return tot;
 }
-template<typename... Args>
-inline
-void _add_refs(const std::string& name,
-	       std::map<std::string, Py_ssize_t>& reg, PyObject* x,
-	       Args... args) {
-  __add_refs(name, reg, x);
-  _add_refs(name, reg, args...);
-}
-template<typename... Args>
-inline
-std::map<std::string, Py_ssize_t> _get_refs(const std::string& name,
-					    PyObject* x, Args... args) {
-  std::map<std::string, Py_ssize_t> out;
-  _add_refs(name, out, x, args...);
-  return out;
-}
-// std::map<std::string, Py_ssize_t> _get_refs_diff(
-//   std::map<std::string, Py_ssize_t> a,
-//   std::map<std::string, Py_ssize_t> b) {
-//   std::map<std::string, Py_ssize_t> out;
   
-// }
+inline
+long __check_refs(const std::string& src,
+		  const std::string& name="",
+		  PyObject* x = NULL) {
+  if (PyErr_Occurred())
+    return -1;
+  if (x == NULL)
+    return -1;
+  long N = static_cast<long>(Py_REFCNT(x));
+  if (N > 0) {
+    std::string name2 = name;
+    if (name2.empty()) {
+      PyObject* str = PyObject_Str(x);
+      if (str != NULL && PyUnicode_Check(str)) {
+	name2.assign(PyUnicode_AsUTF8(str));
+      } else {
+	name2 = "unknown";
+      }
+      Py_XDECREF(str);
+    }
+    std::cerr << src << ": " << N << " REFS: " << name2 << std::endl;
+  }
+  return N;
+}
 
-#define CHECK_REFS(...)						\
-  _get_refs(__PRETTY_FUNCTION__, __VA_ARGS__)
-#else // YGG_CHECK_REF_COUNTS
-#define CHECK_REFS(...)
-#endif // YGG_CHECK_REF_COUNTS
+inline
+long _check_refs(const std::string& src, PyObject* x) {
+  return __check_refs(src, "", x);
+}
+template<typename... Args>
+inline
+void _check_refs(const std::string& src, PyObject* x, Args... args) {
+  __check_refs(src, "", x);
+  _check_refs(src, "", args...);
+}
+
+#define CHECK_REFS(x)						\
+  _check_total_refs(__PRETTY_FUNCTION__, #x)
+#else // RAPIDJSON_CHECK_PYREFS
+#define CHECK_REFS(x)
+#endif // RAPIDJSON_CHECK_PYREFS
 
 /*!
   @brief Initialize Numpy arrays if it is not initalized.
@@ -275,48 +286,35 @@ void finalize_python(const std::string error_prefix="") {
 // TODO: Version that doesn't throw error
 // TODO: Version that allows other actions in cleanup
 #ifdef RAPIDJSON_YGGDRASIL_PYTHON
-#define PYTHON_ERROR_CLEANUP_BASE_(method)			\
-  if (ignore_error) {						\
-    PyErr_Clear();						\
-  } else {							\
-    if (PyErr_Occurred() != NULL) {				\
-      if (err.empty()) {					\
-	err = error_prefix + #method + ": Python error occured";	\
-      }								\
-    }								\
+#define ON_PYTHON_ERROR_DISP_
+#else
+#define ON_PYTHON_ERROR_DISP_ PyErr_Print()
+#endif
+#define ON_PYTHON_ERROR_THROW_						\
+  if (ignore_error) {							\
+    PyErr_Clear();							\
+  } else {								\
+    ON_PYTHON_ERROR_DISP_;						\
+    if (err.empty()) {							\
+      err = error_prefix + __PRETTY_FUNCTION__ + ": Python error occured"; \
+    }									\
+  }
+#define PYTHON_ERROR_CLEANUP_BASE_(on_error, on_success)	\
+  if (PyErr_Occurred()) {					\
+    on_error;							\
   }								\
+  on_success;							\
   END_PY_GIL
-#else // RAPIDJSON_YGGDRASIL_PYTHON
-#define PYTHON_ERROR_CLEANUP_BASE_(method)			\
-  if (ignore_error) {						\
-    PyErr_Clear();						\
-  } else {							\
-    if (PyErr_Occurred() != NULL) {				\
-      PyErr_Print();						\
-      if (err.empty()) {					\
-	err = error_prefix + #method + ": Python error occured";	\
-      }								\
-    }								\
-  }								\
-  END_PY_GIL
-#endif // RAPIDJSON_YGGDRASIL_PYTHON
-#define PYTHON_ERROR_CLEANUP_(method, before)	\
-  cleanup:					\
-  before;					\
-  PYTHON_ERROR_CLEANUP_BASE_(method);		\
-  if (!err.empty()) {				\
-    throw std::runtime_error(err);		\
-  }						\
-  return out
-#define PYTHON_ERROR_CLEANUP_NOTHROW_BASE_(method, before)	\
-  UNUSED(err);							\
-  before;							\
-  END_PY_GIL
-#define PYTHON_ERROR_CLEANUP_NOTHROW_(method, before)	\
+#define PYTHON_ERROR_CLEANUP_				\
   cleanup:						\
-  UNUSED(err);						\
-  before;						\
-  END_PY_GIL;				\
+  PYTHON_ERROR_CLEANUP_BASE_(ON_PYTHON_ERROR_THROW_, );	\
+  return out
+#define PYTHON_ERROR_CLEANUP_NOTHROW_BASE_			\
+  UNUSED(err);							\
+  END_PY_GIL
+#define PYTHON_ERROR_CLEANUP_NOTHROW_			\
+  cleanup:						\
+  PYTHON_ERROR_CLEANUP_NOTHROW_BASE_;			\
   return out
 
 
@@ -342,7 +340,7 @@ inline bool assign_char_PyUnicode(PyObject* x, Py_ssize_t& py_len,
 				  PyObject*& x2,
 				  RAPIDJSON_ENABLEIF((internal::IsSame<typename Encoding::Ch,char>))) {
   bool out = false;
-  BEGIN_PY_GIL;
+  PYTHON_ERROR_SETUP_;
 #define ENCODING_BRANCH(enc)						\
   else if (internal::IsSame<Encoding, enc<typename Encoding::Ch> >::Value) { \
     x2 = PyUnicode_As ## enc ## String(x);				\
@@ -350,21 +348,19 @@ inline bool assign_char_PyUnicode(PyObject* x, Py_ssize_t& py_len,
       py_len = PyBytes_Size(x2);					\
       orig = PyBytes_AsString(x2);					\
       out = true;							\
-      goto release;							\
+      goto cleanup;							\
     }									\
   }
   if (internal::IsSame<Encoding, UTF8<typename Encoding::Ch> >::Value) {
     orig = PyUnicode_AsUTF8AndSize(x, &py_len);
     out = true;
-    goto release;
+    goto cleanup;
   }
   ENCODING_BRANCH(UTF16)
   ENCODING_BRANCH(UTF32)
   ENCODING_BRANCH(ASCII)
 #undef ENCODING_BRANCH
- release:
-  END_PY_GIL;
-  return out;
+  PYTHON_ERROR_CLEANUP_NOTHROW_;
 }
 
 template<typename Encoding, typename Allocator>
@@ -374,7 +370,7 @@ typename Encoding::Ch* PyUnicode_AsEncoding(PyObject* x, SizeType& length,
   typename Encoding::Ch* free_orig = NULL;
   const typename Encoding::Ch* orig = NULL;
   Py_ssize_t py_len = 0;
-  BEGIN_PY_GIL;
+  PYTHON_ERROR_SETUP_;
   if (assign_wchar_PyUnicode(x, py_len, free_orig)) {
     orig = free_orig;
   } else {
@@ -389,8 +385,7 @@ typename Encoding::Ch* PyUnicode_AsEncoding(PyObject* x, SizeType& length,
       PyMem_Free(free_orig);
   }
   Py_XDECREF(x2);
-  END_PY_GIL;
-  return out;
+  PYTHON_ERROR_CLEANUP_NOTHROW_;
 }
 
 /*!
@@ -411,7 +406,7 @@ PyObject* import_python_module(const char* module_name,
   if (!isPythonInitialized())
     goto cleanup;
   out = PyImport_ImportModule(module_name);
-  PYTHON_ERROR_CLEANUP_(import_python_module, CHECK_REFS(out));
+  PYTHON_ERROR_CLEANUP_;
 }
 
 /*!
@@ -437,13 +432,14 @@ PyObject* import_python_class(const char* module_name,
     goto cleanup;
   out = PyObject_GetAttrString(py_module, class_name);
   Py_DECREF(py_module);
-  PYTHON_ERROR_CLEANUP_(import_python_class, CHECK_REFS(out, py_module));
+  PYTHON_ERROR_CLEANUP_;
 }
 
 template<typename Encoding, typename Allocator>
 bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
 			  SizeType& mod_cls_siz,
 			  Allocator& allocator) {
+  PYTHON_ERROR_SETUP_;
   typedef typename Encoding::Ch Ch;
   bool out = true;
   Ch *mod = NULL, *cls = NULL, *file = NULL, *curr = NULL;
@@ -457,14 +453,14 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
   RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__name__"));
   if (!(PyObject_HasAttrString(x, "__module__") && PyObject_HasAttrString(x, "__name__"))) {
     out = false;
-    goto release;
+    goto cleanup;
   }
   // Get the module
   mod_py = PyObject_GetAttrString(x, "__module__");
   RAPIDJSON_ASSERT(mod_py != NULL);
   if (mod_py == NULL) {
     out = false;
-    goto release;
+    goto cleanup;
   }
   // Get the class
   cls_py = PyObject_GetAttrString(x, "__name__");
@@ -472,7 +468,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
   if (cls_py == NULL) {
     Py_DECREF(mod_py);
     out = false;
-    goto release;
+    goto cleanup;
   }
   // Check for local function
   x_repr = PyObject_Repr(x);
@@ -480,7 +476,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
     Py_DECREF(mod_py);
     Py_DECREF(cls_py);
     out = false;
-    goto release;
+    goto cleanup;
   }
   local_str = PyUnicode_FromString("<locals>");
   if (local_str == NULL) {
@@ -488,7 +484,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
     Py_DECREF(mod_py);
     Py_DECREF(cls_py);
     out = false;
-    goto release;
+    goto cleanup;
   }
   is_local = PySequence_Contains(x_repr, local_str);
   Py_DECREF(x_repr);
@@ -497,7 +493,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
     Py_DECREF(mod_py);
     Py_DECREF(cls_py);
     out = false;
-    goto release;
+    goto cleanup;
   }
   // Get file containing the module
   // Using the file alone is not portable
@@ -510,7 +506,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
       Py_DECREF(mod_py);
       Py_DECREF(cls_py);
       out = false;
-      goto release;
+      goto cleanup;
     }
     inspect_getfile = PyObject_GetAttrString(inspect, "getfile");
     Py_DECREF(inspect);
@@ -518,7 +514,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
       Py_DECREF(mod_py);
       Py_DECREF(cls_py);
       out = false;
-      goto release;
+      goto cleanup;
     }
     file_py = PyObject_CallFunction(inspect_getfile, "(O)", x);
     Py_DECREF(inspect_getfile);
@@ -527,7 +523,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
     Py_DECREF(mod_py);
     Py_DECREF(cls_py);
     out = false;
-    goto release;
+    goto cleanup;
   }
   mod = PyUnicode_AsEncoding<Encoding,Allocator>(mod_py, mod_len, allocator);
   cls = PyUnicode_AsEncoding<Encoding,Allocator>(cls_py, cls_len, allocator);
@@ -538,7 +534,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
   if ((mod == NULL) || (cls == NULL)) {
     out = false;
     Py_XDECREF(file_py);
-    goto release;
+    goto cleanup;
   }
   mod_cls_siz = mod_len + cls_len + 1;
   if (file_py != NULL) {
@@ -547,7 +543,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
     RAPIDJSON_ASSERT(file != NULL);
     if (file == NULL) {
       out = false;
-      goto release;
+      goto cleanup;
     }
     if (file_len == 0) {
       allocator.Free(file);
@@ -560,7 +556,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
   RAPIDJSON_ASSERT(mod_cls);
   if (!mod_cls) {
     out = false;
-    goto release;
+    goto cleanup;
   }
   curr = mod_cls;
   if (file_len > 0) {
@@ -586,18 +582,14 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
     // TODO: Handle encoding?
     if (PyDict_GetItemString(globals, (char*)mod_cls) != NULL) {
       out = false;
-      goto release;
+      goto cleanup;
     }
     if (PyDict_SetItemString(globals, (char*)mod_cls, x) < 0) {
       out = false;
-      goto release;
+      goto cleanup;
     }
   }
- release:
-  CHECK_REFS(mod_py, cls_py, x_repr, local_str, file_py, inspect,
-	     inspect_getfile, globals);
-  END_PY_GIL;
-  return out;
+  PYTHON_ERROR_CLEANUP_NOTHROW_;
 }
 
 inline
@@ -793,11 +785,7 @@ PyObject* import_python_object(const char* mod_class,
     // Removing added path makes the object un-picklable
     // PyObject_CallMethod(sys_path, "pop", "n", Py_SIZE(sys_path) - 1);
   }
-  PYTHON_ERROR_CLEANUP_(import_python_object,
-			CHECK_REFS(out, globals, tmpPy, path_add, path,
-				   os_path, path_abspath,
-				   path_abs, path_split, path_parts,
-				   path_dir, path_base, sys_path));
+  PYTHON_ERROR_CLEANUP_;
 }
 
 
@@ -818,8 +806,7 @@ PyObject* pickle_python_object(PyObject* x,
   out = PyObject_Call(pickleMethod, args, NULL);
   Py_DECREF(pickleMethod);
   Py_DECREF(args);
-  PYTHON_ERROR_CLEANUP_(pickle_python_object,
-			CHECK_REFS(out, args, pickleMethod));
+  PYTHON_ERROR_CLEANUP_;
 }
 
 inline
@@ -846,8 +833,7 @@ PyObject* unpickle_python_object(const char* buffer,
   out = PyObject_Call(pickle, args, NULL);
   Py_DECREF(pickle);
   Py_DECREF(args);
-  PYTHON_ERROR_CLEANUP_(unpickle_python_object,
-			CHECK_REFS(out, py_str, args, pickle));
+  PYTHON_ERROR_CLEANUP_;
 }
 
 
@@ -876,8 +862,7 @@ bool PyObject_IsInstanceString(PyObject* x, std::string class_name) {
   Py_DECREF(inst_class_str);
   check = "<class '" + class_name + "'>";
   out = (check == result);
-  PYTHON_ERROR_CLEANUP_NOTHROW_(PyObject_IsInstanceString,
-				CHECK_REFS(inst_class, inst_class_str));
+  PYTHON_ERROR_CLEANUP_NOTHROW_;
 }
 inline
 bool IsStructuredArray(PyObject* x) {
@@ -930,8 +915,7 @@ bool IsStructuredArray(PyObject* x) {
       }
     }
   }
-  PYTHON_ERROR_CLEANUP_NOTHROW_(IsStructuredArray,
-				CHECK_REFS(x, item));
+  PYTHON_ERROR_CLEANUP_NOTHROW_;
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
 }
 inline
@@ -1040,9 +1024,7 @@ PyObject* GetStructuredArray(PyObject* x) {
   Py_XDECREF(names);
   Py_XDECREF(desc);
   Py_XDECREF(array);
-  PYTHON_ERROR_CLEANUP_NOTHROW_BASE_(GetStructuredArray,
-				     CHECK_REFS(out, names, fields,
-						ikey, idtype, ioffset, ifield));
+  PYTHON_ERROR_CLEANUP_NOTHROW_BASE_;
   return out;
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
 }
