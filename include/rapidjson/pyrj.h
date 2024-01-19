@@ -66,8 +66,23 @@ void __add_refs(const std::string& name,
       key.assign(PyUnicode_AsUTF8(str));
     }
     Py_XDECREF(str);
+    long tot = -1;
+    PyObject* sys = PyImport_ImportModule("sys");
+    if (sys != NULL && PyObject_HasAttrString(sys, "gettotalrefcount")) {
+      PyObject* refc = PyObject_GetAttrString(sys, "gettotalrefcount");
+      if (refc != NULL) {
+	PyObject* res = PyObject_CallFunction(refc, NULL);
+	Py_DECREF(refc);
+	if (res != NULL && PyLong_Check(res)) {
+	  tot = PyLong_AsLong(res);
+	}
+	Py_XDECREF(res);
+      }
+      Py_DECREF(sys);
+    }
     reg[key] = N;
-    std::cerr << name << ": " << N << " REFS: " << key << std::endl;
+    std::cerr << name << ": " << N << " REFS: " << key <<
+      " (total = " << tot << ")" << std::endl;
   }
 }
 
@@ -469,6 +484,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
   }
   local_str = PyUnicode_FromString("<locals>");
   if (local_str == NULL) {
+    Py_DECREF(x_repr);
     Py_DECREF(mod_py);
     Py_DECREF(cls_py);
     out = false;
@@ -521,6 +537,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
   RAPIDJSON_ASSERT((mod != NULL) && (cls != NULL));
   if ((mod == NULL) || (cls == NULL)) {
     out = false;
+    Py_XDECREF(file_py);
     goto release;
   }
   mod_cls_siz = mod_len + cls_len + 1;
