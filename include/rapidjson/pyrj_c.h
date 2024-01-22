@@ -47,7 +47,7 @@ extern "C" {
 #endif
 #endif
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && !defined(RAPIDJSON_CHECK_PYREFS)
 #undef _DEBUG
 #include <Python.h>
 #include <numpy/arrayobject.h>

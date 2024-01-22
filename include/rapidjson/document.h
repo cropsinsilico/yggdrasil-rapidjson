@@ -4568,11 +4568,14 @@ public:
     if (x == NULL || !isPythonInitialized())
       return false;
     bool out = true;
-    PyObject *keys = NULL, *ikey = NULL, *ival = NULL, *scalar = NULL,
+    PyObject *keys = NULL, *ikey = NULL, *scalar = NULL,
       *dtype = NULL, *offsetObj = NULL, *field = NULL, *x_rep = NULL,
       *inst_class = NULL;
     PyArray_Descr *desc = NULL;
     PyArrayObject *cpy = NULL;
+#ifndef RAPIDJSON_DONT_IMPORT_NUMPY
+    PyObject *ival = NULL;
+#endif
     PYTHON_ERROR_SETUP_;
     if (x == Py_None) {
       SetNull();
