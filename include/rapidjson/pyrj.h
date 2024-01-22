@@ -35,6 +35,9 @@ RAPIDJSON_NAMESPACE_END
 #include "encodings.h"
 
 #ifdef RAPIDJSON_CHECK_PYREFS
+// #ifdef _Py_GetRefTotal
+// #undef _Py_GetRefTotal
+// #endif
 #ifndef _Py_GetRefTotal
 #undef Py_INCREF
 #undef Py_DECREF
@@ -43,13 +46,17 @@ static Py_ssize_t _rapidjson_pyref_count = 0;
   _rapidjson_pyref_count
 static inline
 void _rapidjson_Py_INCREF(PyObject *op) {
-  _Py_IncRef(op);
+  Py_INCREF(op);
   _rapidjson_pyref_count++;
 }
 static inline
 void _rapidjson_Py_DECREF(PyObject *op) {
   _rapidjson_pyref_count--;
+#if defined(Py_REF_DEBUG) // && !defined(Py_LIMITED_API)
   Py_DECREF(__FILE__, __LINE__, _PyObject_CAST(op));
+#else
+  Py_DECREF(op);
+#endif
 }
 #define Py_INCREF(op) _rapidjson_Py_INCREF(_PyObject_CAST(op))
 #define Py_DECREF(op) _rapidjson_Py_DECREF(_PyObject_CAST(op))
