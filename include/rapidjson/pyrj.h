@@ -194,8 +194,10 @@ void init_numpy_API() {
   {
 #endif
   if (PY_ARRAY_UNIQUE_SYMBOL == NULL) { // GCOVR_EXCL_START
-    if (_import_array() < 0)
+    if (_import_array() < 0) {
       PyErr_Print();
+      err = "Error importing numpy";
+    }
   } // GCOVR_EXCL_STOP
 #ifdef _OPENMP
   }
