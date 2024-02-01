@@ -182,13 +182,14 @@ void _clear_refs(T*& x, Args... args) {
 
 /*!
   @brief Initialize Numpy arrays if it is not initalized.
+  @return error message
  */
 static inline
-void init_numpy_API() {
+std::string init_numpy_API() {
+  std::string err;
 #ifndef RAPIDJSON_DONT_IMPORT_NUMPY
 #ifdef RAPIDJSON_FORCE_IMPORT_ARRAY
   BEGIN_PY_GIL;
-  std::string err = "";
 #ifdef _OPENMP
 #pragma omp critical (numpy)
   {
@@ -203,19 +204,19 @@ void init_numpy_API() {
   }
 #endif
   END_PY_GIL;
-  if (err.length() > 0)
-    throw std::runtime_error(err); // GCOVR_EXCL_LINE
 #endif // RAPIDJSON_FORCE_IMPORT_ARRAY
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
+  return err;
 }
 
 
 /*!
   @brief Initialize Python if it is not initialized.
+  @return error message
  */
 static inline
-void init_python_API() {
-  std::string err = "";
+std::string init_python_API() {
+  std::string err;
 #ifndef RAPIDJSON_YGGDRASIL_PYTHON
 #ifdef _OPENMP
 #pragma omp critical (python)
@@ -261,7 +262,7 @@ void init_python_API() {
       err = "Failed to initialize Python"; // GCOVR_EXCL_LINE
       goto done;
     }
-    init_numpy_API();
+    err = init_numpy_API();
   done:
 #if PY_MAJOR_VERSION > 3 ||			\
   (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 8)
@@ -273,9 +274,8 @@ void init_python_API() {
 #ifdef _OPENMP
   }
 #endif
-  if (err.length() > 0)
-    throw std::runtime_error(err); // GCOVR_EXCL_LINE
 #endif // RAPIDJSON_YGGDRASIL_PYTHON
+  return err;
 }
 
 
@@ -296,14 +296,24 @@ bool isPythonInitialized() {
 /*!
   @brief Initialize Python if it is not initialized.
   @param[in] error_prefix std::string Prefix that should be added to error messages.
+  @param[in] dont_raise If true, the error will not be thrown
+  @return error message
  */
 inline
-void initialize_python(const std::string error_prefix="") {
+std::string initialize_python(const std::string error_prefix="",
+			      bool dont_raise=false) {
+  std::string err;
   try {
-    init_python_API();
+    err = init_python_API();
   } catch (std::exception& e) {
-    throw std::runtime_error(error_prefix + "initialize_python: " + e.what()); // GCOVR_EXCL_LINE
+    err = e.what();
   }
+  if (!err.empty()) {
+    err = error_prefix + "initialize_python: " + err;
+    if (!dont_raise)
+      throw std::runtime_error(err); // GCOVR_EXCL_LINE
+  }
+  return err;
 }
 
 
