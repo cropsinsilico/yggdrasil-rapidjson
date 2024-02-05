@@ -77,8 +77,10 @@ public:
   }
 private:
   //! Copy constructor is not permitted.
-  VarArgList(const VarArgList& rhs);
-  VarArgList& operator=(const VarArgList& rhs);
+#ifndef _MSC_VER
+  VarArgList(const VarArgList& rhs) = delete;
+#endif // _MSC_VER
+  VarArgList& operator=(const VarArgList& rhs) = delete;
 public:
   std::va_list va;  //!< Traditional variable argument list.
   size_t nargs_; //!< Storage for number of remaining arguments if not provided as a pointer.
