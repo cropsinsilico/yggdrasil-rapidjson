@@ -6200,7 +6200,8 @@ public:
   GenericValue& SetScalar(const T x, const Ch* units_str,
 			  Allocator& allocator) {
     this->~GenericValue();
-    new (this) GenericValue(x, units_str, allocator);
+    new (this) GenericValue(x, units_str, internal::StrLen(units_str),
+			    allocator);
     return *this; }
   template<typename T>
   GenericValue& SetScalar(const T x, const Ch* units_str,
