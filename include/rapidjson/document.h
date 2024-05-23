@@ -6323,6 +6323,11 @@ public:
     ResetSchema(allocator);
     AddSchemaMember(GetTypeString(), GetSchemaString());
     return *this; }
+  GenericValue& SetSchema(const GenericValue& x, Allocator& allocator) {
+    CopyFrom(x, allocator, true);
+    ResetSchema(allocator);
+    AddSchemaMember(GetTypeString(), GetSchemaString());
+    return *this; }
 
   template <typename Encoding2, typename Allocator2>
   friend std::ostream & operator << (std::ostream &out,
