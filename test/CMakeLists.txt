@@ -13,6 +13,7 @@ include_directories(SYSTEM ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
 
 #     include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
 #     set(TEST_LIBRARIES ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY} ${Python3_LIBRARIES})
+# endif()
     
 if(GTESTSRC_FOUND)
 

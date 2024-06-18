@@ -28,3 +28,5 @@ INCLUDE(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GTestSrc DEFAULT_MSG
     GTEST_SOURCE_DIR
     GTEST_INCLUDE_DIR)
+message(STATUS "GTEST_SOURCE_DIR = ${GTEST_SOURCE_DIR}")
+message(STATUS "GTEST_INCLUDE_DIR = ${GTEST_INCLUDE_DIR}")
