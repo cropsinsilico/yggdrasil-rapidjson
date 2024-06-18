@@ -57,7 +57,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=${pythonLocation} -DRAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF -DRAPIDJSON_YGGDRASIL_TESTS=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=${pythonLocation} -DRAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF -DRAPIDJSON_YGGDRASIL_TESTS=ON -DRAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
       - name: Build
         run: |
           cd build
