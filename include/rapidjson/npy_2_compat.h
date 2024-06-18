@@ -145,7 +145,7 @@ PyArray_ImportNumPyAPI()
     static inline void
     PyDataType_SET_ELSIZE(PyArray_Descr *dtype, npy_intp size)
     {
-        dtype->elsize = size;
+        dtype->elsize = static_cast<int>(size);
     }
 
     static inline npy_uint64
