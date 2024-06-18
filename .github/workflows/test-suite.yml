@@ -92,13 +92,15 @@ jobs:
         with:
           toolset: 14.0
       - name: Set up miniconda test environment
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: rapidjson
           environment-file: environment.yml
           auto-update-conda: true
           channels: conda-forge
           channel-priority: strict
+          miniforge-variant: Mambaforge
+          use-mamba: true
       - name: Check for numpy
         run: |
           python -c "import sys; print(sys.executable)"
