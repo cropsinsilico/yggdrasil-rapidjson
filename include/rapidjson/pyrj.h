@@ -918,9 +918,9 @@ bool IsStructuredArray(PyObject* x) {
     RAPIDJSON_ASSERT(desc);
     if (desc == NULL)
       PYTHON_ERROR_EXIT_(false);
-    if (desc->names == NULL)
+    if (PyDataType_NAMES(desc) == NULL)
       PYTHON_ERROR_EXIT_(false);
-    if (PyTuple_Size(desc->names) != 1)
+    if (PyTuple_Size(PyDataType_NAMES(desc)) != 1)
       PYTHON_ERROR_EXIT_(false);
     if (dims == NULL) {
       if (i > 0)
@@ -953,7 +953,8 @@ PyObject* GetStructuredArray(PyObject* x) {
   npy_intp *dims = NULL, *strides = NULL;
   PyObject *out = NULL, *names = NULL, *fields = NULL;
   PyObject *ikey = NULL, *idtype = NULL, *ioffset = NULL, *ifield = NULL;
-  PyArray_Descr *idesc = NULL, *sub_desc = NULL, *desc = NULL, *isub_desc;
+  PyArray_Descr *idesc = NULL, *sub_desc = NULL, *isub_desc;
+  _PyArray_LegacyDescr *desc = NULL;
   PyArrayObject *ival = NULL, *array = NULL;
   Py_ssize_t i = 0, kw_pos = 0;
   npy_intp offset = 0;
@@ -976,13 +977,13 @@ PyObject* GetStructuredArray(PyObject* x) {
     idesc = PyArray_DESCR(ival);
     if (idesc == NULL)
       goto cleanup;
-    ikey = PyTuple_GetItem(idesc->names, 0);
+    ikey = PyTuple_GetItem(PyDataType_NAMES(idesc), 0);
     if (ikey == NULL)
       goto cleanup;
     Py_INCREF(ikey);
     if (PyTuple_SetItem(names, i, ikey) < 0)
       goto cleanup;
-    ifield = PyDict_GetItem(idesc->fields, ikey);
+    ifield = PyDict_GetItem(PyDataType_FIELDS(idesc), ikey);
     if (ifield == NULL)
       goto cleanup;
     isub_desc = (PyArray_Descr*)PyTuple_GetItem(ifield, 0);
@@ -992,7 +993,7 @@ PyObject* GetStructuredArray(PyObject* x) {
     // sub_desc = PyArray_DescrNewFromType(PyArray_TYPE(ival));
     if (sub_desc == NULL)
       goto cleanup;
-    sub_desc->elsize = (int)PyArray_ITEMSIZE(ival);
+    PyDataType_SET_ELSIZE(sub_desc, (int)PyArray_ITEMSIZE(ival));
     offsets.push_back(offset);
     ioffset = PyLong_FromSsize_t((Py_ssize_t)offset);
     if (ioffset == NULL) {
@@ -1016,7 +1017,7 @@ PyObject* GetStructuredArray(PyObject* x) {
     ifield = NULL;
     isub_desc = NULL;
   }
-  desc = PyArray_DescrNewFromType(NPY_VOID);
+  desc = (_PyArray_LegacyDescr*)PyArray_DescrNewFromType(NPY_VOID);
   if (desc == NULL)
     goto cleanup;
   Py_INCREF(fields);
@@ -1024,8 +1025,10 @@ PyObject* GetStructuredArray(PyObject* x) {
   Py_INCREF(names);
   desc->names = names;
   desc->elsize = (int)offset;
+  // PyDataType_SET_ELSIZE(desc, (int)offset);
   // TODO: fill in other fields? alignment?
-  array = (PyArrayObject*)PyArray_NewFromDescr(&PyArray_Type, desc,
+  array = (PyArrayObject*)PyArray_NewFromDescr(&PyArray_Type,
+					       (PyArray_Descr*)desc,
 					       nd, dims, strides,
 					       NULL, 0, NULL);
   desc = NULL; // PyArray_NewFromDescr steals ref

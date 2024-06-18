@@ -4449,8 +4449,9 @@ public:
 	if (desc == NULL) {
 	  goto cleanup;
 	}
-	if (PyTypeNum_ISFLEXIBLE(typenum))
-	  desc->elsize = static_cast<int>(GetPrecision());
+	if (PyTypeNum_ISFLEXIBLE(typenum)) {
+	  PyDataType_SET_ELSIZE(desc, static_cast<int>(GetPrecision()));
+	}
 	out = PyArray_Scalar((void*)GetString(), desc, NULL);
 	desc = NULL; // Stolen by PyArray_Scalar
 	goto cleanup;
@@ -4466,8 +4467,9 @@ public:
 	  out = NULL;
 	  goto cleanup;
 	}
-	if (PyTypeNum_ISFLEXIBLE(typenum))
-	  desc->elsize = static_cast<int>(GetPrecision());
+	if (PyTypeNum_ISFLEXIBLE(typenum)) {
+	  PyDataType_SET_ELSIZE(desc, static_cast<int>(GetPrecision()));
+	}
 	if (HasTitle()) {
 	  const ValueType& title = GetTitle();
 	  titlePy = PyUnicode_FromStringAndSize(title.GetString(),
@@ -4478,14 +4480,15 @@ public:
 	    out = NULL;
 	    goto cleanup;
 	  }
-	  desc->names = PyTuple_Pack(1, titlePy);
-	  desc->fields = PyDict_New();
-	  desc->elsize = sub_desc->elsize;
+	  _PyArray_LegacyDescr* leg_desc = (_PyArray_LegacyDescr*)desc;
+	  leg_desc->names = PyTuple_Pack(1, titlePy);
+	  leg_desc->fields = PyDict_New();
+	  PyDataType_SET_ELSIZE(desc, PyDataType_ELSIZE(sub_desc));
 	  offset = PyLong_FromSsize_t(0);
 	  sub_dtype = PyTuple_Pack(2, sub_desc, offset);
 	  Py_CLEAR(sub_desc);
 	  Py_CLEAR(offset);
-	  if (PyDict_SetItem(desc->fields, titlePy, sub_dtype) < 0) {
+	  if (PyDict_SetItem(leg_desc->fields, titlePy, sub_dtype) < 0) {
 	    out = NULL;
 	    goto cleanup;
 	  }
@@ -4519,7 +4522,7 @@ public:
 	  std::cerr << "CHANGING THE ENCODING" << std::endl;
 	  free_data = true;
 	  data = tmp_data;
-	  desc->elsize = static_cast<int>(tmp_nbytes / GetNElements());
+	  PyDataType_SET_ELSIZE(desc, static_cast<int>(tmp_nbytes / GetNElements()));
 	}
 	tmp = PyArray_NewFromDescr(&PyArray_Type, desc,
 				   (int)ndim, np_shape,
@@ -4728,14 +4731,14 @@ public:
       }
       Py_INCREF(desc);
       if (PyDataType_HASFIELDS(desc)) {
-	bool single = (PyDict_Size(desc->fields) == 1);
+	bool single = (PyDict_Size(PyDataType_FIELDS(desc)) == 1);
 	if (!single) {
 	  SetArray();
 	  ResetSchema(allocator);
-	  Reserve((SizeType)PyDict_Size(desc->fields), allocator);
+	  Reserve((SizeType)PyDict_Size(PyDataType_FIELDS(desc)), allocator);
 	}
 	Py_ssize_t kw_pos = 0;
-	while (PyDict_Next(desc->fields, &kw_pos, &ikey, &ival)) {
+	while (PyDict_Next(PyDataType_FIELDS(desc), &kw_pos, &ikey, &ival)) {
 	  dtype = PyTuple_GetItem(ival, 0);
 	  if (dtype == NULL) {
 	    out = false;
@@ -5328,9 +5331,9 @@ public:
 				Allocator& allocator) {
     if (desc->type_num == NPY_STRING || desc->type_num == NPY_UNICODE) {
       if (itemsize == 0) {
-	if (desc->elsize == 0)
+	if (PyDataType_ELSIZE(desc) == 0)
 	  return false;
-	itemsize = (SizeType)(desc->elsize);
+	itemsize = (SizeType)(PyDataType_ELSIZE(desc));
       }
       precision = itemsize;
       if (desc->type_num == NPY_UNICODE)
@@ -5342,7 +5345,7 @@ public:
       std::cerr << "NumpyType2SubType: Non-number numpy element (itemsize = " << itemsize << ")" << std::endl;
       return false;
     }
-    precision = (SizeType)(desc->elsize);
+    precision = (SizeType)(PyDataType_ELSIZE(desc));
     if (PyDataType_ISUNSIGNED(desc))
       subtype.CopyFrom(GetUintSubTypeString(), allocator);
     else if (PyDataType_ISSIGNED(desc))

@@ -61,6 +61,16 @@ extern "C" {
 #include <numpy/npy_common.h>
 #endif
 
+#if NPY_ABI_VERSION < 0x02000000
+#define PyDataType_FIELDS(descr) ((descr)->fields)
+#define PyDataType_NAMES(descr) ((descr)->names)
+/* #define PyDataType_SUBARRAY(descr) */
+#define PyDataType_ELSIZE(descr) ((descr)->elsize)
+#define PyDataType_SET_ELSIZE(descr, size) ((descr)->elsize = size)
+#define PyArray_DescrProto PyArray_Descr
+#define _PyArray_LegacyDescr PyArray_Descr
+#endif
+
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 
 #ifdef __cplusplus /* If this is a C++ compiler, end C linkage */
