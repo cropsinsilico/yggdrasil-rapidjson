@@ -4851,7 +4851,7 @@ public:
       PyObject *column_dtypes = NULL, *columns = NULL,
 	*itype = NULL, *skipTitleObject = NULL, *vtype = NULL, *vv = NULL,
 	*method = NULL, *args = NULL, *kwargs = NULL, *arr = NULL,
-	*new_itype = NULL;
+	*new_itype = NULL, *pandas_api = NULL, *is_integer_dtype = NULL;
       std::string new_itype_str;
       column_dtypes = PyDict_New();
       if (column_dtypes == NULL) {
@@ -4863,7 +4863,20 @@ public:
 	error = true;
 	goto cleanup_array;
       }
-      skipTitleObject = PyObject_CallMethod(columns, "is_integer", NULL);
+      pandas_api = PyImport_ImportModule("pandas.api.types");
+      if (pandas_api == NULL) {
+	error = true;
+	goto cleanup_array;
+      }
+      is_integer_dtype = PyObject_GetAttrString(pandas_api, "is_integer_dtype");
+      Py_CLEAR(pandas_api);
+      if (is_integer_dtype == NULL) {
+	error = true;
+	goto cleanup_array;
+      }
+      skipTitleObject = PyObject_CallFunction(is_integer_dtype, "(O)", columns);
+      Py_CLEAR(is_integer_dtype);
+      // skipTitleObject = PyObject_CallMethod(columns, "is_integer", NULL);
       if (skipTitleObject == NULL) {
 	error = true;
 	goto cleanup_array;
@@ -4986,6 +4999,8 @@ public:
       Py_CLEAR(arr);
       Py_CLEAR(ikey);
       Py_CLEAR(ival);
+      Py_CLEAR(pandas_api);
+      Py_CLEAR(is_integer_dtype);
       out = (!error);
       goto cleanup;
 #endif // RAPIDJSON_DONT_IMPORT_NUMPY
