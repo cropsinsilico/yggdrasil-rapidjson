@@ -918,6 +918,8 @@ bool IsStructuredArray(PyObject* x) {
     RAPIDJSON_ASSERT(desc);
     if (desc == NULL)
       PYTHON_ERROR_EXIT_(false);
+    if (!PyDataType_HASFIELDS(desc))
+      PYTHON_ERROR_EXIT_(false);
     if (PyDataType_NAMES(desc) == NULL)
       PYTHON_ERROR_EXIT_(false);
     if (PyTuple_Size(PyDataType_NAMES(desc)) != 1)
@@ -953,8 +955,7 @@ PyObject* GetStructuredArray(PyObject* x) {
   npy_intp *dims = NULL, *strides = NULL;
   PyObject *out = NULL, *names = NULL, *fields = NULL;
   PyObject *ikey = NULL, *idtype = NULL, *ioffset = NULL, *ifield = NULL;
-  PyArray_Descr *idesc = NULL, *sub_desc = NULL, *isub_desc;
-  _PyArray_LegacyDescr *desc = NULL;
+  PyArray_Descr *idesc = NULL, *sub_desc = NULL, *isub_desc, *desc = NULL;
   PyArrayObject *ival = NULL, *array = NULL;
   Py_ssize_t i = 0, kw_pos = 0;
   npy_intp offset = 0;
@@ -993,7 +994,8 @@ PyObject* GetStructuredArray(PyObject* x) {
     // sub_desc = PyArray_DescrNewFromType(PyArray_TYPE(ival));
     if (sub_desc == NULL)
       goto cleanup;
-    PyDataType_SET_ELSIZE(sub_desc, (int)PyArray_ITEMSIZE(ival));
+    if (PyTypeNum_ISFLEXIBLE(isub_desc->type_num))
+      PyDataType_SET_ELSIZE(sub_desc, (int)PyArray_ITEMSIZE(ival));
     offsets.push_back(offset);
     ioffset = PyLong_FromSsize_t((Py_ssize_t)offset);
     if (ioffset == NULL) {
@@ -1017,18 +1019,18 @@ PyObject* GetStructuredArray(PyObject* x) {
     ifield = NULL;
     isub_desc = NULL;
   }
-  desc = (_PyArray_LegacyDescr*)PyArray_DescrNewFromType(NPY_VOID);
-  if (desc == NULL)
+  desc = PyArray_DescrNewFromType(NPY_VOID);
+  if (desc == NULL || !PyDataType_ISLEGACY(desc))
+    goto cleanup;
+  if (PyDataType_SET_FIELDS(desc, fields) < 0)
     goto cleanup;
   Py_INCREF(fields);
-  desc->fields = fields;
+  if (PyDataType_SET_NAMES(desc, names) < 0)
+    goto cleanup;
   Py_INCREF(names);
-  desc->names = names;
-  desc->elsize = (int)offset;
-  // PyDataType_SET_ELSIZE(desc, (int)offset);
+  PyDataType_SET_ELSIZE(desc, (int)offset);
   // TODO: fill in other fields? alignment?
-  array = (PyArrayObject*)PyArray_NewFromDescr(&PyArray_Type,
-					       (PyArray_Descr*)desc,
+  array = (PyArrayObject*)PyArray_NewFromDescr(&PyArray_Type, desc,
 					       nd, dims, strides,
 					       NULL, 0, NULL);
   desc = NULL; // PyArray_NewFromDescr steals ref

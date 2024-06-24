@@ -4345,7 +4345,8 @@ public:
     if (!isPythonInitialized())
       return NULL;
     PyObject *out = NULL, *ival = NULL, *tmp = NULL, *pyBytes = NULL,
-      *titlePy = NULL, *offset = NULL, *sub_dtype = NULL;
+      *titlePy = NULL, *offset = NULL, *sub_dtype = NULL,
+      *fields = NULL, *names = NULL;
     PyArray_Descr *desc = NULL, *sub_desc = NULL;
     PYTHON_ERROR_SETUP_;
     switch (GetType()) {
@@ -4476,24 +4477,38 @@ public:
 						title.GetStringLength());
 	  sub_desc = desc;
 	  desc = PyArray_DescrNewFromType(NPY_VOID);
-	  if (desc == NULL) {
+	  if (desc == NULL || !PyDataType_ISLEGACY(desc)) {
 	    out = NULL;
 	    goto cleanup;
 	  }
-	  _PyArray_LegacyDescr* leg_desc = (_PyArray_LegacyDescr*)desc;
-	  leg_desc->names = PyTuple_Pack(1, titlePy);
-	  leg_desc->fields = PyDict_New();
+	  names = PyTuple_Pack(1, titlePy);
+	  fields = PyDict_New();
 	  PyDataType_SET_ELSIZE(desc, PyDataType_ELSIZE(sub_desc));
 	  offset = PyLong_FromSsize_t(0);
 	  sub_dtype = PyTuple_Pack(2, sub_desc, offset);
 	  Py_CLEAR(sub_desc);
 	  Py_CLEAR(offset);
-	  if (PyDict_SetItem(leg_desc->fields, titlePy, sub_dtype) < 0) {
+	  if (PyDict_SetItem(fields, titlePy, sub_dtype) < 0) {
+	    Py_CLEAR(fields);
+	    Py_CLEAR(names);
 	    out = NULL;
 	    goto cleanup;
 	  }
 	  Py_CLEAR(titlePy);
 	  Py_CLEAR(sub_dtype);
+	  if (PyDataType_SET_FIELDS(desc, fields) < 0) {
+	    Py_CLEAR(fields);
+	    Py_CLEAR(names);
+	    out = NULL;
+	    goto cleanup;
+	  }
+	  fields = NULL;
+	  if (PyDataType_SET_NAMES(desc, names) < 0) {
+	    Py_CLEAR(names);
+	    out = NULL;
+	    goto cleanup;
+	  }
+	  names = NULL;
 	}
 	const ValueType& shape = GetShape();
 	SizeType ndim = shape.Size();

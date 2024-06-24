@@ -62,6 +62,37 @@ extern "C" {
 #endif
 
 #include "npy_2_compat.h"
+#if NPY_FEATURE_VERSION >= NPY_2_0_API_VERSION || NPY_ABI_VERSION < 0x02000000
+  #define DESCR_SETTER(FIELD, field, type, legacy_only)			\
+    static inline int							\
+    PyDataType_SET_##FIELD(PyArray_Descr *dtype, type value) {		\
+      if (legacy_only && !PyDataType_ISLEGACY(dtype)) {			\
+	return -1;							\
+      }									\
+      ((_PyArray_LegacyDescr *)dtype)->field = value;			\
+      return 0;								\
+    }
+#else  /* compiling for both 1.x and 2.x */
+  #define DESCR_SETTER(FIELD, field, type, legacy_only)			\
+    static inline int							\
+    PyDataType_SET_##FIELD(PyArray_Descr *dtype, type value) {		\
+      if (legacy_only && !PyDataType_ISLEGACY(dtype)) {			\
+	return -1;							\
+      }									\
+      if (PyArray_RUNTIME_VERSION >= NPY_2_0_API_VERSION) {		\
+	((_PyArray_LegacyDescr *)dtype)->field = value;			\
+      }									\
+      else {								\
+	((PyArray_DescrProto *)dtype)->field = value;			\
+      }									\
+      return 0;								\
+    }
+#endif
+  
+DESCR_SETTER(NAMES, names, PyObject *, 1)
+DESCR_SETTER(FIELDS, fields, PyObject *, 1)
+
+#undef DESCR_SETTER
 
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 
