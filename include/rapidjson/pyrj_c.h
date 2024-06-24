@@ -62,6 +62,10 @@ extern "C" {
 #endif
 
 #include "npy_2_compat.h"
+
+#ifndef NUMPY_CORE_INCLUDE_NUMPY_NPY_2_COMPAT_EXTRAS_H_
+#define NUMPY_CORE_INCLUDE_NUMPY_NPY_2_COMPAT_EXTRAS_H_
+  
 #if NPY_FEATURE_VERSION >= NPY_2_0_API_VERSION || NPY_ABI_VERSION < 0x02000000
   #define DESCR_SETTER(FIELD, field, type, legacy_only)			\
     static inline int							\
@@ -93,6 +97,8 @@ DESCR_SETTER(NAMES, names, PyObject *, 1)
 DESCR_SETTER(FIELDS, fields, PyObject *, 1)
 
 #undef DESCR_SETTER
+
+#endif // NUMPY_CORE_INCLUDE_NUMPY_NPY_2_COMPAT_EXTRAS_H_
 
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 
