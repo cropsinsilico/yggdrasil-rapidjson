@@ -4345,8 +4345,10 @@ public:
     if (!isPythonInitialized())
       return NULL;
     PyObject *out = NULL, *ival = NULL, *tmp = NULL, *pyBytes = NULL,
-      *titlePy = NULL, *offset = NULL, *sub_dtype = NULL,
-      *fields = NULL, *names = NULL;
+      *titlePy = NULL, *offset = NULL, *sub_dtype = NULL;
+#ifndef RAPIDJSON_DONT_IMPORT_NUMPY
+    PyObject *fields = NULL, *names = NULL;
+#endif
     PyArray_Descr *desc = NULL, *sub_desc = NULL;
     PYTHON_ERROR_SETUP_;
     switch (GetType()) {
