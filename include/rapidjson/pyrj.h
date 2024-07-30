@@ -22,6 +22,14 @@ bool isPythonInitialized() {
 
 RAPIDJSON_NAMESPACE_END
 
+#define BEGIN_PY_GIL
+#define END_PY_GIL
+#define YGGDRASIL_PYGIL_BEGIN
+#define YGGDRASIL_PYGIL_END
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_BEGIN
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_END
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_BEGIN_GLOBAL
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_END_GLOBAL
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
 
 #include <string>
@@ -65,20 +73,29 @@ void _rapidjson_Py_DECREF(PyObject *op) {
 
 RAPIDJSON_NAMESPACE_BEGIN
 
-#ifdef YGG_ENSURE_PY_GIL
-#define BEGIN_PY_GIL				\
-  PyGILState_STATE gstate;			\
-  gstate = PyGILState_Ensure();			\
-  CHECK_REFS(setup)
-#define END_PY_GIL				\
-  CHECK_REFS(cleanup)				\
-  PyGILState_Release(gstate)
-#else // YGG_ENSURE_PY_GIL
+#ifdef YGGDRASIL_PYGIL_NO_MANAGEMENT
 #define BEGIN_PY_GIL				\
   CHECK_REFS(setup)
 #define END_PY_GIL				\
   CHECK_REFS(cleanup)
-#endif // YGG_ENSURE_PY_GIL
+#define YGGDRASIL_PYGIL_BEGIN			\
+  CHECK_REFS(setup)
+#define YGGDRASIL_PYGIL_END			\
+  CHECK_REFS(cleanup)
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_BEGIN
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_END
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_BEGIN_GLOBAL
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_END_GLOBAL
+#else // YGGDRASIL_PYGIL_NO_MANAGEMENT
+#define BEGIN_PY_GIL global_PyGILState();
+#define END_PY_GIL global_PyGILState(true);
+#define YGGDRASIL_PYGIL_BEGIN rapidjson::global_PyGILState();
+#define YGGDRASIL_PYGIL_END rapidjson::global_PyGILState(true);
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_BEGIN rapidjson::global_PyThreadState();
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_END rapidjson::global_PyThreadState(true);
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_BEGIN_GLOBAL
+#define YGGDRASIL_PYGIL_ALLOW_THREADS_END_GLOBAL
+#endif // YGGDRASIL_PYGIL_NO_MANAGEMENT
 
 #ifdef _MSC_VER
 #define __RAPIDJSON_PRETTY_FUNCTION__ ""
@@ -180,6 +197,108 @@ void _clear_refs(T*& x, Args... args) {
 #define CLEAR_REFS(...)				\
   _clear_refs(__VA_ARGS__)
 
+// #define LOG_STATE(x, message)			\
+//   std::cerr << message << "[" << x << "]: " << PyGILState_Check() << " [action_taken = " << action_taken << "]" << std::endl
+
+#define LOG_STATE(x, message)
+
+/*!
+ * @brief Acquire/release the Python GIL.
+ * @param[in] release If true, the Python GIL will be released by the
+ *   current thread if it has already been acquired. If false, the GIL
+ *   will be acquired by the current thread if it has not already been
+ *   acquired.
+ * @returns true if successful, false otherwise.
+ */
+inline
+bool global_PyGILState(bool release = false) {
+  static thread_local PyGILState_STATE state;
+  static thread_local std::vector<bool> stack;
+  bool action_taken = false;
+  LOG_STATE(release, "Before global_PyGILState");
+  if (release) {
+    CHECK_REFS(cleanup);
+    if (stack.empty()) {
+      std::cerr << "global_PyGILState: The stack is empty, GIL will " <<
+	"not be released." << std::endl;
+      return false;
+    }
+    action_taken = stack.back();
+    stack.pop_back();
+    if (action_taken) {
+      if (!PyGILState_Check()) {
+	std::cerr << "global_PyGILState: No state to release" << std::endl;
+	return false;
+      }
+      LOG_STATE(release, "Before PyGILState_Release");
+      PyGILState_Release(state);
+      LOG_STATE(release, "After PyGILState_Release");
+    }
+  } else {
+    if (PyGILState_Check()) {
+      LOG_STATE(release, "global_PyGILState: GIL already acquired");
+    } else {
+      LOG_STATE(release, "Before PyGILState_Ensure");
+      state = PyGILState_Ensure();
+      LOG_STATE(release, "After PyGILState_Ensure");
+      action_taken = true;
+    }
+    stack.push_back(action_taken);
+    CHECK_REFS(setup);
+  }
+  LOG_STATE(release, "After global_PyGILState");
+  return true;
+}
+
+/*!
+ * @brief Save/restore the global Python thread state.
+ * @param[in] restore If true, the global thread state will be restored
+ *   if one has been saved. If false, the global thread state will be
+ *   saved if one does not already exist.
+ * @returns true if successful, false otherwise.
+ */
+inline
+bool global_PyThreadState(bool restore = false) {
+  static thread_local PyThreadState* state = NULL;
+  static thread_local std::vector<bool> stack;
+  bool action_taken = false;
+  LOG_STATE(restore, "Before global_PyThreadState");
+  if (restore) {
+    if (stack.empty()) {
+      std::cerr << "The stack is empty, no thread state can be restored." << std::endl;
+      return false;
+    }
+    action_taken = stack.back();
+    stack.pop_back();
+    if (action_taken) {
+      if (!state) {
+	std::cerr << "global_PyThreadState: No state to restore" << std::endl;
+	return false;
+      }
+      LOG_STATE(restore, "Before PyEval_RestoreThread");
+      PyEval_RestoreThread(state);
+      LOG_STATE(restore, "After PyEval_RestoreThread");
+      state = NULL;
+    }
+  } else {
+    if (!state) {
+      if (!PyGILState_Check()) {
+	LOG_STATE(restore, "global_PyThreadState: GIL not acquired");
+	// std::cerr << "global_PyThreadState: GIL not acquired" << std::endl;
+	// return false;
+      } else {
+	LOG_STATE(restore, "Before PyEval_SaveThread");
+	state = PyEval_SaveThread();
+	LOG_STATE(restore, "After PyEval_SaveThread");
+	action_taken = true;
+      }
+    }
+    stack.push_back(action_taken);
+  }
+  LOG_STATE(restore, "After global_PyThreadState");
+  return true;
+}
+
 /*!
   @brief Initialize Numpy arrays if it is not initalized.
   @return error message
@@ -270,6 +389,7 @@ std::string init_python_API() {
 #else
     {}
 #endif
+    YGGDRASIL_PYGIL_ALLOW_THREADS_BEGIN_GLOBAL;
   }
 #ifdef _OPENMP
   }
@@ -328,8 +448,11 @@ void finalize_python(const std::string="") {}
 inline
 void finalize_python(const std::string error_prefix="") {
   try {
-    if (Py_IsInitialized())
+    if (Py_IsInitialized()) {
+      
+      YGGDRASIL_PYGIL_ALLOW_THREADS_END_GLOBAL;
       Py_Finalize();
+    }
   } catch (std::exception& e) {
     throw std::runtime_error(error_prefix + "finalize_python: " + e.what()); // GCOVR_EXCL_LINE
   }

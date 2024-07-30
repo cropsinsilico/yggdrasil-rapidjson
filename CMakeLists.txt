@@ -34,6 +34,11 @@ if(POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
     cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python
 endif()
 
+option(YGGDRASIL_PYGIL_NO_MANAGEMENT "Disable any handling of the Python GIL" OFF)
+if (YGGDRASIL_PYGIL_NO_MANAGEMENT)
+    add_definitions(-DYGGDRASIL_PYGIL_NO_MANAGEMENT)
+endif()
+
 option(YGGDRASIL_DISABLE_PYTHON_C_API "Disable the Python C API" OFF)
 if(YGGDRASIL_DISABLE_PYTHON_C_API)
     add_definitions(-DYGGDRASIL_DISABLE_PYTHON_C_API)
