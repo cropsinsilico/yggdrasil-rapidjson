@@ -515,6 +515,11 @@ public:
   GenericUnitPrefix(const std::basic_string<Ch> abbr0, const double& factor0,
 		    const std::basic_string<Ch> name0) :
     abbr(abbr0), factor(factor0), name(name0) {}
+#if RAPIDJSON_HAS_CXX20
+  GenericUnitPrefix(const char8_t* abbr0, const double& factor0, const Ch* name0) :
+    abbr(reinterpret_cast<const char*>(abbr0)),
+    factor(factor0), name(name0) {}
+#endif // RAPIDJSON_HAS_CXX20
   //! Abbreviation associated with the prefix.
   std::basic_string<Ch> abbr;
   //! Factor that the prefix implies.
