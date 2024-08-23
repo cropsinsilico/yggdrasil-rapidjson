@@ -3601,7 +3601,7 @@ public:
   template <typename SourceEncoding, typename SourceAllocator,
 	    typename SourceStackAllocator>
   bool AddSchema(GenericDocument<SourceEncoding, SourceAllocator, SourceStackAllocator>& schema) {
-    return AddSchema(schema, schema.allocator_);
+    return AddSchema(schema, *schema.allocator_);
   }
   template <typename SourceEncoding, typename SourceAllocator>
   bool AddSchema(GenericValue<SourceEncoding, SourceAllocator>& schema,
