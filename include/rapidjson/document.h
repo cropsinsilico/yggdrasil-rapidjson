@@ -772,16 +772,30 @@ YGG_GENERIC_HELPER(Ply, Ply)
 #define YGG_STD_VECTOR_STRING_(T)					\
   template<typename ValueType>						\
   struct TypeHelper<ValueType, std::vector<T> > {			\
-    static bool Is(const ValueType& v)					\
-    { return v.template IsNDArray<typename ValueType::Ch>(); }		\
+    static bool Is(const ValueType& v) {				\
+      if (v.template IsNDArray<typename ValueType::Ch>()) return true;	\
+      if (!v.IsArray()) return false;					\
+      for (typename ValueType::ConstValueIterator it = v.Begin();	\
+	   it != v.End(); it++) {					\
+	if (!it->template Is<T>()) return false;			\
+      }									\
+      return true;							\
+    }									\
     static std::vector<T> Get(const ValueType& v) {			\
       std::vector<T> out;						\
-      out.resize(static_cast<size_t>(v.GetNElements()));		\
-      SizeType prec = v.GetPrecision() /				\
-	sizeof(typename ValueType::Ch);					\
-      typename ValueType::Ch* data = v.GetString();			\
-      for (size_t i = 0; i < out.size(); i++) {				\
-	out[i].assign(data + (i * prec), prec);				\
+      if (v.IsArray()) {						\
+	for (typename ValueType::ConstValueIterator it = v.Begin();	\
+	     it != v.End(); it++) {					\
+	  out.push_back(it->template Get<T>());				\
+	}								\
+      } else {								\
+	out.resize(static_cast<size_t>(v.GetNElements()));		\
+	SizeType prec = v.GetPrecision() /				\
+	  sizeof(typename ValueType::Ch);				\
+	const typename ValueType::Ch* data = v.GetString();		\
+	for (size_t i = 0; i < out.size(); i++) {			\
+	  out[i].assign(data + (i * prec), prec);			\
+	}								\
       }									\
       return out;							\
     }									\
