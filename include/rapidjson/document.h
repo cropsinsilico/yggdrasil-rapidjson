@@ -529,8 +529,32 @@ template <typename T> struct IsGenericValue : IsGenericValueImpl<T>::Type {};
 namespace internal {
 
 template <typename ValueType, typename T>
-struct TypeHelper {};
+struct TypeHelper {
+  static T Get(const ValueType& v,
+	       typename ValueType::AllocatorType&) {
+    return TypeHelper<ValueType, T>::Get(v);
+  }
+  static ValueType& Set(ValueType& v, const T& data,
+			typename ValueType::AllocatorType&) {
+    return TypeHelper<ValueType, T>::Set(v, data);
+  }
+};
 
+template<typename ValueType> 
+struct TypeHelper<ValueType, typename ValueType::ValueType> {
+  static bool Is(const ValueType&) { return true; }
+  static typename ValueType::ValueType Get(const ValueType& v,
+					   typename ValueType::AllocatorType& allocator) {
+    return typename ValueType::ValueType(v, allocator, true);
+  }
+  static ValueType& Set(ValueType& v,
+			const typename ValueType::ValueType& data,
+			typename ValueType::AllocatorType& allocator) {
+    v.CopyFrom(data, allocator, true);
+    return v;
+  }
+};
+  
 template<typename ValueType> 
 struct TypeHelper<ValueType, bool> {
     static bool Is(const ValueType& v) { return v.IsBool(); }
@@ -716,6 +740,33 @@ YGG_PTR_HELPER(PyObject, PythonInstance)
 YGG_GENERIC_HELPER(ObjWavefront, ObjWavefront)
 YGG_GENERIC_HELPER(Ply, Ply)
 #undef YGG_GENERIC_HELPER
+
+// template<typename ValueType>
+// struct TypeHelper<ValueType, std::vector<ValueType> > {
+//   static bool Is(const ValueType& v) { return v.IsArray(); }
+//   static std::vector<ValueType> Get(const ValueType& v,
+// 				    typename ValueType::AllocatorType& allocator) {
+//     std::vector<ValueType> out;
+//     for (typename ValueType::ConstValueIterator it = v.Begin();
+// 	 it != v.End(); it++) {
+//       out.emplace_back(*it, allocator, true);
+//     }
+//     return out;
+//   }
+//   static ValueType& Set(ValueType& v,
+// 			const std::vector<ValueType>& data,
+// 			typename ValueType::AllocatorType& allocator) {
+//     v.SetArray();
+//     v.Reserve(static_cast<SizeType>(data.size()), allocator);
+//     for (typename ValueType::ConstValueIterator it = v.Begin();
+// 	 it != v.End(); it++) {
+//       typename ValueType::ValueType item;
+//       item.CopyFrom(*it, allocator, true);
+//       v.PushBack(item, allocator);
+//     }
+//     return v;
+//   }
+// };
   
 #define YGG_STD_VECTOR_(T)						\
   template<typename ValueType>						\
@@ -733,6 +784,15 @@ YGG_GENERIC_HELPER(Ply, Ply)
       for (typename ValueType::ConstValueIterator it = v.Begin();	\
 	   it != v.End(); it++) {					\
 	out.push_back(it->template Get<T>());				\
+      }									\
+      return out;							\
+    }									\
+    static std::vector<T> Get(const ValueType& v,			\
+			      typename ValueType::AllocatorType& allocator) { \
+      std::vector<T> out;						\
+      for (typename ValueType::ConstValueIterator it = v.Begin();	\
+	   it != v.End(); it++) {					\
+	out.push_back(it->template Get<T>(allocator));			\
       }									\
       return out;							\
     }									\
@@ -822,6 +882,35 @@ YGG_GENERIC_HELPER(Ply, Ply)
     }									\
   };
 #if RAPIDJSON_HAS_STDSTRING
+// template<typename ValueType>
+// struct TypeHelper<ValueType, std::map<std::basic_string<typename ValueType::Ch>, ValueType> > {
+//   static bool Is(const ValueType& v) { return v.IsObject(); }
+//   static std::map<std::basic_string<typename ValueType::Ch>, ValueType> Get(const ValueType& v, typename ValueType::AllocatorType& allocator) {
+//     std::map<std::basic_string<typename ValueType::Ch>, ValueType> out;
+//     for (typename ValueType::ConstMemberIterator it = v.MemberBegin();
+// 	 it != v.MemberEnd(); it++) {
+//       out.emplace(std::piecewise_construct,
+// 		  std::forward_as_tuple(it->name.GetString()),
+// 		  std::forward_as_tuple(it->second, allocator, true));
+//     }
+//     return out;
+//   }
+//   static ValueType& Set(ValueType& v,
+// 			const std::map<std::basic_string<typename ValueType::Ch>, ValueType>& data,
+// 			typename ValueType::AllocatorType& allocator) {
+//     v.SetObject();
+//     v.MemberReserve(static_cast<SizeType>(data.size()), allocator);
+//     for (typename std::map<std::basic_string<typename ValueType::Ch>, T>::const_iterator it = data.begin();
+// 	 it != data.end(); it++) {
+//       typename ValueType::ValueType key;
+//       typename ValueType::ValueType item;
+//       key.template Set<std::basic_string<typename ValueType::Ch> >(it->first, allocator);
+//       item.CopyFrom(it->second, allocator, true);
+//       v.AddMember(key, item, allocator);
+//     }
+//     return v;
+//   }
+// };
 #define YGG_STD_MAP_(T)							\
   template<typename ValueType>						\
   struct TypeHelper<ValueType, std::map<std::basic_string<typename ValueType::Ch>, T> > { \
@@ -840,7 +929,16 @@ YGG_GENERIC_HELPER(Ply, Ply)
 	out[it->name.GetString()] = it->value.template Get<T>();	\
       }									\
       return out;							\
-}									\
+    }									\
+    static std::map<std::basic_string<typename ValueType::Ch>, T> Get(const ValueType& v, \
+								      typename ValueType::AllocatorType& allocator) { \
+      std::map<std::basic_string<typename ValueType::Ch>, T> out;		\
+      for (typename ValueType::ConstMemberIterator it = v.MemberBegin(); \
+	   it != v.MemberEnd(); it++) {					\
+	out[it->name.GetString()] = it->value.template Get<T>(allocator); \
+      }									\
+      return out;							\
+    }									\
     static ValueType& Set(ValueType& v,					\
 			  const std::map<std::basic_string<typename ValueType::Ch>, T>& data, \
 			  typename ValueType::AllocatorType& allocator) { \
@@ -870,6 +968,8 @@ YGG_GENERIC_HELPER(Ply, Ply)
   YGG_STD_VECTOR_STRING_(T)			\
   YGG_STD_MAP_(T)
   // TODO: Special treatment of vectors of scalars
+YGG_STD_VECTOR_(typename ValueType::ValueType)
+YGG_STD_MAP_(typename ValueType::ValueType)
 YGG_STD_HELPERS_(bool)
 YGG_STD_HELPERS_SCALAR_(int)
 YGG_STD_HELPERS_SCALAR_(unsigned)
@@ -952,7 +1052,7 @@ template <typename Encoding, typename Allocator = RAPIDJSON_DEFAULT_ALLOCATOR >
 class GenericValue {
 public:
     //! Name-value pair in an object.
-    typedef GenericMember<Encoding, Allocator> Member;
+    typedef GenericMember<Encoding, Allocator> Member;  //!< Type for member pairs
     typedef Encoding EncodingType;                  //!< Encoding type from template parameter.
     typedef Allocator AllocatorType;                //!< Allocator type from template parameter.
     typedef typename Encoding::Ch Ch;               //!< Character type derived from Encoding.
@@ -1391,7 +1491,7 @@ public:
     }
 
     //! Equal-to operator with const C-string pointer
-    bool operator==(const Ch* rhs) const { return *this == GenericValue(StringRef(rhs)); }
+    // bool operator==(const Ch* rhs) const { return *this == GenericValue(StringRef(rhs)); }
 
 #if RAPIDJSON_HAS_STDSTRING
     //! Equal-to operator with string object
@@ -2255,6 +2355,49 @@ public:
     //@{
 
 #ifdef RAPIDJSON_YGGDRASIL
+#define ADD_CAST_OP_BASE(T, TC)			\
+    operator T() { return Get<T>(); }		\
+    operator TC() const { return Get<TC>(); }
+#define ADD_CAST_OP(T)				\
+    ADD_CAST_OP_BASE(T, T)
+    
+    ADD_CAST_OP(bool)
+    ADD_CAST_OP(int)
+    ADD_CAST_OP(unsigned)
+#ifdef _MSC_VER
+    ADD_CAST_OP(long)
+    ADD_CAST_OP(unsigned long)
+#endif
+    ADD_CAST_OP(int64_t)
+    ADD_CAST_OP(uint64_t)
+    ADD_CAST_OP(double)
+    ADD_CAST_OP(float)
+    // ADD_CAST_OP_BASE(Ch*, const Ch*)
+#if RAPIDJSON_HAS_STDSTRING
+    ADD_CAST_OP(std::basic_string<Ch>)
+#endif
+    ADD_CAST_OP_BASE(Array, ConstArray)
+    ADD_CAST_OP_BASE(Object, ConstObject)
+    ADD_CAST_OP(uint8_t)
+    ADD_CAST_OP(uint16_t)
+    ADD_CAST_OP(int8_t)
+    ADD_CAST_OP(int16_t)
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+    ADD_CAST_OP(long double)
+#endif
+    ADD_CAST_OP(std::complex<float>)
+    ADD_CAST_OP(std::complex<double>)
+#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
+    ADD_CAST_OP(std::complex<long double>)
+#endif
+#ifndef YGGDRASIL_DISABLE_PYTHON_C_API
+    ADD_CAST_OP(PyObject*)
+#endif
+    ADD_CAST_OP(ObjWavefront)
+    ADD_CAST_OP(Ply)
+#undef ADD_CAST_OP
+#undef ADD_CAST_OP_BASE
+    
     //! Locate an array element.
     ConstValueIterator Index(const ValueType& x) const {
       RAPIDJSON_ASSERT(IsArray());
@@ -2433,6 +2576,10 @@ public:
     T Get() { return internal::TypeHelper<ValueType, T>::Get(*this); }
 
 #ifdef RAPIDJSON_YGGDRASIL
+    template <typename T>
+    T Get(AllocatorType& allocator) {
+      return internal::TypeHelper<ValueType, T>::Get(*this, allocator);
+    }
     template <typename T>
     void Get(T& data) { data = Get<T>(); }
 #endif  

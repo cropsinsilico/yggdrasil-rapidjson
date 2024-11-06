@@ -993,12 +993,14 @@ public:
   GenericUnits() : units_() {}
   //! \brief Initialize from a vector of units.
   //! \param units Vector of units.
-  GenericUnits(const std::vector<GenericUnit<Encoding> > units) : units_(units) {}
+  GenericUnits(const std::vector<GenericUnit<Encoding> > units) :
+    units_(units) {}
   //! \brief Initialize from a string.
   //! \param str Units string.
   //! \param verbose If true, verbose information is displayed when
   //!   parsing the units string.
-  GenericUnits(const std::basic_string<Ch> str, const bool& verbose=false) : units_() {
+  GenericUnits(const std::basic_string<Ch> str, const bool& verbose=false) :
+    units_() {
     GenericUnits<Encoding> new_units = parse_units(str.c_str(), str.length(), verbose);
     units_.insert(units_.begin(), new_units.units_.begin(), new_units.units_.end());
   }
@@ -1008,7 +1010,8 @@ public:
   //! \param verbose If true, verbose information is displayed when
   //!   parsing the units string.
   template<size_t N>
-  GenericUnits(const Ch str[N], const bool& verbose=false) : units_() {
+  GenericUnits(const Ch str[N], const bool& verbose=false) :
+    units_() {
     GenericUnits<Encoding> new_units = parse_units(str, N, verbose);
     units_.insert(units_.begin(), new_units.units_.begin(), new_units.units_.end());
   }
@@ -1017,7 +1020,8 @@ public:
   //!   null terminated.
   //! \param verbose If true, verbose information is displayed when
   //!   parsing the units string.
-  GenericUnits(const Ch* str, const bool& verbose=false) : units_() {
+  GenericUnits(const Ch* str, const bool& verbose=false) :
+    units_() {
     GenericUnits<Encoding> new_units = parse_units(str, internal::StrLen(str), verbose);
     units_.insert(units_.begin(), new_units.units_.begin(), new_units.units_.end());
   }
@@ -1026,11 +1030,13 @@ public:
   //! \param len Number of characters in str.
   //! \param verbose If true, verbose information is displayed when
   //!   parsing the units string.
-  GenericUnits(const Ch* str, const size_t len, const bool& verbose=false) : units_() {
+  GenericUnits(const Ch* str, const size_t len, const bool& verbose=false) :
+    units_() {
     GenericUnits<Encoding> new_units = parse_units(str, len, verbose);
     units_.insert(units_.begin(), new_units.units_.begin(), new_units.units_.end());
   }
-  GenericUnits(const GenericUnits<Encoding>& rhs) : units_() {
+  GenericUnits(const GenericUnits<Encoding>& rhs) :
+    units_() {
     units_.insert(units_.begin(), rhs.units_.begin(), rhs.units_.end());
   }
   GenericUnits<Encoding>& operator=(const GenericUnits<Encoding>& rhs) {
@@ -2355,6 +2361,7 @@ class QuantityArray;
     typedef ENCODING Encoding;						\
     typedef typename BASETYP(T)::Ch Ch;					\
     typedef typename BASETYP(T)::UnitsType UnitsType;			\
+    typedef typename BASETYP(T)::ScalarType ScalarType;			\
     CTORS(CLS, BASETYP)							\
     INHERIT_OPERATORS_(CLS, TYP, BASETYP)				\
     TYP(T)& operator=(const BASETYP(T)& other) {			\
@@ -2376,6 +2383,7 @@ public:
   typedef Encoding EncodingType;    //!< Encoding type from template parameter.
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
   typedef GenericUnits<Encoding> UnitsType; //!< Units type.
+  typedef T ScalarType; //!< Scalar type.
   //! \brief Empty constructor.
   GenericQuantityArray() : value_(), units_(), shape_() {}
   //! \brief Create a quantity.
@@ -2383,28 +2391,29 @@ public:
   //! \param ndim Number of dimensions in the array.
   //! \param shape Size of the array in each dimension.
   //! \param units Units instance.
-  GenericQuantityArray(const T* value, const SizeType& ndim, const SizeType* shape,
+  GenericQuantityArray(const ScalarType* value,
+		       const SizeType& ndim, const SizeType* shape,
 		       const UnitsType& units = UnitsType()) :
     value_(), units_(units), shape_()
   { _init(value, ndim, shape); }
   //! \brief Create a scalar quantity.
   //! \param value Scalar value.
   //! \param units Units instance.
-  GenericQuantityArray(const T value,
+  GenericQuantityArray(const ScalarType value,
 		       const UnitsType& units = UnitsType()) :
     value_(), units_(units), shape_()
   { SizeType len = 1; _init(&value, 1, &len); }
   //! \brief Create a scalar quantity.
   //! \param value Scalar value.
   //! \param units Units string.
-  GenericQuantityArray(const T value, const Ch* units) :
+  GenericQuantityArray(const ScalarType value, const Ch* units) :
     value_(), units_(UnitsType(units)), shape_()
   { SizeType len = 1; _init(&value, 1, &len); }
   //! \brief Create a quantity.
   //! \param value Pointer to an array.
   //! \param len Number of elements in the 1D array.
   //! \param units Units instance.
-  GenericQuantityArray(const T* value, const SizeType& len,
+  GenericQuantityArray(const ScalarType* value, const SizeType& len,
 		const UnitsType& units = UnitsType()) :
     value_(), units_(units), shape_()
   { _init(value, 1, &len); }
@@ -2413,7 +2422,7 @@ public:
   //! \param ndim Number of dimensions in the array.
   //! \param shape Size of the array in each dimension.
   //! \param units Units string.
-  GenericQuantityArray(const T* value, const SizeType& ndim, const SizeType* shape,
+  GenericQuantityArray(const ScalarType* value, const SizeType& ndim, const SizeType* shape,
 		const Ch* units) :
     value_(), units_(UnitsType(units)), shape_()
   { _init(value, ndim, shape); }
@@ -2422,7 +2431,7 @@ public:
   //! \param value 1D array.
   //! \param units Units instance.
   template<SizeType N>
-  GenericQuantityArray(const T (&value)[N], const UnitsType& units = UnitsType()) :
+  GenericQuantityArray(const ScalarType (&value)[N], const UnitsType& units = UnitsType()) :
     value_(), units_(units), shape_()
   { SizeType len = N; _init(&(value[0]), 1, &len); }
   //! \brief Constructor from units string.
@@ -2430,7 +2439,7 @@ public:
   //! \param value 1D array.
   //! \param units Units string.
   template<SizeType N>
-  GenericQuantityArray(const T (&value)[N], const Ch* units) :
+  GenericQuantityArray(const ScalarType (&value)[N], const Ch* units) :
     value_(), units_(UnitsType(units)), shape_()
   { SizeType len = N; _init(&(value[0]), 1, &len); }
   //! \brief Create a quantity without units.
@@ -2439,7 +2448,7 @@ public:
   //! \param value 1D array.
   //! \param units Units instance.
   template<SizeType N, SizeType M>
-  GenericQuantityArray(const T (&value)[N][M], const UnitsType& units = UnitsType()) :
+  GenericQuantityArray(const ScalarType (&value)[N][M], const UnitsType& units = UnitsType()) :
     value_(), units_(units), shape_()
   { SizeType shape[] = {N, M}; _init(&(value[0][0]), 2, &(shape[0])); }
   //! \brief Constructor from units string.
@@ -2448,12 +2457,12 @@ public:
   //! \param value 1D array.
   //! \param units Units string.
   template<SizeType N, SizeType M>
-  GenericQuantityArray(const T (&value)[N][M], const Ch* units) :
+  GenericQuantityArray(const ScalarType (&value)[N][M], const Ch* units) :
     value_(), units_(UnitsType(units)), shape_()
   { SizeType shape[] = {N, M}; _init(&(value[0][0]), 2, &(shape[0])); }
   //! \brief Copy constructor.
   //! \param other QuantityArray to copy.
-  GenericQuantityArray(const GenericQuantityArray<T, Encoding>& other) :
+  GenericQuantityArray(const GenericQuantityArray<ScalarType, Encoding>& other) :
     value_(), units_(other.units_), shape_()
   { _init(other.value_.data(), other.ndim(), other.shape_.data()); }
   //! \brief Destructor.
@@ -2464,7 +2473,7 @@ public:
   //! \brief Copy assignment.
   //! \param other GenericQuantityArray to copy.
   //! \return Copy.
-  GenericQuantityArray<T, Encoding>& operator=(const GenericQuantityArray<T, Encoding>& other) {
+  GenericQuantityArray<ScalarType, Encoding>& operator=(const GenericQuantityArray<ScalarType, Encoding>& other) {
     this->~GenericQuantityArray();
     new (this) GenericQuantityArray(other);
     return *this;
@@ -2491,9 +2500,9 @@ public:
   //! \tparam DestEncoding Encoding that the copy should use.
   //! \return Copy w/ DestEncoding.
   template<typename DestEncoding>
-  GenericQuantityArray<T, DestEncoding> transcode() const {
+  GenericQuantityArray<ScalarType, DestEncoding> transcode() const {
     GenericUnits<DestEncoding> new_units = units_.template transcode<DestEncoding>();
-    return GenericQuantityArray<T, DestEncoding>(value(), ndim(), shape(), new_units);
+    return GenericQuantityArray<ScalarType, DestEncoding>(value(), ndim(), shape(), new_units);
   }
 private:
   std::vector<SizeType> _index(const SizeType idx) const {
@@ -2510,12 +2519,12 @@ private:
   }
   template<typename T2>
   void _init(const T2*, const SizeType, const SizeType*,
-	     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T2, T)))) {
-    RAPIDJSON_ASSERT(((YGGDRASIL_IS_CASTABLE(T2, T)::Value)));
+	     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
+    RAPIDJSON_ASSERT(((YGGDRASIL_IS_CASTABLE(T2, ScalarType)::Value)));
   }
   template<typename T2>
   void _init(const T2* value, const SizeType ndim, const SizeType* shape,
-	     RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, T)))) {
+	     RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
     RAPIDJSON_ASSERT(ndim > 0);
     // Shape
     shape_.resize(ndim);
@@ -2525,7 +2534,7 @@ private:
     SizeType N = nelements();
     value_.resize(N);
     for (SizeType i = 0; i < N; i++)
-      value_[i] = castPrecision<T2,T>(value[i]);
+      value_[i] = castPrecision<T2,ScalarType>(value[i]);
   }
   template<typename Ch2>
   void _write_array(std::basic_ostream<Ch2>& os) const {
@@ -2579,7 +2588,7 @@ private:
 public:
   //! \brief Get the quantity value without units.
   //! \return Value.
-  const T* value() const { return value_.data(); }
+  const ScalarType* value() const { return value_.data(); }
   //! \brief Get the units instance.
   //! \return Units.
   UnitsType units() const { return units_; }
@@ -2695,8 +2704,8 @@ public:
   //! \param x QuantityArray to modulo by.
   //! \return Result of modulo.
   template<typename T2>
-  GenericQuantityArray<T, Encoding>& operator%=(const GenericQuantityArray<T2, Encoding>& x) {
-    GenericQuantityArray<T, Encoding> val = *this / x;
+  GenericQuantityArray<ScalarType, Encoding>& operator%=(const GenericQuantityArray<T2, Encoding>& x) {
+    GenericQuantityArray<ScalarType, Encoding> val = *this / x;
     val.floor_inplace();
     val *= x;
     *this -= val;
@@ -2720,7 +2729,7 @@ public:
   //! \brief Perform floor operation in place.
   //! \return Resulut of floor.
   GenericQuantityArray& floor_inplace() {
-    if (YGGDRASIL_IS_FLOAT_TYPE(T)::Value) {
+    if (YGGDRASIL_IS_FLOAT_TYPE(ScalarType)::Value) {
       SizeType N = nelements();
       for (SizeType i = 0; i < N; i++) {
 	value_[i] = internal::value_floor(value_[i]);
@@ -2755,8 +2764,8 @@ public:
 		       (x))
   //! \brief Explicity copy.
   //! \return Copy.
-  GenericQuantityArray<T, Encoding>* copy() const {
-    return new GenericQuantityArray<T, Encoding>(*this);
+  GenericQuantityArray<ScalarType, Encoding>* copy() const {
+    return new GenericQuantityArray<ScalarType, Encoding>(*this);
   }
   //! \brief Explicity copy and cast to void pointer.
   //! \return Copy.
@@ -2798,7 +2807,7 @@ public:
   void apply_conversion_factor(std::vector<double> factor) {
     SizeType N = nelements();
     for (SizeType i = 0; i < N; i++)
-      value_[i] = do_conv<T>(value_[i], factor[0], factor[1]);
+      value_[i] = do_conv<ScalarType>(value_[i], factor[0], factor[1]);
   }
   //! \brief Convert the quantity to a different set of units. The new units
   //!   must be compatible with the current ones.
@@ -2870,24 +2879,25 @@ public:
   typedef Encoding EncodingType;    //!< Encoding type from template parameter.
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
   typedef GenericUnits<Encoding> UnitsType; //!< Units type.
+  typedef T ScalarType; //!< Scalar type.
   //! \brief Empty constructor.
-  GenericQuantity() : Base(_initialize_value<T>()) {}
+  GenericQuantity() : Base(_initialize_value<ScalarType>()) {}
   //! \brief Copy constructor.
-  GenericQuantity(const GenericQuantity& rhs) :
+  GenericQuantity(const GenericQuantity<ScalarType, Encoding>& rhs) :
     Base(rhs.value(), rhs.units()) {}
   //! \brief Create a quantity without units.
   //! \param value Scalar value.
-  GenericQuantity(const T& value) :
+  GenericQuantity(const ScalarType& value) :
     Base(value) {}
   //! \brief Constructor from units string.
   //! \param value Scalar value.
   //! \param units Units string.
-  GenericQuantity(const T& value, const Ch* units) :
+  GenericQuantity(const ScalarType& value, const Ch* units) :
     Base(value, units) {}
   //! \brief Constructor from units string.
   //! \param value Scalar value.
   //! \param units Units instance.
-  GenericQuantity(const T& value, const UnitsType& units) :
+  GenericQuantity(const ScalarType& value, const UnitsType& units) :
     Base(value, units) {}
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
@@ -2900,12 +2910,12 @@ public:
   }
   //! \brief Get the quantity value without units.
   //! \return Value.
-  T value() const { return Base::value()[0]; }
+  ScalarType value() const { return Base::value()[0]; }
   //! \brief Set the quantity value.
   //! \param new_value New quantity value.
   template<typename T2>
   void set_value(const T2& new_value,
-		 RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, T))))
+		 RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType))))
   {
     SizeType N = 1;
     Base::set_value(&new_value, 1, &N);
