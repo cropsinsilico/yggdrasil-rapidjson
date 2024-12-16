@@ -2372,6 +2372,12 @@ public:
     ADD_CAST_OP(uint64_t)
     ADD_CAST_OP(double)
     ADD_CAST_OP(float)
+#if LLONG_MAX != INT64_MAX
+    ADD_CAST_OP(long long int);
+#endif
+#if ULLONG_MAX != UINT64_MAX
+    ADD_CAST_OP(unsigned long long int);
+#endif
     // ADD_CAST_OP_BASE(Ch*, const Ch*)
 #if RAPIDJSON_HAS_STDSTRING
     ADD_CAST_OP(std::basic_string<Ch>)
