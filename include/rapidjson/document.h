@@ -1491,7 +1491,7 @@ public:
     }
 
     //! Equal-to operator with const C-string pointer
-    // bool operator==(const Ch* rhs) const { return *this == GenericValue(StringRef(rhs)); }
+    bool operator==(const Ch* rhs) const { return *this == GenericValue(StringRef(rhs)); }
 
 #if RAPIDJSON_HAS_STDSTRING
     //! Equal-to operator with string object
@@ -2358,17 +2358,6 @@ public:
 #define ADD_CAST_OP_BASE(T, TC)			\
     operator T() { return Get<T>(); }		\
     operator TC() const { return Get<TC>(); }
-  /*
-#define ADD_CAST_IFNEQ(T0, TSRC, TNEQ)					\
-    template<typename T=T0>						\
-    operator typename std::enable_if<!std::is_same<T, TNEQ>::value, T>::type () { \
-      return static_cast<T>(Get<TSRC>());				\
-    }									\
-    template<typename T=T0>						\
-    operator typename std::enable_if<!std::is_same<T, TNEQ>::value, T>::type () const { \
-      return static_cast<T>(Get<TSRC>());				\
-    }
-  */
 #define ADD_CAST_IFNEQ(T0, TSRC, TNEQ)					\
     template<typename T=T0>						\
     operator RAPIDJSON_DISABLEIF_RETURN((internal::IsSame<T, TNEQ>), (T))() { \
