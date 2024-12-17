@@ -7,6 +7,7 @@ name: Test of package installation & execution
      - '*'
   schedule:
   - cron: 0 10 * * 1
+  - cron: 0 10 1 * *
 jobs:
   build_pip:
     runs-on: ${{ matrix.os }}
@@ -99,12 +100,18 @@ jobs:
           auto-update-conda: true
           channels: conda-forge
           channel-priority: strict
-          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          # miniforge-variant: Mambaforge
           use-mamba: true
+          conda-remove-defaults: true
       - name: Check for numpy
         run: |
           python -c "import sys; print(sys.executable)"
           python -c "import numpy; print(numpy.get_include())"
+      - name: Check conda environment
+        run: |
+          mamba info
+          mamba list
       - name: Configure
         if: matrix.os == 'windows-latest'
         run: |
