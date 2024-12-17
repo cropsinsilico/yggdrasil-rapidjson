@@ -2358,6 +2358,26 @@ public:
 #define ADD_CAST_OP_BASE(T, TC)			\
     operator T() { return Get<T>(); }		\
     operator TC() const { return Get<TC>(); }
+  /*
+#define ADD_CAST_IFNEQ(T0, TSRC, TNEQ)					\
+    template<typename T=T0>						\
+    operator typename std::enable_if<!std::is_same<T, TNEQ>::value, T>::type () { \
+      return static_cast<T>(Get<TSRC>());				\
+    }									\
+    template<typename T=T0>						\
+    operator typename std::enable_if<!std::is_same<T, TNEQ>::value, T>::type () const { \
+      return static_cast<T>(Get<TSRC>());				\
+    }
+  */
+#define ADD_CAST_IFNEQ(T0, TSRC, TNEQ)					\
+    template<typename T=T0>						\
+    operator RAPIDJSON_DISABLEIF_RETURN((internal::IsSame<T, TNEQ>), (T))() { \
+      return static_cast<T>(Get<TSRC>());				\
+    }									\
+    template<typename T=T0>						\
+    operator RAPIDJSON_DISABLEIF_RETURN((internal::IsSame<T, TNEQ>), (T))() const { \
+      return static_cast<T>(Get<TSRC>());				\
+    }
 #define ADD_CAST_OP(T)				\
     ADD_CAST_OP_BASE(T, T)
     
@@ -2372,18 +2392,8 @@ public:
     ADD_CAST_OP(uint64_t)
     ADD_CAST_OP(double)
     ADD_CAST_OP(float)
-#pragma message "LLONG_MAX = " XSTR_MACRO(LLONG_MAX)
-#pragma message "INT64_MAX = " XSTR_MACRO(INT64_MAX)
-#if LLONG_MAX != INT64_MAX
-#pragma message "ADDED long long int CAST"
-    ADD_CAST_OP(long long int);
-#endif
-#pragma message "ULLONG_MAX = " XSTR_MACRO(ULLONG_MAX)
-#pragma message "UINT64_MAX = " XSTR_MACRO(UINT64_MAX)
-#if ULLONG_MAX != UINT64_MAX
-#pragma message "ADDED unsigned long long int CAST"
-    ADD_CAST_OP(unsigned long long int);
-#endif
+    ADD_CAST_IFNEQ(long long int, int64_t, int64_t)
+    ADD_CAST_IFNEQ(unsigned long long int, uint64_t, uint64_t)
     // ADD_CAST_OP_BASE(Ch*, const Ch*)
 #if RAPIDJSON_HAS_STDSTRING
     ADD_CAST_OP(std::basic_string<Ch>)
