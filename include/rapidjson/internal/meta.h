@@ -240,6 +240,7 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
 #define PACK_MACRO(...) PACK_MACRO_((__VA_ARGS__))
 #define UNPACK_MACRO(...) __VA_ARGS__
 #define STR_MACRO(X) #X
+#define XSTR_MACRO(X) STR_MACRO(X)
 
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
   

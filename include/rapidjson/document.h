@@ -2372,10 +2372,16 @@ public:
     ADD_CAST_OP(uint64_t)
     ADD_CAST_OP(double)
     ADD_CAST_OP(float)
+#pragma message "LLONG_MAX = " XSTR_MACRO(LLONG_MAX)
+#pragma message "INT64_MAX = " XSTR_MACRO(INT64_MAX)
 #if LLONG_MAX != INT64_MAX
+#pragma message "ADDED long long int CAST"
     ADD_CAST_OP(long long int);
 #endif
+#pragma message "ULLONG_MAX = " XSTR_MACRO(ULLONG_MAX)
+#pragma message "UINT64_MAX = " XSTR_MACRO(UINT64_MAX)
 #if ULLONG_MAX != UINT64_MAX
+#pragma message "ADDED unsigned long long int CAST"
     ADD_CAST_OP(unsigned long long int);
 #endif
     // ADD_CAST_OP_BASE(Ch*, const Ch*)
