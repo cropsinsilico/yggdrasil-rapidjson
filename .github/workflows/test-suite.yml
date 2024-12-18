@@ -104,6 +104,9 @@ jobs:
           # miniforge-variant: Mambaforge
           use-mamba: true
           conda-remove-defaults: true
+      - name: Install packages not current on conda-forge (gcovr)
+        run: |
+          pip install gcovr
       - name: Check for numpy
         run: |
           python -c "import sys; print(sys.executable)"
