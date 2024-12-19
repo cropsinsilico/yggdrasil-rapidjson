@@ -15,8 +15,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    endif()
 endif()
 
-SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
-
 set(LIB_MAJOR_VERSION "1")
 set(LIB_MINOR_VERSION "1")
 set(LIB_PATCH_VERSION "0")
@@ -26,13 +24,14 @@ if (CMAKE_VERSION VERSION_LESS 3.0)
     PROJECT(RapidJSON CXX)
 else()
     cmake_policy(SET CMP0048 NEW)
-    PROJECT(RapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES CXX)
+    PROJECT(RapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES C CXX)
 endif()
-
 
 if(POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
     cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python
 endif()
+
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 
 option(YGGDRASIL_PYGIL_NO_MANAGEMENT "Disable any handling of the Python GIL" OFF)
 if (YGGDRASIL_PYGIL_NO_MANAGEMENT)

@@ -1,11 +1,15 @@
 set -e
-# mkdir build
-# cd build
+rm -rf build
+if [ ! -d build ]; then
+    mkdir build
+fi
+cd build
 cmake .. -DRAPIDJSON_SKIP_VALGRIND_TESTS=ON -DRAPIDJSON_ENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_CREATE_METASCHEMA_FULL=ON -DRAPIDJSON_YGGDRASIL_TESTS=ON -DRAPIDJSON_BUILD_UBSAN=ON -DRAPIDJSON_BUILD_ASAN=ON
 # cmake --build .
-cmake --build . --target=tests
-# ctest -C Debug --output-on-failure --verbose
-ctest -R unittest
+cmake --build . --target=tests -- -j 8
+ctest -C Debug --output-on-failure --verbose
+# ctest -R unittest
+# ctest -R coverage
 # ctest -R coverage
 # cmake .. -DRAPIDJSON_SKIP_VALGRIND_TESTS=ON -DRAPIDJSON_ENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
 # ctest -T Coverage
