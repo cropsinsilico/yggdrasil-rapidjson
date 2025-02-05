@@ -720,6 +720,7 @@ static bool __StaticTrue = true;
     { return v.SetScalar(data, allocator); }				\
   };
 
+YGG_SCALAR_HELPER(float16_t)
 YGG_SCALAR_HELPER(uint8_t)
 YGG_SCALAR_HELPER(uint16_t)
 YGG_SCALAR_HELPER(int8_t)
@@ -788,11 +789,11 @@ YGG_GENERIC_HELPER(Ply, Ply)
       return out;							\
     }									\
     static std::vector<T> Get(const ValueType& v,			\
-			      typename ValueType::AllocatorType& allocator) { \
+			      typename ValueType::AllocatorType&) {	\
       std::vector<T> out;						\
       for (typename ValueType::ConstValueIterator it = v.Begin();	\
 	   it != v.End(); it++) {					\
-	out.push_back(it->template Get<T>(allocator));			\
+	out.push_back(it->template Get<T>());				\
       }									\
       return out;							\
     }									\
@@ -931,11 +932,11 @@ YGG_GENERIC_HELPER(Ply, Ply)
       return out;							\
     }									\
     static std::map<std::basic_string<typename ValueType::Ch>, T> Get(const ValueType& v, \
-								      typename ValueType::AllocatorType& allocator) { \
+								      typename ValueType::AllocatorType&) { \
       std::map<std::basic_string<typename ValueType::Ch>, T> out;		\
       for (typename ValueType::ConstMemberIterator it = v.MemberBegin(); \
 	   it != v.MemberEnd(); it++) {					\
-	out[it->name.GetString()] = it->value.template Get<T>(allocator); \
+	out[it->name.GetString()] = it->value.template Get<T>();	\
       }									\
       return out;							\
     }									\
@@ -1066,10 +1067,10 @@ public:
     typedef GenericArray<true, ValueType> ConstArray;
     typedef GenericObject<false, ValueType> Object;
     typedef GenericObject<true, ValueType> ConstObject;
+    typedef units::GenericUnits<Encoding> UnitsType;
 
 #ifdef RAPIDJSON_YGGDRASIL
     typedef GenericDocument<Encoding, Allocator, Allocator> SchemaValueType;
-    typedef units::GenericUnits<Encoding> UnitsType;
     // typedef GenericDocument<Encoding, Allocator, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> SchemaValueType;
 #define YGG_SCHEMA_INIT , schema_(0)  // NULL)
 #define YGG_SCHEMA_INIT_ONLY : schema_(0) // NULL)
@@ -1879,23 +1880,10 @@ public:
         \note Amortized Constant time complexity.
     */
 #ifdef RAPIDJSON_YGGDRASIL
+    
     template <typename T>
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-    RAPIDJSON_ENABLEIF_RETURN((internal::OrExpr<internal::IsSame<T,uint8_t>,
-			       internal::OrExpr<internal::IsSame<T,uint16_t>,
-			       internal::OrExpr<internal::IsSame<T,int8_t>,
-			       internal::OrExpr<internal::IsSame<T,int16_t>,
-			       internal::OrExpr<internal::IsSame<T,long double>,
-			       YGGDRASIL_IS_COMPLEX_TYPE(T)> > > > >),
-			       (GenericValue&))
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-    RAPIDJSON_ENABLEIF_RETURN((internal::OrExpr<internal::IsSame<T,uint8_t>,
-			       internal::OrExpr<internal::IsSame<T,uint16_t>,
-			       internal::OrExpr<internal::IsSame<T,int8_t>,
-			       internal::OrExpr<internal::IsSame<T,int16_t>,
-			       YGGDRASIL_IS_COMPLEX_TYPE(T)> > > >),
-			       (GenericValue&))
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
+    RAPIDJSON_ENABLEIF_RETURN((YGGDRASIL_IS_SCALAR_TYPE(T)),
+			      (GenericValue&))
     AddMember(GenericValue& name, T value, Allocator& allocator) {
       GenericValue v(value, allocator);
       return AddMember(name, v, allocator);
@@ -1904,7 +1892,7 @@ public:
     GenericValue& AddMember(GenericValue& name,
 			    units::GenericQuantity<T, EncodingType> value,
 			    Allocator& allocator) {
-      GenericValue v(value);
+      GenericValue v(value, allocator);
       return AddMember(name, v, allocator);
     }
     template <typename T>
@@ -1948,29 +1936,15 @@ public:
       GenericValue v(value, shape, ndim, allocator);
       return AddMember(name, v, allocator);
     }
+#endif // RAPIDJSON_YGGDRASIL
 			       
-  
+
+#ifdef RAPIDJSON_YGGDRASIL
     template <typename T>
-#ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
     RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
-				internal::OrExpr<internal::IsSame<T,uint8_t>,
-				internal::OrExpr<internal::IsSame<T,uint16_t>,
-				internal::OrExpr<internal::IsSame<T,int8_t>,
-				internal::OrExpr<internal::IsSame<T,int16_t>,
-				internal::OrExpr<internal::IsSame<T,long double>,
-				internal::OrExpr<YGGDRASIL_IS_COMPLEX_TYPE(T),
-				internal::IsGenericValue<T> > > > > > > >),
+				internal::OrExpr<internal::IsGenericValue<T>,
+				YGGDRASIL_IS_SCALAR_TYPE(T) > >),
 			       (GenericValue&))
-#else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-    RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
-				internal::OrExpr<internal::IsSame<T,uint8_t>,
-				internal::OrExpr<internal::IsSame<T,uint16_t>,
-				internal::OrExpr<internal::IsSame<T,int8_t>,
-				internal::OrExpr<internal::IsSame<T,int16_t>,
-				internal::OrExpr<YGGDRASIL_IS_COMPLEX_TYPE(T),
-				internal::IsGenericValue<T> > > > > > >),
-			       (GenericValue&))
-#endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 #else // RAPIDJSON_YGGDRASIL
     template <typename T>
     RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>, internal::IsGenericValue<T> >), (GenericValue&))
@@ -2295,12 +2269,46 @@ public:
         \note Amortized constant time complexity.
     */
     template <typename T>
+#ifdef RAPIDJSON_YGGDRASIL
+    RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
+				internal::OrExpr<internal::IsGenericValue<T>,
+				YGGDRASIL_IS_SCALAR_TYPE(T) > >),
+			       (GenericValue&))
+#else // RAPIDJSON_YGGDRASIL
     RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>, internal::IsGenericValue<T> >), (GenericValue&))
+#endif // RAPIDJSON_YGGDRASIL
     PushBack(T value, Allocator& allocator) {
         GenericValue v(value);
         return PushBack(v, allocator);
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+    //! Append a primitive value at the end of the array.
+    /*! \tparam T Either \ref Type, \c int, \c unsigned, \c int64_t, \c uint64_t
+        \param value Value of primitive type T to be appended.
+        \param allocator    Allocator for reallocating memory. It must be the same one as used before. Commonly use GenericDocument::GetAllocator().
+        \pre IsArray() == true
+        \return The value itself for fluent API.
+        \note If the number of elements to be appended is known, calls Reserve() once first may be more efficient.
+
+        \note The source type \c T explicitly disallows all pointer types,
+            especially (\c const) \ref Ch*.  This helps avoiding implicitly
+            referencing character strings with insufficient lifetime, use
+            \ref PushBack(GenericValue&, Allocator&) or \ref
+            PushBack(StringRefType, Allocator&).
+            All other pointer types would implicitly convert to \c bool,
+            use an explicit cast instead, if needed.
+        \note Amortized constant time complexity.
+    */
+    template <typename T>
+    RAPIDJSON_ENABLEIF_RETURN((YGGDRASIL_IS_SCALAR_TYPE(T)),
+			      (GenericValue&))
+    PushBack(T value, Allocator& allocator) {
+	GenericValue v(value, allocator);
+        return PushBack(v, allocator);
+    }
+#endif // RAPIDJSON_YGGDRASIL
+    
     //! Remove the last element in the array.
     /*!
         \note Constant time complexity.
@@ -2587,12 +2595,63 @@ public:
     T Get() { return internal::TypeHelper<ValueType, T>::Get(*this); }
 
 #ifdef RAPIDJSON_YGGDRASIL
+    // template <typename T>
+    // T Get(AllocatorType& allocator) const {
+    //   return internal::TypeHelper<ValueType, T>::Get(*this);
+    // }
+    // template <typename T>
+    // T Get(AllocatorType& allocator) {
+    //   return internal::TypeHelper<ValueType, T>::Get(*this, allocator);
+    // }
     template <typename T>
-    T Get(AllocatorType& allocator) {
-      return internal::TypeHelper<ValueType, T>::Get(*this, allocator);
-    }
+    void Get(T& data) const { data = Get<T>(); }
     template <typename T>
     void Get(T& data) { data = Get<T>(); }
+
+    template <typename T>
+    std::vector<T> GetVector() const {
+      RAPIDJSON_ASSERT(GetType() == kArrayType);
+      std::vector<T> out(Size());
+      std::size_t i = 0;
+      for (ConstValueIterator v = Begin(); v != End(); ++v, ++i) {
+	RAPIDJSON_ASSERT(v->template Is<T>());
+	v->Get(out[i]);
+      }
+      return out;
+    }
+    // template <typename T>
+    // std::vector<T> GetVector(AllocatorType& allocator) const {
+    //   RAPIDJSON_ASSERT(GetType() == kArrayType);
+    //   std::vector<T> out(Size());
+    //   std::size_t i = 0;
+    //   for (ConstValueIterator v = Begin(); v != End(); ++v, ++i) {
+    // 	RAPIDJSON_ASSERT(v->template Is<T>());
+    // 	out[i] = v->template Get<T>(allocator);
+    //   }
+    //   return out;
+    // }
+    template <typename T>
+    std::map<std::string, T> GetMap() const {
+      RAPIDJSON_ASSERT(GetType() == kObjectType);
+      std::map<std::string, T> out;
+      std::string k;
+      for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
+	k = m->name.GetString();
+	out[k] = m->value.template Get<T>();
+      }
+      return out;
+    }
+    // template <typename T>
+    // std::map<std::string, T> GetMap(AllocatorType& allocator) const {
+    //   RAPIDJSON_ASSERT(GetType() == kObjectType);
+    //   std::map<std::string, T> out;
+    //   std::string k;
+    //   for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
+    // 	k.c_str(m->name.GetString());
+    // 	out[k] = m->value.template Get<T>(allocator);
+    //   }
+    //   return out;
+    // }
 #endif  
 
     template<typename T>
@@ -3777,7 +3836,7 @@ public:
   }
   template <typename SourceEncoding, typename SourceAllocator>
   bool AddSchema(GenericValue<SourceEncoding, SourceAllocator>& schema,
-		 SourceAllocator& allocator = 0) {
+		 SourceAllocator& allocator) {
     switch(GetType()) {
     case kObjectType:
       if (schema.IsObject() &&
