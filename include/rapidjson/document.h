@@ -1067,9 +1067,9 @@ public:
     typedef GenericArray<true, ValueType> ConstArray;
     typedef GenericObject<false, ValueType> Object;
     typedef GenericObject<true, ValueType> ConstObject;
-    typedef units::GenericUnits<Encoding> UnitsType;
 
 #ifdef RAPIDJSON_YGGDRASIL
+    typedef units::GenericUnits<Encoding> UnitsType;
     typedef GenericDocument<Encoding, Allocator, Allocator> SchemaValueType;
     // typedef GenericDocument<Encoding, Allocator, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> SchemaValueType;
 #define YGG_SCHEMA_INIT , schema_(0)  // NULL)
