@@ -2363,6 +2363,7 @@ public:
     //@{
 
 #ifdef RAPIDJSON_YGGDRASIL
+    /*
 #define ADD_CAST_OP_BASE(T, TC)			\
     operator T() { return Get<T>(); }		\
     operator TC() const { return Get<TC>(); }
@@ -2416,6 +2417,7 @@ public:
     ADD_CAST_OP(Ply)
 #undef ADD_CAST_OP
 #undef ADD_CAST_OP_BASE
+    */
     
     //! Locate an array element.
     ConstValueIterator Index(const ValueType& x) const {
