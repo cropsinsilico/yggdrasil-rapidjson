@@ -1547,7 +1547,7 @@ TEST(SchemaNormalizer, NDArray) {
 		     "    \"errorCode\": 27,"
 		     "    \"instanceRef\": \"#\","
 		     "    \"schemaRef\": \"#\","
-		     "    \"expected\": \"float\", \"actual\": \"complex\""
+		     "    \"expected\": [\"float\"], \"actual\": \"complex\""
 		     "}}");
 }
 

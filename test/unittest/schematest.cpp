@@ -1814,28 +1814,28 @@ TEST(SchemaValidator, ScalarInterop) {
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"float\", \"actual\": \"uint\""
+	       "    \"expected\": [\"float\"], \"actual\": \"uint\""
 	       "}}");
     INVALIDATE(s, "-1",
 	       "", "subtype", "",
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"float\", \"actual\": \"int\""
+	       "    \"expected\": [\"float\"], \"actual\": \"int\""
 	       "}}");
     INVALIDATE(s, "4294967296",
 	       "", "subtype", "",
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"float\", \"actual\": \"uint\""
+	       "    \"expected\": [\"float\"], \"actual\": \"uint\""
 	       "}}");
     INVALIDATE(s, "-2147483649",
 	       "", "subtype", "",
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"float\", \"actual\": \"int\""
+	       "    \"expected\": [\"float\"], \"actual\": \"int\""
 	       "}}");
     VALIDATE(s, "5.5", true);
   }
@@ -1869,7 +1869,7 @@ TEST(SchemaValidator, ScalarInterop) {
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"int\", \"actual\": \"float\""
+	       "    \"expected\": [\"int\"], \"actual\": \"float\""
 	       "}}");
   }
   { // Int64
@@ -1890,7 +1890,7 @@ TEST(SchemaValidator, ScalarInterop) {
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"int\", \"actual\": \"float\""
+	       "    \"expected\": [\"int\"], \"actual\": \"float\""
 	       "}}");
   }
   { // Uint64
@@ -1908,7 +1908,7 @@ TEST(SchemaValidator, ScalarInterop) {
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"uint\", \"actual\": \"int\""
+	       "    \"expected\": [\"uint\"], \"actual\": \"int\""
 	       "}}");
     VALIDATE(s, "4294967296", true);
     INVALIDATE(s, "-2147483649",
@@ -1916,14 +1916,14 @@ TEST(SchemaValidator, ScalarInterop) {
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"uint\", \"actual\": \"int\""
+	       "    \"expected\": [\"uint\"], \"actual\": \"int\""
 	       "}}");
     INVALIDATE(s, "5.5",
 	       "", "subtype", "",
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"uint\", \"actual\": \"float\""
+	       "    \"expected\": [\"uint\"], \"actual\": \"float\""
 	       "}}");
   }
 }
@@ -1944,14 +1944,14 @@ TEST(SchemaValidator, SubType) {
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"uint\", \"actual\": \"int\""
+	       "    \"expected\": [\"uint\"], \"actual\": \"int\""
 	       "}}");
     INVALIDATE(s, "0.15",
 	       "", "subtype", "",
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"uint\", \"actual\": \"float\""
+	       "    \"expected\": [\"uint\"], \"actual\": \"float\""
 	       "}}");
   }
   { // Float
@@ -1970,9 +1970,40 @@ TEST(SchemaValidator, SubType) {
 	       "{ \"subtype\" : {"
 	       "    \"errorCode\": 27,"
 	       "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-	       "    \"expected\": \"float\", \"actual\": \"int\""
+	       "    \"expected\": [\"float\"], \"actual\": \"int\""
 	       "}}");
   }
+}
+TEST(SchemaValidator, AnySubType) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": \"any\""
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "5.5", true);
+    VALIDATE(s, "1", true);
+    VALIDATE(s, "\"hello\"", true);
+    VALIDATE(s, "\"-YGG-eyJ0eXBlIjoic2NhbGFyIiwic3VidHlwZSI6ImludCIsInByZWNpc2lvbiI6MSwidW5pdHMiOiJnIn0=-YGG-DA==-YGG-\"", true);
+}
+TEST(SchemaValidator, MultiSubType) {
+    Document sd;
+    sd.Parse(
+        "{"
+        "  \"type\": \"scalar\","
+	"  \"subtype\": [\"float\", \"complex\"]"
+        "}");
+    SchemaDocument s(sd);
+    VALIDATE(s, "5.5", true);
+    INVALIDATE(s, "1",
+               "", "subtype", "",
+               "{ \"subtype\" : {"
+               "    \"errorCode\": 27,"
+               "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+               "    \"expected\": [\"float\", \"complex\"], "
+               "\"actual\": \"uint\""
+               "}}");
 }
 TEST(SchemaValidator, Precision) { // 28
   { // Scalar
@@ -5195,7 +5226,7 @@ TEST(SchemaCompare, SubType) {
 		  "    \"errorCode\": 45,"
 		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
 		  "    \"property\": \"subtype\","
-		  "    \"expected\": \"float\", \"actual\": \"int\""
+		  "    \"expected\": [\"float\"], \"actual\": [\"int\"]"
 		  "}}");
 }
 TEST(SchemaCompare, Precision) {

@@ -1963,14 +1963,22 @@ public:
   //! \param red Color index in red.
   //! \param green Color index in green.
   //! \param blue Color index in blue.
-  ObjColor(int red, int green, int blue) :
+  ObjColor(double red, double green, double blue) :
     r(red), g(green), b(blue), is_set(true) {}
-  //! Red color index.
-  int r;
-  //! Blue color index.
-  int g;
-  //! Green color index.
-  int b;
+  //! \brief Create a RGB color element.
+  //! \param red Color index in red.
+  //! \param green Color index in green.
+  //! \param blue Color index in blue.
+  ObjColor(int red, int green, int blue) :
+    r(((double)red)/255.0),
+    g(((double)green)/255.0),
+    b(((double)blue)/255.0), is_set(true) {}
+  //! Red color value.
+  double r;
+  //! Blue color value.
+  double g;
+  //! Green color value.
+  double b;
   //! true if the color was set.
   bool is_set;
   //! \brief Check if another ObjColor object is equivalent.
@@ -1978,9 +1986,9 @@ public:
   bool is_equal(const ObjColor& rhs) const {
     const ObjColor& lhs = *this;
     if (lhs.is_set != rhs.is_set) return false;
-    if (lhs.r != rhs.r) return false;
-    if (lhs.g != rhs.g) return false;
-    if (lhs.b != rhs.b) return false;
+    if (!internal::values_eq(lhs.r, rhs.r)) return false;
+    if (!internal::values_eq(lhs.g, rhs.g)) return false;
+    if (!internal::values_eq(lhs.b, rhs.b)) return false;
     return true;
   }
   friend bool operator == (const ObjColor& lhs, const ObjColor& rhs);
@@ -2522,11 +2530,17 @@ public:
   //! \brief Get the colors for an element set in array form.
   //! \param defaultValue Value to add if colors are missing.
   //! \returns The colors for the requirested type in array form.
-  std::vector<uint8_t> get_colors_array(uint8_t defaultValue=0) const {
-    std::vector<uint8_t> out;
+  template<typename CT>
+  std::vector<CT> get_colors_array(CT defaultValue=0) const {
+    std::vector<CT> out;
     get_colors_array(out, defaultValue);
     return out;
   }
+  //! \brief Get the colors for an element set in array form.
+  //! \param out Array to add values to.
+  //! \param defaultValue Value to add if colors are missing.
+  virtual void get_colors_array(std::vector<double>&,
+				double=0) const {}
   //! \brief Get the colors for an element set in array form.
   //! \param out Array to add values to.
   //! \param defaultValue Value to add if colors are missing.
@@ -2535,6 +2549,13 @@ public:
   //! \brief Determine if the element contains color information.
   //! \return true if there are colors, false otherwise.
   virtual bool has_colors() const { return false; }
+  //! \brief Add element colors to this element.
+  //! \param arr Color property values for this element.
+  //! \param N Number of color properties.
+  //! \return true if successful, false otherwise.
+  virtual bool add_colors(const double*, SizeType) {
+    return false;
+  }
   //! \brief Add element colors to this element.
   //! \param arr Color property values for this element.
   //! \param N Number of color properties.
@@ -3075,9 +3096,9 @@ public:
 			   SINGLE_ARG(OBJ_P_(&x, "x", ObjTypeFloat),
 				      OBJ_P_(&y, "y", ObjTypeFloat),
 				      OBJ_P_(&z, "z", ObjTypeFloat),
-				      OBJ_P_(&(color.r), "red", ObjTypeInt | ObjTypeOpt),
-				      OBJ_P_(&(color.g), "green", ObjTypeInt | ObjTypeOpt),
-				      OBJ_P_(&(color.b), "blue", ObjTypeInt | ObjTypeOpt),
+				      OBJ_P_(&(color.r), "red", ObjTypeFloat | ObjTypeOpt),
+				      OBJ_P_(&(color.g), "green", ObjTypeFloat | ObjTypeOpt),
+				      OBJ_P_(&(color.b), "blue", ObjTypeFloat | ObjTypeOpt),
 				      OBJ_P_(&w, "w", ObjTypeFloat | ObjTypeOpt)),
 			   SINGLE_ARG(COMPATIBLE_WITH_FLOAT(T)),
 			   double)
@@ -3093,12 +3114,25 @@ public:
   ObjColor color;
   
   //! \copydoc ObjElement::get_colors_array
+  void get_colors_array(std::vector<double>& out,
+			double defaultValue=0) const OVERRIDE_CXX11 {
+    if (color.is_set) {
+      out.push_back(static_cast<double>(color.r));
+      out.push_back(static_cast<double>(color.g));
+      out.push_back(static_cast<double>(color.b));
+    } else {
+      out.push_back(defaultValue);
+      out.push_back(defaultValue);
+      out.push_back(defaultValue);
+    }
+  }
+  //! \copydoc ObjElement::get_colors_array
   void get_colors_array(std::vector<uint8_t>& out,
 			uint8_t defaultValue=0) const OVERRIDE_CXX11 {
     if (color.is_set) {
-      out.push_back(static_cast<uint8_t>(color.r));
-      out.push_back(static_cast<uint8_t>(color.g));
-      out.push_back(static_cast<uint8_t>(color.b));
+      out.push_back(static_cast<uint8_t>(color.r/255.0));
+      out.push_back(static_cast<uint8_t>(color.g/255.0));
+      out.push_back(static_cast<uint8_t>(color.b/255.0));
     } else {
       out.push_back(defaultValue);
       out.push_back(defaultValue);
@@ -3139,12 +3173,26 @@ public:
   //! \param arr Color property values for this element.
   //! \param N Number of color properties.
   //! \return true if successful, false otherwise.
-  bool add_colors(const uint8_t* arr, SizeType N) OVERRIDE_CXX11 {
+  bool add_colors(const double* arr, SizeType N) OVERRIDE_CXX11 {
     if (N == 3) {
       color.is_set = true;
       color.r = arr[0];
       color.g = arr[1];
       color.b = arr[2];
+      return true;
+    }
+    return false;
+  }
+  //! \brief Add element colors to this element.
+  //! \param arr Color property values for this element.
+  //! \param N Number of color properties.
+  //! \return true if successful, false otherwise.
+  bool add_colors(const uint8_t* arr, SizeType N) OVERRIDE_CXX11 {
+    if (N == 3) {
+      color.is_set = true;
+      color.r = ((double)(arr[0]))/255.0;
+      color.g = ((double)(arr[1]))/255.0;
+      color.b = ((double)(arr[2]))/255.0;
       return true;
     }
     return false;
@@ -4215,6 +4263,13 @@ public:
     return out;
   }
   //! \copydoc ObjElement::get_colors_array
+  void get_colors_array(std::vector<double>& out,
+			double defaultValue=0) const OVERRIDE_CXX11 {
+    if (!has_colors()) return;
+    for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++)
+      (*it)->get_colors_array(out, defaultValue);
+  }
+  //! \copydoc ObjElement::get_colors_array
   void get_colors_array(std::vector<uint8_t>& out,
 			uint8_t defaultValue=0) const OVERRIDE_CXX11 {
     if (!has_colors()) return;
@@ -4227,11 +4282,12 @@ public:
   //! \param[out] M Number of values for each element in the returned array.
   //! \param defaultValue Value to add if colors are missing.
   //! \returns The colors for the requirested type in array form.
-  std::vector<uint8_t> get_colors_array(const std::string& name,
-					size_t &N, size_t &M,
-					uint8_t defaultValue=0) const {
+  template<typename CT>
+  std::vector<CT> get_colors_array(const std::string& name,
+				   size_t &N, size_t &M,
+				   CT defaultValue=0) const {
     std::string name2 = obj_alias2base(name);
-    std::vector<uint8_t> out;
+    std::vector<CT> out;
     if (!has_colors(name2)) return out;
     N = 0;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
@@ -4249,8 +4305,9 @@ public:
   //! \param M Number of elements in the set.
   //! \param N Number of color properties for each element.
   //! \return true if successful, false otherwise.
+  template<typename CT>
   bool add_element_set_colors(const std::string& name,
-			      const uint8_t* arr, SizeType M, SizeType N) {
+			      const CT* arr, SizeType M, SizeType N) {
     std::string name2 = obj_alias2base(name);
     if (N != 3 || M != count_elements(name2)) return false;
     size_t i = 0;

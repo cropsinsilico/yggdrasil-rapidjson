@@ -379,6 +379,14 @@ public:
     virtual void StartDisallowedType() = 0;
     virtual void AddExpectedType(const typename SchemaType::ValueType& expectedType) = 0;
     virtual void EndDisallowedType(const typename SchemaType::ValueType& actualType) = 0;
+#ifdef RAPIDJSON_YGGDRASIL
+    virtual void StartDisallowedSubTypeKey(bool actual) = 0;
+    virtual void AddExpectedSubTypeKey(const typename SchemaType::ValueType& expectedType, bool actual) = 0;
+    virtual void EndDisallowedSubTypeKey(bool actual) = 0;
+    virtual void StartDisallowedSubType() = 0;
+    virtual void AddExpectedSubType(const typename SchemaType::ValueType& expectedType) = 0;
+    virtual void EndDisallowedSubType(const typename SchemaType::ValueType& actualType) = 0;
+#endif // RAPIDJSON_YGGDRASIL
     virtual void NotAllOf(ISchemaValidator** subvalidators, SizeType count) = 0;
     virtual void NoneOf(ISchemaValidator** subvalidators, SizeType count) = 0;
     virtual void NotOneOf(ISchemaValidator** subvalidators, SizeType count) = 0;
@@ -387,7 +395,6 @@ public:
   
 #ifdef RAPIDJSON_YGGDRASIL
   virtual void MissingRequiredSchemaProperty(const typename SchemaType::ValueType& name) = 0;
-  virtual void IncorrectSubType(const typename SchemaType::ValueType& actual, const typename SchemaType::ValueType& expected) = 0;
   virtual void IncorrectPrecision(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
   virtual void IncorrectUnits(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
   virtual void IncorrectShape(const SValue& actual, const SValue& expected) = 0;
@@ -1030,7 +1037,6 @@ public:
       sharedStack_.template Pop<PairEntry>(1)->~PairEntry();
     while (!tempStack_.Empty()) {
       tempStack_.template Pop<PairEntry>(1)->~PairEntry();
-      std::cerr << "EMPTYING STACK" << std::endl;
     }
     document_.ClearStack();
     // if (temporary_memory_) {
@@ -2210,7 +2216,7 @@ public:
     GenericDocument<EncodingType, AllocatorType>* valueSchema = NULL;	\
     SizeType length = sizeof args;					\
     const Ch* str = (Ch*)(&args);					\
-    typename SchemaType::YggSchemaValueSubType subtype = subT;		\
+    unsigned int subtype = (1 << subT);					\
     SizeType precision = length;					\
     typename SchemaType::YggSchemaEncodingType encoding = SchemaType::kYggNullSchemaEncodingType; \
     const Ch units[] = { '\0' };					\
@@ -2226,13 +2232,13 @@ public:
   template <typename YggSchemaValueType>
   bool NormScalar(Context& context, const SchemaType& schema,
 		  const Ch*& str, SizeType& length,
-		  typename SchemaType::YggSchemaValueSubType src_subtype,
+		  unsigned int src_subtype,
 		  SizeType& src_precision,
 		  const Ch* src_units, SizeType src_units_len,
 		  typename SchemaType::YggSchemaEncodingType src_encoding,
 		  SizeType nelements,
 		  YggSchemaValueType* valueSchema) {
-    typename SchemaType::YggSchemaValueSubType dst_subtype = src_subtype;
+    unsigned int dst_subtype = src_subtype;
     SizeType dst_precision = src_precision;
     typename SchemaType::YggSchemaEncodingType dst_encoding = src_encoding;
     const Ch* dst_units = src_units;
@@ -2240,8 +2246,9 @@ public:
     bool native_scalar = false;
     if ((schema.yggtype_ & (1 << SchemaType::kYggScalarSchemaType)) ||
 	(schema.yggtype_ & (1 << SchemaType::kYggNDArraySchemaType))) {
-      if (schema.subtype_ != SchemaType::kYggNullSubType)
+      if (!(schema.subtype_ & src_subtype)) {
 	dst_subtype = schema.subtype_;
+      }
       if (schema.precision_.IsUint())
 	dst_precision = schema.precision_.GetUint();
       if (schema.units_.IsString()) {
@@ -2250,11 +2257,11 @@ public:
       }
     } else if (valueSchema != NULL) {
       if (schema.type_ & (1 << SchemaType::kNumberSchemaType)) {
-	dst_subtype = SchemaType::kYggFloatSchemaSubType;
+	dst_subtype = (1 << SchemaType::kYggFloatSchemaSubType);
 	dst_precision = 8;
 	native_scalar = true;
       } else if (schema.type_ & (1 << SchemaType::kIntegerSchemaType)) {
-	dst_subtype = SchemaType::kYggIntSchemaSubType;
+	dst_subtype = (1 << SchemaType::kYggIntSchemaSubType);
 	dst_precision = 8;
 	native_scalar = true;
       }
@@ -2267,8 +2274,8 @@ public:
     SizeType dst_nbytes = src_nbytes;
     bool modified = false;
     // Encoding
-    if ((src_subtype == SchemaType::kYggStringSchemaSubType) &&
-	(src_subtype == dst_subtype) &&
+    if ((src_subtype & (1 << SchemaType::kYggStringSchemaSubType)) &&
+	(src_subtype & dst_subtype) &&
 	(src_encoding != dst_encoding)) {
       void* tmp = NULL;
       if (TranslateEncoding(str, src_nbytes, schema.EncodingType2String(src_encoding).GetString(),
@@ -2289,38 +2296,56 @@ public:
       dst_encoding = src_encoding;
     }
     // Subtype and/or precision
-    if ((src_subtype != dst_subtype ||
+    typename SchemaType::YggSchemaValueSubType src_subtype_code = SchemaType::SubTypeBitMask2SubType(src_subtype);
+    typename SchemaType::YggSchemaValueSubType dst_subtype_code = SchemaType::kYggNullSubType;
+    if (((!(src_subtype & dst_subtype)) ||
 	 src_precision != dst_precision) &&
-	src_subtype != SchemaType::kYggStringSchemaSubType) {
-      if (canTruncate((YggSubType)src_subtype, src_precision,
-		      (const unsigned char*)str,
-		      (YggSubType)dst_subtype, dst_precision,
-		      nelements)) {
+	(!(src_subtype & (1 << SchemaType::kYggStringSchemaSubType)))) {
+      unsigned int dst_subtype_code0 = ((unsigned int)(SchemaType::kYggNullSubType)) + 1;
+      unsigned int dst_subtype_code1 = ((unsigned int)(SchemaType::kYggTotalSchemaSubType)) - 1;
+      if (src_subtype & dst_subtype) {
+	dst_subtype_code0 = src_subtype_code;
+	dst_subtype_code1 = src_subtype_code;
+      }
+      for (unsigned int idst_subtype = dst_subtype_code0;
+	   idst_subtype <= dst_subtype_code1; idst_subtype++) {
+	if (!(dst_subtype & (1 << idst_subtype)))
+	  continue;
+	if (!canTruncate((YggSubType)src_subtype_code, src_precision,
+			 (const unsigned char*)str,
+			 (YggSubType)idst_subtype, dst_precision,
+			 nelements)) {
+	  continue;
+	}
 	modified = true;
-	SizeType src_size = sizeOfSubtype((YggSubType)src_subtype, src_precision);
-	SizeType dst_size = sizeOfSubtype((YggSubType)dst_subtype, dst_precision);
+	SizeType src_size = sizeOfSubtype((YggSubType)src_subtype_code, src_precision);
+	SizeType dst_size = sizeOfSubtype((YggSubType)idst_subtype, dst_precision);
 	RAPIDJSON_ASSERT(src_nbytes == (nelements * src_size));
 	if (src_nbytes != (nelements * src_size))
 	  return false;
 	dst_nbytes = nelements * dst_size;
 	unsigned char* dst = (unsigned char*)SetTemporary(dst_nbytes);
-	truncateCast((YggSubType)src_subtype, src_precision, (const unsigned char*)str,
-		     (YggSubType)dst_subtype, dst_precision, dst, nelements);
+	truncateCast((YggSubType)src_subtype_code, src_precision, (const unsigned char*)str,
+		     (YggSubType)idst_subtype, dst_precision, dst, nelements);
 	length = dst_nbytes / (SizeType)sizeof(Ch);
 	str = (Ch*)dst;
-      } else {
+	dst_subtype_code = (typename SchemaType::YggSchemaValueSubType)(idst_subtype);
+	break;
+      }
+      if (dst_subtype_code == SchemaType::kYggNullSubType) {
 	return true; // Allow validation to fail
       }
     } else {
       dst_subtype = src_subtype;
-      if (src_subtype != SchemaType::kYggStringSchemaSubType)
+      dst_subtype_code = src_subtype_code;
+      if (!(src_subtype & (1 << SchemaType::kYggStringSchemaSubType)))
 	dst_precision = src_precision;
     }
     // Units
     if (src_Units != dst_Units) {
       if (src_Units.is_compatible(dst_Units)) {
 	modified = true;
-	changeUnits((YggSubType)dst_subtype, dst_precision,
+	changeUnits((YggSubType)dst_subtype_code, dst_precision,
 		    (unsigned char*)str, src_Units,
 		    (unsigned char*)(&(str[0])), dst_Units,
 		    length * (SizeType)sizeof(Ch), nelements);
@@ -2349,7 +2374,7 @@ public:
       newValueSchema->AddMember(SValue(newValueSchema->GetSubTypeString(),
 				       newValueSchema->GetAllocator(),
 				       true).Move(),
-				SValue(schema.SubType2String(dst_subtype),
+				SValue(schema.SubType2String(dst_subtype_code),
 				       newValueSchema->GetAllocator(),
 				       true).Move(),
 				newValueSchema->GetAllocator());
@@ -2390,9 +2415,9 @@ public:
 				  new_value,				\
 				  newValueSchema->GetAllocator());	\
       }
-      if (src_subtype != dst_subtype) {
+      if (src_subtype_code != dst_subtype_code) {
 	ADD_PROPERTY_(SubType)
-	const typename SchemaType::ValueType& subtype_str = schema.SubType2String(dst_subtype);
+	const typename SchemaType::ValueType& subtype_str = schema.SubType2String(dst_subtype_code);
 	(*newValueSchema)[newValueSchema->GetSubTypeString()].SetString(subtype_str.GetString(), subtype_str.GetStringLength(), newValueSchema->GetAllocator());
       }
       if (src_precision != dst_precision) {
@@ -2431,11 +2456,11 @@ public:
   bool NormBool(Context& context, const SchemaType& schema, bool b)
   { NORM_VALUE_(Bool, (b)); }
   bool NormInt(Context& context, const SchemaType& schema, int i)
-  { NORM_SCALAR_(Int, (i), SchemaType::kYggUintSchemaSubType); }
+  { NORM_SCALAR_(Int, (i), SchemaType::kYggIntSchemaSubType); }
   bool NormUint(Context& context, const SchemaType& schema, unsigned u)
   { NORM_SCALAR_(Uint, (u), SchemaType::kYggUintSchemaSubType); }
   bool NormInt64(Context& context, const SchemaType& schema, int64_t i)
-  { NORM_SCALAR_(Int64, (i), SchemaType::kYggUintSchemaSubType); }
+  { NORM_SCALAR_(Int64, (i), SchemaType::kYggIntSchemaSubType); }
   bool NormUint64(Context& context, const SchemaType& schema, uint64_t u)
   { NORM_SCALAR_(Uint64, (u), SchemaType::kYggUintSchemaSubType); }
   bool NormDouble(Context& context, const SchemaType& schema, double d)
@@ -2469,8 +2494,9 @@ public:
       }
     }
     // Normalize string of quantity to quantity
-    if (schema.yggtype_ & (1 << SchemaType::kYggScalarSchemaType) &&
-	schema.subtype_ == SchemaType::kYggFloatSchemaSubType) {
+    if ((schema.yggtype_ & (1 << SchemaType::kYggScalarSchemaType)) &&
+	(schema.subtype_ & (1 << SchemaType::kYggFloatSchemaSubType)) &&
+	!(SchemaType::isAnySubType(schema.subtype_))) {
       units::GenericUnits<EncodingType> unitStr = units::GenericUnits<EncodingType>::parse_units(str, length, true);
       if (!unitStr.is_empty()) {
 	double factor = unitStr.pull_factor();
@@ -2519,8 +2545,9 @@ public:
       }
     }
     // Normalize string to scalar string
-    if (schema.yggtype_ & (1 << SchemaType::kYggScalarSchemaType) &&
-	schema.subtype_ == SchemaType::kYggStringSchemaSubType) {
+    if ((schema.yggtype_ & (1 << SchemaType::kYggScalarSchemaType)) &&
+	(schema.subtype_ & (1 << SchemaType::kYggStringSchemaSubType)) &&
+	!(SchemaType::isAnySubType(schema.subtype_))) {
       GenericDocument<EncodingType, AllocatorType> valueSchema(kObjectType);
       valueSchema.AddMember(SValue(schema.GetTypeString(),
 				   valueSchema.GetAllocator(),
@@ -2564,7 +2591,7 @@ public:
 	(subtypeV != valueSchema.MemberEnd()) &&
 	(precisionV != valueSchema.MemberEnd())) {
       typename SchemaType::YggSchemaEncodingType encoding = SchemaType::kYggNullSchemaEncodingType;
-      typename SchemaType::YggSchemaValueSubType subtype = schema.GetSubType(typename SchemaType::ValueType(subtypeV->value.GetString(), subtypeV->value.GetStringLength()).Move(), &encoding);
+      unsigned int subtype = schema.GetSubTypeBitMask(typename SchemaType::ValueType(subtypeV->value.GetString(), subtypeV->value.GetStringLength()).Move(), &encoding);
       if (encodingV != valueSchema.MemberEnd()) {
 	encoding = schema.GetEncodingType(typename SchemaType::ValueType(encodingV->value.GetString(), encodingV->value.GetStringLength()).Move());
       }
@@ -2589,7 +2616,7 @@ public:
 		      encoding, nelements, &valueSchema))
 	return false;
       // Allow normalization of scalar string to regular string
-      if ((subtype == SchemaType::kYggStringSchemaSubType) &&
+      if ((subtype & (1 << SchemaType::kYggStringSchemaSubType)) &&
 	  (schema.type_ & (1 << SchemaType::kStringSchemaType)) &&
 	  (schema.yggtype_ == 0) && (nelements == 1)) {
 	valueSchema[YggSchemaValueType::GetTypeString()].SetString(YggSchemaValueType::GetStringSubTypeString().GetString(),
@@ -4871,7 +4898,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
 	,
 	yggtype_((1 << kYggTotalSchemaType) - 1),
-	subtype_(kYggNullSubType),
+	subtype_((1 << kYggTotalSchemaSubType) - 1),
 	precision_(),
 	units_(),
 	shape_(),
@@ -5310,17 +5337,20 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
 	// Yggdrasil properties
 	if (const ValueType* v = GetMember(value, GetSubTypeString())) {
-	  subtype_ = kYggNullSubType;
+	  subtype_ = 0;
 	  if (v->IsString())
 	    AddSubType(*v);
+	  else if (v->IsArray())
+	    for (ConstValueIterator itr = v->Begin(); itr != v->End(); ++itr)
+	      AddSubType(*itr);
 	}
 	if (const ValueType* v = GetMember(value, GetPrecisionString())) {
 	    precision_ = 0;
 	    if (v->IsNumber() && v->GetInt() >= 0) {
 	      precision_.CopyFrom(*v, *allocator_);
-	      if (subtype_ != kYggStringSchemaSubType) {
+	      if (!(subtype_ & (1 << kYggStringSchemaSubType))) {
 		precision_.SetUint(NormPrecision(precision_.GetInt(),
-						 (subtype_ == kYggComplexSchemaSubType)));
+						 (subtype_ & (1 << kYggComplexSchemaSubType))));
 	      }
 	    }
 	}
@@ -5449,16 +5479,16 @@ public:
       if (!(yggtype_ & (1 << kYggScalarSchemaType)))
 	return false;
       if (rhs.type_ & (1 << kNumberSchemaType)) {
-	if (!(subtype_ == kYggFloatSchemaSubType ||
-	      subtype_ == kYggIntSchemaSubType ||
-	      subtype_ == kYggUintSchemaSubType))
+	if (!(subtype_ & ((1 << kYggFloatSchemaSubType) |
+			  (1 << kYggIntSchemaSubType) |
+			  (1 << kYggUintSchemaSubType))))
 	  return false;
       } else if (rhs.type_ & (1 << kIntegerSchemaType)) {
-	if (!(subtype_ == kYggIntSchemaSubType ||
-	      subtype_ == kYggUintSchemaSubType))
+	if (!(subtype_ & ((1 << kYggIntSchemaSubType) |
+			  (1 << kYggUintSchemaSubType))))
 	  return false;
       } else if (rhs.type_ & (1 << kStringSchemaType)) {
-	if (!(subtype_ == kYggStringSchemaSubType))
+	if (!(subtype_ & (1 << kYggStringSchemaSubType)))
 	  return false;
 	dontCheckPrecision = true;
       } else {
@@ -5511,13 +5541,11 @@ public:
 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
 	}
       }
-      if ((!native_scalar) &&
-	  ((subtype_ != kYggNullSubType && !rhs_any) ||
-	   (rhs.subtype_ != kYggNullSubType && !lhs_any))
-	  && (subtype_ != rhs.subtype_)) {
-	const ValueType& lhs_subtype = SubType2String(subtype_);
-	const ValueType& rhs_subtype = SubType2String(rhs.subtype_);
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetSubTypeString(), lhs_subtype, rhs_subtype);
+      if ((!native_scalar) && (!(rhs_any || lhs_any))
+	  && (!(subtype_ & rhs.subtype_))) {
+	DisallowedSubTypeKey(context);
+	rhs.DisallowedSubTypeKey(context, true);
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetSubTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
       }
       // Number properties
       CHECK_INCOMPATIBLE_IF_PRESENT(minimum_, Minimum);
@@ -5925,8 +5953,7 @@ public:
 	units_str = units_.GetString();					\
 	units_len = units_.GetStringLength();				\
       }									\
-      switch (subtype_) {						\
-      case (kYggIntSchemaSubType): {					\
+      if (subtype_ & (1 << kYggIntSchemaSubType)) {			\
 	switch (prec) {							\
 	  CASE_PREC_(get, set, int8_t, 0, 1)				\
 	  CASE_PREC_(get, set, int16_t, 0, 1)				\
@@ -5937,7 +5964,7 @@ public:
 	  }								\
 	}								\
       }									\
-      case (kYggUintSchemaSubType): {					\
+      else if (subtype_ & (1 << kYggUintSchemaSubType)) {		\
 	switch (prec) {							\
 	  CASE_PREC_(get, set, uint8_t, 0, 1)				\
 	  CASE_PREC_(get, set, uint16_t, 0, 1)				\
@@ -5948,7 +5975,7 @@ public:
 	  }								\
 	}								\
       }									\
-      case (kYggFloatSchemaSubType): {					\
+      else if (subtype_ & (1 << kYggFloatSchemaSubType)) {		\
 	switch (prec) {							\
 	  CASE_PREC_(get, set, float16_t, 0, 0.5)			\
 	  CASE_PREC_(get, set, float, 0, 0.5)				\
@@ -5959,7 +5986,7 @@ public:
 	  }								\
 	}								\
       }									\
-      case (kYggComplexSchemaSubType): {				\
+      else if (subtype_ & (1 << kYggComplexSchemaSubType)) {		\
 	switch (prec) {							\
 	  CASE_PREC_COMPLEX_(get, set, float, 0.0, 0.5)			\
 	  CASE_PREC_COMPLEX_(get, set, double, 0.0, 0.5)		\
@@ -5969,7 +5996,7 @@ public:
 	  }								\
 	}								\
       }									\
-      case (kYggStringSchemaSubType): {					\
+      else if (subtype_ & (1 << kYggStringSchemaSubType)) {		\
 	if (prec == 0) prec = 5;					\
 	const Ch* encoding_str = 0;					\
 	SizeType encoding_len = 0;					\
@@ -5981,9 +6008,8 @@ public:
 	strCase;							\
 	AFTER_SET_;							\
       }									\
-      default: {							\
+      else {								\
 	BODY_PREC_(get, set, int, 0, 1);				\
-      }									\
       }
 #define ARRAYS_3D(zero)						\
       double vertices[8][3] =					\
@@ -6768,7 +6794,7 @@ public:
 	      (yggtype_ & ((1 << kYggPythonClassSchemaType) |
 			   (1 << kYggPythonFunctionSchemaType))) ||
 	      ((yggtype_ & (1 << kYggScalarSchemaType)) &&
-	       (subtype_ == kYggStringSchemaSubType)))) {
+	       (subtype_ & (1 << kYggStringSchemaSubType))))) {
 #else // RAPIDJSON_YGGDRASIL
         if (!(type_ & (1 << kStringSchemaType))) {
 #endif // RAPIDJSON_YGGDRASIL
@@ -6808,7 +6834,7 @@ public:
 	  if (!CheckPythonImport(context, str, length))
 	    return false;
 	} else if ((yggtype_ & (1 << kYggScalarSchemaType)) &&
-		   (subtype_ == kYggStringSchemaSubType)) {
+		   (subtype_ & (1 << kYggStringSchemaSubType))) {
 	  ValueType actual(length);
 	  if (!CheckPrecision(context, &actual, true))
 	    return false;
@@ -6848,13 +6874,13 @@ public:
 	return false;
       }
     } else if (isScalar && (type_ & (1 << kNumberSchemaType))) {
-      if (!(CheckSubType(context, *schema, kYggFloatSchemaSubType) &&
+      if (!(CheckSubType(context, *schema, (1 << kYggFloatSchemaSubType)) &&
 	    CheckPrecision(context, *schema, SValue(8).Move()))) {
 	CLEANUP_;
 	return false;
       }
     } else if (isScalar && (type_ & (1 << kIntegerSchemaType))) {
-      if (!(CheckSubType(context, *schema, kYggIntSchemaSubType) &&
+      if (!(CheckSubType(context, *schema, (1 << kYggIntSchemaSubType)) &&
 	    CheckPrecision(context, *schema, SValue(8).Move()))) {
 	CLEANUP_;
 	return false;
@@ -7641,10 +7667,10 @@ protected:
 	  type_ |= ((1 << kTotalSchemaType) - 1);
 	  yggtype_ |= ((1 << kYggTotalSchemaType) - 1);
 	} else {
-	  YggSchemaValueSubType subT = GetSubType(type, &encoding_);
-	  if (subT != kYggNullSubType) {
+	  unsigned int subT = GetSubTypeBitMask(type, &encoding_);
+	  if (subT) {
 	    yggtype_ |= 1 << kYggScalarSchemaType;
-	    subtype_ = subT;
+	    subtype_ = subT; // Direct assignment as this will be before subtype actually parsed
 	  }
 	}
 #endif // RAPIDJSON_YGGDRASIL
@@ -7714,13 +7740,30 @@ protected:
 #undef ADD_TYPE
       eh.EndDisallowedTypeKey(actual);
     }
-  YggSchemaValueSubType GetSubType(const ValueType& subtype, YggSchemaEncodingType* encoding = NULL) const {
+    void DisallowedSubTypeKey(Context& context, bool actual = false) const {
+      DisallowedSubTypeKey(context, subtype_, actual);
+    }
+    void DisallowedSubTypeKey(Context& context, const unsigned int subtype, bool actual = false) const {
+      ErrorHandler& eh = context.error_handler;
+      eh.StartDisallowedSubTypeKey(actual);
+#define ADD_TYPE(exp)				\
+      eh.AddExpectedSubTypeKey(exp, actual)
+      if (subtype & (1 << kYggIntSchemaSubType)) ADD_TYPE(GetIntSubTypeString());
+      if (subtype & (1 << kYggUintSchemaSubType)) ADD_TYPE(GetUintSubTypeString());
+      if (subtype & (1 << kYggFloatSchemaSubType)) ADD_TYPE(GetFloatSubTypeString());
+      if (subtype & (1 << kYggComplexSchemaSubType)) ADD_TYPE(GetComplexSubTypeString());
+      if (subtype & (1 << kYggStringSchemaSubType)) ADD_TYPE(GetStringSubTypeString());
+#undef ADD_TYPE
+      eh.EndDisallowedSubTypeKey(actual);
+    }
+    static YggSchemaValueSubType GetSubType(const ValueType& subtype, YggSchemaEncodingType* encoding = NULL) {
     if      (subtype == GetIntSubTypeString()    ) return kYggIntSchemaSubType;
     else if (subtype == GetUintSubTypeString()   ) return kYggUintSchemaSubType;
     else if (subtype == GetFloatSubTypeString()  ) return kYggFloatSchemaSubType;
     else if (subtype == GetComplexSubTypeString()) return kYggComplexSchemaSubType;
     else if (subtype == GetStringSubTypeString() ) return kYggStringSchemaSubType;
     else if (subtype == GetBytesString()         ) return kYggStringSchemaSubType;
+    else if (subtype == GetAnyString()           ) return kYggTotalSchemaSubType;
     else if (subtype == GetUnicodeString()       ) {
       if (encoding)
 	encoding[0] = kYggUCS4SchemaEncodingType;
@@ -7728,20 +7771,52 @@ protected:
     }
     return kYggNullSubType;
   }
-  const ValueType& SubType2String(const YggSchemaValueSubType subtype) const {
+  static unsigned int GetSubTypeBitMask(const ValueType& subtype, YggSchemaEncodingType* encoding = NULL) {
+    YggSchemaValueSubType subtype_code = GetSubType(subtype, encoding);
+    if (subtype_code == kYggTotalSchemaSubType) {
+      return ((1 << kYggTotalSchemaSubType) - 1);
+    } else if (subtype_code == kYggNullSubType) {
+      return 0;
+    }
+    return (1 << subtype_code);
+  }
+  static YggSchemaValueSubType SubTypeBitMask2SubType(const unsigned int subtype) {
+    if (isAnySubType(subtype))
+      return kYggTotalSchemaSubType;
+    if (isMultipleSubTypes(subtype)) {
+      // THIS SHOULDN'T OCCUR
+      std::cerr << "SubTypeBitMask2SubType: MULTIPLE SUBTYPES" << std::endl;
+      return kYggTotalSchemaSubType;
+    }
+    for (unsigned int isubtype = 1; isubtype < kYggTotalSchemaSubType; isubtype++) {
+      if (subtype & (1 << isubtype)) return (YggSchemaValueSubType)isubtype;
+    }
+    return kYggNullSubType;
+  }
+  static const ValueType& SubTypeBitMask2String(const unsigned int subtype) {
+    return SubType2String(SubTypeBitMask2SubType(subtype));
+  }
+  static bool isAnySubType(const unsigned int subtype) {
+    return (subtype == ((1 << kYggTotalSchemaSubType) - 1));
+  }
+  static bool isMultipleSubTypes(const unsigned int subtype) {
+    return (internal::countBits(subtype) > 1);
+  }
+  static const ValueType& SubType2String(const YggSchemaValueSubType subtype) {
     switch (subtype) {
     case (kYggIntSchemaSubType): return GetIntSubTypeString();
     case (kYggUintSchemaSubType): return GetUintSubTypeString();
     case (kYggFloatSchemaSubType): return GetFloatSubTypeString();
     case (kYggComplexSchemaSubType): return GetComplexSubTypeString();
     case (kYggStringSchemaSubType): return GetStringSubTypeString();
+    case (kYggTotalSchemaSubType): return GetAnyString();
     default:
       const ValueType& out = GetNullString();
       return out;
     }
   }
   void AddSubType(const ValueType& subtype) {
-    subtype_ = GetSubType(subtype, &encoding_);
+    subtype_ |= GetSubTypeBitMask(subtype, &encoding_);
   }
   YggSchemaEncodingType GetEncodingType(const ValueType& encoding) const {
     if      (encoding == GetNullEncodingString() ) return kYggNullSchemaEncodingType;
@@ -8206,6 +8281,25 @@ protected:
     }
 
 #ifdef RAPIDJSON_YGGDRASIL
+    void DisallowedSubType(Context& context, const ValueType& actualSubType) const {
+      DisallowedSubType(context, actualSubType, subtype_);
+    }
+    void DisallowedSubType(Context& context, const ValueType& actualSubType, const unsigned int subtype) const {
+      ErrorHandler& eh = context.error_handler;
+      eh.StartDisallowedSubType();
+#define ADD_TYPE(exp)				\
+      eh.AddExpectedSubType(exp)
+      if (subtype & (1 << kYggIntSchemaSubType)) ADD_TYPE(GetIntSubTypeString());
+      if (subtype & (1 << kYggUintSchemaSubType)) ADD_TYPE(GetUintSubTypeString());
+      if (subtype & (1 << kYggFloatSchemaSubType)) ADD_TYPE(GetFloatSubTypeString());
+      if (subtype & (1 << kYggComplexSchemaSubType)) ADD_TYPE(GetComplexSubTypeString());
+      if (subtype & (1 << kYggStringSchemaSubType)) ADD_TYPE(GetStringSubTypeString());
+#undef ADD_TYPE
+      eh.EndDisallowedSubType(actualSubType);
+    }
+#endif // RAPIDJSON_YGGDRASIL
+
+#ifdef RAPIDJSON_YGGDRASIL
   template <typename YggSchemaValueType>
   bool CheckRequiredSchemaProperty(Context& context, const YggSchemaValueType& schema, const ValueType& name) const {
     RAPIDJSON_ASSERT(schema.IsObject());
@@ -8229,16 +8323,16 @@ protected:
   }
   bool CheckSubType(Context& context, const ValueType* subtype_str,
 		    const bool has_encoding,
-		    const YggSchemaValueSubType subtype_schema) const {
-    if (subtype_schema == kYggNullSubType)
+		    const unsigned int subtype_schema) const {
+    if (subtype_schema == ((1 << kYggTotalSchemaSubType) - 1)) {
       return true;
+    }
     YggSchemaEncodingType encoding_code = kYggNullSchemaEncodingType;
-    YggSchemaValueSubType subtype_code = GetSubType(*subtype_str, &encoding_code);
-    if ((subtype_schema != subtype_code) &&
-	(!((subtype_schema == kYggIntSchemaSubType) &&
-	   (subtype_code == kYggUintSchemaSubType)))) {
-      context.error_handler.IncorrectSubType(*subtype_str,
-					     SubType2String(subtype_schema));
+    unsigned int subtype_code = GetSubTypeBitMask(*subtype_str, &encoding_code);
+    if ((!(subtype_schema & subtype_code)) &&
+	(!((subtype_schema & (1 << kYggIntSchemaSubType)) &&
+	   (subtype_code & (1 << kYggUintSchemaSubType))))) {
+      DisallowedSubType(context, *subtype_str, subtype_schema);
       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubType);
     }
     if (!has_encoding && encoding_code != kYggNullSchemaEncodingType) {
@@ -8254,7 +8348,7 @@ protected:
   }
   template <typename YggSchemaValueType>
   bool CheckSubType(Context& context, const YggSchemaValueType& schema,
-		    const YggSchemaValueSubType subtype_schema) const {
+		    const unsigned int subtype_schema) const {
     RAPIDJSON_ASSERT(schema.IsObject());
     if (!CheckRequiredSchemaProperty(context, schema, GetSubTypeString()))
       return false;
@@ -9958,7 +10052,7 @@ protected:
 #ifdef RAPIDJSON_YGGDRASIL
     // Yggdrasil properties
     unsigned int yggtype_; // bitmask of kSchemaYggType
-    YggSchemaValueSubType subtype_;
+    unsigned int subtype_; // bitmask of YggSchemaValueSubType
     SValue precision_;
     SValue units_;
     SValue shape_;
@@ -11593,6 +11687,39 @@ public:
         currentError_ = error;
         AddCurrentError(kValidateErrorType);
     }
+  // SUBTYPE
+#ifdef RAPIDJSON_YGGDRASIL
+    void StartDisallowedSubTypeKey(bool actual) {
+      if (!actual)
+	currentError_.SetObject();
+      if (actual)
+        currentError_.AddMember(GetActualString(), ValueType(kArrayType).Move(), GetStateAllocator());
+      else
+	currentError_.AddMember(GetExpectedString(), ValueType(kArrayType).Move(), GetStateAllocator());
+    }
+    void AddExpectedSubTypeKey(const typename SchemaType::ValueType& expectedSubType, bool actual) {
+      typename ValueType::MemberIterator dst;
+      if (actual)
+	dst = currentError_.FindMember(GetActualString());
+      else
+	dst = currentError_.FindMember(GetExpectedString());
+      dst->value.PushBack(ValueType(expectedSubType, GetStateAllocator(), actual).Move(), GetStateAllocator());
+    }
+    void EndDisallowedSubTypeKey(bool) {}
+    void StartDisallowedSubType() {
+        currentError_.SetArray();
+    }
+    void AddExpectedSubType(const typename SchemaType::ValueType& expectedSubType) {
+        currentError_.PushBack(ValueType(expectedSubType, GetStateAllocator()).Move(), GetStateAllocator());
+    }
+    void EndDisallowedSubType(const typename SchemaType::ValueType& actualSubType) {
+        ValueType error(kObjectType);
+        error.AddMember(GetExpectedString(), currentError_, GetStateAllocator());
+        error.AddMember(GetActualString(), ValueType(actualSubType, GetStateAllocator(), true).Move(), GetStateAllocator());
+        currentError_ = error;
+        AddCurrentError(kValidateErrorSubType);
+    }
+#endif // RAPIDJSON_YGGDRASIL
     void NotAllOf(ISchemaValidator** subvalidators, SizeType count) {
         // Treat allOf like oneOf and anyOf to match https://rapidjson.org/md_doc_schema.html#allOf-anyOf-oneOf
         AddErrorArray(kValidateErrorAllOf, subvalidators, count);
@@ -11634,16 +11761,6 @@ public:
 			    ValueType(name, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     AddCurrentError(kValidateErrorPythonImport, true);
-  }
-  void IncorrectSubType(const typename SchemaType::ValueType& actual, const typename SchemaType::ValueType& expected) {
-    currentError_.SetObject();
-    currentError_.AddMember(GetExpectedString(),
-			    ValueType(expected, GetStateAllocator(), true).Move(),
-			    GetStateAllocator());
-    currentError_.AddMember(GetActualString(),
-			    ValueType(actual, GetStateAllocator(), true).Move(),
-			    GetStateAllocator());
-    AddCurrentError(kValidateErrorSubType, true);
   }
   void IncorrectPrecision(const typename SchemaType::ValueType& actual, const SValue& expected) {
     AddNumberError(kValidateErrorPrecision,
@@ -11724,16 +11841,16 @@ public:
 			    ValueType(kArrayType).Move(),
 			    GetStateAllocator());
     ValueType dup(GetDuplicatesString(), GetStateAllocator());
-    currentError_[dup].PushBack(ValueType(base, GetStateAllocator()).Move(),
+    currentError_[dup].PushBack(ValueType(base, GetStateAllocator(), true).Move(),
 				GetStateAllocator());
-    currentError_[dup].PushBack(ValueType(alias, GetStateAllocator()).Move(),
+    currentError_[dup].PushBack(ValueType(alias, GetStateAllocator(), true).Move(),
 				GetStateAllocator());
     AddCurrentError(kNormalizeErrorAliasDuplicate, true);
   }
   void CircularAlias(const SValue& alias) {
     currentError_.SetObject();
     currentError_.AddMember(GetCircularString(),
-			    ValueType(alias, GetStateAllocator()).Move(),
+			    ValueType(alias, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     AddCurrentError(kNormalizeErrorCircularAlias, true);
   }
@@ -11742,13 +11859,13 @@ public:
 			  const SValue& base2) {
     currentError_.SetObject();
     currentError_.AddMember(GetConflictingString(),
-			    ValueType(alias, GetStateAllocator()).Move(),
+			    ValueType(alias, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     currentError_.AddMember(GetExpectedString(),
-			    ValueType(base1, GetStateAllocator()).Move(),
+			    ValueType(base1, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     currentError_.AddMember(GetActualString(),
-			    ValueType(base2, GetStateAllocator()).Move(),
+			    ValueType(base2, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     AddCurrentError(kNormalizeErrorConflictingAliases, true);
   }
@@ -11765,7 +11882,7 @@ public:
     }
     error_.AddMember(GetSingularString(),
 		     ValueType(static_cast<GenericSchemaValidator*>(subvalidator[1])->GetError(),
-			       GetStateAllocator()).Move(),
+			       GetStateAllocator(), true).Move(),
 		     GetStateAllocator());
     return vcode;
   }
@@ -11782,7 +11899,7 @@ public:
     }
     error_.AddMember(GetWrappedString(),
 		     ValueType(static_cast<GenericSchemaValidator*>(subvalidator[1])->GetError(),
-			       GetStateAllocator()).Move(),
+			       GetStateAllocator(), true).Move(),
 		     GetStateAllocator());
     return vcode;
   }
@@ -11790,13 +11907,13 @@ public:
 				  const SValue& expected, const SValue& actual) {
     currentError_.SetObject();
     currentError_.AddMember(GetConflictingString(),
-			    ValueType(cond, GetStateAllocator()).Move(),
+			    ValueType(cond, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     currentError_.AddMember(GetExpectedString(),
-			    ValueType(expected, GetStateAllocator()).Move(),
+			    ValueType(expected, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     currentError_.AddMember(GetActualString(),
-			    ValueType(actual, GetStateAllocator()).Move(),
+			    ValueType(actual, GetStateAllocator(), true).Move(),
 			    GetStateAllocator());
     AddCurrentError(kNormalizeErrorMergeConflict, false);
   }

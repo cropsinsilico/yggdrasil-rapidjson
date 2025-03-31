@@ -393,6 +393,16 @@ template<typename T>
 inline std::complex<T> value_floor(const std::complex<T>& x) {
   return std::complex<T>(value_floor(x.real()), value_floor(x.imag()));
 }
+
+inline unsigned int countBits(unsigned int n)
+{
+  unsigned int count = 0;
+  while (n) {
+    count += n & 1;
+    n >>= 1;
+  }
+  return count;
+}
   
 #endif // RAPIDJSON_YGGDRASIL
   
