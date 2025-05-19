@@ -2,10 +2,7 @@ import copy
 import json
 import argparse
 import os
-from urllib.request import Request, urlopen
-
-
-_user_agent = None
+import requests
 
 
 def create_full_schema(fname):
@@ -380,11 +377,10 @@ if __name__ == "__main__":
     parser.add_argument("--create-full-schema", action='store_true',
                         help='Create a full_schema.yml file')
     args = parser.parse_args()
-    url = f'http://json-schema.org/{args.base_draft}/schema#'
-    req = Request(url)
-    if _user_agent:
-        req.add_header('User-Agent', _user_agent)
-    standard = json.loads(urlopen(req).read().decode('utf-8'))
+    url = f'https://json-schema.org/{args.base_draft}/schema'
+    r = requests.get(url)
+    r.raise_for_status()
+    standard = r.json()
     base = copy.deepcopy(standard)
     base['title'] = "Ygg meta-schema for data type schemas"
     base['definitions']['simpleTypes']['enum'] += [
@@ -449,7 +445,8 @@ if __name__ == "__main__":
                 "int",
                 "uint",
                 "bytes",
-                "unicode"
+                "unicode",
+                "any",
             ],
             "type": "string"
         },

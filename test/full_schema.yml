@@ -294,6 +294,8 @@ definitions:
         enum:
         - IPCInputDriver
         - IPCOutputDriver
+        - InputDriver
+        - OutputDriver
         type: string
       name:
         description: Name used for component in log messages.
@@ -388,6 +390,8 @@ definitions:
         enum:
         - RMQInputDriver
         - RMQOutputDriver
+        - InputDriver
+        - OutputDriver
         type: string
       name:
         description: Name used for component in log messages.
@@ -418,6 +422,8 @@ definitions:
         enum:
         - RMQAsyncInputDriver
         - RMQAsyncOutputDriver
+        - InputDriver
+        - OutputDriver
         type: string
       name:
         description: Name used for component in log messages.
@@ -476,6 +482,8 @@ definitions:
         enum:
         - ZMQInputDriver
         - ZMQOutputDriver
+        - InputDriver
+        - OutputDriver
         type: string
       name:
         description: Name used for component in log messages.
@@ -505,6 +513,7 @@ definitions:
     - $ref: '#/definitions/connection-subtype-base'
     - anyOf:
       - $ref: '#/definitions/connection-subtype-connection'
+      - $ref: '#/definitions/connection-subtype-direct'
       - $ref: '#/definitions/connection-subtype-file_input'
       - $ref: '#/definitions/connection-subtype-file_output'
       - $ref: '#/definitions/connection-subtype-input'
@@ -528,6 +537,7 @@ definitions:
         description: Connection between one or more comms/files and one or more comms/files.
         enum:
         - connection
+        - direct
         - file_input
         - file_output
         - input
@@ -540,6 +550,7 @@ definitions:
         description: '[DEPRECATED] Name of driver class that should be used.'
         enum:
         - ConnectionDriver
+        - DirectConnectionDriver
         - FileInputDriver
         - FileOutputDriver
         - InputDriver
@@ -627,6 +638,8 @@ definitions:
         - table
         - wofost
         - yaml
+        - read
+        - readline
         type: string
       transform:
         aliases:
@@ -706,6 +719,24 @@ definitions:
         - ConnectionDriver
         type: string
     title: yggdrasil.drivers.ConnectionDriver.ConnectionDriver
+    type: object
+  connection-subtype-direct:
+    additionalProperties: true
+    description: Schema for connection component ['direct'] subtype.
+    properties:
+      connection_type:
+        default: direct
+        description: Connection between one or more comms/files and one or more comms/files.
+        enum:
+        - direct
+        type: string
+      driver:
+        deprecated: true
+        description: '[DEPRECATED] Name of driver class that should be used.'
+        enum:
+        - DirectConnectionDriver
+        type: string
+    title: yggdrasil.drivers.DirectConnectionDriver.DirectConnectionDriver
     type: object
   connection-subtype-file_input:
     additionalProperties: true
@@ -830,6 +861,776 @@ definitions:
       required:
       - driver
       - args
+  dependency:
+    allOf:
+    - $ref: '#/definitions/dependency-subtype-base'
+    - anyOf:
+      - $ref: '#/definitions/dependency-subtype-apt'
+      - $ref: '#/definitions/dependency-subtype-cmake'
+      - $ref: '#/definitions/dependency-subtype-cran'
+      - $ref: '#/definitions/dependency-subtype-choco'
+      - $ref: '#/definitions/dependency-subtype-command'
+      - $ref: '#/definitions/dependency-subtype-conda'
+      - $ref: '#/definitions/dependency-subtype-options'
+      - $ref: '#/definitions/dependency-subtype-set'
+      - $ref: '#/definitions/dependency-subtype-git'
+      - $ref: '#/definitions/dependency-subtype-brew'
+      - $ref: '#/definitions/dependency-subtype-make'
+      - $ref: '#/definitions/dependency-subtype-pip'
+      - $ref: '#/definitions/dependency-subtype-source'
+      - $ref: '#/definitions/dependency-subtype-vcpkg'
+    description: Schema for dependency components.
+    title: complete-dependency-package_manager
+  dependency-subtype-apt:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['apt'] subtype.
+    properties:
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: apt
+        description: Dependency installed from apt
+        enum:
+        - apt
+        type: string
+    required:
+    - package
+    title: yggdrasil.dependencies.AptDependency
+    type: object
+  dependency-subtype-base:
+    additionalProperties: false
+    allowSingular: package
+    description: Base schema for all subtypes of dependency components.
+    properties:
+      args_build:
+        description: Arguments that should be passed to the build tool during the
+          build step if buildfile is provided.
+        items:
+          type: string
+        type: array
+      args_config:
+        description: Arguments that should be passed to the build tool during the
+          configuration step (only used when buildfile is a CMakeLists.txt file).
+        items:
+          type: string
+        type: array
+      args_install:
+        description: Arguments that should be passed to the build tool during the
+          install step if buildfile is provided.
+        items:
+          type: string
+        type: array
+      arguments:
+        description: Additional arguments that should be passed to the package manager
+          during installation.
+        items:
+          type: string
+        type: array
+      arguments_uninstall:
+        description: Additional arguments that should be passed to the package manager
+          during uninstall.
+        items:
+          type: string
+        type: array
+      branch:
+        description: Branch that should be checked out. Ignored if commit or tag provided.
+        type: string
+      buildfile:
+        description: Path to buildfile (Makefile or CMakeLists.txt) that should be
+          used to build the dependency. If a relative path is provided, it will be
+          assumed to be relative to directory. If provided, a build will be attempted
+          to install the dependency.
+        type: string
+      channel:
+        description: Conda channel that the package should be installed from.
+        type: string
+      command:
+        description: Command arguments.
+        items:
+          type: string
+        type: array
+      command_kwargs:
+        additionalProperties: true
+        description: Keyword arguments that should be passed to the subprocess call
+          for the installation.
+        properties:
+          shell:
+            default: false
+            type: boolean
+        type: object
+      command_uninstall:
+        description: Command arguments used to uninstall the dependency.
+        items:
+          type: string
+        type: array
+      commit:
+        description: Commit that should be checked out.
+        type: string
+      conda_env:
+        description: Conda environment where the dependency should be installed.
+        type: string
+      default_package_manager:
+        allowSingular: true
+        description: 'Package manager(s) that should be used for members that do not
+          have a package_manager property and cannot be determined from the provided
+          properties. If a list is provided, the first package_manager that is installed
+          will be used. If not provided, the default order will be based on the operating
+          system: macos  : [''conda'', ''brew'', ''apt'', ''choco'', ''vcpkg''] linux  :
+          [''conda'', ''apt'', ''brew'', ''choco'', ''vcpkg''] windows: [''conda'',
+          ''choco'', ''vcpkg'', ''apt'', ''brew'']'
+        items:
+          $ref: '#/definitions/dependency-subtype-base/properties/package_manager'
+        type: array
+      directory:
+        description: Path to the directory that contains the source code to install.
+        type: string
+      fstring_tag:
+        default: v{version}
+        description: Format string that should be used to turn versions into tags.
+          Defaults to 'v{version}'
+        type: string
+      install_method:
+        description: 'Method that should be used to install the package from the specified
+          directory. If not provided, the directory will be inspected to try to determine
+          how to install the package. Valid options include: ''make'' : make installation
+          controlled via buildfile, args_build & args_install. make /path/to/buildfile
+          args_build[0] ... make install args_install[0] ... ''cmake'': cmake installation
+          controlled via buildfile, args_config, args_build & args_install. cmake
+          -S /path/to/buildfile -B build args_config[0] ... cmake --build build args_build[0]
+          ... cmake --install build args_install[0] ... ''pip'':   pip installation
+          from source controlled via args_install. pip install package args_install[0]
+          ...'
+        enum:
+        - cmake
+        - command
+        - cran
+        - make
+        - pip
+      install_prefix:
+        description: Prefix for directory under which built packages should be installed.
+          If not provided and conda_env set or run inside a conda environment, the
+          conda environment prefix will be used.
+        type: string
+      is_private:
+        default: false
+        description: If True, the repository is private and the user may be asked
+          for credentials when cloning the repository.
+        type: boolean
+      members:
+        description: Dependencies in the set. All of the members will be installed
+          with the set is installed.
+        items:
+          $ref: '#/definitions/dependency'
+        type: array
+      operating_systems:
+        description: Operating systems that the dependency is valid for.
+        items:
+          enum:
+          - windows
+          - macos
+          - linux
+          - unix
+          type: string
+        type: array
+      options:
+        description: Different options for installing the dependency. The first valid
+          option will be installed.
+        items:
+          $ref: '#/definitions/dependency'
+        type: array
+      overwrite:
+        default: false
+        description: If True, any existing instance of the repository in directory
+          will be overwritten. overwrite will automatically set to True if directory
+          is not provided and the repository is cloned into a temporary directory.
+        type: boolean
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        description: Set of related dependencies
+        enum:
+        - apt
+        - brew
+        - choco
+        - cmake
+        - command
+        - conda
+        - cran
+        - git
+        - make
+        - options
+        - pip
+        - set
+        - source
+        - vcpkg
+        type: string
+      post_install_steps:
+        description: Additional commands that should be executed in order to install
+          the package.
+        items:
+          type: string
+        type: array
+      post_uninstall_steps:
+        description: Additional commands that should be executed in order to uninstall
+          the package.
+        items:
+          type: string
+        type: array
+      pre_install_steps:
+        description: Additional commands that should be executed before install in
+          order to install the package.
+        items:
+          type: string
+        type: array
+      pre_uninstall_steps:
+        description: Additional commands that should be executed before uninstall
+          in order to uninstall the package.
+        items:
+          type: string
+        type: array
+      preserve:
+        default: false
+        description: If True, uninstall will only uninstall the dependency installation
+          and the git repository will not be removed. preserve will automatically
+          set to False if directory is not provided and the repository is cloned into
+          a temporary directory.
+        type: boolean
+      products:
+        description: Files that are required for the dependency to be considered installed.
+        items:
+          type: string
+        type: array
+      r_install_steps:
+        description: Set of R commands that should be used to install the package
+          if different from the standard 'install.packages()' method.
+        items:
+          type: string
+        type: array
+      repos:
+        default: http://cloud.r-project.org
+        description: Mirror that should be used to install the dependency from.
+        type: string
+      repository:
+        description: URL address to the repository.
+        type: string
+      shared_properties:
+        description: Properties that will be added to all members/options.
+        type: object
+      sourcedir:
+        description: Directory containing package source code that the package should
+          be installed from.
+        type: string
+      tag:
+        description: Tag that should be checked out. Ignored if commit provided. If
+          version is provided, but tag is not, the tag will be set using fstring_tag.
+          If version is a min, max, or range, the maximum valid tag will be used.
+        type: string
+      version:
+        description: Version of the package that should be installed. This string
+          can begin with '==', '<', '<=', '>', or '>=' to indicate the type of contraint
+          on the version installed. If none of these are present, it will be assumed
+          to be a strict version requirement (i.e. ==version).
+        type: string
+    title: dependency_base
+    type: object
+  dependency-subtype-brew:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['brew'] subtype.
+    properties:
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: brew
+        description: Dependency installed from homebrew
+        enum:
+        - brew
+        type: string
+    required:
+    - package
+    title: yggdrasil.dependencies.HomebrewDependency
+    type: object
+  dependency-subtype-choco:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['choco'] subtype.
+    properties:
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: choco
+        description: Dependency installed via chocolate
+        enum:
+        - choco
+        type: string
+    required:
+    - package
+    title: yggdrasil.dependencies.ChocoDependency
+    type: object
+  dependency-subtype-cmake:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['cmake'] subtype.
+    properties:
+      args_build:
+        description: Arguments that should be passed to the build tool during the
+          build step if buildfile is provided.
+        items:
+          type: string
+        type: array
+      args_config:
+        description: Arguments that should be passed to the build tool during the
+          configuration step (only used when buildfile is a CMakeLists.txt file).
+        items:
+          type: string
+        type: array
+      args_install:
+        description: Arguments that should be passed to the build tool during the
+          install step if buildfile is provided.
+        items:
+          type: string
+        type: array
+      buildfile:
+        description: Path to buildfile (Makefile or CMakeLists.txt) that should be
+          used to build the dependency. If a relative path is provided, it will be
+          assumed to be relative to directory. If provided, a build will be attempted
+          to install the dependency.
+        type: string
+      conda_env:
+        description: Conda environment where the dependency should be installed.
+        type: string
+      directory:
+        description: Path to the directory that contains the source code to install.
+        type: string
+      install_prefix:
+        description: Prefix for directory under which built packages should be installed.
+          If not provided and conda_env set or run inside a conda environment, the
+          conda environment prefix will be used.
+        type: string
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: cmake
+        description: Dependency installed from source code via cmake
+        enum:
+        - cmake
+        type: string
+    required:
+    - directory
+    - package
+    title: yggdrasil.dependencies.CMakeDependency
+    type: object
+  dependency-subtype-command:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['command'] subtype.
+    properties:
+      command:
+        description: Command arguments.
+        items:
+          type: string
+        type: array
+      command_uninstall:
+        description: Command arguments used to uninstall the dependency.
+        items:
+          type: string
+        type: array
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: command
+        description: Dependency installed via user supplied command
+        enum:
+        - command
+        type: string
+      sourcedir:
+        description: Directory containing package source code that the package should
+          be installed from.
+        type: string
+    required:
+    - command
+    - package
+    title: yggdrasil.dependencies.CommandDependency
+    type: object
+  dependency-subtype-conda:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['conda'] subtype.
+    properties:
+      channel:
+        description: Conda channel that the package should be installed from.
+        type: string
+      conda_env:
+        description: Conda environment where the dependency should be installed.
+        type: string
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: conda
+        description: Dependency installed from conda
+        enum:
+        - conda
+        type: string
+    required:
+    - package
+    title: yggdrasil.dependencies.CondaDependency
+    type: object
+  dependency-subtype-cran:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['cran'] subtype.
+    properties:
+      conda_env:
+        description: Conda environment where the dependency should be installed.
+        type: string
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: cran
+        description: Dependency installed from CRAN
+        enum:
+        - cran
+        type: string
+      r_install_steps:
+        description: Set of R commands that should be used to install the package
+          if different from the standard 'install.packages()' method.
+        items:
+          type: string
+        type: array
+      repos:
+        default: http://cloud.r-project.org
+        description: Mirror that should be used to install the dependency from.
+        type: string
+      sourcedir:
+        description: Directory containing package source code that the package should
+          be installed from.
+        type: string
+    required:
+    - package
+    title: yggdrasil.dependencies.CRANDependency
+    type: object
+  dependency-subtype-git:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['git'] subtype.
+    properties:
+      branch:
+        description: Branch that should be checked out. Ignored if commit or tag provided.
+        type: string
+      commit:
+        description: Commit that should be checked out.
+        type: string
+      conda_env:
+        description: Conda environment where the dependency should be installed.
+        type: string
+      directory:
+        description: Path to the directory that contains the source code to install.
+        type: string
+      fstring_tag:
+        default: v{version}
+        description: Format string that should be used to turn versions into tags.
+          Defaults to 'v{version}'
+        type: string
+      install_method:
+        description: 'Method that should be used to install the package from the specified
+          directory. If not provided, the directory will be inspected to try to determine
+          how to install the package. Valid options include: ''make'' : make installation
+          controlled via buildfile, args_build & args_install. make /path/to/buildfile
+          args_build[0] ... make install args_install[0] ... ''cmake'': cmake installation
+          controlled via buildfile, args_config, args_build & args_install. cmake
+          -S /path/to/buildfile -B build args_config[0] ... cmake --build build args_build[0]
+          ... cmake --install build args_install[0] ... ''pip'':   pip installation
+          from source controlled via args_install. pip install package args_install[0]
+          ...'
+        enum:
+        - cmake
+        - command
+        - cran
+        - make
+        - pip
+      install_prefix:
+        description: Prefix for directory under which built packages should be installed.
+          If not provided and conda_env set or run inside a conda environment, the
+          conda environment prefix will be used.
+        type: string
+      is_private:
+        default: false
+        description: If True, the repository is private and the user may be asked
+          for credentials when cloning the repository.
+        type: boolean
+      overwrite:
+        default: false
+        description: If True, any existing instance of the repository in directory
+          will be overwritten. overwrite will automatically set to True if directory
+          is not provided and the repository is cloned into a temporary directory.
+        type: boolean
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: git
+        description: Dependency installed from a git respository
+        enum:
+        - git
+        type: string
+      preserve:
+        default: false
+        description: If True, uninstall will only uninstall the dependency installation
+          and the git repository will not be removed. preserve will automatically
+          set to False if directory is not provided and the repository is cloned into
+          a temporary directory.
+        type: boolean
+      repository:
+        description: URL address to the repository.
+        type: string
+      tag:
+        description: Tag that should be checked out. Ignored if commit provided. If
+          version is provided, but tag is not, the tag will be set using fstring_tag.
+          If version is a min, max, or range, the maximum valid tag will be used.
+        type: string
+    required:
+    - directory
+    - package
+    - repository
+    title: yggdrasil.dependencies.GitDependency
+    type: object
+  dependency-subtype-make:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['make'] subtype.
+    properties:
+      args_build:
+        description: Arguments that should be passed to the build tool during the
+          build step if buildfile is provided.
+        items:
+          type: string
+        type: array
+      args_install:
+        description: Arguments that should be passed to the build tool during the
+          install step if buildfile is provided.
+        items:
+          type: string
+        type: array
+      buildfile:
+        description: Path to buildfile (Makefile or CMakeLists.txt) that should be
+          used to build the dependency. If a relative path is provided, it will be
+          assumed to be relative to directory. If provided, a build will be attempted
+          to install the dependency.
+        type: string
+      conda_env:
+        description: Conda environment where the dependency should be installed.
+        type: string
+      directory:
+        description: Path to the directory that contains the source code to install.
+        type: string
+      install_prefix:
+        description: Prefix for directory under which built packages should be installed.
+          If not provided and conda_env set or run inside a conda environment, the
+          conda environment prefix will be used.
+        type: string
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: make
+        description: Dependency installed from source code via make
+        enum:
+        - make
+        type: string
+    required:
+    - directory
+    - package
+    title: yggdrasil.dependencies.MakeDependency
+    type: object
+  dependency-subtype-options:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['options'] subtype.
+    properties:
+      default_package_manager:
+        allowSingular: true
+        description: 'Package manager(s) that should be used for members that do not
+          have a package_manager property and cannot be determined from the provided
+          properties. If a list is provided, the first package_manager that is installed
+          will be used. If not provided, the default order will be based on the operating
+          system: macos  : [''conda'', ''brew'', ''apt'', ''choco'', ''vcpkg''] linux  :
+          [''conda'', ''apt'', ''brew'', ''choco'', ''vcpkg''] windows: [''conda'',
+          ''choco'', ''vcpkg'', ''apt'', ''brew'']'
+        items:
+          $ref: '#/definitions/dependency-subtype-base/properties/package_manager'
+        type: array
+      options:
+        description: Different options for installing the dependency. The first valid
+          option will be installed.
+        items:
+          $ref: '#/definitions/dependency'
+        type: array
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: options
+        description: Set of different options for installing a dependency
+        enum:
+        - options
+        type: string
+      shared_properties:
+        description: Properties that will be added to all members/options.
+        type: object
+    required:
+    - options
+    - package
+    title: yggdrasil.dependencies.DependencyOptions
+    type: object
+  dependency-subtype-pip:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['pip'] subtype.
+    properties:
+      conda_env:
+        description: Conda environment where the dependency should be installed.
+        type: string
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: pip
+        description: Dependency installed from PyPI via pip
+        enum:
+        - pip
+        type: string
+      sourcedir:
+        description: Directory containing package source code that the package should
+          be installed from.
+        type: string
+    required:
+    - package
+    title: yggdrasil.dependencies.PipDependency
+    type: object
+  dependency-subtype-set:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['set'] subtype.
+    properties:
+      default_package_manager:
+        allowSingular: true
+        description: 'Package manager(s) that should be used for members that do not
+          have a package_manager property and cannot be determined from the provided
+          properties. If a list is provided, the first package_manager that is installed
+          will be used. If not provided, the default order will be based on the operating
+          system: macos  : [''conda'', ''brew'', ''apt'', ''choco'', ''vcpkg''] linux  :
+          [''conda'', ''apt'', ''brew'', ''choco'', ''vcpkg''] windows: [''conda'',
+          ''choco'', ''vcpkg'', ''apt'', ''brew'']'
+        items:
+          $ref: '#/definitions/dependency-subtype-base/properties/package_manager'
+        type: array
+      members:
+        description: Dependencies in the set. All of the members will be installed
+          with the set is installed.
+        items:
+          $ref: '#/definitions/dependency'
+        type: array
+      package_manager:
+        default: set
+        description: Set of related dependencies
+        enum:
+        - set
+        type: string
+      shared_properties:
+        description: Properties that will be added to all members/options.
+        type: object
+    required:
+    - members
+    title: yggdrasil.dependencies.DependencySet
+    type: object
+  dependency-subtype-source:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['source'] subtype.
+    properties:
+      conda_env:
+        description: Conda environment where the dependency should be installed.
+        type: string
+      directory:
+        description: Path to the directory that contains the source code to install.
+        type: string
+      install_method:
+        description: 'Method that should be used to install the package from the specified
+          directory. If not provided, the directory will be inspected to try to determine
+          how to install the package. Valid options include: ''make'' : make installation
+          controlled via buildfile, args_build & args_install. make /path/to/buildfile
+          args_build[0] ... make install args_install[0] ... ''cmake'': cmake installation
+          controlled via buildfile, args_config, args_build & args_install. cmake
+          -S /path/to/buildfile -B build args_config[0] ... cmake --build build args_build[0]
+          ... cmake --install build args_install[0] ... ''pip'':   pip installation
+          from source controlled via args_install. pip install package args_install[0]
+          ...'
+        enum:
+        - cmake
+        - command
+        - cran
+        - make
+        - pip
+      install_prefix:
+        description: Prefix for directory under which built packages should be installed.
+          If not provided and conda_env set or run inside a conda environment, the
+          conda environment prefix will be used.
+        type: string
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: source
+        description: Dependency installed from source code
+        enum:
+        - source
+        type: string
+    required:
+    - directory
+    - package
+    title: yggdrasil.dependencies.SourceDependency
+    type: object
+  dependency-subtype-vcpkg:
+    additionalProperties: true
+    allowSingular: package
+    description: Schema for dependency component ['vcpkg'] subtype.
+    properties:
+      package:
+        description: Name of the package that should be installed. If the package
+          manager supports it, this can include version requirements.
+        type: string
+      package_manager:
+        default: vcpkg
+        description: Dependency installed via vcpkg
+        enum:
+        - vcpkg
+        type: string
+    required:
+    - package
+    title: yggdrasil.dependencies.VcpkgDependency
+    type: object
   file:
     allOf:
     - $ref: '#/definitions/file-subtype-base'
@@ -1054,6 +1855,11 @@ definitions:
       endrow:
         description: Row to stop read at (non-inclusive).
         type: integer
+      expected_result:
+        description: Path to an existing file that contains the result expected when
+          the default inputs & outputs are used. This parameter is only valid for
+          output files.
+        type: string
       field_names:
         aliases:
         - column_names
@@ -1143,6 +1949,12 @@ definitions:
         description: Path to file containing index if different from the standard
           naming convention for BAM and CRAM files.
         type: string
+      index_col:
+        description: Column index in the serialized table that contains the row index/names.
+        type: integer
+      index_row:
+        description: Row index in the serialized table that contains the column index/names.
+        type: integer
       is_series:
         default: false
         description: If True, input/output will be done to a series of files. If reading,
@@ -2046,6 +2858,12 @@ definitions:
         enum:
         - pandas
         type: string
+      index_col:
+        description: Column index in the serialized table that contains the row index/names.
+        type: integer
+      index_row:
+        description: Row index in the serialized table that contains the column index/names.
+        type: integer
       name:
         description: Name used for component in log messages.
         pattern: ^([A-Za-z0-9-_]+:)?\.?[A-Za-z0-9-_\\\/]+\.[A-Za-z0-9-_]+(::[A-Za-z0-9-_]+)?$
@@ -2647,19 +3465,7 @@ definitions:
       additional_dependencies:
         additionalProperties:
           items:
-            oneOf:
-            - type: string
-            - additionalProperties: false
-              properties:
-                arguments:
-                  type: string
-                package:
-                  type: string
-                package_manager:
-                  type: string
-              required:
-              - package
-              type: object
+            $ref: '#/definitions/dependency'
           type: array
         description: A mapping between languages and lists of packages in those languages
           that are required by the model.
@@ -2685,6 +3491,16 @@ definitions:
         description: If True, comm connections will be set up so that the model-side
           comms can be used by more than one thread. Defaults to False.
         type: boolean
+      archiver:
+        description: Name of archiver that should be used to build the model
+        type: string
+      archiver_flags:
+        default: []
+        description: Flags that should be passed to the archiverwhen building the
+          model
+        items:
+          type: string
+        type: array
       args:
         allowSingular: true
         description: The path to the file containing the model program that will be
@@ -2696,11 +3512,33 @@ definitions:
           - string
           - number
         type: array
+      build_commands:
+        description: Set of commands that should be run in order to build the model
+          if different from the standard set of commands.
+        items:
+          type: string
+        type: array
       builddir:
-        description: Directory where the build should be saved. Defaults to <sourcedir>/build.
-          It can be relative to working_dir or absolute.
+        description: Path to the directory that will contain build products. Can be
+          absolute or relative to working_dir. Defaults to builddir_base. If builddir
+          is not provided to the build tool as a command line flag, compile_working_dir
+          will be set to builddir (e.g. so make is called from builddir).
         type: string
+      builder:
+        description: Name of builder that should be used to build the model
+        type: string
+      builder_flags:
+        default: []
+        description: Flags that should be passed to the builderwhen building the model
+        items:
+          type: string
+        type: array
       buildfile:
+        description: Path to the file containing build instructions. Can be absolute
+          or relative to compile_working_dir (if provided), builddir (if provided),
+          or the source directory containing the model source files that will be built.
+        type: string
+      client_id:
         type: string
       client_of:
         allowSingular: true
@@ -2716,18 +3554,17 @@ definitions:
         items:
           type: string
         type: array
+      compile_working_dir:
+        description: Directory where compilation should be invoked from if it is not
+          the same as the provided working_dir.
+        type: string
       compiler:
-        description: Command or path to executable that should be used to compile
-          the model. If not provided, the compiler will be determined based on configuration
-          options for the language (if present) and the registered compilers that
-          are available on the current operating system.
+        description: Name of compiler that should be used to build the model
         type: string
       compiler_flags:
         default: []
-        description: Flags that should be passed to the compiler during compilation.
-          If nto provided, the compiler flags will be determined based on configuration
-          options for the language (if present), the compiler defaults, and the default_compiler_flags
-          class attribute.
+        description: Flags that should be passed to the compilerwhen building the
+          model
         items:
           type: string
         type: array
@@ -2735,6 +3572,16 @@ definitions:
         default: Release
         description: Build type/configuration that should be built. Defaults to 'Release'.
         type: string
+      configurer:
+        description: Name of configurer that should be used to build the model
+        type: string
+      configurer_flags:
+        default: []
+        description: Flags that should be passed to the configurerwhen building the
+          model
+        items:
+          type: string
+        type: array
       contact_email:
         description: Email address that should be used to contact the maintainer of
           the model. This parameter is only used in the model repository.
@@ -2752,33 +3599,26 @@ definitions:
           use any of the files located there since OSR always assumes the included
           file paths are relative. Defaults to False.
         type: boolean
+      definitions:
+        default: []
+        description: Definitions that should be added to compilation options.
+        items:
+          type: string
+        type: array
       dependencies:
         description: A list of packages required by the model that are written in
           the same language as the model. If the package requires dependencies outside
           the language of the model. use the additional_dependencies parameter to
-          provide them. If you need a version of the package from a specific package
-          manager, a mapping with 'package' and 'package_manager' fields can be provided
-          instead of just the name of the package.
+          provide them.
         items:
-          oneOf:
-          - type: string
-          - additionalProperties: false
-            properties:
-              arguments:
-                type: string
-              package:
-                type: string
-              package_manager:
-                type: string
-            required:
-            - package
-            type: object
+          $ref: '#/definitions/dependency'
         type: array
       description:
         description: Description of the model. This parameter is only used in the
           model repository or when providing the model as a service.
         type: string
       disable_python_c_api:
+        default: false
         description: If True, the Python C API will be disabled. Defaults to False.
         type: boolean
       driver:
@@ -2811,25 +3651,29 @@ definitions:
         description: Dictionary of environment variables that should be set when the
           driver starts. Defaults to {}.
         type: object
+      env_archiver:
+        description: Environment variable that the archiver executable path should
+          be stored in when building the model
+        type: string
+      env_archiver_flags:
+        description: Environment variable that the archiver flags should be stored
+          in when building the model
+        type: string
       env_compiler:
-        description: Environment variable where the compiler executable should be
-          stored for use within the Makefile. If not provided, this will be determined
-          by the target language driver.
+        description: Environment variable that the compiler executable path should
+          be stored in when building the model
         type: string
       env_compiler_flags:
-        description: Environment variable where the compiler flags should be stored
-          (including those required to compile against the |yggdrasil| interface).
-          If not provided, this will be determined by the target language driver.
+        description: Environment variable that the compiler flags should be stored
+          in when building the model
         type: string
       env_linker:
-        description: Environment variable where the linker executable should be stored
-          for use within the Makefile. If not provided, this will be determined by
-          the target language driver.
+        description: Environment variable that the linker executable path should be
+          stored in when building the model
         type: string
       env_linker_flags:
-        description: Environment variable where the linker flags should be stored
-          (including those required to link against the |yggdrasil| interface). If
-          not provided, this will be determined by the target language driver.
+        description: Environment variable that the linker flags should be stored in
+          when building the model
         type: string
       function:
         description: If provided, an integrated model is created by wrapping the function
@@ -2968,17 +3812,11 @@ definitions:
         - timesync
         type: string
       linker:
-        description: Command or path to executable that should be used to link the
-          model. If not provided, the linker will be determined based on configuration
-          options for the language (if present) and the registered linkers that are
-          available on the current operating system
+        description: Name of linker that should be used to build the model
         type: string
       linker_flags:
         default: []
-        description: Flags that should be passed to the linker during compilation.
-          If not provided, the linker flags will be determined based on configuration
-          options for the language (if present), the linker defaults, and the default_linker_flags
-          class attribute.
+        description: Flags that should be passed to the linkerwhen building the model
         items:
           type: string
         type: array
@@ -2987,16 +3825,6 @@ definitions:
         description: The level of logging messages that should be displayed by the
           model. Defaults to the logging level as determined by the configuration
           file and environment variables.
-        type: string
-      makedir:
-        description: Directory where make should be invoked from if it is not the
-          same as the directory containing the makefile. Defaults to directory containing
-          makefile if provided, otherwise working_dir.
-        type: string
-      makefile:
-        default: Makefile
-        description: Path to make file either absolute, relative to makedir (if provided),
-          or relative to working_dir. Defaults to Makefile.
         type: string
       name:
         description: Name used for component in log messages.
@@ -3039,19 +3867,18 @@ definitions:
           attribute outputs_in_inputs.
         type: boolean
       overwrite:
+        default: false
         description: If True, any existing model products (compilation products, wrapper
           scripts, etc.) are removed prior to the run. If False, the products are
           not removed. Defaults to True. Setting this to False can improve the performance,
           particularly for models that take a long time to compile, but this should
           only be done once the model has been fully debugged to ensure that each
-          run is tested on a clean copy of the model. The value of this keyword also
-          determines whether or not products are removed after a run.
+          run is tested on a clean copy of the model.
         type: boolean
       preserve_cache:
-        default: false
-        description: If True model products will be kept following the run, otherwise
-          all products will be cleaned up. Defaults to False. This keyword is superceeded
-          by overwrite.
+        default: true
+        description: '[DEPRECATED] If True model products will be kept following the
+          run, otherwise all products will be cleaned up.'
         type: boolean
       products:
         default: []
@@ -3061,11 +3888,27 @@ definitions:
         items:
           type: string
         type: array
+      remove_products:
+        default: false
+        description: If True, integration products will be removed after running the
+          model.
+        type: boolean
       repository_commit:
         description: Commit that should be checked out in the model repository specified
           by repository_url. If not provided, the most recent commit on the default
           branch will be used.
         type: string
+      repository_dir:
+        description: Directory where the respository should be cloned to (including
+          the repository name). If the directory already exists, it will be assumed
+          to be a git repository and the provided commit will be checked out if provided.
+          If not provided, the respository will be cloned into the model working_dir.
+          If not an absolute path, it will be taken as relative to the model working_dir.
+        type: string
+      repository_patches:
+        items:
+          type: string
+        type: array
       repository_url:
         description: URL for the git repository containing the model source code.
           If provided, relative paths in the model YAML definition will be considered
@@ -3083,6 +3926,20 @@ definitions:
         items:
           type: string
         type: array
+      service:
+        type: string
+      service_address:
+        type: string
+      service_models:
+        items:
+          type: string
+        type: array
+      skip_compile:
+        default: false
+        description: If True, don't compile the model during initialization. This
+          assumes that the model executable will have already been compiled against
+          the appropriate yggdrasil interface.
+        type: boolean
       skip_interpreter:
         default: false
         description: If True, no interpreter will be added to the arguments. This
@@ -3112,9 +3969,9 @@ definitions:
           type: string
         type: array
       sourcedir:
-        description: Source directory to call cmake on. If not provided it is set
-          to working_dir. This should be the directory containing the CMakeLists.txt
-          file. It can be relative to working_dir or absolute.
+        description: Path to the directory that contains source files. Can be absolute
+          or relative to working_dir. If not provided, it will be determined from
+          args & buildfile.
         type: string
       standard:
         default: f2003
@@ -3186,16 +4043,26 @@ definitions:
           the keys:'
         type: object
       target:
-        description: Make target that should be built to create the model executable.
-          Defaults to None.
+        description: Target that should be built to create the model executable. Defaults
+          to None.
         type: string
+      target_archiver:
+        description: Name of archiver that should be used to build the model
+        type: string
+      target_archiver_flags:
+        default: []
+        description: Flags that should be passed to the archiver when building the
+          model
+        items:
+          type: string
+        type: array
       target_compiler:
-        description: Compilation tool that should be used to compile the target language.
-          Defaults to None and will be set based on the selected language driver.
+        description: Name of compiler that should be used to build the model
         type: string
       target_compiler_flags:
-        description: Compilation flags that should be passed to the target language
-          compiler. Defaults to [].
+        default: []
+        description: Flags that should be passed to the compiler when building the
+          model
         items:
           type: string
         type: array
@@ -3204,12 +4071,11 @@ definitions:
           will be set based on the source files provided.
         type: string
       target_linker:
-        description: Compilation tool that should be used to link the target language.
-          Defaults to None and will be set based on the selected language driver.
+        description: Name of linker that should be used to build the model
         type: string
       target_linker_flags:
-        description: Linking flags that should be passed to the target language linker.
-          Defaults to [].
+        default: []
+        description: Flags that should be passed to the linker when building the model
         items:
           type: string
         type: array
@@ -3280,6 +4146,7 @@ definitions:
         description: Path to file where model weights are saved
         type: string
       with_asan:
+        default: false
         description: If True, the model will be compiled and linked with the address
           sanitizer enabled (if there is one available for the selected compiler).
         type: boolean
@@ -3288,6 +4155,11 @@ definitions:
           should include the tool executable and any flags that should be passed to
           it.
         type: string
+      with_omp:
+        default: false
+        description: If True, the model will be compiled and linked with OpenMP if
+          OpenMP is installed and can be located.
+        type: boolean
       with_strace:
         default: false
         description: If True, the command is run with strace (on Linux) or dtrace
@@ -3300,6 +4172,10 @@ definitions:
       working_dir:
         description: Working directory. If not provided, the current working directory
           is used.
+        type: string
+      yggdrasil_option:
+        description: Build option that can be set to build against the yggdrasil library.
+          If provided, the cmake file will not be modified.
         type: string
     pushProperties:
       $properties/inputs/items/anyOf/0/allOf/0/properties/default_file:
@@ -3321,6 +4197,16 @@ definitions:
     additionalProperties: true
     description: Schema for model component ['c'] subtype.
     properties:
+      archiver:
+        description: Name of archiver that should be used to build the model
+        type: string
+      archiver_flags:
+        default: []
+        description: Flags that should be passed to the archiverwhen building the
+          model
+        items:
+          type: string
+        type: array
       args:
         allowSingular: true
         description: The path to the file containing the model program that will be
@@ -3332,22 +4218,34 @@ definitions:
           - string
           - number
         type: array
+      build_commands:
+        description: Set of commands that should be run in order to build the model
+          if different from the standard set of commands.
+        items:
+          type: string
+        type: array
+      compile_working_dir:
+        description: Directory where compilation should be invoked from if it is not
+          the same as the provided working_dir.
+        type: string
       compiler:
-        description: Command or path to executable that should be used to compile
-          the model. If not provided, the compiler will be determined based on configuration
-          options for the language (if present) and the registered compilers that
-          are available on the current operating system.
+        description: Name of compiler that should be used to build the model
         type: string
       compiler_flags:
         default: []
-        description: Flags that should be passed to the compiler during compilation.
-          If nto provided, the compiler flags will be determined based on configuration
-          options for the language (if present), the compiler defaults, and the default_compiler_flags
-          class attribute.
+        description: Flags that should be passed to the compilerwhen building the
+          model
+        items:
+          type: string
+        type: array
+      definitions:
+        default: []
+        description: Definitions that should be added to compilation options.
         items:
           type: string
         type: array
       disable_python_c_api:
+        default: false
         description: If True, the Python C API will be disabled. Defaults to False.
         type: boolean
       driver:
@@ -3364,20 +4262,20 @@ definitions:
         - c
         type: string
       linker:
-        description: Command or path to executable that should be used to link the
-          model. If not provided, the linker will be determined based on configuration
-          options for the language (if present) and the registered linkers that are
-          available on the current operating system
+        description: Name of linker that should be used to build the model
         type: string
       linker_flags:
         default: []
-        description: Flags that should be passed to the linker during compilation.
-          If not provided, the linker flags will be determined based on configuration
-          options for the language (if present), the linker defaults, and the default_linker_flags
-          class attribute.
+        description: Flags that should be passed to the linkerwhen building the model
         items:
           type: string
         type: array
+      skip_compile:
+        default: false
+        description: If True, don't compile the model during initialization. This
+          assumes that the model executable will have already been compiled against
+          the appropriate yggdrasil interface.
+        type: boolean
       source_files:
         default: []
         description: Source files that should be compiled into an executable. Defaults
@@ -3387,8 +4285,14 @@ definitions:
           type: string
         type: array
       with_asan:
+        default: false
         description: If True, the model will be compiled and linked with the address
           sanitizer enabled (if there is one available for the selected compiler).
+        type: boolean
+      with_omp:
+        default: false
+        description: If True, the model will be compiled and linked with OpenMP if
+          OpenMP is installed and can be located.
         type: boolean
     required:
     - args
@@ -3410,32 +4314,58 @@ definitions:
           - string
           - number
         type: array
-      builddir:
-        description: Directory where the build should be saved. Defaults to <sourcedir>/build.
-          It can be relative to working_dir or absolute.
-        type: string
-      buildfile:
-        type: string
-      compiler:
-        description: Command or path to executable that should be used to compile
-          the model. If not provided, the compiler will be determined based on configuration
-          options for the language (if present) and the registered compilers that
-          are available on the current operating system.
-        type: string
-      compiler_flags:
-        default: []
-        description: Flags that should be passed to the compiler during compilation.
-          If nto provided, the compiler flags will be determined based on configuration
-          options for the language (if present), the compiler defaults, and the default_compiler_flags
-          class attribute.
+      build_commands:
+        description: Set of commands that should be run in order to build the model
+          if different from the standard set of commands.
         items:
           type: string
         type: array
+      builddir:
+        description: Path to the directory that will contain build products. Can be
+          absolute or relative to working_dir. Defaults to builddir_base. If builddir
+          is not provided to the build tool as a command line flag, compile_working_dir
+          will be set to builddir (e.g. so make is called from builddir).
+        type: string
+      builder:
+        description: Name of builder that should be used to build the model
+        type: string
+      builder_flags:
+        default: []
+        description: Flags that should be passed to the builderwhen building the model
+        items:
+          type: string
+        type: array
+      buildfile:
+        description: Path to the file containing build instructions. Can be absolute
+          or relative to compile_working_dir (if provided), builddir (if provided),
+          or the source directory containing the model source files that will be built.
+        type: string
+      compile_working_dir:
+        description: Directory where compilation should be invoked from if it is not
+          the same as the provided working_dir.
+        type: string
       configuration:
         default: Release
         description: Build type/configuration that should be built. Defaults to 'Release'.
         type: string
+      configurer:
+        description: Name of configurer that should be used to build the model
+        type: string
+      configurer_flags:
+        default: []
+        description: Flags that should be passed to the configurerwhen building the
+          model
+        items:
+          type: string
+        type: array
+      definitions:
+        default: []
+        description: Definitions that should be added to compilation options.
+        items:
+          type: string
+        type: array
       disable_python_c_api:
+        default: false
         description: If True, the Python C API will be disabled. Defaults to False.
         type: boolean
       driver:
@@ -3444,25 +4374,29 @@ definitions:
         enum:
         - CMakeModelDriver
         type: string
+      env_archiver:
+        description: Environment variable that the archiver executable path should
+          be stored in when building the model
+        type: string
+      env_archiver_flags:
+        description: Environment variable that the archiver flags should be stored
+          in when building the model
+        type: string
       env_compiler:
-        description: Environment variable where the compiler executable should be
-          stored for use within the Makefile. If not provided, this will be determined
-          by the target language driver.
+        description: Environment variable that the compiler executable path should
+          be stored in when building the model
         type: string
       env_compiler_flags:
-        description: Environment variable where the compiler flags should be stored
-          (including those required to compile against the |yggdrasil| interface).
-          If not provided, this will be determined by the target language driver.
+        description: Environment variable that the compiler flags should be stored
+          in when building the model
         type: string
       env_linker:
-        description: Environment variable where the linker executable should be stored
-          for use within the Makefile. If not provided, this will be determined by
-          the target language driver.
+        description: Environment variable that the linker executable path should be
+          stored in when building the model
         type: string
       env_linker_flags:
-        description: Environment variable where the linker flags should be stored
-          (including those required to link against the |yggdrasil| interface). If
-          not provided, this will be determined by the target language driver.
+        description: Environment variable that the linker flags should be stored in
+          when building the model
         type: string
       language:
         default: cmake
@@ -3470,21 +4404,12 @@ definitions:
         enum:
         - cmake
         type: string
-      linker:
-        description: Command or path to executable that should be used to link the
-          model. If not provided, the linker will be determined based on configuration
-          options for the language (if present) and the registered linkers that are
-          available on the current operating system
-        type: string
-      linker_flags:
-        default: []
-        description: Flags that should be passed to the linker during compilation.
-          If not provided, the linker flags will be determined based on configuration
-          options for the language (if present), the linker defaults, and the default_linker_flags
-          class attribute.
-        items:
-          type: string
-        type: array
+      skip_compile:
+        default: false
+        description: If True, don't compile the model during initialization. This
+          assumes that the model executable will have already been compiled against
+          the appropriate yggdrasil interface.
+        type: boolean
       source_files:
         default: []
         description: Source files that should be compiled into an executable. Defaults
@@ -3494,21 +4419,31 @@ definitions:
           type: string
         type: array
       sourcedir:
-        description: Source directory to call cmake on. If not provided it is set
-          to working_dir. This should be the directory containing the CMakeLists.txt
-          file. It can be relative to working_dir or absolute.
+        description: Path to the directory that contains source files. Can be absolute
+          or relative to working_dir. If not provided, it will be determined from
+          args & buildfile.
         type: string
       target:
-        description: Make target that should be built to create the model executable.
-          Defaults to None.
+        description: Target that should be built to create the model executable. Defaults
+          to None.
         type: string
+      target_archiver:
+        description: Name of archiver that should be used to build the model
+        type: string
+      target_archiver_flags:
+        default: []
+        description: Flags that should be passed to the archiver when building the
+          model
+        items:
+          type: string
+        type: array
       target_compiler:
-        description: Compilation tool that should be used to compile the target language.
-          Defaults to None and will be set based on the selected language driver.
+        description: Name of compiler that should be used to build the model
         type: string
       target_compiler_flags:
-        description: Compilation flags that should be passed to the target language
-          compiler. Defaults to [].
+        default: []
+        description: Flags that should be passed to the compiler when building the
+          model
         items:
           type: string
         type: array
@@ -3517,19 +4452,28 @@ definitions:
           will be set based on the source files provided.
         type: string
       target_linker:
-        description: Compilation tool that should be used to link the target language.
-          Defaults to None and will be set based on the selected language driver.
+        description: Name of linker that should be used to build the model
         type: string
       target_linker_flags:
-        description: Linking flags that should be passed to the target language linker.
-          Defaults to [].
+        default: []
+        description: Flags that should be passed to the linker when building the model
         items:
           type: string
         type: array
       with_asan:
+        default: false
         description: If True, the model will be compiled and linked with the address
           sanitizer enabled (if there is one available for the selected compiler).
         type: boolean
+      with_omp:
+        default: false
+        description: If True, the model will be compiled and linked with OpenMP if
+          OpenMP is installed and can be located.
+        type: boolean
+      yggdrasil_option:
+        description: Build option that can be set to build against the yggdrasil library.
+          If provided, the cmake file will not be modified.
+        type: string
     required:
     - args
     - language
@@ -3539,6 +4483,16 @@ definitions:
     additionalProperties: true
     description: Schema for model component ['c++', 'cpp', 'cxx'] subtype.
     properties:
+      archiver:
+        description: Name of archiver that should be used to build the model
+        type: string
+      archiver_flags:
+        default: []
+        description: Flags that should be passed to the archiverwhen building the
+          model
+        items:
+          type: string
+        type: array
       args:
         allowSingular: true
         description: The path to the file containing the model program that will be
@@ -3550,22 +4504,34 @@ definitions:
           - string
           - number
         type: array
+      build_commands:
+        description: Set of commands that should be run in order to build the model
+          if different from the standard set of commands.
+        items:
+          type: string
+        type: array
+      compile_working_dir:
+        description: Directory where compilation should be invoked from if it is not
+          the same as the provided working_dir.
+        type: string
       compiler:
-        description: Command or path to executable that should be used to compile
-          the model. If not provided, the compiler will be determined based on configuration
-          options for the language (if present) and the registered compilers that
-          are available on the current operating system.
+        description: Name of compiler that should be used to build the model
         type: string
       compiler_flags:
         default: []
-        description: Flags that should be passed to the compiler during compilation.
-          If nto provided, the compiler flags will be determined based on configuration
-          options for the language (if present), the compiler defaults, and the default_compiler_flags
-          class attribute.
+        description: Flags that should be passed to the compilerwhen building the
+          model
+        items:
+          type: string
+        type: array
+      definitions:
+        default: []
+        description: Definitions that should be added to compilation options.
         items:
           type: string
         type: array
       disable_python_c_api:
+        default: false
         description: If True, the Python C API will be disabled. Defaults to False.
         type: boolean
       driver:
@@ -3584,20 +4550,20 @@ definitions:
         - cxx
         type: string
       linker:
-        description: Command or path to executable that should be used to link the
-          model. If not provided, the linker will be determined based on configuration
-          options for the language (if present) and the registered linkers that are
-          available on the current operating system
+        description: Name of linker that should be used to build the model
         type: string
       linker_flags:
         default: []
-        description: Flags that should be passed to the linker during compilation.
-          If not provided, the linker flags will be determined based on configuration
-          options for the language (if present), the linker defaults, and the default_linker_flags
-          class attribute.
+        description: Flags that should be passed to the linkerwhen building the model
         items:
           type: string
         type: array
+      skip_compile:
+        default: false
+        description: If True, don't compile the model during initialization. This
+          assumes that the model executable will have already been compiled against
+          the appropriate yggdrasil interface.
+        type: boolean
       source_files:
         default: []
         description: Source files that should be compiled into an executable. Defaults
@@ -3607,8 +4573,14 @@ definitions:
           type: string
         type: array
       with_asan:
+        default: false
         description: If True, the model will be compiled and linked with the address
           sanitizer enabled (if there is one available for the selected compiler).
+        type: boolean
+      with_omp:
+        default: false
+        description: If True, the model will be compiled and linked with OpenMP if
+          OpenMP is installed and can be located.
         type: boolean
     required:
     - args
@@ -3630,6 +4602,8 @@ definitions:
           - string
           - number
         type: array
+      client_id:
+        type: string
       driver:
         deprecated: true
         description: '[DEPRECATED] Name of driver class that should be used.'
@@ -3658,6 +4632,14 @@ definitions:
         enum:
         - dummy
         type: string
+      service:
+        type: string
+      service_address:
+        type: string
+      service_models:
+        items:
+          type: string
+        type: array
       skip_interpreter:
         default: false
         description: If True, no interpreter will be added to the arguments. This
@@ -3705,6 +4687,16 @@ definitions:
     additionalProperties: true
     description: Schema for model component ['fortran'] subtype.
     properties:
+      archiver:
+        description: Name of archiver that should be used to build the model
+        type: string
+      archiver_flags:
+        default: []
+        description: Flags that should be passed to the archiverwhen building the
+          model
+        items:
+          type: string
+        type: array
       args:
         allowSingular: true
         description: The path to the file containing the model program that will be
@@ -3716,22 +4708,34 @@ definitions:
           - string
           - number
         type: array
+      build_commands:
+        description: Set of commands that should be run in order to build the model
+          if different from the standard set of commands.
+        items:
+          type: string
+        type: array
+      compile_working_dir:
+        description: Directory where compilation should be invoked from if it is not
+          the same as the provided working_dir.
+        type: string
       compiler:
-        description: Command or path to executable that should be used to compile
-          the model. If not provided, the compiler will be determined based on configuration
-          options for the language (if present) and the registered compilers that
-          are available on the current operating system.
+        description: Name of compiler that should be used to build the model
         type: string
       compiler_flags:
         default: []
-        description: Flags that should be passed to the compiler during compilation.
-          If nto provided, the compiler flags will be determined based on configuration
-          options for the language (if present), the compiler defaults, and the default_compiler_flags
-          class attribute.
+        description: Flags that should be passed to the compilerwhen building the
+          model
+        items:
+          type: string
+        type: array
+      definitions:
+        default: []
+        description: Definitions that should be added to compilation options.
         items:
           type: string
         type: array
       disable_python_c_api:
+        default: false
         description: If True, the Python C API will be disabled. Defaults to False.
         type: boolean
       driver:
@@ -3747,20 +4751,20 @@ definitions:
         - fortran
         type: string
       linker:
-        description: Command or path to executable that should be used to link the
-          model. If not provided, the linker will be determined based on configuration
-          options for the language (if present) and the registered linkers that are
-          available on the current operating system
+        description: Name of linker that should be used to build the model
         type: string
       linker_flags:
         default: []
-        description: Flags that should be passed to the linker during compilation.
-          If not provided, the linker flags will be determined based on configuration
-          options for the language (if present), the linker defaults, and the default_linker_flags
-          class attribute.
+        description: Flags that should be passed to the linkerwhen building the model
         items:
           type: string
         type: array
+      skip_compile:
+        default: false
+        description: If True, don't compile the model during initialization. This
+          assumes that the model executable will have already been compiled against
+          the appropriate yggdrasil interface.
+        type: boolean
       source_files:
         default: []
         description: Source files that should be compiled into an executable. Defaults
@@ -3777,8 +4781,14 @@ definitions:
         - f2008
         type: string
       with_asan:
+        default: false
         description: If True, the model will be compiled and linked with the address
           sanitizer enabled (if there is one available for the selected compiler).
+        type: boolean
+      with_omp:
+        default: false
+        description: If True, the model will be compiled and linked with OpenMP if
+          OpenMP is installed and can be located.
         type: boolean
     required:
     - args
@@ -3906,26 +4916,44 @@ definitions:
           - string
           - number
         type: array
+      build_commands:
+        description: Set of commands that should be run in order to build the model
+          if different from the standard set of commands.
+        items:
+          type: string
+        type: array
       builddir:
+        description: Path to the directory that will contain build products. Can be
+          absolute or relative to working_dir. Defaults to builddir_base. If builddir
+          is not provided to the build tool as a command line flag, compile_working_dir
+          will be set to builddir (e.g. so make is called from builddir).
         type: string
-      buildfile:
+      builder:
+        description: Name of builder that should be used to build the model
         type: string
-      compiler:
-        description: Command or path to executable that should be used to compile
-          the model. If not provided, the compiler will be determined based on configuration
-          options for the language (if present) and the registered compilers that
-          are available on the current operating system.
-        type: string
-      compiler_flags:
+      builder_flags:
         default: []
-        description: Flags that should be passed to the compiler during compilation.
-          If nto provided, the compiler flags will be determined based on configuration
-          options for the language (if present), the compiler defaults, and the default_compiler_flags
-          class attribute.
+        description: Flags that should be passed to the builderwhen building the model
+        items:
+          type: string
+        type: array
+      buildfile:
+        description: Path to the file containing build instructions. Can be absolute
+          or relative to compile_working_dir (if provided), builddir (if provided),
+          or the source directory containing the model source files that will be built.
+        type: string
+      compile_working_dir:
+        description: Directory where compilation should be invoked from if it is not
+          the same as the provided working_dir.
+        type: string
+      definitions:
+        default: []
+        description: Definitions that should be added to compilation options.
         items:
           type: string
         type: array
       disable_python_c_api:
+        default: false
         description: If True, the Python C API will be disabled. Defaults to False.
         type: boolean
       driver:
@@ -3934,57 +4962,43 @@ definitions:
         enum:
         - MakeModelDriver
         type: string
+      env_archiver:
+        description: Environment variable that the archiver executable path should
+          be stored in when building the model
+        type: string
+      env_archiver_flags:
+        description: Environment variable that the archiver flags should be stored
+          in when building the model
+        type: string
       env_compiler:
-        description: Environment variable where the compiler executable should be
-          stored for use within the Makefile. If not provided, this will be determined
-          by the target language driver.
+        description: Environment variable that the compiler executable path should
+          be stored in when building the model
         type: string
       env_compiler_flags:
-        description: Environment variable where the compiler flags should be stored
-          (including those required to compile against the |yggdrasil| interface).
-          If not provided, this will be determined by the target language driver.
+        description: Environment variable that the compiler flags should be stored
+          in when building the model
         type: string
       env_linker:
-        description: Environment variable where the linker executable should be stored
-          for use within the Makefile. If not provided, this will be determined by
-          the target language driver.
+        description: Environment variable that the linker executable path should be
+          stored in when building the model
         type: string
       env_linker_flags:
-        description: Environment variable where the linker flags should be stored
-          (including those required to link against the |yggdrasil| interface). If
-          not provided, this will be determined by the target language driver.
+        description: Environment variable that the linker flags should be stored in
+          when building the model
         type: string
       language:
         default: make
-        description: Model is written in C/C++ and has a Makefile for compilation.
+        description: Model is written in a compiled language and has a Makefile for
+          performing compilation.
         enum:
         - make
         type: string
-      linker:
-        description: Command or path to executable that should be used to link the
-          model. If not provided, the linker will be determined based on configuration
-          options for the language (if present) and the registered linkers that are
-          available on the current operating system
-        type: string
-      linker_flags:
-        default: []
-        description: Flags that should be passed to the linker during compilation.
-          If not provided, the linker flags will be determined based on configuration
-          options for the language (if present), the linker defaults, and the default_linker_flags
-          class attribute.
-        items:
-          type: string
-        type: array
-      makedir:
-        description: Directory where make should be invoked from if it is not the
-          same as the directory containing the makefile. Defaults to directory containing
-          makefile if provided, otherwise working_dir.
-        type: string
-      makefile:
-        default: Makefile
-        description: Path to make file either absolute, relative to makedir (if provided),
-          or relative to working_dir. Defaults to Makefile.
-        type: string
+      skip_compile:
+        default: false
+        description: If True, don't compile the model during initialization. This
+          assumes that the model executable will have already been compiled against
+          the appropriate yggdrasil interface.
+        type: boolean
       source_files:
         default: []
         description: Source files that should be compiled into an executable. Defaults
@@ -3993,17 +5007,32 @@ definitions:
         items:
           type: string
         type: array
-      target:
-        description: Make target that should be built to create the model executable.
-          Defaults to None.
+      sourcedir:
+        description: Path to the directory that contains source files. Can be absolute
+          or relative to working_dir. If not provided, it will be determined from
+          args & buildfile.
         type: string
+      target:
+        description: Target that should be built to create the model executable. Defaults
+          to None.
+        type: string
+      target_archiver:
+        description: Name of archiver that should be used to build the model
+        type: string
+      target_archiver_flags:
+        default: []
+        description: Flags that should be passed to the archiver when building the
+          model
+        items:
+          type: string
+        type: array
       target_compiler:
-        description: Compilation tool that should be used to compile the target language.
-          Defaults to None and will be set based on the selected language driver.
+        description: Name of compiler that should be used to build the model
         type: string
       target_compiler_flags:
-        description: Compilation flags that should be passed to the target language
-          compiler. Defaults to [].
+        default: []
+        description: Flags that should be passed to the compiler when building the
+          model
         items:
           type: string
         type: array
@@ -4012,18 +5041,23 @@ definitions:
           will be set based on the source files provided.
         type: string
       target_linker:
-        description: Compilation tool that should be used to link the target language.
-          Defaults to None and will be set based on the selected language driver.
+        description: Name of linker that should be used to build the model
         type: string
       target_linker_flags:
-        description: Linking flags that should be passed to the target language linker.
-          Defaults to [].
+        default: []
+        description: Flags that should be passed to the linker when building the model
         items:
           type: string
         type: array
       with_asan:
+        default: false
         description: If True, the model will be compiled and linked with the address
           sanitizer enabled (if there is one available for the selected compiler).
+        type: boolean
+      with_omp:
+        default: false
+        description: If True, the model will be compiled and linked with OpenMP if
+          OpenMP is installed and can be located.
         type: boolean
     required:
     - args
@@ -4641,6 +5675,12 @@ definitions:
         type:
         - string
         - int
+      index_col:
+        description: Column index in the serialized table that contains the row index/names.
+        type: integer
+      index_row:
+        description: Row index in the serialized table that contains the column index/names.
+        type: integer
       newline:
         default: '
 
@@ -4885,6 +5925,12 @@ definitions:
           a list of arguments and parse messages to get a list of arguments in C printf/scanf
           style. Defaults to None and messages are assumed to already be bytes.
         type: string
+      index_col:
+        description: Column index in the serialized table that contains the row index/names.
+        type: integer
+      index_row:
+        description: Row index in the serialized table that contains the column index/names.
+        type: integer
       no_header:
         default: false
         description: If True, headers will not be read or serialized from/to tables.

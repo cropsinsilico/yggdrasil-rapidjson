@@ -186,7 +186,7 @@ void _clear_refs(T*& x, Args... args) {
   _clear_refs(__VA_ARGS__)
 
 /*
-  #define LOG_STATE(x, message)
+ #define LOG_STATE(x, message)						\
   std::cerr << message << "[" << x << "]: " << PyGILState_Check() << " [action_taken = " << action_taken << "]" << std::endl
 */
 
