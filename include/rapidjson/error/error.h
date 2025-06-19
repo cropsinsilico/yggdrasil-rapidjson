@@ -214,6 +214,8 @@ enum ValidateErrorCode {
     kDeprecatedWarning,                        //!< Property is being deprecated.
     kValidateErrorGeneric,                     //!< Generic error occurred: %message.
     kIncompatibleSchemas,                      //!< Incompatible schema property `%property`: %expected vs %actual.
+    kValidateErrorMissingSubschema,            //!< Subschema is missing from one of the two schemas.
+    kValidateErrorSubschemas,                  //!< Object has one or more invalid subschemas.
 #endif // RAPIDJSON_YGGDRASIL
 
     kValidateErrorReadOnly,                    //!< Property is read-only but has been provided when validation is for writing

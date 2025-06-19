@@ -5698,6 +5698,8 @@ public:
       return GetIntSubTypeString();
     } else if (IsUint() || IsUint64()) {
       return GetUintSubTypeString();
+    } else if (IsString() && !IsYggdrasil()) {
+      return GetStringSubTypeString();
     } else {
       RAPIDJSON_ASSERT(IsYggdrasil());
       RAPIDJSON_ASSERT(schema_->HasMember(GetSubTypeString()));
@@ -7064,6 +7066,15 @@ public:
     @returns true if successful, false otherwise.
    */
   bool Normalize(const ValueType& schema, StringBuffer* error=NULL);
+  /*!
+    @brief Encode a Value as a schema.
+    @param[in] doc Value to encode the schema for.
+    @param[in] minimal If True, the schema will not fully describe the
+      document and only contain enough properties to validate the
+      general properties.
+    @returns true if successful, false otherwise.
+   */
+  bool EncodeSchema(const ValueType& doc, const bool minimal=false);
   // TODO: Version where schema not provided when setting from existing
   //   populated document.
   size_t CountVarArgs(ValueType& schema, bool set) const {

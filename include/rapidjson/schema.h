@@ -283,6 +283,9 @@ class Schema;
 #ifdef RAPIDJSON_YGGDRASIL
 template <typename SchemaDocumentType, typename StackAllocator>
 class GenericNormalizedDocument;
+  
+template <typename SchemaType>
+class IValidationErrorHandler;
 #endif // RAPIDJSON_YGGDRASIL
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -298,6 +301,132 @@ public:
     virtual unsigned GetValidatorID() const { return 0; }
 #endif // RAPIDJSON_YGGDRASIL
 };
+
+#ifdef RAPIDJSON_YGGDRASIL
+///////////////////////////////////////////////////////////////////////////////
+// ISchemaIterator
+  
+template <typename SchemaType>
+class ISchemaIterator {
+public:
+  typedef typename SchemaType::Ch Ch;
+  typedef typename SchemaType::SValue SValue;
+  typedef typename SchemaType::EncodingType EncodingType;
+  typedef typename SchemaType::PointerType PointerType;
+
+  virtual ~ISchemaIterator() {}
+
+  virtual void GetSchemaLocation(GenericStringBuffer<EncodingType>&,
+				 const bool = false,
+				 PointerType = PointerType()) const = 0;
+  
+  virtual bool IterSchema() = 0;
+  virtual bool IterSchemaSkip() = 0;
+  virtual bool IterSchemaStartObject() = 0;
+  virtual bool IterSchemaKey(const Ch*, SizeType, bool=false) = 0;
+  virtual bool IterSchemaAdditionalProperties() = 0;
+  virtual bool IterSchemaEndObject() = 0;
+  virtual bool IterSchemaStartArray() = 0;
+  virtual bool IterSchemaAdditionalItems() = 0;
+  virtual bool IterSchemaEndArray() = 0;
+};
+  
+///////////////////////////////////////////////////////////////////////////////
+// ISchemaHandler
+  
+template <typename SchemaType>
+class ISchemaHandler {
+public:
+  typedef typename SchemaType::Ch Ch;
+  typedef typename SchemaType::SValue SValue;
+  typedef typename SchemaType::ValueType ValueType;
+  typedef typename SchemaType::Context Context;
+  typedef typename SchemaType::EncodingType EncodingType;
+  typedef typename SchemaType::PointerType PointerType;
+  typedef IValidationErrorHandler<SchemaType> ErrorHandlerType;
+
+  virtual ~ISchemaHandler() {}
+
+  virtual void GetSchemaLocation(GenericStringBuffer<EncodingType>&,
+				 const bool = false,
+				 PointerType = PointerType()) const = 0;
+  
+  virtual ISchemaHandler* CreateSchemaHandler() = 0;
+  virtual void DestroySchemaHandler(ISchemaHandler*) = 0;
+  // virtual const ValueType& GetSchemaHandlerError() const = 0;
+  virtual void TransferHandlerError(ErrorHandlerType& error_handler) const = 0;
+
+  virtual bool SchemaSkip(const SchemaType&) = 0;
+  virtual bool SchemaStart(const SchemaType&, Context&) = 0;
+  virtual bool SchemaEnd() = 0;
+
+  virtual bool SchemaNull(const SchemaType&) = 0;
+  virtual bool SchemaBoolean(const SchemaType&) = 0;
+  virtual bool SchemaString(const SchemaType&) = 0;
+  virtual bool SchemaNumber(const SchemaType&) = 0;
+  virtual bool SchemaInteger(const SchemaType&) = 0;
+  virtual bool SchemaEncoding(const SchemaType&) = 0;
+  virtual bool SchemaScalar(const SchemaType&) = 0;
+  virtual bool SchemaNDArray(const SchemaType&) = 0;
+  virtual bool SchemaPython(const SchemaType&) = 0;
+  virtual bool SchemaGeometry(const SchemaType&) = 0;
+  virtual bool SchemaSchema(const SchemaType&) = 0;
+  
+  virtual bool SchemaStartObject(const SchemaType&) = 0;
+  virtual bool SchemaKey(const Ch*, SizeType, bool=false) = 0;
+  virtual bool SchemaAdditionalProperties() = 0;
+  virtual bool SchemaEndObject(SizeType, const bool=false) = 0;
+  virtual bool SchemaStartArray(const SchemaType&) = 0;
+  virtual bool SchemaAdditionalItems() = 0;
+  virtual bool SchemaEndArray(SizeType, const bool=false) = 0;
+  
+};
+  
+///////////////////////////////////////////////////////////////////////////////
+// IJointSchemaHandler
+
+template <typename SchemaType>
+class IJointSchemaHandler {
+public:
+  typedef typename SchemaType::Ch Ch;
+  typedef typename SchemaType::SValue SValue;
+  typedef typename SchemaType::Context Context;
+  typedef IValidationErrorHandler<SchemaType> ErrorHandlerType;
+
+  virtual ~IJointSchemaHandler() {}
+
+  virtual IJointSchemaHandler* CreateJointSchemaHandler() = 0;
+  virtual void DestroyJointSchemaHandler(IJointSchemaHandler*) = 0;
+  // virtual const ValueType& GetSchemaHandlerError() const = 0;
+  virtual void TransferHandlerError(ErrorHandlerType& error_handler) const = 0;
+
+  virtual bool Skip(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool Start(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool End(Context&) = 0;
+
+  virtual bool Null(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool Boolean(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool String(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool Number(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool Integer(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool Encoding(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool Scalar(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool NDArray(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool Python(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool Geometry(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool Schema(Context&, const SchemaType&, const SchemaType&) = 0;
+
+  virtual bool StartObject(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool Key(Context&) = 0;
+  virtual bool AdditionalProperties(Context&) = 0;
+  virtual bool EndObject(Context&) = 0;
+  virtual bool StartArray(Context&, const SchemaType&, const SchemaType&) = 0;
+  virtual bool AdditionalItems(Context&) = 0;
+  virtual bool EndArray(Context&) = 0;
+  
+};
+  
+#endif // RAPIDJSON_YGGDRASIL
 
 ///////////////////////////////////////////////////////////////////////////////
 // ISchemaStateFactory
@@ -420,8 +549,14 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
   virtual void GenericError(const char* str) = 0;
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-  virtual void IncompatibleSchemas(const typename SchemaType::ValueType& key, const SValue& expected, const SValue& actual, typename SchemaType::PointerType ptr1, typename SchemaType::PointerType ptr2, bool existingValues = false) = 0;
+  virtual void IncompatibleSchemas(const typename SchemaType::ValueType& key, const SValue& expected, const SValue& actual, bool existingValues = false) = 0;
   virtual void ResetError() = 0;
+  
+  virtual void SchemaHandlerError(const SValue& error) = 0;
+  virtual void StartDisallowedProperties() = 0;
+  virtual void AddDisallowedProperty(const SValue& name) = 0;
+  virtual bool EndDisallowedProperties() = 0;
+  virtual void AddMissingSubschema(const SValue& name) = 0;
 #endif // RAPIDJSON_YGGDRASIL
   
     virtual void DisallowedWhenWriting() = 0;
@@ -537,6 +672,8 @@ public:
     bool IsValid() const { return stack_.GetSize() == sizeof(uint64_t); }
 
     uint64_t GetHashCode() const {
+        if (!IsValid())
+	  std::cerr << "GetHashCode: !IsValid()" << std::endl;
         RAPIDJSON_ASSERT(IsValid());
         return *stack_.template Top<uint64_t>();
     }
@@ -576,6 +713,7 @@ private:
 };
 
 #ifdef RAPIDJSON_YGGDRASIL
+  
 ///////////////////////////////////////////////////////////////////////////////
 // SharedProperties
 
@@ -739,11 +877,15 @@ struct SchemaValidationContext {
     typedef typename SchemaType::ValueType ValueType;
     typedef typename ValueType::Ch Ch;
 #ifdef RAPIDJSON_YGGDRASIL
+    typedef ISchemaHandler<SchemaType> SchemaHandlerType;
+    typedef ISchemaIterator<SchemaType> SchemaIteratorType;
+    typedef IJointSchemaHandler<SchemaType> JointSchemaHandlerType;
     typedef typename SchemaType::EncodingType EncodingType;
     typedef typename SchemaType::AllocatorType AllocatorType;
     typedef typename SchemaType::PointerType PointerType;
     typedef SharedProperties<SchemaDocumentType> SharedPropertiesType;
     typedef GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
+    typedef SchemaValidationContext<SchemaDocumentType> ContextType;
 #endif //RAPIDJSON_YGGDRASIL
 
     enum PatternValidatorType {
@@ -751,6 +893,32 @@ struct SchemaValidationContext {
         kPatternValidatorWithProperty,
         kPatternValidatorWithAdditionalProperty
     };
+
+#ifdef RAPIDJSON_YGGDRASIL
+    enum OtherValidatorType {
+        kOtherValidatorNull,
+        kOtherValidatorPropertiesOnly,
+        kOtherValidatorPropertiesWithExplicit,
+        kOtherValidatorPropertiesWithAdditional,
+	kOtherValidatorItemsOnly,
+	kOtherValidatorItemsWithAdditional
+    };
+    enum ValidatorMode {
+        kValidationMode,
+	kNormalizationMode,
+	kGenerateMode,
+	kComparisonMode,
+	kSchemaIteratorMode,
+	kJointSchemaHandlerMode
+    };
+    enum IterationType {
+      kNoIterationType,
+      kInitIterationType,
+      kDirectIterationType,
+      kJointIterationType,
+      kJointSubschemaIterationType
+    };
+#endif // RAPIDJSON_YGGDRASIL
 
     SchemaValidationContext(SchemaValidatorFactoryType& f, ErrorHandlerType& eh, const SchemaType* s, unsigned fl = 0) :
         factory(f),
@@ -778,8 +946,22 @@ struct SchemaValidationContext {
 	schemaPointerAbs(),
 	valuePointer(),
 	patternPropertiesPointers(0),
+	patternPropertyExist(),
+	otherValidators(),
+	otherValidatorCount(),
+	otherSchemas(),
+	otherSchemaCount(),
+	otherPointers(0),
+	valueOtherValidatorType(kOtherValidatorNull),
 	python_disabled(false),
-	relativePathRoot()
+	relativePathRoot(),
+	mode(kValidationMode),
+	schema_iterator(0),
+	schema_handler(0),
+	joint_schema_handler(0),
+	iterationType(kNoIterationType),
+	iterationContext(0),
+	iterationPropertyIndex(~SizeType(0))
 #endif //RAPIDJSON_YGGDRASIL
     {}
 
@@ -812,8 +994,48 @@ struct SchemaValidationContext {
 	        (patternPropertiesPointers + i)->~PointerType();
 	    factory.FreeState(patternPropertiesPointers);
 	}
+	if (patternPropertyExist)
+	    factory.FreeState(patternPropertyExist);
+	if (otherValidators) {
+            for (SizeType i = 0; i < otherValidatorCount; i++) {
+                if (otherValidators[i]) {
+                    factory.DestroySchemaValidator(otherValidators[i]);
+                }
+            }
+            factory.FreeState(otherValidators);
+	  
+	}
+        if (otherSchemas)
+            factory.FreeState(otherSchemas);
+	if (otherPointers) {
+	    for (SizeType i = 0; i < otherSchemaCount; i++)
+	        (otherPointers + i)->~PointerType();
+	    factory.FreeState(otherPointers);
+	}
 #endif // RAPIDJSON_YGGDRASIL
     }
+
+#ifdef RAPIDJSON_YGGDRASIL
+    void ResetForSubschema(const SchemaType* typeless) {
+	// if (patternPropertiesPointers) {
+	//     for (SizeType i = 0; i < patternPropertiesSchemaCount; i++)
+	//         (patternPropertiesPointers + i)->~PointerType();
+	// }
+	// if (otherPointers) {
+	//     for (SizeType i = 0; i < otherSchemaCount; i++)
+	//         (otherPointers + i)->~PointerType();
+	// }
+	valueSchema = typeless;
+	valuePointer = PointerType();
+	patternPropertiesSchemaCount = 0;
+	otherSchemaCount = 0;
+	valueOtherValidatorType = kOtherValidatorNull;
+	valuePatternValidatorType = kPatternValidatorOnly;
+	iterationPropertyIndex = ~SizeType(0);
+	arrayElementIndex = 0;
+	// iterationType = kJointSubschemaIterationType;
+    }
+#endif // RAPIDJSON_YGGDRASIL
 
     SchemaValidatorFactoryType& factory;
     ErrorHandlerType& error_handler;
@@ -842,8 +1064,25 @@ struct SchemaValidationContext {
     PointerType schemaPointerAbs;
     PointerType valuePointer;
     PointerType* patternPropertiesPointers;
+    bool* patternPropertyExist;
+    ISchemaValidator** otherValidators;
+    SizeType otherValidatorCount;
+    const SchemaType** otherSchemas;
+    SizeType otherSchemaCount;
+    PointerType* otherPointers;
+    OtherValidatorType valueOtherValidatorType;
+    OtherValidatorType objectOtherValidatorType;
     bool python_disabled;
     ValueType relativePathRoot;
+    ValidatorMode mode;
+    SchemaIteratorType* schema_iterator;
+    SchemaHandlerType* schema_handler;
+    JointSchemaHandlerType* joint_schema_handler;
+    IterationType iterationType;
+    ContextType* iterationContext;
+    SizeType iterationPropertyIndex;
+    // SizeType valuePropertyIndex;
+    // SizeType objectPropertyIndex;
 #endif //RAPIDJSON_YGGDRASIL
 };
 
@@ -2297,11 +2536,11 @@ public:
     }
     // Subtype and/or precision
     typename SchemaType::YggSchemaValueSubType src_subtype_code = SchemaType::SubTypeBitMask2SubType(src_subtype);
-    typename SchemaType::YggSchemaValueSubType dst_subtype_code = SchemaType::kYggNullSubType;
+    typename SchemaType::YggSchemaValueSubType dst_subtype_code = SchemaType::kYggNullSchemaSubType;
     if (((!(src_subtype & dst_subtype)) ||
 	 src_precision != dst_precision) &&
 	(!(src_subtype & (1 << SchemaType::kYggStringSchemaSubType)))) {
-      unsigned int dst_subtype_code0 = ((unsigned int)(SchemaType::kYggNullSubType)) + 1;
+      unsigned int dst_subtype_code0 = ((unsigned int)(SchemaType::kYggNullSchemaSubType)) + 1;
       unsigned int dst_subtype_code1 = ((unsigned int)(SchemaType::kYggTotalSchemaSubType)) - 1;
       if (src_subtype & dst_subtype) {
 	dst_subtype_code0 = src_subtype_code;
@@ -2332,7 +2571,7 @@ public:
 	dst_subtype_code = (typename SchemaType::YggSchemaValueSubType)(idst_subtype);
 	break;
       }
-      if (dst_subtype_code == SchemaType::kYggNullSubType) {
+      if (dst_subtype_code == SchemaType::kYggNullSchemaSubType) {
 	return true; // Allow validation to fail
       }
     } else {
@@ -2488,7 +2727,7 @@ public:
 				     true).Move(),
 			      typeString, GetAllocator());
 	bool out = NormYggdrasilString(context, schema, str, length, copy, valueSchema);
-	if (out && !schema.isMetaschema_)
+	if (out && !schema.isMetaschema())
 	  RecordModified(kModificationTypeValue);
 	return out;
       }
@@ -2570,7 +2809,7 @@ public:
 			    valueSchema.GetAllocator());
       // TODO: Should there be an encoding?
       bool out = NormYggdrasilString(context, schema, str, length, copy, valueSchema);
-      if (out && !schema.isMetaschema_)
+      if (out && !schema.isMetaschema())
 	RecordModified(kModificationTypeValue);
       return out;
     }
@@ -4845,11 +5084,15 @@ public:
     typedef GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
     typedef SharedProperties<SchemaDocumentType> SharedPropertiesType;
     typedef units::GenericUnits<EncodingType> UnitsType;
+    typedef ISchemaIterator<SchemaType> SchemaIteratorType;
 #endif // RAPIDJSON_YGGDRASIL
 
     Schema(SchemaDocumentType* schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document, AllocatorType* allocator, const UriType& id = UriType()
 #ifdef RAPIDJSON_YGGDRASIL
-	   , const bool isMetaschema = false, const SingularFlag isSingular = kSingularNoFlags, const SchemaType* parentSchema = NULL, const ValueType* parentKey = NULL
+	   , const unsigned int flags = 0,
+	   // , const bool isMetaschema = false, const SingularFlag isSingular = kSingularNoFlags,
+	   const SingularFlag isSingular = kSingularNoFlags,
+	   const SchemaType* parentSchema = NULL, const ValueType* parentKey = NULL
 #endif // RAPIDJSON_YGGDRASIL
 	   ) :
         allocator_(allocator),
@@ -4899,13 +5142,13 @@ public:
 	,
 	yggtype_((1 << kYggTotalSchemaType) - 1),
 	subtype_((1 << kYggTotalSchemaSubType) - 1),
+	flags_(flags),
 	precision_(),
 	units_(),
 	shape_(),
 	ndim_(0),
 	encoding_(kYggNullSchemaEncodingType),
 	class_(),
-	isMetaschema_(isMetaschema),
 	inSort_(0),
 	metaschema_(0),
 	metaschemaValidatorIndex_(),
@@ -4914,10 +5157,13 @@ public:
 	defaultSet_(false), default_(),
 	aliases_(kArrayType), child_aliases_(kObjectType), hasAliases_(false),
 	allowSingular_(false), allowWrapped_(false),
-	isSingular_(isSingular), singularPtr_(),
+	isSingular_(isSingular),
+	singularPtr_(),
 	parentSchema_(parentSchema), parentKey_(kNullType),
 	deprecated_(false), enumValues_(kNullType),
-	sharedProperties_(0)
+	sharedProperties_(0),
+	additionalPropertiesExplicit_(false),
+	additionalItemsExplicit_(false)
 #endif // RAPIDJSON_YGGDRASIL
     {
         GenericStringBuffer<EncodingType> sb;
@@ -4971,7 +5217,8 @@ public:
 	  if (v->IsArray())
 	    aliases_.CopyFrom(*v, *allocator_, true);
 	}
-	if (schemaDocument && (!isMetaschema_) &&
+	if (schemaDocument &&
+	    (!(flags_ & (1 << kMetaschemaFlag))) &&
 	    (isSingular_ != kSingularArray) &&
 	    (isSingular_ != kSingularObject)) {
 	  SingularFlag kSingular = kSingularNoFlags;
@@ -4990,7 +5237,7 @@ public:
 	    return;
 	  }
 	}
-	if (schemaDocument && (!isMetaschema_) &&
+	if (schemaDocument && (!isMetaschema()) &&
 	    (isSingular_ != kWrappedItem) &&
 	    (isSingular_ != kWrappedValue)) {
 	  if (const ValueType* v = GetMember(value, GetAllowWrappedString())) {
@@ -5259,6 +5506,10 @@ public:
                 additionalProperties_ = v->GetBool();
             else if (v->IsObject())
                 schemaDocument->CreateSchema(&additionalPropertiesSchema_, p.Append(GetAdditionalPropertiesString(), allocator_), *v, document, id_);
+#ifdef RAPIDJSON_YGGDRASIL
+	    additionalPropertiesExplicit_ = (v->IsBool());
+	    // && additionalProperties_);
+#endif // RAPIDJSON_YGGDRASIL
         }
 
         AssignIfExist(minProperties_, value, GetMinPropertiesString());
@@ -5287,6 +5538,10 @@ public:
                 additionalItems_ = v->GetBool();
             else if (v->IsObject())
                 schemaDocument->CreateSchema(&additionalItemsSchema_, p.Append(GetAdditionalItemsString(), allocator_), *v, document, id_);
+#ifdef RAPIDJSON_YGGDRASIL
+	    additionalItemsExplicit_ = (v->IsBool());
+	    // && additionalItems_);
+#endif // RAPIDJSON_YGGDRASIL
         }
 
         AssignIfExist(uniqueItems_, value, GetUniqueItemsString());
@@ -5409,6 +5664,19 @@ public:
             if (nullable_)
                 AddType(GetNullString());
         }
+
+#ifdef RAPIDJSON_YGGDRASIL
+	if (schemaDocument) {
+	  SizeType externalCount = 0;
+	  if (allOf_.schemas) externalCount++;
+	  if (anyOf_.schemas) externalCount++;
+	  if (oneOf_.schemas) externalCount++;
+	  if (not_) externalCount++;
+	  if (externalCount == value.MemberCount())
+	    flags_ |= (1 << kNoBaseFlag);
+	}
+#endif // RAPIDJSON_YGGDRASIL
+	
     }
 
     ~Schema() {
@@ -5473,21 +5741,167 @@ public:
 #undef LOOP_
       return 0;
     }
+    bool CreateDocument(ValueType& dst, AllocatorType& allocator) const {
+      dst.SetObject();
+      if (!isAnyType(type_, yggtype_)) {
+        ValueType type;
+        if (isMultipleTypes(type_, yggtype_)) {
+          type.SetArray();
+          if (type_) AddTypeStrings(type, allocator, type_);
+          if (yggtype_) AddYggTypeStrings(type, allocator, yggtype_);
+        } else {
+          if (type_) {
+	    const ValueType& typeStr = TypeBitMask2String(type_);
+	    type.SetString(typeStr.GetString(), typeStr.GetStringLength(), allocator);
+	  } else if (yggtype_) {
+	    const ValueType& typeStr = YggTypeBitMask2String(yggtype_);
+	    type.SetString(typeStr.GetString(), typeStr.GetStringLength(), allocator);
+	  }
+        }
+        dst.AddMember(GetTypeString(), type, allocator);
+      }
+      if (!isAnySubType(subtype_)) {
+        ValueType subtype;
+        if (isMultipleSubTypes(subtype_)) {
+          subtype.SetArray();
+          AddSubTypeStrings(subtype, allocator, subtype_);
+        } else {
+          const ValueType& typeStr = SubTypeBitMask2String(subtype_);
+          subtype.SetString(typeStr.GetString(), typeStr.GetStringLength(), allocator);
+        }
+        dst.AddMember(GetSubTypeString(), subtype, allocator);
+      }
+      return true;
+    }
+    bool operator==(const SchemaType& rhs) const {
+      if (this == &rhs) return true;
+#define DIRECT_COMPARE(name)			\
+      if (name != rhs.name) return false
+#define CHECK_ARRAY(name, count)			\
+      DIRECT_COMPARE(count);				\
+      if (name || rhs.name) {				\
+	if (!(name && rhs.name)) return false;		\
+	for (SizeType i = 0; i < count; i++) {		\
+	  if (name[i] != rhs.name[i]) return false;	\
+	}						\
+      }
+#define CHECK_SCHEMA_ARRAY(name, count)				\
+      DIRECT_COMPARE(count);					\
+      if (name || rhs.name) {					\
+	if (!(name && rhs.name)) return false;			\
+	for (SizeType i = 0; i < count; i++) {			\
+	  if (*(name[i]) != *(rhs.name[i])) return false;	\
+	}							\
+      }
+#define CHECK_SCHEMA(name)			\
+      if (name || rhs.name) {			\
+	if (!(name && rhs.name)) return false;	\
+	if (*name != *(rhs.name)) return false;	\
+      }
+      // AllocatorType* allocator_;
+      // SValue uri_;
+      // UriType id_;
+      // Specification spec_;
+      // PointerType pointer_;
+      DIRECT_COMPARE(flags_);
+      // Type & top level keywords
+      DIRECT_COMPARE(type_);
+      DIRECT_COMPARE(yggtype_);
+      DIRECT_COMPARE(subtype_);
+      DIRECT_COMPARE(class_);
+      DIRECT_COMPARE(defaultValueLength_);
+      DIRECT_COMPARE(defaultSet_);
+      DIRECT_COMPARE(default_);
+      DIRECT_COMPARE(readOnly_);
+      DIRECT_COMPARE(writeOnly_);
+      DIRECT_COMPARE(nullable_);
+      DIRECT_COMPARE(isSingular_);
+      DIRECT_COMPARE(allowSingular_);
+      DIRECT_COMPARE(allowWrapped_);
+      DIRECT_COMPARE(deprecated_);
+      // Enum
+      DIRECT_COMPARE(enumCount_);
+      for (SizeType i = 0; i < enumCount_; i++) {
+	if (enum_[i] != rhs.enum_[i]) return false;
+      }
+#define CheckSchemaArray(name)					\
+      if (name.schemas || rhs.name.schemas) {			\
+	if (!(name.schemas && rhs.name.schemas)) return false;	\
+	if (name.count != rhs.name.count) return false;		\
+	for (SizeType i = 0; i < name.count; i++) {		\
+	  if (*(name.schemas[i]) != *(rhs.name.schemas[i]))	\
+	    return false;					\
+	}							\
+      }
+      CheckSchemaArray(allOf_);
+      CheckSchemaArray(anyOf_);
+      CheckSchemaArray(oneOf_);
+#undef CheckSchemaArray
+      if (not_ || rhs.not_) {
+	if (!(not_ && rhs.not_)) return false;
+	if (*not_ != *(rhs.not_)) return false;
+      }
+      // Properties
+      CHECK_ARRAY(properties_, propertyCount_);
+      CHECK_ARRAY(patternProperties_, patternPropertyCount_);
+      DIRECT_COMPARE(additionalProperties_);
+      CHECK_SCHEMA(additionalPropertiesSchema_);
+      DIRECT_COMPARE(minProperties_);
+      DIRECT_COMPARE(maxProperties_);
+      DIRECT_COMPARE(hasDependencies_);
+      DIRECT_COMPARE(hasRequired_);
+      DIRECT_COMPARE(hasSchemaDependencies_);
+      // Items
+      CHECK_SCHEMA_ARRAY(itemsTuple_, itemsTupleCount_);
+      CHECK_SCHEMA(itemsList_);
+      CHECK_SCHEMA(additionalItemsSchema_);
+      DIRECT_COMPARE(minItems_);
+      DIRECT_COMPARE(maxItems_);
+      DIRECT_COMPARE(additionalItems_);
+      DIRECT_COMPARE(uniqueItems_);
+      // String
+      DIRECT_COMPARE(patternStr_);
+      DIRECT_COMPARE(minLength_);
+      DIRECT_COMPARE(maxLength_);
+      // Number
+      DIRECT_COMPARE(minimum_);
+      DIRECT_COMPARE(maximum_);
+      DIRECT_COMPARE(multipleOf_);
+      DIRECT_COMPARE(exclusiveMinimum_);
+      DIRECT_COMPARE(exclusiveMaximum_);
+      // Scalar
+      DIRECT_COMPARE(precision_);
+      DIRECT_COMPARE(units_);
+      DIRECT_COMPARE(shape_);
+      DIRECT_COMPARE(ndim_);
+      DIRECT_COMPARE(encoding_);
+      // Yggdrasil properties
+      DIRECT_COMPARE(aliases_);
+      DIRECT_COMPARE(child_aliases_);
+      DIRECT_COMPARE(hasAliases_);
+#undef CHECK_SCHEMA_ARRAY
+#undef CHECK_ARRAY
+#undef DIRECT_COMPARE
+      return true;
+    }
+    bool operator!=(const SchemaType& rhs) const {
+      return (!operator==(rhs));
+    }
 
-    bool CompareNativeScalar(const Schema<SchemaDocumentType>& rhs) const {
+    bool CompareNativeScalar(const unsigned rhs_type) const {
       bool dontCheckPrecision = false;
       if (!(yggtype_ & (1 << kYggScalarSchemaType)))
 	return false;
-      if (rhs.type_ & (1 << kNumberSchemaType)) {
+      if (rhs_type & (1 << kNumberSchemaType)) {
 	if (!(subtype_ & ((1 << kYggFloatSchemaSubType) |
 			  (1 << kYggIntSchemaSubType) |
 			  (1 << kYggUintSchemaSubType))))
 	  return false;
-      } else if (rhs.type_ & (1 << kIntegerSchemaType)) {
+      } else if (rhs_type & (1 << kIntegerSchemaType)) {
 	if (!(subtype_ & ((1 << kYggIntSchemaSubType) |
 			  (1 << kYggUintSchemaSubType))))
 	  return false;
-      } else if (rhs.type_ & (1 << kStringSchemaType)) {
+      } else if (rhs_type & (1 << kStringSchemaType)) {
 	if (!(subtype_ & (1 << kYggStringSchemaSubType)))
 	  return false;
 	dontCheckPrecision = true;
@@ -5501,362 +5915,395 @@ public:
       }
       return true;
     }
-
-    bool Compare(const Schema<SchemaDocumentType>& rhs, Context& context) const {
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA(key, expected, actual)		\
-      {									\
-	context.error_handler.IncompatibleSchemas(key, expected, actual, pointer_, rhs.pointer_); \
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
-      }
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(key, expected, actual)	\
-      {									\
-	context.error_handler.IncompatibleSchemas(key, expected, actual, pointer_, rhs.pointer_, true); \
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
-      }
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, a, b)	\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a).Move(), SValue(b).Move())
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(key, a, b)	\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a.GetString(), a.GetStringLength()).Move(), SValue(b.GetString(), b.GetStringLength()).Move())
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(key, a, b)	\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, (bool)(a), (bool)(b))
-#define CHECK_INCOMPATIBLE_IF_SET(key, err, def)	\
-      if (key != def && rhs.key != def && key != rhs.key)	\
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), SValue(key).Move(), SValue(rhs.key).Move())
-#define CHECK_INCOMPATIBLE_IF_PRESENT(key, err) \
-      if (!key.IsNull() && !rhs.key.IsNull() && key != rhs.key)	\
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), key, rhs.key)
-      if (this == &rhs) return true;
-      bool native_scalar = false;
-      bool lhs_any = (type_ == ((1 << kTotalSchemaType) - 1));
-      bool rhs_any = (rhs.type_ == ((1 << kTotalSchemaType) - 1));
-      // Type
-      if (!(((type_ || rhs.type_) && (type_ & rhs.type_)) ||
-	    ((yggtype_ || rhs.yggtype_) && (yggtype_ & rhs.yggtype_)))) {
-	if (CompareNativeScalar(rhs) ||
-	    rhs.CompareNativeScalar(*this)) {
-	  native_scalar = true;
-	} else {
-	  DisallowedTypeKey(context);
-	  rhs.DisallowedTypeKey(context, true);
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
-	}
-      }
-      if ((!native_scalar) && (!(rhs_any || lhs_any))
-	  && (!(subtype_ & rhs.subtype_))) {
-	DisallowedSubTypeKey(context);
-	rhs.DisallowedSubTypeKey(context, true);
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetSubTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
-      }
-      // Number properties
-      CHECK_INCOMPATIBLE_IF_PRESENT(minimum_, Minimum);
-      CHECK_INCOMPATIBLE_IF_PRESENT(maximum_, Maximum);
-      CHECK_INCOMPATIBLE_IF_PRESENT(multipleOf_, MultipleOf);
-      // String properties
-      CHECK_INCOMPATIBLE_IF_PRESENT(patternStr_, Pattern);
-      CHECK_INCOMPATIBLE_IF_SET(minLength_, MinLength, 0);
-      CHECK_INCOMPATIBLE_IF_SET(maxLength_, MaxLength, ~SizeType(0));
-      // Scalar properties
-      CHECK_INCOMPATIBLE_IF_PRESENT(precision_, Precision);
-      CHECK_INCOMPATIBLE_IF_PRESENT(units_, Units);
-      // This version allows the units to be compatible
-      // if (units_.IsString() && rhs.units_.IsString()) {
-      // 	UnitsType lhs_units(units_.GetString(), units_.GetStringLength(), false);
-      // 	UnitsType rhs_units(rhs.units_.GetString(), rhs.units_.GetStringLength(), false);
-      // 	if (!lhs_units.is_compatible(rhs_units))
-      // }
-      CHECK_INCOMPATIBLE_IF_PRESENT(shape_, Shape);
-      CHECK_INCOMPATIBLE_IF_SET(ndim_, NDim, 0);
-      if (ndim_ != 0 && (!rhs.shape_.IsNull()) && ndim_ != rhs.shape_.Size())
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(ndim_).Move(), SValue(rhs.shape_.Size()).Move());
-      if ((!shape_.IsNull()) && rhs.ndim_ != 0 && shape_.Size() != rhs.ndim_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(shape_.Size()).Move(), SValue(rhs.ndim_).Move());
-      if (!(rhs_any || lhs_any)) {
-	if (encoding_ != rhs.encoding_) {
-	  const ValueType& lhs_encoding = EncodingType2String(encoding_);
-	  const ValueType& rhs_encoding = EncodingType2String(rhs.encoding_);
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetEncodingString(), lhs_encoding, rhs_encoding);
-	}
-	if (class_ != rhs.class_)
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPythonClassString(), class_, rhs.class_);
-      }
-      // Enum
-      if (enumCount_ || rhs.enumCount_) {
-	for (SizeType i = 0; i < enumCount_; i++) {
-	  for (SizeType j = 0; j < rhs.enumCount_; j++) {
-	    if (enum_[i] == rhs.enum_[j])
-	      goto foundEnum;
-	  }
-	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetEnumString(), enumValues_, rhs.enumValues_);
-      foundEnum:;
-      }
-      // Schema logic
-      if (not_) {
-	if (not_->Compare(rhs, context)) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetNotString(), false, true);
-	}
-	context.error_handler.ResetError();
-      } else if (rhs.not_) {
-	if (Compare(*(rhs.not_), context)) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetNotString(), false, true);
-	}
-	context.error_handler.ResetError();
-      }
-      if (allOf_.schemas) {
-	for (SizeType i = 0; i < allOf_.count; i++) {
-	  if (!allOf_.schemas[i]->Compare(rhs, context))
-	    return false;
-	}
-      } else if (rhs.allOf_.schemas) {
-	for (SizeType i = 0; i < rhs.allOf_.count; i++) {
-	  if (!Compare(*(rhs.allOf_.schemas[i]), context))
-	    return false;
-	}
-      }
-      if (anyOf_.schemas) {
-	bool match = false;
-	for (SizeType i = 0; i < anyOf_.count; i++) {
-	  if (anyOf_.schemas[i]->Compare(rhs, context))
-	    match = true;
-	  context.error_handler.ResetError();
-	}
-	if (!match) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAnyOfString(), true, false);
-	}
-      } else if (rhs.anyOf_.schemas) {
-	bool match = false;
-	for (SizeType i = 0; i < rhs.anyOf_.count; i++) {
-	  if (Compare(*(rhs.anyOf_.schemas[i]), context))
-	    match = true;
-	  context.error_handler.ResetError();
-	}
-	if (!match) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAnyOfString(), true, false);
-	}
-      }
-      if (oneOf_.schemas) {
-	int matches = 0;
-	for (SizeType i = 0; i < oneOf_.count; i++) {
-	  if (oneOf_.schemas[i]->Compare(rhs, context))
-	    matches++;
-	  context.error_handler.ResetError();
-	}
-	if (matches != 1) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetOneOfString(), 1, matches);
-	}
-      } else if (rhs.oneOf_.schemas) {
-	int matches = 0;
-	for (SizeType i = 0; i < rhs.oneOf_.count; i++) {
-	  if (Compare(*(rhs.oneOf_.schemas[i]), context))
-	    matches++;
-	  context.error_handler.ResetError();
-	}
-	if (matches != 1) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetOneOfString(), 1, matches);
-	}
-      }
-      if (allowSingularSchema_.schemas) {
-	if (allowSingularSchema_.schemas[1]->Compare(rhs, context))
-	  return true;
-	context.error_handler.ResetError();
-	return allowSingularSchema_.schemas[0]->Compare(rhs, context);
-      } else if (rhs.allowSingularSchema_.schemas) {
-	if (Compare(*(rhs.allowSingularSchema_.schemas[1]), context))
-	  return true;
-	context.error_handler.ResetError();
-	return Compare(*(rhs.allowSingularSchema_.schemas[0]), context);
-      }
-      if (allowWrappedSchema_.schemas) {
-	if (allowWrappedSchema_.schemas[1]->Compare(rhs, context))
-	  return true;
-	context.error_handler.ResetError();
-	return allowWrappedSchema_.schemas[0]->Compare(rhs, context);
-      } else if (rhs.allowWrappedSchema_.schemas) {
-	if (Compare(*(rhs.allowWrappedSchema_.schemas[1]), context))
-	  return true;
-	context.error_handler.ResetError();
-	return Compare(*(rhs.allowWrappedSchema_.schemas[0]), context);
-      }
-      // Early exit if types not constrained
-      // if (lhs_any || rhs_any)
-      // 	return true;
-      
-      // Properties
-      if (properties_) {
-	for (SizeType i = 0; i < propertyCount_; i++) {
-	  const SchemaType* ischema = rhs.FindPropertySchema(properties_[i].name);
-	  if (ischema) {
-	    if (!properties_[i].schema->Compare(*ischema, context))
-	      return false;
-	  } else if (!rhs.additionalProperties_ || properties_[i].required) {
-	    RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPropertiesString(), properties_[i].name, SValue(kNullType).Move());
-	  }
-	}
-      }
-      if (rhs.properties_) {
-	for (SizeType j = 0; j < rhs.propertyCount_; j++) {
-	  SizeType i = 0;
-	  if (FindPropertyIndex(rhs.properties_[j].name.GetString(),
-				rhs.properties_[j].name.GetStringLength(), &i))
-	    continue;
-	  const SchemaType* ischema = FindPropertySchema(rhs.properties_[j].name);
-	  if (ischema) {
-	    if (!ischema->Compare(*rhs.properties_[j].schema, context))
-	      return false;
-	  } else if (!additionalProperties_ || rhs.properties_[j].required) {
-	    RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPropertiesString(), SValue(kNullType).Move(), rhs.properties_[j].name);
-	  }
-	}
-      }
-      // Additional proeprties
-      bool lhs_addProps = (additionalProperties_ || additionalPropertiesSchema_);
-      bool rhs_addProps = (rhs.additionalProperties_ || rhs.additionalPropertiesSchema_);
-      if (lhs_addProps != rhs_addProps) {
-	if ((!rhs_addProps && maxProperties_ == SizeType(~0)) ||
-	    (!lhs_addProps && rhs.maxProperties_ == SizeType(~0))) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), lhs_addProps, rhs_addProps);
-	}
-      }
-      if (additionalPropertiesSchema_ && rhs.additionalPropertiesSchema_ &&
-	  !additionalPropertiesSchema_->Compare(*rhs.additionalPropertiesSchema_, context))
-	return false;
-      // Pattern properties
-      for (SizeType i = 0; i < patternPropertyCount_; i++) {
-	bool patternMatch = false;
-	const SchemaType* ischema = rhs.FindPatternPropertySchema(patternProperties_[i].patternStr, patternProperties_[i].pattern, patternMatch);
-	if (ischema) {
-	  if (!patternMatch && !patternProperties_[i].schema->Compare(*ischema, context))
-	    return false;
-	} else if (!rhs.additionalProperties_) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPatternPropertiesString(), patternProperties_[i].patternStr, SValue(kNullType).Move());
-	}
-      }
-      for (SizeType j = 0; j < rhs.patternPropertyCount_; j++) {
-	bool patternMatch = false;
-	const SchemaType* ischema = FindPatternPropertySchema(rhs.patternProperties_[j].patternStr, rhs.patternProperties_[j].pattern, patternMatch);
-	if (ischema) {
-	  if (!patternMatch && !ischema->Compare(*rhs.patternProperties_[j].schema, context))
-	    return false;
-	} else if (!additionalProperties_) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPatternPropertiesString(), SValue(kNullType).Move(), rhs.patternProperties_[j].patternStr);
-	}
-      }
-      // Other property properties
-      if (minProperties_ != rhs.minProperties_) {
-	SizeType lhs_minProps = minProperties_, rhs_minProps = rhs.minProperties_;
-	if (minProperties_ == 0) {
-	  if (propertyCount_ >= rhs.minProperties_)
-	    goto minPropertiesMatch;
-	  lhs_minProps = propertyCount_;
-	}
-	if (rhs.minProperties_ == 0) {
-	  if (rhs.propertyCount_ >= rhs.minProperties_)
-	    goto minPropertiesMatch;
-	  rhs_minProps = rhs.propertyCount_;
-	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinPropertiesString(), lhs_minProps, rhs_minProps);
-        minPropertiesMatch:;
-      }
-      if (maxProperties_ != rhs.maxProperties_) {
-	SizeType lhs_maxProps = maxProperties_, rhs_maxProps = rhs.maxProperties_;
-	if (maxProperties_ == SizeType(~0) && propertyCount_ != 0 && !lhs_addProps) {
-	  if (propertyCount_ <= rhs.maxProperties_)
-	    goto maxPropertiesMatch;
-	  lhs_maxProps = propertyCount_;
-	}
-	if (rhs.maxProperties_ == SizeType(~0) && rhs.propertyCount_ != 0 && !rhs_addProps) {
-	  if (rhs.propertyCount_ <= maxProperties_)
-	    goto maxPropertiesMatch;
-	  rhs_maxProps = rhs.propertyCount_;
-	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxPropertiesString(), lhs_maxProps, rhs_maxProps);
-        maxPropertiesMatch:;
-      }
-      // Items
-      for (SizeType i = 0; i < itemsTupleCount_; i++) {
-	const SchemaType* ischema = rhs.FindItemSchema(i);
-	if (ischema) {
-	  if (!itemsTuple_[i]->Compare(*ischema, context))
-	    return false;
-	} else if (!rhs.additionalItems_) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetItemsString(), i, kNullType);
-	}
-      }
-      for (SizeType j = 0; j < rhs.itemsTupleCount_; j++) {
-	if (j < itemsTupleCount_) continue;
-	const SchemaType* ischema = FindItemSchema(j);
-	if (ischema) {
-	  if (!ischema->Compare(*rhs.itemsTuple_[j], context))
-	    return false;
-	} else if (!additionalItems_) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetItemsString(), kNullType, j);
-	}
-      }
-      if (!(itemsTuple_ || rhs.itemsTuple_)) {
-	if (itemsList_ && rhs.itemsList_) {
-	  if (!itemsList_->Compare(*rhs.itemsList_, context))
-	    return false;
-	} else if (itemsList_ && rhs.additionalItemsSchema_) {
-	  if (!itemsList_->Compare(*rhs.additionalItemsSchema_, context))
-	    return false;
-	} else if (additionalItemsSchema_ && rhs.itemsList_) {
-	  if (!additionalItemsSchema_->Compare(*rhs.itemsList_, context))
-	    return false;
-	}
-      }
-      // Additional items
-      bool lhs_addItems = (additionalItems_ || additionalItemsSchema_);
-      bool rhs_addItems = (rhs.additionalItems_ || rhs.additionalItemsSchema_);
-      if (lhs_addItems != rhs_addItems) {
-	if ((!rhs_addItems && maxItems_ == SizeType(~0)) ||
-	    (!lhs_addItems && rhs.maxItems_ == SizeType(~0))) {
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalItemsString(), lhs_addItems, rhs_addItems);
-	}
-      }
-      if (additionalItemsSchema_ && rhs.additionalItemsSchema_ &&
-	  !additionalItemsSchema_->Compare(*rhs.additionalItemsSchema_, context))
-	return false;
-      // Other item properties
-      if (uniqueItems_ != rhs.uniqueItems_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetUniqueItemsString(), uniqueItems_, rhs.uniqueItems_);
-      if (minItems_ != rhs.minItems_) {
-	SizeType lhs_minItems = minItems_, rhs_minItems = rhs.minItems_;
-	if (minItems_ == 0) {
-	  if (itemsTupleCount_ >= rhs.minItems_)
-	    goto minItemsMatch;
-	  lhs_minItems = itemsTupleCount_;
-	}
-	if (rhs.minItems_ == 0) {
-	  if (rhs.itemsTupleCount_ >= minItems_)
-	    goto minItemsMatch;
-	  rhs_minItems = rhs.itemsTupleCount_;
-	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinItemsString(), lhs_minItems, rhs_minItems);
-        minItemsMatch:;
-      }
-      if (maxItems_ != rhs.maxItems_) {
-	SizeType lhs_maxItems = maxItems_, rhs_maxItems = rhs.maxItems_;
-	
-	if (maxItems_ == SizeType(~0) && itemsTupleCount_ != 0 && !lhs_addItems) {
-	  if (itemsTupleCount_ <= rhs.maxItems_)
-	    goto maxItemsMatch;
-	  lhs_maxItems = itemsTupleCount_;
-	}
-	if (rhs.maxItems_ == SizeType(~0) && rhs.itemsTupleCount_ != 0 && !rhs_addItems) {
-	  if (rhs.itemsTupleCount_ <= maxItems_)
-	    goto maxItemsMatch;
-	  rhs_maxItems = rhs.itemsTupleCount_;
-	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxItemsString(), lhs_maxItems, rhs_maxItems);
-        maxItemsMatch:;
-      }
-      return true;
-#undef CHECK_INCOMPATIBLE_IF_SET
-#undef CHECK_INCOMPATIBLE_IF_PRESENT
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA
+    SizeType ndarray_ndim() const {
+      if (shape_.IsArray())
+	return shape_.Size();
+      return ndim_;
     }
+    SizeType ndarray_nelements() const {
+      SizeType out = 1;
+      if (shape_.IsNull()) return out;
+      for (SizeType i = 0; i < shape_.Size(); i++)
+	out *= (SizeType)(shape_[i].GetUint());
+      return out;
+    }
+
+    bool CanBeScalar() const {
+      if (yggtype_ == ((1 << kYggTotalSchemaType) - 1))
+	return false;
+      if (type_ & ((1 << kNumberSchemaType) |
+		   (1 << kIntegerSchemaType) |
+		   (1 << kStringSchemaType)))
+	return true;
+      if (yggtype_ & (1 << kYggScalarSchemaType))
+	return true;
+      if (yggtype_ & (1 << kYggNDArraySchemaType)) {
+	if (ndarray_nelements() == 1)
+	  return true;
+      }
+      return false;
+    }
+    const SchemaType* NDArrayBase() const {
+      if (yggtype_ == ((1 << kYggTotalSchemaType) - 1))
+	return nullptr;
+      if ((yggtype_ & (1 << kYggNDArraySchemaType)) || CanBeScalar())
+	return this;
+      if (type_ && (1 << kArraySchemaType)) {
+	const SchemaType* itemsBase = nullptr;
+	if (itemsTuple_)
+	  itemsBase = itemsTuple_[0];
+	else if (itemsList_)
+	  itemsBase = itemsList_;
+	else if (additionalItemsSchema_)
+	  itemsBase = additionalItemsSchema_;
+	else
+	  return nullptr;
+	return itemsBase->NDArrayBase();
+      }
+      return nullptr;
+    }
+    // bool CanBeNDArray(Context& context,
+    // 		      const SchemaType* base = nullptr) const {
+    //   if (yggtype_ == ((1 << kYggTotalSchemaType) - 1))
+    // 	return false;
+    //   if (yggtype_ & (1 << kYggNDArraySchemaType)) return true;
+    //   if (CanBeScalar()) return true;
+    //   if (type_ && (1 << kArraySchemaType)) {
+    // 	const SchemaType* itemsBase = nullptr;
+    // 	if (itemsTuple_)
+    // 	  itemsBase = itemsTuple_[0];
+    // 	else if (itemsList_)
+    // 	  itemsBase = itemsList_;
+    // 	else if (additionalItemsSchema_)
+    // 	  itemsBase = additionalItemsSchema_;
+    // 	else
+    // 	  return false;
+    // 	if (!itemsBase->CanBeNDArray(context))
+    // 	  return false;
+    // 	if (itemsTuple_) {
+    // 	  for (SizeType i = 1; i < itemsTupleCount_; i++)
+    // 	    if (!(itemsTuple_[i]->CanBeNDArray(context) &&
+    // 		  itemsBase->Compare(*itemsTuple_[i], context)))
+    // 	      return false;
+    // 	}
+    // 	if (additionalItemsSchema_ && itemsBase != additionalItemsSchema_)
+    // 	  if (!(additionalItemsSchema_->CanBeNDArray(context) &&
+    // 		itemsBase->Compare(*additionalItemsSchema_, context)))
+    // 	    return false;
+    // 	return true;
+    //   }
+    //   if (allOf_.schemas) {
+    // 	for (SizeType i = 0; i < allOf_.count; i++) {
+    // 	  if (!allOf_.schemas[i]->CanBeNDArray(context))
+    // 	    return false;
+    // 	}
+    //   }
+    //   if (anyOf_.schemas) {
+    // 	for (SizeType i = 0; i < anyOf_.count; i++) {
+    // 	  if (anyOf_.schemas[i]->CanBeNDArray(context))
+    // 	    return true;
+    // 	  if (i < (anyOf_.count - 1))
+    // 	    context.error_handler.ResetError();
+    // 	}
+    //   }
+    //   if (oneOf_.schemas) {
+    // 	for (SizeType i = 0; i < oneOf_.count; i++) {
+    // 	  if (oneOf_.schemas[i]->CanBeNDArray(context))
+    // 	    return true;
+    // 	  if (i < (anyOf_.count - 1))
+    // 	    context.error_handler.ResetError();
+    // 	}
+    //   }
+    //   // TODO: oneOf, anyOf
+    //   return false;
+    // }
+
+    // bool Compare(Context& context,
+    // 		 const Schema<SchemaDocumentType>& rhs) const {
+    //   if (this == &rhs) return true;
+    //   bool native_scalar = false;
+    //   bool lhs_any = (type_ == ((1 << kTotalSchemaType) - 1));
+    //   bool rhs_any = (rhs.type_ == ((1 << kTotalSchemaType) - 1));
+    //   // Type
+    //   if (!(((type_ || rhs.type_) && (type_ & rhs.type_)) ||
+    // 	    ((yggtype_ || rhs.yggtype_) && (yggtype_ & rhs.yggtype_)))) {
+    // 	if (CompareNativeScalar(rhs.type_) ||
+    // 	    rhs.CompareNativeScalar(this->type_)) {
+    // 	  native_scalar = true;
+    // 	} else {
+    // 	  DisallowedTypeKey(context);
+    // 	  rhs.DisallowedTypeKey(context, true);
+    // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+    // 	}
+    //   }
+    //   if ((!native_scalar) && (!(rhs_any || lhs_any))
+    // 	  && (!(subtype_ & rhs.subtype_))) {
+    // 	DisallowedSubTypeKey(context);
+    // 	rhs.DisallowedSubTypeKey(context, true);
+    // 	RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetSubTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+    //   }
+    //   // Enum
+    //   if (enumCount_ || rhs.enumCount_) {
+    // 	for (SizeType i = 0; i < enumCount_; i++) {
+    // 	  for (SizeType j = 0; j < rhs.enumCount_; j++) {
+    // 	    if (enum_[i] == rhs.enum_[j])
+    // 	      goto foundEnum;
+    // 	  }
+    // 	}
+    // 	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetEnumString(), enumValues_, rhs.enumValues_);
+    //   foundEnum:;
+    //   }
+      
+    //   // if (!Schema(context, rhs)) return false;
+    //   // // Schema logic
+    //   // if (not_) {
+    //   // 	if (not_->Compare(rhs, context)) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetNotString(), false, true);
+    //   // 	}
+    //   // 	context.error_handler.ResetError();
+    //   // } else if (rhs.not_) {
+    //   // 	if (Compare(*(rhs.not_), context)) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetNotString(), false, true);
+    //   // 	}
+    //   // 	context.error_handler.ResetError();
+    //   // }
+    //   // if (allOf_.schemas) {
+    //   // 	for (SizeType i = 0; i < allOf_.count; i++) {
+    //   // 	  if (!allOf_.schemas[i]->Compare(rhs, context))
+    //   // 	    return false;
+    //   // 	}
+    //   // } else if (rhs.allOf_.schemas) {
+    //   // 	for (SizeType i = 0; i < rhs.allOf_.count; i++) {
+    //   // 	  if (!Compare(*(rhs.allOf_.schemas[i]), context))
+    //   // 	    return false;
+    //   // 	}
+    //   // }
+    //   // if (anyOf_.schemas) {
+    //   // 	bool match = false;
+    //   // 	for (SizeType i = 0; i < anyOf_.count; i++) {
+    //   // 	  if (anyOf_.schemas[i]->Compare(rhs, context))
+    //   // 	    match = true;
+    //   // 	  context.error_handler.ResetError();
+    //   // 	}
+    //   // 	if (!match) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAnyOfString(), true, false);
+    //   // 	}
+    //   // } else if (rhs.anyOf_.schemas) {
+    //   // 	bool match = false;
+    //   // 	for (SizeType i = 0; i < rhs.anyOf_.count; i++) {
+    //   // 	  if (Compare(*(rhs.anyOf_.schemas[i]), context))
+    //   // 	    match = true;
+    //   // 	  context.error_handler.ResetError();
+    //   // 	}
+    //   // 	if (!match) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAnyOfString(), true, false);
+    //   // 	}
+    //   // }
+    //   // if (oneOf_.schemas) {
+    //   // 	int matches = 0;
+    //   // 	for (SizeType i = 0; i < oneOf_.count; i++) {
+    //   // 	  if (oneOf_.schemas[i]->Compare(rhs, context))
+    //   // 	    matches++;
+    //   // 	  context.error_handler.ResetError();
+    //   // 	}
+    //   // 	if (matches != 1) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetOneOfString(), 1, matches);
+    //   // 	}
+    //   // } else if (rhs.oneOf_.schemas) {
+    //   // 	int matches = 0;
+    //   // 	for (SizeType i = 0; i < rhs.oneOf_.count; i++) {
+    //   // 	  if (Compare(*(rhs.oneOf_.schemas[i]), context))
+    //   // 	    matches++;
+    //   // 	  context.error_handler.ResetError();
+    //   // 	}
+    //   // 	if (matches != 1) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetOneOfString(), 1, matches);
+    //   // 	}
+    //   // }
+    //   // if (allowSingularSchema_.schemas) {
+    //   // 	if (allowSingularSchema_.schemas[1]->Compare(rhs, context))
+    //   // 	  return true;
+    //   // 	context.error_handler.ResetError();
+    //   // 	return allowSingularSchema_.schemas[0]->Compare(rhs, context);
+    //   // } else if (rhs.allowSingularSchema_.schemas) {
+    //   // 	if (Compare(*(rhs.allowSingularSchema_.schemas[1]), context))
+    //   // 	  return true;
+    //   // 	context.error_handler.ResetError();
+    //   // 	return Compare(*(rhs.allowSingularSchema_.schemas[0]), context);
+    //   // }
+    //   // if (allowWrappedSchema_.schemas) {
+    //   // 	if (allowWrappedSchema_.schemas[1]->Compare(rhs, context))
+    //   // 	  return true;
+    //   // 	context.error_handler.ResetError();
+    //   // 	return allowWrappedSchema_.schemas[0]->Compare(rhs, context);
+    //   // } else if (rhs.allowWrappedSchema_.schemas) {
+    //   // 	if (Compare(*(rhs.allowWrappedSchema_.schemas[1]), context))
+    //   // 	  return true;
+    //   // 	context.error_handler.ResetError();
+    //   // 	return Compare(*(rhs.allowWrappedSchema_.schemas[0]), context);
+    //   // }
+    //   // Early exit if types not constrained
+    //   // if (lhs_any || rhs_any)
+    //   // 	return true;
+      
+    //   // // Properties
+    //   // if (properties_) {
+    //   // 	for (SizeType i = 0; i < propertyCount_; i++) {
+    //   // 	  const SchemaType* ischema = rhs.FindPropertySchema(properties_[i].name);
+    //   // 	  if (ischema) {
+    //   // 	    if (!properties_[i].schema->Compare(*ischema, context))
+    //   // 	      return false;
+    //   // 	  } else if (!rhs.additionalProperties_ || properties_[i].required) {
+    //   // 	    RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPropertiesString(), properties_[i].name, SValue(kNullType).Move());
+    //   // 	  }
+    //   // 	}
+    //   // }
+    //   // if (rhs.properties_) {
+    //   // 	for (SizeType j = 0; j < rhs.propertyCount_; j++) {
+    //   // 	  SizeType i = 0;
+    //   // 	  if (FindPropertyIndex(rhs.properties_[j].name.GetString(),
+    //   // 				rhs.properties_[j].name.GetStringLength(), &i))
+    //   // 	    continue;
+    //   // 	  const SchemaType* ischema = FindPropertySchema(rhs.properties_[j].name);
+    //   // 	  if (ischema) {
+    //   // 	    if (!ischema->Compare(*rhs.properties_[j].schema, context))
+    //   // 	      return false;
+    //   // 	  } else if (!additionalProperties_ || rhs.properties_[j].required) {
+    //   // 	    RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPropertiesString(), SValue(kNullType).Move(), rhs.properties_[j].name);
+    //   // 	  }
+    //   // 	}
+    //   // }
+    //   // // Additional proeprties
+    //   // bool lhs_addProps = (additionalProperties_ || additionalPropertiesSchema_);
+    //   // bool rhs_addProps = (rhs.additionalProperties_ || rhs.additionalPropertiesSchema_);
+    //   // if (lhs_addProps != rhs_addProps) {
+    //   // 	if ((!rhs_addProps && maxProperties_ == SizeType(~0)) ||
+    //   // 	    (!lhs_addProps && rhs.maxProperties_ == SizeType(~0))) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), lhs_addProps, rhs_addProps);
+    //   // 	}
+    //   // }
+    //   // if (additionalPropertiesSchema_ && rhs.additionalPropertiesSchema_ &&
+    //   // 	  !additionalPropertiesSchema_->Compare(*rhs.additionalPropertiesSchema_, context))
+    //   // 	return false;
+    //   // // Pattern properties
+    //   // for (SizeType i = 0; i < patternPropertyCount_; i++) {
+    //   // 	bool patternMatch = false;
+    //   // 	const SchemaType* ischema = rhs.FindPatternPropertySchema(patternProperties_[i].patternStr, patternProperties_[i].pattern, patternMatch);
+    //   // 	if (ischema) {
+    //   // 	  if (!patternMatch && !patternProperties_[i].schema->Compare(*ischema, context))
+    //   // 	    return false;
+    //   // 	} else if (!rhs.additionalProperties_) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPatternPropertiesString(), patternProperties_[i].patternStr, SValue(kNullType).Move());
+    //   // 	}
+    //   // }
+    //   // for (SizeType j = 0; j < rhs.patternPropertyCount_; j++) {
+    //   // 	bool patternMatch = false;
+    //   // 	const SchemaType* ischema = FindPatternPropertySchema(rhs.patternProperties_[j].patternStr, rhs.patternProperties_[j].pattern, patternMatch);
+    //   // 	if (ischema) {
+    //   // 	  if (!patternMatch && !ischema->Compare(*rhs.patternProperties_[j].schema, context))
+    //   // 	    return false;
+    //   // 	} else if (!additionalProperties_) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPatternPropertiesString(), SValue(kNullType).Move(), rhs.patternProperties_[j].patternStr);
+    //   // 	}
+    //   // }
+    //   // // Items
+    //   // for (SizeType i = 0; i < itemsTupleCount_; i++) {
+    //   // 	const SchemaType* ischema = rhs.FindItemSchema(i);
+    //   // 	if (ischema) {
+    //   // 	  if (!itemsTuple_[i]->Compare(*ischema, context))
+    //   // 	    return false;
+    //   // 	} else if (!rhs.additionalItems_) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetItemsString(), i, kNullType);
+    //   // 	}
+    //   // }
+    //   // for (SizeType j = 0; j < rhs.itemsTupleCount_; j++) {
+    //   // 	if (j < itemsTupleCount_) continue;
+    //   // 	const SchemaType* ischema = FindItemSchema(j);
+    //   // 	if (ischema) {
+    //   // 	  if (!ischema->Compare(*rhs.itemsTuple_[j], context))
+    //   // 	    return false;
+    //   // 	} else if (!additionalItems_) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetItemsString(), kNullType, j);
+    //   // 	}
+    //   // }
+    //   // if (!(itemsTuple_ || rhs.itemsTuple_)) {
+    //   // 	if (itemsList_ && rhs.itemsList_) {
+    //   // 	  if (!itemsList_->Compare(*rhs.itemsList_, context))
+    //   // 	    return false;
+    //   // 	} else if (itemsList_ && rhs.additionalItemsSchema_) {
+    //   // 	  if (!itemsList_->Compare(*rhs.additionalItemsSchema_, context))
+    //   // 	    return false;
+    //   // 	} else if (additionalItemsSchema_ && rhs.itemsList_) {
+    //   // 	  if (!additionalItemsSchema_->Compare(*rhs.itemsList_, context))
+    //   // 	    return false;
+    //   // 	}
+    //   // }
+    //   // // Additional items
+    //   // bool lhs_addItems = (additionalItems_ || additionalItemsSchema_);
+    //   // bool rhs_addItems = (rhs.additionalItems_ || rhs.additionalItemsSchema_);
+    //   // if (lhs_addItems != rhs_addItems) {
+    //   // 	if ((!rhs_addItems && maxItems_ == SizeType(~0)) ||
+    //   // 	    (!lhs_addItems && rhs.maxItems_ == SizeType(~0))) {
+    //   // 	  RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalItemsString(), lhs_addItems, rhs_addItems);
+    //   // 	}
+    //   // }
+    //   // if (additionalItemsSchema_ && rhs.additionalItemsSchema_ &&
+    //   // 	  !additionalItemsSchema_->Compare(*rhs.additionalItemsSchema_, context))
+    //   // 	return false;
+    //   return true;
+    // }
+    template<typename VT>
+    bool GenerateNull(Context& context, VT& data) const {
+      data.SetNull();
+      return Null(context);
+    }
+    template<typename T>
+    T GenerateNumberData(const T& def, T offset=0) const {
+      T out = def;
+      if (!multipleOf_.IsNull()) {
+	offset = static_cast<T>(2 * multipleOf_.GetDouble());
+      }
+      if ((!minimum_.IsNull()) && (!maximum_.IsNull()))
+	out = static_cast<T>((minimum_.GetDouble() + maximum_.GetDouble()) / 2.0);
+      else if (!minimum_.IsNull())
+	out = static_cast<T>(minimum_.GetDouble()) + offset;
+      else if (!maximum_.IsNull())
+	out = static_cast<T>(maximum_.GetDouble()) - offset;
+      if (!multipleOf_.IsNull())
+	out = static_cast<T>(multipleOf_.GetDouble() * internal::value_floor((double)out / multipleOf_.GetDouble()));
+      return out;
+    }
+#define YGG_GENERATE_NUMBER_DATA(method, T, def, offset)		\
+    template<typename VT>						\
+    T Generate ## method(Context& context, VT& data) const {		\
+      data.Set ## method(GenerateNumberData<T>(def, offset));		\
+      return method(context, data.Get ## method());			\
+    }
+    template<typename VT>
+    bool GenerateBool(Context& context, VT& data) const {
+      data.SetBool(true);
+      return Bool(context, true);
+    }
+    YGG_GENERATE_NUMBER_DATA(Int, int, 0, 1);
+    YGG_GENERATE_NUMBER_DATA(Uint, unsigned int, 0, 1);
+    YGG_GENERATE_NUMBER_DATA(Int64, int64_t, 0, 1);
+    YGG_GENERATE_NUMBER_DATA(Uint64, uint64_t, 0, 1);
+    YGG_GENERATE_NUMBER_DATA(Double, double, 0.0, 0.5);
+  // Int
+  //Uint
+  //Int64
+  //Uint64
+  //Double
+  //RawNumber?
+  //String
+  //YggdrasilString
+  //YggdrasilStartObject
+  //StartObject
+  //Key
+  //EndObject
+  //StartArrray
+  //EndArray
+	    
     template<typename VT>
     bool GenerateData(VT& data, Context& context,
 		      typename VT::AllocatorType& allocator,
@@ -6351,16 +6798,16 @@ public:
             if (uniqueItems_)
                 context.valueUniqueness = true;
 
-            if (itemsList_)
+            if (itemsList_) {
                 context.valueSchema = itemsList_;
-            else if (itemsTuple_) {
-                if (context.arrayElementIndex < itemsTupleCount_)
+            } else if (itemsTuple_) {
+	        if (context.arrayElementIndex < itemsTupleCount_) {
                     context.valueSchema = itemsTuple_[context.arrayElementIndex];
-                else if (additionalItemsSchema_)
+                } else if (additionalItemsSchema_) {
                     context.valueSchema = additionalItemsSchema_;
-                else if (additionalItems_)
+                } else if (additionalItems_) {
                     context.valueSchema = typeless_;
-                else {
+                } else {
                     context.error_handler.DisallowedItem(context.arrayElementIndex);
                     // Must set valueSchema for when kValidateContinueOnErrorFlag is set, else reports spurious type error
                     context.valueSchema = typeless_;
@@ -6369,6 +6816,11 @@ public:
                     RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalItems);
                 }
             }
+#ifdef RAPIDJSON_YGGDRASIL
+	    else if (additionalItemsSchema_) {
+	      context.valueSchema = additionalItemsSchema_;
+	    }
+#endif // RAPIDJSON_YGGDRASIL
             else
                 context.valueSchema = typeless_;
 
@@ -6384,8 +6836,10 @@ public:
                 } else if (additionalItemsSchema_) {
 		    context.valuePointer = context.schemaPointerAbs.Append(GetAdditionalItemsString(), allocator_);
 		}
+	    } else if (additionalItemsSchema_) {
+	        context.valuePointer = context.schemaPointerAbs.Append(GetAdditionalItemsString(), allocator_);
 	    }
-        }
+	}
 	if (hasAliases_) {
 	  RAPIDJSON_ASSERT(child_aliases_.IsObject());
 	  for (typename SValue::ConstMemberIterator a = child_aliases_.MemberBegin(); a != child_aliases_.MemberEnd(); a++) {
@@ -6435,7 +6889,49 @@ public:
             }
         }
 
+#ifdef RAPIDJSON_YGGDRASIL
+        // Only check other schemas if we have validators
+        if (context.otherValidatorCount > 0) {
+            bool explicitValid = false;
+            SizeType count = context.otherValidatorCount;
+	    if (context.objectOtherValidatorType == Context::kOtherValidatorPropertiesWithExplicit ||
+		context.objectOtherValidatorType == Context::kOtherValidatorPropertiesWithAdditional ||
+		context.objectOtherValidatorType == Context::kOtherValidatorItemsWithAdditional)
+                explicitValid = context.otherValidators[--count]->IsValid();
+
+            bool otherValid = true;
+            for (SizeType i = 0; i < count; i++)
+                if (!context.otherValidators[i]->IsValid()) {
+                    otherValid = false;
+                    break;
+                }
+
+            if (context.objectOtherValidatorType == Context::kOtherValidatorPropertiesOnly ||
+		context.objectOtherValidatorType == Context::kOtherValidatorItemsOnly) {
+                if (!otherValid) {
+                    context.error_handler.PropertyViolations(context.otherValidators, count);
+                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubschemas);
+                }
+            }
+            else if (context.objectOtherValidatorType == Context::kOtherValidatorPropertiesWithExplicit) {
+                if (!otherValid || !explicitValid) {
+                    context.error_handler.PropertyViolations(context.otherValidators, count + 1);
+                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubschemas);
+                }
+            }
+	    else if (context.objectOtherValidatorType == Context::kOtherValidatorPropertiesWithAdditional ||
+		     context.objectOtherValidatorType == Context::kOtherValidatorItemsWithAdditional) {
+	        if (!otherValid && !explicitValid) {
+		    context.error_handler.PropertyViolations(context.otherValidators, count + 1);
+		    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubschemas);
+		}
+	    }
+	}
+	    
+#endif // RAPIDJSON_YGGDRASIL
+	
         // For enums only check if we have a hasher
+	if (enum_ && !context.hasher)
         if (enum_ && context.hasher) {
             const uint64_t h = context.factory.GetHashCode(context.hasher);
             for (SizeType i = 0; i < enumCount_; i++)
@@ -6452,7 +6948,7 @@ public:
 
         // Only check allOf etc if we have validators
         if (context.validatorCount > 0) {
-            if (allOf_.schemas)
+	    if (allOf_.schemas)
                 for (SizeType i = allOf_.begin; i < allOf_.begin + allOf_.count; i++)
                     if (!context.validators[i]->IsValid()) {
                         context.error_handler.NotAllOf(&context.validators[allOf_.begin], allOf_.count);
@@ -6648,7 +7144,7 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
 
   bool RequiresPython() const {
-    if (!class_.IsNull() || isMetaschema_ ||
+    if (!class_.IsNull() || isMetaschema() ||
 	(yggtype_ & ((1 << kYggPythonClassSchemaType) |
 		     (1 << kYggPythonFunctionSchemaType) |
 		     (1 << kYggSchemaSchemaType))))
@@ -6983,9 +7479,9 @@ public:
     const typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetTypeString());
     RAPIDJSON_ASSERT(vs != schema.MemberEnd());
     const ValueType v(vs->value.GetString(), vs->value.GetStringLength());
-    if ((isMetaschema_ &&
+    if ((isMetaschema() &&
 	 !((v == GetPythonInstanceString()) || (v == GetSchemaTypeString()))) ||
-	(!isMetaschema_ &&
+	(!isMetaschema() &&
 	 !((v == GetPythonInstanceString() &&
 	    yggtype_ & (1 << kYggPythonInstanceSchemaType)) ||
 	   (v == GetSchemaTypeString() &&
@@ -7018,7 +7514,9 @@ public:
         }
 
 #ifdef RAPIDJSON_YGGDRASIL
-        if (hasDependencies_ || hasRequired_ || sharedProperties_) {
+        if (hasDependencies_ || hasRequired_ || sharedProperties_ ||
+	    (properties_ && context.mode != Context::kValidationMode &&
+	     context.mode != Context::kNormalizationMode)) {
 #else // RAPIDJSON_YGGDRASIL
 	if (hasDependencies_ || hasRequired_) {
 #endif // RAPIDJSON_YGGDRASIL
@@ -7037,6 +7535,28 @@ public:
 	      new (&context.patternPropertiesPointers[i]) PointerType(allocator_);
 #endif // RAPIDJSON_YGGDRASIL
         }
+
+#ifdef RAPIDJSON_YGGDRASIL
+	if (context.mode != Context::kValidationMode
+	    && context.mode != Context::kNormalizationMode
+	    && (patternProperties_ || additionalPropertiesSchema_)) {
+	  SizeType count = patternPropertyCount_;
+	  if (additionalPropertiesSchema_) count++;
+	  context.patternPropertyExist = static_cast<bool*>(context.factory.MallocState(sizeof(bool) * count));
+	  std::memset(context.patternPropertyExist, 0, sizeof(bool) * count);
+	}
+	if (properties_ &&
+	    context.mode != Context::kValidationMode &&
+	    context.mode != Context::kNormalizationMode) {
+	  SizeType count = propertyCount_ + 1;
+	  context.otherSchemas = static_cast<const SchemaType**>(context.factory.MallocState(sizeof(const SchemaType*) * count));
+	  context.otherSchemaCount = 0;
+	  std::memset(context.otherSchemas, 0, sizeof(SchemaType*) * count);
+	  context.otherPointers = static_cast<PointerType*>(context.factory.MallocState(sizeof(PointerType) * count));
+	  for (SizeType i = 0; i < count; i++)
+	    new (&context.otherPointers[i]) PointerType(allocator_);
+	}
+#endif // RAPIDJSON_YGGDRASIL
 
         return CreateParallelValidator(context);
     }
@@ -7071,6 +7591,8 @@ public:
                     context.valueSchema = typeless_;
 #ifdef RAPIDJSON_YGGDRASIL
 		    context.patternPropertiesPointers[context.patternPropertiesSchemaCount - 1] = pPattern.Append(i, allocator_);
+		    if (context.patternPropertyExist)
+		        context.patternPropertyExist[i] = true;
 #endif // RAPIDJSON_YGGDRASIL
                 }
         }
@@ -7101,6 +7623,10 @@ public:
             if (context.propertyExist)
                 context.propertyExist[index] = true;
 
+#ifdef RAPIDJSON_YGGDRASIL
+	    if (!SchemaFoundIterationKey(context))
+	      return false;
+#endif // RAPIDJSON_YGGDRASIL
             return true;
         }
 
@@ -7213,6 +7739,20 @@ public:
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
 
+#ifdef RAPIDJSON_YGGDRASIL
+	if ((itemsTuple_ || itemsList_ || additionalItemsSchema_) &&
+	    context.mode != Context::kValidationMode &&
+	    context.mode != Context::kNormalizationMode) {
+	  SizeType count = itemsTupleCount_ + 1;
+	  context.otherSchemas = static_cast<const SchemaType**>(context.factory.MallocState(sizeof(const SchemaType*) * count));
+	  context.otherSchemaCount = 0;
+	  std::memset(context.otherSchemas, 0, sizeof(SchemaType*) * count);
+	  context.otherPointers = static_cast<PointerType*>(context.factory.MallocState(sizeof(PointerType) * count));
+	  for (SizeType i = 0; i < count; i++)
+	    new (&context.otherPointers[i]) PointerType(allocator_);
+	}
+#endif // RAPIDJSON_YGGDRASIL
+	
         return CreateParallelValidator(context);
     }
 
@@ -7290,6 +7830,8 @@ public:
 	    case kValidateErrorGeneric:                 return GetGenericString();
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
 	    case kIncompatibleSchemas:                  return GetCompareString();
+	    case kValidateErrorMissingSubschema:        return GetSubschemasString();
+  	    case kValidateErrorSubschemas:              return GetSubschemasString();
 #endif // RAPIDJSON_YGGDRASIL
             case kValidateErrorReadOnly:                return GetReadOnlyString();
             case kValidateErrorWriteOnly:               return GetWriteOnlyString();
@@ -7407,6 +7949,7 @@ public:
     RAPIDJSON_STRING_(Generic, 'g', 'e', 'n', 'e', 'r', 'i', 'c')
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
     RAPIDJSON_STRING_(Compare, 'c', 'o', 'm', 'p', 'a', 'r', 'e')
+    RAPIDJSON_STRING_(Subschemas, 's', 'u', 'b', 's', 'c', 'h', 'e', 'm', 'a', 's')
     RAPIDJSON_STRING_(RelativeUp, '.', '.')
     RAPIDJSON_STRING_(Wildcard, '.', '*')
     RAPIDJSON_STRING_(Asterix, '*')
@@ -7440,7 +7983,7 @@ protected:
     	kYggTotalSchemaType
     };
     enum YggSchemaValueSubType {
-    	kYggNullSubType,
+    	kYggNullSchemaSubType,
         kYggIntSchemaSubType,
     	kYggUintSchemaSubType,
     	kYggFloatSchemaSubType,
@@ -7456,6 +7999,25 @@ protected:
       kYggUTF32SchemaEncodingType,
       kYggUCS4SchemaEncodingType
     };
+    enum SchemaFlag {
+      kMetaschemaFlag,
+      kInstanceFlag,
+      kNoBaseFlag
+      // kAllOfFlag,
+      // kAnyOfFlag,
+      // kOneOfFlag,
+      // kNotFlag,
+    };
+
+    bool isMetaschema(bool ignoreInstance=false) const {
+      if (ignoreInstance)
+	return (flags_ & (1 << kMetaschemaFlag));
+      return (flags_ & ((1 << kMetaschemaFlag) |
+			(1 << kInstanceFlag)));
+    }
+    bool isInstance() const {
+      return (flags_ & (1 << kInstanceFlag));
+    }
 #endif // RAPIDJSON_YGGDRASIL
 
 #if RAPIDJSON_SCHEMA_USE_INTERNALREGEX
@@ -7769,16 +8331,38 @@ protected:
 	encoding[0] = kYggUCS4SchemaEncodingType;
       return kYggStringSchemaSubType;
     }
-    return kYggNullSubType;
+    return kYggNullSchemaSubType;
   }
   static unsigned int GetSubTypeBitMask(const ValueType& subtype, YggSchemaEncodingType* encoding = NULL) {
     YggSchemaValueSubType subtype_code = GetSubType(subtype, encoding);
     if (subtype_code == kYggTotalSchemaSubType) {
       return ((1 << kYggTotalSchemaSubType) - 1);
-    } else if (subtype_code == kYggNullSubType) {
+    } else if (subtype_code == kYggNullSchemaSubType) {
       return 0;
     }
     return (1 << subtype_code);
+  }
+  static SchemaValueType TypeBitMask2Type(const unsigned int type) {
+    if (isMultipleTypes(type, 0)) {
+      // THIS SHOULDN'T OCCUR
+      std::cerr << "TypeBitMask2Type: MULTIPLE TYPES" << std::endl;
+      return kTotalSchemaType;
+    }
+    for (unsigned int itype = 1; itype < kTotalSchemaType; itype++) {
+      if (type & (1 << itype)) return (SchemaValueType)itype;
+    }
+    return kTotalSchemaType;
+  }
+  static YggSchemaValueType YggTypeBitMask2YggType(const unsigned int type) {
+    if (isMultipleTypes(0, type)) {
+      // THIS SHOULDN'T OCCUR
+      std::cerr << "YggTypeBitMask2YggType: MULTIPLE TYPES" << std::endl;
+      return kYggTotalSchemaType;
+    }
+    for (unsigned int itype = 1; itype < kYggTotalSchemaType; itype++) {
+      if (type & (1 << itype)) return (YggSchemaValueType)itype;
+    }
+    return kYggTotalSchemaType;
   }
   static YggSchemaValueSubType SubTypeBitMask2SubType(const unsigned int subtype) {
     if (isAnySubType(subtype))
@@ -7791,16 +8375,92 @@ protected:
     for (unsigned int isubtype = 1; isubtype < kYggTotalSchemaSubType; isubtype++) {
       if (subtype & (1 << isubtype)) return (YggSchemaValueSubType)isubtype;
     }
-    return kYggNullSubType;
+    return kYggNullSchemaSubType;
+  }
+  template<typename VT, typename AT>
+  static void AddTypeStrings(VT& dst, AT& allocator,
+			     const unsigned int type) {
+    if (dst.IsNull()) dst.SetArray();
+    for (unsigned int itype = 1; itype < kTotalSchemaType; itype++) {
+      if (!(type & (1 << itype))) continue;
+      dst.PushBack(VT(Type2String((SchemaValueType)itype), allocator).Move(),
+		   allocator);
+    }
+  }
+  template<typename VT, typename AT>
+  static void AddYggTypeStrings(VT& dst, AT& allocator,
+				const unsigned int type) {
+    if (dst.IsNull()) dst.SetArray();
+    for (unsigned int itype = 1; itype < kYggTotalSchemaType; itype++) {
+      if (!(type & (1 << itype))) continue;
+      dst.PushBack(VT(YggType2String((YggSchemaValueType)itype), allocator).Move(),
+		   allocator);
+    }
+  }
+  template<typename VT, typename AT>
+  static void AddSubTypeStrings(VT& dst, AT& allocator,
+				const unsigned int subtype) {
+    if (dst.IsNull()) dst.SetArray();
+    for (unsigned int isubtype = 1; isubtype < kYggTotalSchemaSubType; isubtype++) {
+      if (!(subtype & (1 << isubtype))) continue;
+      dst.PushBack(VT(SubType2String((YggSchemaValueSubType)isubtype), allocator).Move(),
+		   allocator);
+    }
+  }
+  static const ValueType& TypeBitMask2String(const unsigned int type) {
+    return Type2String(TypeBitMask2Type(type));
+  }
+  static const ValueType& YggTypeBitMask2String(const unsigned int type) {
+    return YggType2String(YggTypeBitMask2YggType(type));
   }
   static const ValueType& SubTypeBitMask2String(const unsigned int subtype) {
     return SubType2String(SubTypeBitMask2SubType(subtype));
   }
+  static SizeType countTypes(const unsigned int type, const unsigned int yggtype) {
+    return internal::countBits(type) + internal::countBits(yggtype);
+  }
+  static bool isAnyType(const unsigned int type,
+			const unsigned int yggtype) {
+    return (type == ((1 << kTotalSchemaType) - 1)
+	    && yggtype == ((1 << kYggTotalSchemaType) - 1));
+  }
   static bool isAnySubType(const unsigned int subtype) {
     return (subtype == ((1 << kYggTotalSchemaSubType) - 1));
   }
+  static bool isMultipleTypes(const unsigned int type,
+			      const unsigned int yggtype) {
+    return (countTypes(type, yggtype) > 1);
+  }
   static bool isMultipleSubTypes(const unsigned int subtype) {
     return (internal::countBits(subtype) > 1);
+  }
+  static const ValueType& Type2String(const SchemaValueType type) {
+    switch (type) {
+    case (kNullSchemaType): return GetNullString();
+    case (kBooleanSchemaType): return GetBooleanString();
+    case (kObjectSchemaType): return GetObjectString();
+    case (kArraySchemaType): return GetArrayString();
+    case (kStringSchemaType): return GetStringString();
+    case (kNumberSchemaType): return GetNumberString();
+    case (kIntegerSchemaType): return GetIntegerString();
+    default:
+      return GetAnyString();
+    }
+  }
+  static const ValueType& YggType2String(const YggSchemaValueType type) {
+    switch (type) {
+    case (kYggNullSchemaType): return GetNullString();
+    case (kYggScalarSchemaType): return GetScalarString();
+    case (kYggNDArraySchemaType): return GetNDArrayString();
+    case (kYggPythonClassSchemaType): return GetPythonClassString();
+    case (kYggPythonFunctionSchemaType): return GetPythonFunctionString();
+    case (kYggPythonInstanceSchemaType): return GetPythonInstanceString();
+    case (kYggObjSchemaType): return GetObjString();
+    case (kYggPlySchemaType): return GetPlyString();
+    case (kYggSchemaSchemaType): return GetSchemaString();
+    default:
+      return GetAnyString();
+    }
   }
   static const ValueType& SubType2String(const YggSchemaValueSubType subtype) {
     switch (subtype) {
@@ -7841,14 +8501,26 @@ protected:
       return out;
     }
   }
+
 #endif // RAPIDJSON_YGGDRASIL
 
     // Creates parallel validators for allOf, anyOf, oneOf, not and schema dependencies, if required.
     // Also creates a hasher for enums and array uniqueness, if required.
     // Also a useful place to add type-independent error checks.
     bool CreateParallelValidator(Context& context) const {
-        if (enum_ || context.arrayUniqueness)
+#ifdef RAPIDJSON_YGGDRASIL
+        if (context.iterationType != Context::kNoIterationType &&
+	    context.iterationType != Context::kInitIterationType)
+	    return true;
+	if ((context.mode == Context::kValidationMode ||
+	     context.mode == Context::kNormalizationMode) &&
+	    context.iterationType != Context::kInitIterationType) {
+#endif // RAPIDJSON_YGGDRASIL
+	  if (enum_ || context.arrayUniqueness)
             context.hasher = context.factory.CreateHasher();
+#ifdef RAPIDJSON_YGGDRASIL
+	}
+#endif // RAPIDJSON_YGGDRASIL
 
         if (validatorCount_) {
             RAPIDJSON_ASSERT(context.validators == 0);
@@ -8572,6 +9244,24 @@ protected:
 #endif // RAPIDJSON_YGGDRASIL
       {}
         ~Property() { AllocatorType::Free(dependencies); }
+#ifdef RAPIDJSON_YGGDRASIL
+        bool operator==(const Property& rhs) const {
+	  if (name != rhs.name) return false;
+	  if (*schema != *(rhs.schema)) return false;
+	  if (required != rhs.required) return false;
+	  if (dependenciesSchema || rhs.dependenciesSchema) {
+	    if (!(dependenciesSchema && rhs.dependenciesSchema))
+	      return false;
+	    if (*dependenciesSchema != *(rhs.dependenciesSchema))
+	      return false;
+	  }
+	  // compare sharedProperty?
+	  return true;
+        }
+        bool operator!=(const Property& rhs) const {
+	  return (!(operator==(rhs)));
+	}
+#endif // RAPIDJSON_YGGDRASIL
         SValue name;
         const SchemaType* schema;
         const SchemaType* dependenciesSchema;
@@ -8595,6 +9285,16 @@ protected:
                 AllocatorType::Free(pattern);
             }
         }
+#ifdef RAPIDJSON_YGGDRASIL
+        bool operator==(const PatternProperty& rhs) const {
+	  if (patternStr != rhs.patternStr) return false;
+	  if (*schema != *(rhs.schema)) return false;
+	  return true;
+        }
+        bool operator!=(const PatternProperty& rhs) const {
+	  return (!(operator==(rhs)));
+	}
+#endif // RAPIDJSON_YGGDRASIL
         const SchemaType* schema;
         RegexType* pattern;
 #ifdef RAPIDJSON_YGGDRASIL
@@ -9891,7 +10591,7 @@ protected:
       }									\
     }
     void SortSharedProperties(const SchemaType* root, const PointerType path) {
-      if (isMetaschema_) return;
+      if (isMetaschema()) return;
       if (inSort_ >= 1) return;
       if (sharedProperties_)
 	sharedProperties_->SortSources(root, path);
@@ -9992,8 +10692,991 @@ protected:
 	sharedProperties_->AddLocalProperty(this, key, v, push);
       }
     }
+
+public:
+    //////////////////////////////
+    // Tools for checking schema
+    //////////////////////////////
+
+#define SCHEMA_IS_TYPE(name)						\
+    if (!(type_ && (1 << k ## name ## SchemaType))) return false
+#define SCHEMA_IS_YGGTYPE(name)						\
+    if (!(yggtype_ && (1 << kYgg ## name ## SchemaType))) return false
+#define SCHEMA_PROPERTY_DEFINED(name, default)	\
+    if (name != default) return true
+#define SCHEMA_PROPERTY_VALUE_DEFINED(name)	\
+    if (!name.IsNull()) return true
+#define SCHEMA_PROPERTY_BOOL_DEFINED(name)	\
+    if (!name) return true
+    bool HasPropertiesNull() const {
+      SCHEMA_IS_TYPE(Null);
+      return false;
+    }
+    bool HasPropertiesBoolean() const {
+      SCHEMA_IS_TYPE(Boolean);
+      return false;
+    }
+    bool HasPropertiesString() const {
+      SCHEMA_IS_TYPE(String);
+      SCHEMA_PROPERTY_VALUE_DEFINED(patternStr_);
+      SCHEMA_PROPERTY_DEFINED(minLength_, 0);
+      SCHEMA_PROPERTY_DEFINED(maxLength_, ~SizeType(0));
+      return false;
+    }
+    bool HasPropertiesNumber() const {
+      SCHEMA_IS_TYPE(Number);
+      SCHEMA_PROPERTY_VALUE_DEFINED(minimum_);
+      SCHEMA_PROPERTY_VALUE_DEFINED(maximum_);
+      SCHEMA_PROPERTY_VALUE_DEFINED(multipleOf_);
+      return false;
+    }
+    bool HasPropertiesInteger() const {
+      SCHEMA_IS_TYPE(Integer);
+      SCHEMA_PROPERTY_VALUE_DEFINED(minimum_);
+      SCHEMA_PROPERTY_VALUE_DEFINED(maximum_);
+      SCHEMA_PROPERTY_VALUE_DEFINED(multipleOf_);
+      return false;
+    }
+    bool HasPropertiesScalar() const {
+      SCHEMA_IS_YGGTYPE(Scalar);
+      SCHEMA_PROPERTY_DEFINED(subtype_, (1 << kYggTotalSchemaSubType) - 1);
+      SCHEMA_PROPERTY_VALUE_DEFINED(precision_);
+      SCHEMA_PROPERTY_VALUE_DEFINED(units_);
+      SCHEMA_PROPERTY_VALUE_DEFINED(encoding_);
+      return false;
+    }
+    bool HasPropertiesNDArray() const {
+      SCHEMA_IS_YGGTYPE(NDArray);
+      SCHEMA_PROPERTY_DEFINED(subtype_, (1 << kYggTotalSchemaSubType) - 1);
+      SCHEMA_PROPERTY_VALUE_DEFINED(precision_);
+      SCHEMA_PROPERTY_VALUE_DEFINED(units_);
+      SCHEMA_PROPERTY_VALUE_DEFINED(encoding_);
+      SCHEMA_PROPERTY_VALUE_DEFINED(shape_);
+      SCHEMA_PROPERTY_DEFINED(ndim_, 0);
+      return false;
+    }
+    bool HasPropertiesPython() const {
+      if (!(yggtype_ & ((1 << kYggPythonClassSchemaType) |
+			(1 << kYggPythonFunctionSchemaType) |
+			(1 << kYggPythonInstanceSchemaType))))
+	return false;
+      SCHEMA_PROPERTY_VALUE_DEFINED(class_);
+      return false;
+    }
+    bool HasPropertiesGeometry() const {
+      // if (!(yggtype_ & ((1 << kYggObjSchemaType) |
+      // 			(1 << kYggPlySchemaType))))
+      // 	return false;
+      return false;
+    }
+    bool HasPropertiesSchema() const {
+      // SCHEMA_IS_YGGTYPE(Schema);
+      return false;
+    }
+    bool HasPropertiesObject() const {
+      SCHEMA_IS_TYPE(Object);
+      SCHEMA_PROPERTY_DEFINED(propertyCount_, 0);
+      SCHEMA_PROPERTY_DEFINED(minProperties_, 0);
+      SCHEMA_PROPERTY_DEFINED(maxProperties_, ~SizeType(0));
+      SCHEMA_PROPERTY_DEFINED(patternPropertyCount_, 0);
+      SCHEMA_PROPERTY_BOOL_DEFINED(additionalPropertiesSchema_);
+      SCHEMA_PROPERTY_BOOL_DEFINED(additionalPropertiesExplicit_);
+      SCHEMA_PROPERTY_BOOL_DEFINED(hasDependencies_);
+      SCHEMA_PROPERTY_BOOL_DEFINED(hasRequired_);
+      SCHEMA_PROPERTY_BOOL_DEFINED(hasSchemaDependencies_);
+      return false;
+    }
+    bool HasPropertiesArray() const {
+      SCHEMA_IS_TYPE(Array);
+      SCHEMA_PROPERTY_DEFINED(itemsTupleCount_, 0);
+      SCHEMA_PROPERTY_DEFINED(minItems_, 0);
+      SCHEMA_PROPERTY_DEFINED(maxItems_, ~SizeType(0));
+      SCHEMA_PROPERTY_BOOL_DEFINED(uniqueItems_);
+      SCHEMA_PROPERTY_BOOL_DEFINED(itemsList_);
+      SCHEMA_PROPERTY_BOOL_DEFINED(additionalItemsSchema_);
+      SCHEMA_PROPERTY_BOOL_DEFINED(additionalItemsExplicit_);
+      return false;
+    }
+#undef SCHEMA_IS_TYPE
+#undef SCHEMA_IS_YGGTYPE
+#undef SCHEMA_PROPERTY_DEFINED
+#undef SCHEMA_PROPERTY_VALUE_DEFINED
+#undef SCHEMA_PROPERTY_BOOL_DEFINED
+    
+#define APPLY_SCHEMA_HANDLER(method, args)			\
+    if (context.schema_handler &&				\
+	!context.schema_handler->Schema ## method args) {	\
+      context.schema_handler->TransferHandlerError(context.error_handler); \
+      return false;						\
+    }
+    
+    //////////////////////////////
+    // Schema iteration
+    //////////////////////////////
+    
+    bool IterSchemaSkip(Context&) const {
+      return false;
+    }
+    bool IterSchema(Context& context, SchemaIteratorType* iterator) const {
+      if (iterator->IterSchemaSkip())
+	return true;
+      context.iterationType = Context::kInitIterationType;
+      if (!CreateParallelValidator(context))
+	return false;
+      // Early exit to prevent calls to schema handler for empty base
+      if (flags_ & (1 << kNoBaseFlag)) {
+	context.iterationType = Context::kNoIterationType;
+	return true;
+      }
+      // Calls after this will be called for all parallel validators
+      context.iterationType = Context::kDirectIterationType;
+      APPLY_SCHEMA_HANDLER(Start, (*this, context));
+      if (context.schema_handler && context.schema_handler->SchemaSkip(*this))
+	goto completeSchema;
+      if (context.schema_handler) {
+#define HANDLE_TYPE(type)					\
+	if (type_ & (1 << k ## type ## SchemaType)) {		\
+	  APPLY_SCHEMA_HANDLER(type, (*this));			\
+	}
+#define HANDLE_YGGTYPE(type1, type2)					\
+	if (yggtype_ & (1 << kYgg ## type1 ## SchemaType)) {		\
+	  APPLY_SCHEMA_HANDLER(type2, (*this));				\
+	}
+	HANDLE_TYPE(Null);
+	HANDLE_TYPE(Boolean);
+	HANDLE_TYPE(String);
+	HANDLE_TYPE(Number);
+	HANDLE_TYPE(Integer);
+	HANDLE_YGGTYPE(Scalar, Scalar);
+	HANDLE_YGGTYPE(NDArray, NDArray);
+	HANDLE_YGGTYPE(PythonClass, Python);
+	HANDLE_YGGTYPE(PythonFunction, Python);
+	HANDLE_YGGTYPE(PythonInstance, Python);
+	HANDLE_YGGTYPE(Obj, Geometry);
+	HANDLE_YGGTYPE(Ply, Geometry);
+	HANDLE_YGGTYPE(Schema, Schema);
+#undef HANDLE_TYPE
+#undef HANDLE_YGGTYPE
+      }
+      if ((type_ & (1 << kObjectSchemaType)) &&
+	  (properties_ || patternProperties_ ||
+	   additionalPropertiesSchema_ ||
+	   additionalPropertiesExplicit_)) {
+	if (!iterator->IterSchemaStartObject())
+	  return false;
+	if (properties_) {
+	  PointerType pProp = context.schemaPointerAbs.Append(SchemaType::GetPropertiesString(), allocator_);
+	  for (SizeType i = 0; i < propertyCount_; i++) {
+	    context.ResetForSubschema(typeless_);
+	    context.iterationPropertyIndex = i;
+	    if (!iterator->IterSchemaKey(properties_[i].name.GetString(),
+					 properties_[i].name.GetStringLength()))
+	      return false;
+	    context.valueSchema = properties_[i].schema;
+	    context.valuePointer = pProp.Append(properties_[i].name.GetString(), properties_[i].name.GetStringLength(), allocator_);
+	    if (!iterator->IterSchema())
+	      return false;
+	  }
+	}
+	if (patternProperties_) {
+	  PointerType pPattern = context.schemaPointerAbs.Append(SchemaType::GetPatternPropertiesString(), allocator_);
+	  for (SizeType i = 0; i < patternPropertyCount_; i++) {
+	    context.ResetForSubschema(typeless_);
+	    context.iterationPropertyIndex = i;
+	    if (!iterator->IterSchemaKey(patternProperties_[i].patternStr.GetString(),
+					 patternProperties_[i].patternStr.GetStringLength(),
+					 true))
+	      return false;
+	    context.valueSchema = patternProperties_[i].schema;
+	    context.valuePointer = pPattern.Append(patternProperties_[i].patternStr.GetString(), patternProperties_[i].patternStr.GetStringLength(), allocator_);
+	    if (!iterator->IterSchema())
+	      return false;
+	  }
+	}
+	if (additionalPropertiesSchema_) {
+	  context.ResetForSubschema(typeless_);
+	  context.iterationPropertyIndex = patternPropertyCount_;
+	  if (!iterator->IterSchemaAdditionalProperties())
+	    return false;
+	  context.valueSchema = additionalPropertiesSchema_;
+	  context.valuePointer = context.schemaPointerAbs.Append(GetAdditionalPropertiesString(), allocator_);
+	  if (!iterator->IterSchema())
+	    return false;
+	}
+	if (!iterator->IterSchemaEndObject())
+	  return false;
+	context.ResetForSubschema(typeless_);
+      }
+      if ((type_ & (1 << kArraySchemaType)) &&
+	  (itemsTuple_ || itemsList_ ||
+	   additionalItemsSchema_ ||
+	   additionalItemsExplicit_)) {
+	if (!iterator->IterSchemaStartArray())
+	  return false;
+	context.arrayElementIndex = 0;
+	context.inArray = true;
+	if (itemsTuple_) {
+	  for (SizeType i = 0; i < itemsTupleCount_; i++) {
+	    context.ResetForSubschema(typeless_);
+	    context.valueSchema = itemsTuple_[i];
+	    context.valuePointer = context.schemaPointerAbs.Append(GetItemsString(), allocator_).Append(i, allocator_);
+	    context.arrayElementIndex = i;
+	    if (!iterator->IterSchema())
+	      return false;
+	  }
+	}
+	if (itemsList_ && additionalItemsSchema_)  // TODO: Add error
+	  return false;
+	if (itemsList_ || additionalItemsSchema_) {
+	  context.ResetForSubschema(typeless_);
+	  context.arrayElementIndex = itemsTupleCount_;
+	  if (!iterator->IterSchemaAdditionalItems())
+	    return false;
+	  if (!iterator->IterSchema())
+	    return false;
+	}
+	if (!iterator->IterSchemaEndArray())
+	  return false;
+	context.ResetForSubschema(typeless_);
+      }
+    completeSchema:;
+      APPLY_SCHEMA_HANDLER(End, ());
+      context.iterationType = Context::kNoIterationType;
+      return true;
+    }
+    bool IterSchemaStartObject(Context& context) const {
+      if (properties_) {
+	context.propertyExist = static_cast<bool*>(context.factory.MallocState(sizeof(bool) * propertyCount_));
+	std::memset(context.propertyExist, 0, sizeof(bool) * propertyCount_);
+      }
+      if (patternProperties_ || additionalPropertiesSchema_) {
+	SizeType count = patternPropertyCount_;
+	if (additionalPropertiesSchema_) count++;
+	context.patternPropertyExist = static_cast<bool*>(context.factory.MallocState(sizeof(bool) * count));
+	std::memset(context.patternPropertyExist, 0, sizeof(bool) * count);
+      }
+      APPLY_SCHEMA_HANDLER(StartObject, (*this));
+      return true;
+    }
+    bool IterSchemaKey(Context& context, const Ch* str, SizeType len,
+		       bool isPattern=false) const {
+      APPLY_SCHEMA_HANDLER(Key, (str, len, isPattern));
+      return true;
+    }
+    bool IterSchemaAdditionalProperties(Context& context) const {
+      APPLY_SCHEMA_HANDLER(AdditionalProperties, ());
+      return true;
+    }
+    bool IterSchemaEndObject(Context& context) const {
+      SizeType memberCount = GetMaxPropertyCount();
+      APPLY_SCHEMA_HANDLER(EndObject, (memberCount, additionalProperties_));
+      if (!CheckMissingProperties(context, true))
+	return false;
+      return true;
+    }
+    bool IterSchemaStartArray(Context& context) const {
+      APPLY_SCHEMA_HANDLER(StartArray, (*this));
+      return true;
+    }
+    bool IterSchemaAdditionalItems(Context& context) const {
+      APPLY_SCHEMA_HANDLER(AdditionalItems, ());
+      return true;
+    }
+    bool IterSchemaEndArray(Context& context) const {
+      SizeType elementCount = GetMaxItemCount();
+      APPLY_SCHEMA_HANDLER(EndArray, (elementCount, additionalItems_));
+      if (!CheckMissingItems(context, true))
+	return false;
+      return true;
+    }
+#undef APPLY_SCHEMA_HANDLER
+    
+    //////////////////////////////////////
+    // Schema validator as schema handler
+    //////////////////////////////////////
+    
+#define ADD_SCHEMA_METHOD_JOINT(method, arg1)		\
+    if (context.joint_schema_handler &&			\
+	!context.joint_schema_handler->method arg1) {	\
+      context.joint_schema_handler->TransferHandlerError(context.error_handler); \
+      return false;					\
+    }
+#define ADD_SCHEMA_METHOD_MODE(method, arg2)				\
+    if (context.mode == Context::kComparisonMode) {			\
+      if (!Compare ## method arg2)					\
+	  return false;							\
+    } else if (context.mode == Context::kJointSchemaHandlerMode) {	\
+    } else {								\
+      std::cerr << "Schema" << #method << ": Unsupported mode: " << context.mode << std::endl; \
+      return false;							\
+    }
+#define SCHEMA_LHS_RHS					\
+    const SchemaType& lhs = it_schema;			\
+    const SchemaType& rhs = *this
+#define ADD_SCHEMA_METHOD_BODY(method, arg1, arg2)	\
+    ADD_SCHEMA_METHOD_JOINT(method, arg1);		\
+    ADD_SCHEMA_METHOD_MODE(method, arg2)
+#define ADD_SCHEMA_METHOD_BODY_SIMPLE(method)				\
+    SCHEMA_LHS_RHS;							\
+    if (SchemaSkip(context, it_schema)) return true;			\
+    ADD_SCHEMA_METHOD_BODY(method, (context, lhs, rhs), (context, it_schema))
+#define ADD_SCHEMA_METHOD_BODY_CONTEXT(method, args)		\
+    ADD_SCHEMA_METHOD_BODY(method, (context), args)
+#define ADD_SCHEMA_METHOD_SIMPLE(method)				\
+    bool Schema ## method(Context& context,				\
+			  const SchemaType& it_schema) const {		\
+      ADD_SCHEMA_METHOD_BODY_SIMPLE(method);				\
+      return true;							\
+    }
+
+    bool SchemaSkip(Context& context, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      if (lhs.isMetaschema(true) || rhs.isMetaschema(true))
+	return true;
+      if (lhs.isInstance() || rhs.isInstance())
+	return true;
+      if (context.mode == Context::kComparisonMode &&
+	  CompareSkip(context, it_schema))
+	return true;
+      if (context.joint_schema_handler &&
+	  context.joint_schema_handler->Skip(context, lhs, rhs))
+	return true;
+      return false;
+    }
+
+    bool SchemaStart(Context& context, const SchemaType& it_schema,
+		     Context& it_context) const {
+      context.iterationContext = &it_context;
+      ADD_SCHEMA_METHOD_BODY_SIMPLE(Start);
+      context.iterationType = Context::kInitIterationType;
+      if (!CreateParallelValidator(context))
+	return false;
+      context.iterationType = Context::kJointIterationType;
+      return true;
+    }
+
+    bool SchemaEnd(Context& context) const {
+      ADD_SCHEMA_METHOD_BODY_CONTEXT(End, (context));
+      context.iterationType = Context::kNoIterationType;
+      return true;
+    }
+    
+    ADD_SCHEMA_METHOD_SIMPLE(Null)
+      ADD_SCHEMA_METHOD_SIMPLE(Boolean)
+      ADD_SCHEMA_METHOD_SIMPLE(String)
+      ADD_SCHEMA_METHOD_SIMPLE(Number)
+      ADD_SCHEMA_METHOD_SIMPLE(Integer)
+      ADD_SCHEMA_METHOD_SIMPLE(Encoding)
+      ADD_SCHEMA_METHOD_SIMPLE(Scalar)
+      ADD_SCHEMA_METHOD_SIMPLE(NDArray)
+      ADD_SCHEMA_METHOD_SIMPLE(Python)
+      ADD_SCHEMA_METHOD_SIMPLE(Geometry)
+      ADD_SCHEMA_METHOD_SIMPLE(Schema)
+
+    bool SchemaStartObject(Context& context, const SchemaType& it_schema) const {
+      ADD_SCHEMA_METHOD_BODY_SIMPLE(StartObject);
+      return StartObject(context);
+    }
+
+    bool SchemaFoundIterationKey(Context& context,
+				 bool isPattern=false) const {
+      if (!context.iterationContext)
+	return true;
+      SizeType iterationIndex = context.iterationContext->iterationPropertyIndex;
+      bool* propertyExist = context.iterationContext->propertyExist;
+      if (isPattern)
+	propertyExist = context.iterationContext->patternPropertyExist;
+      if (!(propertyExist && iterationIndex != ~SizeType(0)))
+	return true;
+      propertyExist[iterationIndex] = true;
+      return true;
+    }
+
+    bool SchemaKey(Context& context, const Ch* str,
+		   SizeType len, bool isPattern=false) const {
+      context.ResetForSubschema(typeless_);
+      context.iterationType = Context::kJointSubschemaIterationType;
+      ADD_SCHEMA_METHOD_BODY_CONTEXT(Key, (context, str, len, isPattern));
+      if (!isPattern)
+	return Key(context, str, len, true);
+      PatternProperty pattern;
+      pattern.patternStr.SetString(str, len);
+      pattern.pattern = CreatePattern(pattern.patternStr, nullptr, context.schemaPointerAbs);
+      if (!pattern.pattern) {  // This shouldn't actually occur
+	std::cerr << "SchemaKey: Invalid pattern: " << str << std::endl;
+	return false;
+      }
+      if (properties_) {
+	PointerType pProp = context.schemaPointerAbs.Append(SchemaType::GetPropertiesString(),
+							       allocator_);
+	context.otherSchemaCount = 0;
+	for (SizeType i = 0; i < propertyCount_; i++) {
+	  if (IsPatternMatch(pattern.pattern,
+			     properties_[i].name.GetString(),
+			     properties_[i].name.GetStringLength())) {
+	    context.otherSchemas[context.otherSchemaCount++] = properties_[i].schema;
+	    context.valueSchema = typeless_;
+	    context.otherPointers[context.otherSchemaCount - 1] = pProp.Append(properties_[i].name.GetString(),
+												       properties_[i].name.GetStringLength(),
+												       allocator_);
+	    context.valueOtherValidatorType = Context::kOtherValidatorPropertiesOnly;
+	    if (context.propertyExist)
+	      context.propertyExist[i] = true;
+	    if (!SchemaFoundIterationKey(context, true))
+	      return false;
+	  }
+	}
+      }
+      if (patternProperties_) {
+	PointerType pPattern = context.schemaPointerAbs.Append(SchemaType::GetPatternPropertiesString(),
+							       allocator_);
+	for (SizeType i = 0; i < patternPropertyCount_; i++) {
+	  if (patternProperties_[i].pattern &&
+	      patternProperties_[i].patternStr == pattern.patternStr) {
+	    if (context.otherSchemaCount > 0) {
+	      context.otherSchemas[context.otherSchemaCount++] = patternProperties_[i].schema;
+	      context.valueSchema = typeless_;
+	      context.valueOtherValidatorType = Context::kOtherValidatorPropertiesWithExplicit;
+	      context.otherPointers[context.otherSchemaCount - 1] = pPattern.Append(i, allocator_);
+	    } else {
+	      context.valueSchema = patternProperties_[i].schema;
+	      context.valuePointer = pPattern.Append(i, allocator_);
+	    }
+	    if (!SchemaFoundIterationKey(context, true))
+	      return false;
+	    return true;
+	  }
+	}
+      }
+      if (additionalPropertiesSchema_) {
+	PointerType pProp = context.schemaPointerAbs.Append(SchemaType::GetAdditionalPropertiesString(), allocator_);
+	if (context.otherSchemaCount > 0) {
+	  context.otherSchemas[context.otherSchemaCount++] = additionalPropertiesSchema_;
+	  context.valueSchema = typeless_;
+	  context.valueOtherValidatorType = Context::kOtherValidatorPropertiesWithAdditional;
+	  context.otherPointers[context.otherSchemaCount - 1] = pProp;
+	} else {
+	  context.valueSchema = additionalPropertiesSchema_;
+	  context.valuePointer = pProp;
+	}
+	// Use this?
+	// if (!SchemaFoundIterationKey(context, true))
+	//   return false;
+	return true;
+      } else if (additionalProperties_) {
+	context.valueSchema = typeless_;
+	return true;
+      }
+      if (context.otherSchemaCount == 0) { // no matches
+	// Must set valueSchema for when kValidateContinueOnErrorFlag is set, else reports spurious type error
+	context.valueSchema = typeless_;
+	// TODO: Create DisallowedPatternProperty?
+	context.error_handler.DisallowedProperty(str, len);
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
+      }
+      return true;
+    }
+    bool SchemaAdditionalProperties(Context& context) const {
+      // Next schema must match any properties not already matched
+      context.ResetForSubschema(typeless_);
+      context.iterationType = Context::kJointSubschemaIterationType;
+      ADD_SCHEMA_METHOD_BODY_CONTEXT(AdditionalProperties, (context));
+      context.valueOtherValidatorType = Context::kOtherValidatorPropertiesOnly;
+      if (context.propertyExist) {
+	PointerType pProp = context.schemaPointerAbs.Append(SchemaType::GetPropertiesString(),
+							       allocator_);
+	for (SizeType i = 0; i < propertyCount_; i++) {
+	  if (!context.propertyExist[i]) {
+	    context.otherSchemas[context.otherSchemaCount++] = properties_[i].schema;
+	    context.valueSchema = typeless_;
+	    context.otherPointers[context.otherSchemaCount - 1] = pProp.Append(properties_[i].name.GetString(),
+												       properties_[i].name.GetStringLength(),
+												       allocator_);
+	    context.propertyExist[i] = true;
+	  }
+	}
+      }
+      if (context.patternPropertyExist) {
+	PointerType pProp = context.schemaPointerAbs.Append(SchemaType::GetPatternPropertiesString(),
+							       allocator_);
+	context.patternPropertiesSchemaCount = 0;
+	for (SizeType i = 0; i < patternPropertyCount_; i++) {
+	  if (!context.patternPropertyExist[i]) {
+	    context.patternPropertiesSchemas[context.patternPropertiesSchemaCount++] = patternProperties_[i].schema;
+	    context.valueSchema = typeless_;
+	    context.patternPropertiesPointers[context.patternPropertiesSchemaCount - 1] = pProp.Append(i, allocator_);
+	    context.patternPropertyExist[i] = true;
+	  }
+	}
+      }
+      if (additionalPropertiesSchema_) {
+	PointerType pProp = context.schemaPointerAbs.Append(SchemaType::GetAdditionalPropertiesString(), allocator_);
+	if (context.otherSchemaCount > 0) {
+	  context.otherSchemas[context.otherSchemaCount++] = additionalPropertiesSchema_;
+	  context.valueSchema = typeless_;
+	  // context.valueOtherValidatorType = Context::kOtherValidatorPropertiesWithAdditional;
+	  context.otherPointers[context.otherSchemaCount - 1] = pProp;
+	} else {
+	  std::cerr << "additionalPropertiesSchema_ as valueSchema" << std::endl;
+	  context.valueSchema = additionalPropertiesSchema_;
+	  context.valuePointer = pProp;
+	}
+	context.patternPropertyExist[patternPropertyCount_] = true;
+	return true;
+      } else if (additionalProperties_) {
+	context.valueSchema = typeless_;
+	return true;
+      }
+      // No unmatched properties, patternProperties or additionalProperties allowed
+      if (context.patternPropertiesSchemaCount == 0 &&
+	  context.otherSchemaCount == 0) {
+	context.valueSchema = typeless_;
+	context.error_handler.DisallowedProperty(SchemaType::GetAdditionalPropertiesString().GetString(), SchemaType::GetAdditionalPropertiesString().GetStringLength());
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
+      }
+      return true;
+    }
+
+    SizeType GetMaxItemCount() const {
+      if (!additionalItems_)
+	return itemsTupleCount_;
+      if (maxItems_ != ~SizeType(0))
+	return maxItems_;
+      return ~SizeType(0);
+    }
+    SizeType GetMinItemCount() const {
+      if (minItems_ != 0)
+	return minItems_;
+      return itemsTupleCount_;
+    }
+
+    SizeType GetMaxPropertyCount() const {
+      if (!additionalProperties_)
+	return propertyCount_;
+      if (maxProperties_ != ~SizeType(0))
+	return maxProperties_;
+      return ~SizeType(0);
+    }
+    SizeType GetMinPropertyCount() const {
+      if (minProperties_ != 0)
+	return minProperties_;
+      return propertyCount_;
+    }
+
+    bool CheckMissingItems(Context& context,
+			   const bool additionalItems=false) const {
+      if (additionalItems ||
+	  context.valueOtherValidatorType == Context::kOtherValidatorItemsOnly)
+	return true;
+      // TODO: Addvance arrayElementIndex based on items covered in
+      //   otherSchemas?
+      if (context.arrayElementIndex < itemsTupleCount_) {
+	context.error_handler.TooFewItems(context.arrayElementIndex,
+					  itemsTupleCount_);
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinItems);
+      }
+      // TODO: Error on unmatched additionalItems?
+      // if (context.arrayElementIndex == itemsTupleCount_ &&
+      // 	  additionalItemsSchema_ && !additionalItems) {
+      // 	context.error_handler.AddMissingSubschema(GetAdditionalItemsString());
+      // 	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMissingSubschema);
+      // }
+      return true;
+    }
+
+    bool CheckMissingProperties(Context& context,
+				const bool additionalProperties=false) const {
+      if (context.propertyExist) {
+	if (additionalProperties) {
+	  context.error_handler.StartMissingProperties();
+	} else {
+	  context.error_handler.StartDisallowedProperties();
+	}
+	for (SizeType index = 0; index < propertyCount_; index++) {
+	  if (!context.propertyExist[index]) {
+	    if (additionalProperties) {
+	      if (properties_[index].required)
+		context.error_handler.AddMissingProperty(properties_[index].name);
+	      else
+	      context.propertyExist[index] = true;
+	    } else {
+	      context.error_handler.AddDisallowedProperty(properties_[index].name);
+	    }
+	  }
+	}
+	if (additionalProperties) {
+	  if (context.error_handler.EndMissingProperties())
+	    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
+	} else {
+	  if (context.error_handler.EndDisallowedProperties())
+	    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
+	}
+      }
+      // TODO: Use disallowed when additionalProperties is False
+      if (context.patternPropertyExist) {
+	// TODO: Add Start/EndMissingPatternProperties?
+	context.error_handler.StartMissingProperties();
+	for (SizeType index = 0; index < patternPropertyCount_; index++) {
+	  if (!context.patternPropertyExist[index]) {
+	    if (additionalProperties)
+	      context.patternPropertyExist[index] = true;
+	    else
+	      context.error_handler.AddMissingProperty(patternProperties_[index].patternStr);
+	  }
+	}
+	if (context.error_handler.EndMissingProperties())
+	  RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
+	// TODO: Error on unmatched additionalProperties?
+	// if (additionalPropertiesSchema_) {
+	//   SizeType index = patternPropertyCount_;
+	//   if (!context.patternPropertyExist[index]) {
+	//     if (additionalProperties)
+	//       context.patternPropertyExist[index] = true;
+	//     else {
+	//       context.error_handler.AddMissingSubschema(GetAdditionalPropertiesString());
+	//       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMissingSubschema);
+	//     }
+	//   }
+	// }
+      }
+      return true;
+    }
+    
+    bool SchemaEndObject(Context& context, SizeType memberCount,
+			 const bool additionalProperties=false) const {
+      ADD_SCHEMA_METHOD_BODY_CONTEXT(EndObject, (context, memberCount, additionalProperties));
+      if (!CheckMissingProperties(context, additionalProperties))
+	return false;
+      return EndObject(context, memberCount);
+    }
+
+    bool SchemaStartArray(Context& context, const SchemaType& it_schema) const {
+      ADD_SCHEMA_METHOD_BODY_SIMPLE(StartArray);
+      return StartArray(context);
+    }
+	
+    bool SchemaAdditionalItems(Context& context) const {
+      // Next schema must match any items not already matched
+      SizeType arrayElementIndex = context.arrayElementIndex;
+      context.ResetForSubschema(typeless_);
+      context.arrayElementIndex = arrayElementIndex;
+      context.iterationType = Context::kJointSubschemaIterationType;
+      ADD_SCHEMA_METHOD_BODY_CONTEXT(AdditionalItems, (context));
+      if (!context.inArray) return false;
+      SizeType remainingItems = (itemsTupleCount_ - arrayElementIndex);
+      if (itemsList_ || additionalItemsSchema_) remainingItems++;
+      std::cerr << "SchemaAdditionalItems: arrayElementIndex = " << arrayElementIndex << ", itemsTupleCount_ = " << itemsTupleCount_ << ", remainingItems = " << remainingItems << std::endl;
+      if (remainingItems <= 1)
+	return true;
+      context.valueOtherValidatorType = Context::kOtherValidatorItemsOnly;
+      if ((arrayElementIndex + 1) < itemsTupleCount_) {
+	PointerType pItem = context.schemaPointerAbs.Append(SchemaType::GetItemsString(), allocator_);
+	for (SizeType i = arrayElementIndex + 1; i < itemsTupleCount_; i++) {
+	  context.otherSchemas[context.otherSchemaCount++] = itemsTuple_[i];
+	  context.otherPointers[context.otherSchemaCount - 1] = pItem.Append(i, allocator_);
+	}
+      }
+      if (itemsList_) {
+	PointerType pItem = context.schemaPointerAbs.Append(SchemaType::GetItemsString(), allocator_);
+	context.otherSchemas[context.otherSchemaCount++] = itemsList_;
+	context.otherPointers[context.otherSchemaCount - 1] = pItem;
+	// context.valueOtherValidatorType = Context::kOtherValidatorItemsWithAdditional;
+      }
+      if (additionalItemsSchema_) {
+	PointerType pItem = context.schemaPointerAbs.Append(SchemaType::GetAdditionalItemsString(), allocator_);
+	context.otherSchemas[context.otherSchemaCount++] = additionalItemsSchema_;
+	context.otherPointers[context.otherSchemaCount - 1] = pItem;
+	// context.valueOtherValidatorType = Context::kOtherValidatorItemsWithAdditional;
+      }
+      return true;
+    }
+
+    bool SchemaEndArray(Context& context, SizeType elementCount, const bool additionalItems=false) const {
+      ADD_SCHEMA_METHOD_BODY_CONTEXT(EndArray, (context, elementCount, additionalItems));
+      if (!CheckMissingItems(context, additionalItems))
+	return false;
+      return EndArray(context, elementCount);
+    }
+
+
+#undef ADD_SCHEMA_METHOD_SIMPLE
+#undef ADD_SCHEMA_METHOD_BODY_CONTEXT
+#undef ADD_SCHEMA_METHOD_BODY_SIMPLE
+#undef ADD_SCHEMA_METHOD_BODY
+#undef ADD_SCHEMA_METHOD_MODE
+#undef ADD_SCHEMA_METHOD_JOINT
+    
+    //////////////////////////////
+    // Schema comparison
+    //////////////////////////////
+    
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA(key, expected, actual)		\
+      {									\
+	context.error_handler.IncompatibleSchemas(key, expected, actual); \
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
+      }
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(key, expected, actual)	\
+      {									\
+	context.error_handler.IncompatibleSchemas(key, expected, actual, true); \
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
+      }
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, a, b)	\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a).Move(), SValue(b).Move())
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(key, a, b)	\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a.GetString(), a.GetStringLength()).Move(), SValue(b.GetString(), b.GetStringLength()).Move())
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(key, a, b)	\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, (bool)(a), (bool)(b))
+#define CHECK_INCOMPATIBLE_IF_SET(key, err, def)			\
+    if (lhs.key != def && rhs.key != def && lhs.key != rhs.key)		\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), SValue(lhs.key).Move(), SValue(rhs.key).Move())
+#define CHECK_INCOMPATIBLE_IF_PRESENT(key, err) \
+    if (!lhs.key.IsNull() && !rhs.key.IsNull() && lhs.key != rhs.key)	\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), lhs.key, rhs.key)
+    
+    bool CompareSkip(Context&, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      if (lhs == rhs)
+	return false;
+      return (lhs == rhs);
+    }
+    bool CompareStart(Context& context, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      bool native_scalar = false;
+      bool lhs_any = (lhs.type_ == ((1 << kTotalSchemaType) - 1));
+      bool rhs_any = (rhs.type_ == ((1 << kTotalSchemaType) - 1));
+      // Type
+      if (!(((lhs.type_ || rhs.type_) && (lhs.type_ & rhs.type_)) ||
+	    ((lhs.yggtype_ || rhs.yggtype_) && (lhs.yggtype_ & rhs.yggtype_)))) {
+	if (lhs.CompareNativeScalar(rhs.type_) ||
+	    rhs.CompareNativeScalar(lhs.type_)) {
+	  native_scalar = true;
+	} else if (((lhs.type_ & (1 << kObjectSchemaType)) &&
+		    (rhs.yggtype_ & ((1 << kYggPythonInstanceSchemaType) |
+				     (1 << kYggSchemaSchemaType)))) ||
+		   ((rhs.type_ & (1 << kObjectSchemaType)) &&
+		    (lhs.yggtype_ & ((1 << kYggPythonInstanceSchemaType) |
+				     (1 << kYggSchemaSchemaType))))) {
+	} else {
+	  lhs.DisallowedTypeKey(context);
+	  rhs.DisallowedTypeKey(context, true);
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+	}
+      }
+      if ((!native_scalar) && (!(rhs_any || lhs_any))
+	  && (!(lhs.subtype_ & rhs.subtype_))) {
+	lhs.DisallowedSubTypeKey(context);
+	rhs.DisallowedSubTypeKey(context, true);
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetSubTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+      }
+      // Enum
+      if (lhs.enumCount_ || rhs.enumCount_) {
+	for (SizeType i = 0; i < lhs.enumCount_; i++) {
+	  for (SizeType j = 0; j < rhs.enumCount_; j++) {
+	    if (lhs.enum_[i] == rhs.enum_[j])
+	      goto foundEnum;
+	  }
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetEnumString(), lhs.enumValues_, rhs.enumValues_);
+      foundEnum:;
+      }
+      // if (lhs.additionalProperties_ != rhs.additionalProperties_) {
+      // 	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), lhs.additionalProperties_, rhs.additionalProperties_);
+      // }
+      return true;
+    }
+    bool CompareEnd(Context&) const {
+      return true;
+    }
+    bool CompareNull(Context&, const SchemaType&) const {
+      return true;
+    }
+    bool CompareBoolean(Context&, const SchemaType&) const {
+      return true;
+    }
+    bool CompareString(Context& context, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      CHECK_INCOMPATIBLE_IF_PRESENT(patternStr_, Pattern);
+      CHECK_INCOMPATIBLE_IF_SET(minLength_, MinLength, 0);
+      CHECK_INCOMPATIBLE_IF_SET(maxLength_, MaxLength, ~SizeType(0));
+      return true;
+    }
+    bool CompareNumber(Context&, const SchemaType&) const {
+      return true;
+    }
+    bool CompareInteger(Context& context, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      CHECK_INCOMPATIBLE_IF_PRESENT(minimum_, Minimum);
+      CHECK_INCOMPATIBLE_IF_PRESENT(maximum_, Maximum);
+      CHECK_INCOMPATIBLE_IF_PRESENT(multipleOf_, MultipleOf);
+      return true;
+    }
+    bool CompareEncoding(Context& context, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      if (lhs.encoding_ != rhs.encoding_) {
+	const ValueType& lhs_encoding = EncodingType2String(lhs.encoding_);
+	const ValueType& rhs_encoding = EncodingType2String(rhs.encoding_);
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetEncodingString(), lhs_encoding, rhs_encoding);
+      }
+      return true;
+    }
+    bool CompareScalar(Context& context, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      CHECK_INCOMPATIBLE_IF_PRESENT(precision_, Precision);
+      CHECK_INCOMPATIBLE_IF_PRESENT(units_, Units);
+      // This version allows the units to be compatible
+      // if (lhs.units_.IsString() && rhs.units_.IsString()) {
+      // 	UnitsType lhs_units(lhs.units_.GetString(), lhs.units_.GetStringLength(), false);
+      // 	UnitsType rhs_units(rhs.units_.GetString(), rhs.units_.GetStringLength(), false);
+      // 	if (!lhs_units.is_compatible(rhs_units))
+      // }
+      if (rhs.subtype_ & (1 << kYggStringSchemaSubType)) {
+	if (!CompareEncoding(context, it_schema))
+	  return false;
+      }
+      return true;
+    }
+    bool CompareNDArray(Context& context, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      CHECK_INCOMPATIBLE_IF_PRESENT(shape_, Shape);
+      CHECK_INCOMPATIBLE_IF_SET(ndim_, NDim, 0);
+      if (lhs.ndim_ != 0 && (!rhs.shape_.IsNull()) && lhs.ndim_ != rhs.shape_.Size())
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(lhs.ndim_).Move(), SValue(rhs.shape_.Size()).Move());
+      if ((!lhs.shape_.IsNull()) && rhs.ndim_ != 0 && lhs.shape_.Size() != rhs.ndim_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(lhs.shape_.Size()).Move(), SValue(rhs.ndim_).Move());
+      if (rhs.subtype_ & (1 << kYggStringSchemaSubType)) {
+	if (!CompareEncoding(context, it_schema))
+	  return false;
+      }
+      return true;
+    }
+    bool ComparePython(Context& context, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      if (lhs.class_ != rhs.class_) {
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPythonClassString(), lhs.class_, rhs.class_);
+      }
+      return true;
+    }
+    bool CompareGeometry(Context&, const SchemaType&) const {
+      return true;
+    }
+    bool CompareSchema(Context&, const SchemaType&) const {
+      return true;
+    }
+    bool CompareStartObject(Context& context, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      bool lhs_addProps = (lhs.additionalProperties_ || lhs.additionalPropertiesSchema_);
+      bool rhs_addProps = (rhs.additionalProperties_ || rhs.additionalPropertiesSchema_);
+      // if (lhs_addProps != rhs_addProps &&
+      // 	  ((!rhs_addProps && lhs.maxProperties_ == SizeType(~0)) ||
+      // 	   (!lhs_addProps && rhs.maxProperties_ == SizeType(~0)))) {
+      // 	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), lhs_addProps, rhs_addProps);
+      // }
+      if (lhs.minProperties_ != rhs.minProperties_) {
+	SizeType lhs_minProps = lhs.minProperties_, rhs_minProps = rhs.minProperties_;
+	if (lhs.minProperties_ == 0) {
+	  if (lhs.propertyCount_ >= rhs.minProperties_)
+	    goto minPropertiesMatch;
+	  lhs_minProps = lhs.propertyCount_;
+	}
+	if (rhs.minProperties_ == 0) {
+	  if (rhs.propertyCount_ >= rhs.minProperties_)
+	    goto minPropertiesMatch;
+	  rhs_minProps = rhs.propertyCount_;
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinPropertiesString(), lhs_minProps, rhs_minProps);
+        minPropertiesMatch:;
+      }
+      if (lhs.maxProperties_ != rhs.maxProperties_) {
+	SizeType lhs_maxProps = lhs.maxProperties_, rhs_maxProps = rhs.maxProperties_;
+	if (lhs.maxProperties_ == SizeType(~0) && lhs.propertyCount_ != 0 && !lhs_addProps) {
+	  if (lhs.propertyCount_ <= rhs.maxProperties_)
+	    goto maxPropertiesMatch;
+	  lhs_maxProps = lhs.propertyCount_;
+	}
+	if (rhs.maxProperties_ == SizeType(~0) && rhs.propertyCount_ != 0 && !rhs_addProps) {
+	  if (rhs.propertyCount_ <= lhs.maxProperties_)
+	    goto maxPropertiesMatch;
+	  rhs_maxProps = rhs.propertyCount_;
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxPropertiesString(), lhs_maxProps, rhs_maxProps);
+        maxPropertiesMatch:;
+      }
+      return true;
+    }
+    bool CompareKey(Context&, const Ch*, SizeType, bool=false) const {
+      return true;
+    }
+    bool CompareAdditionalProperties(Context&) const {
+      return true;
+    }
+    bool CompareEndObject(Context& context, SizeType memberCount, const bool additionalProperties=false) const {
+      if (memberCount == 0 && !additionalProperties &&
+	  additionalProperties_ && additionalPropertiesExplicit_) {
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), additionalProperties, additionalProperties_);
+      }
+      return true;
+    }
+    bool CompareStartArray(Context& context, const SchemaType& it_schema) const {
+      SCHEMA_LHS_RHS;
+      bool lhs_addItems = (lhs.additionalItems_ || lhs.additionalItemsSchema_);
+      bool rhs_addItems = (rhs.additionalItems_ || rhs.additionalItemsSchema_);
+      if (lhs.uniqueItems_ != rhs.uniqueItems_)
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetUniqueItemsString(), lhs.uniqueItems_, rhs.uniqueItems_);
+      if (lhs.minItems_ != rhs.minItems_) {
+	SizeType lhs_minItems = lhs.minItems_, rhs_minItems = rhs.minItems_;
+	if (lhs.minItems_ == 0) {
+	  if (lhs.itemsTupleCount_ >= rhs.minItems_)
+	    goto minItemsMatch;
+	  lhs_minItems = lhs.itemsTupleCount_;
+	}
+	if (rhs.minItems_ == 0) {
+	  if (rhs.itemsTupleCount_ >= lhs.minItems_)
+	    goto minItemsMatch;
+	  rhs_minItems = rhs.itemsTupleCount_;
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinItemsString(), lhs_minItems, rhs_minItems);
+        minItemsMatch:;
+      }
+      if (lhs.maxItems_ != rhs.maxItems_) {
+	SizeType lhs_maxItems = lhs.maxItems_, rhs_maxItems = rhs.maxItems_;
+	if (lhs.maxItems_ == SizeType(~0) && lhs.itemsTupleCount_ != 0 && !lhs_addItems) {
+	  if (lhs.itemsTupleCount_ <= rhs.maxItems_)
+	    goto maxItemsMatch;
+	  lhs_maxItems = lhs.itemsTupleCount_;
+	}
+	if (rhs.maxItems_ == SizeType(~0) && rhs.itemsTupleCount_ != 0 && !rhs_addItems) {
+	  if (rhs.itemsTupleCount_ <= lhs.maxItems_)
+	    goto maxItemsMatch;
+	  rhs_maxItems = rhs.itemsTupleCount_;
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxItemsString(), lhs_maxItems, rhs_maxItems);
+        maxItemsMatch:;
+      }
+      return true;
+    }
+    bool CompareAdditionalItems(Context&) const {
+      return true;
+    }
+    bool CompareEndArray(Context& context, SizeType elementCount, const bool additionalItems=false) const {
+      if (elementCount == 0 && !additionalItems &&
+	  additionalItems_ && additionalItemsExplicit_) {
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalItemsString(), additionalItems, additionalItems_);
+      }
+      return true;
+    }
+#undef CHECK_INCOMPATIBLE_IF_PRESENT
+#undef CHECK_INCOMPATIBLE_IF_SET
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_STR
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA
+#undef SCHEMA_LHS_RHS
+protected:
+  
 #endif // RAPIDJSON_YGGDRASIL
 
+    // HERE
     AllocatorType* allocator_;
     SValue uri_;
     UriType id_;
@@ -10051,15 +11734,15 @@ protected:
 
 #ifdef RAPIDJSON_YGGDRASIL
     // Yggdrasil properties
-    unsigned int yggtype_; // bitmask of kSchemaYggType
+    unsigned int yggtype_; // bitmask of SchemaYggType
     unsigned int subtype_; // bitmask of YggSchemaValueSubType
+    unsigned int flags_; // bitmask of SchemaFlag
     SValue precision_;
     SValue units_;
     SValue shape_;
     SizeType ndim_;
     YggSchemaEncodingType encoding_;
     SValue class_;
-    bool isMetaschema_;
     int inSort_;
     const SchemaType* metaschema_;
     SizeType metaschemaValidatorIndex_;
@@ -10081,6 +11764,8 @@ protected:
     SValue deprecated_;
     SValue enumValues_;
     SharedPropertiesType* sharedProperties_;
+    bool additionalPropertiesExplicit_;
+    bool additionalItemsExplicit_;
 #endif // RAPIDJSON_YGGDRASIL
   
 };
@@ -10182,7 +11867,7 @@ public:
         const PointerType& pointer = PointerType(), // PR #1393
         const Specification& spec = Specification(kDraft04)
 #ifdef RAPIDJSON_YGGDRASIL
-				   , bool isMetaschema = false
+				   , unsigned int flags = 0
 #endif // RAPIDJSON_YGGDRASIL
 				   ) :  // PR #1393
         remoteProvider_(remoteProvider),
@@ -10196,8 +11881,7 @@ public:
         error_(kObjectType),
         currentError_()
 #ifdef RAPIDJSON_YGGDRASIL
-	, metaschema_doc_(), metaschema_(),
-	isMetaschema_(isMetaschema),
+	, flags_(flags), metaschema_doc_(), metaschema_(),
 	instanceMap_(allocator, kInitialInstanceMapSize)
 #endif // RAPIDJSON_YGGDRASIL
     {
@@ -10257,7 +11941,7 @@ public:
         error_(std::move(rhs.error_)),
         currentError_(std::move(rhs.currentError_))
 #ifdef RAPIDJSON_YGGDRASIL
-	, metaschema_doc_(rhs.metaschema_doc_), metaschema_(rhs.metaschema_), isMetaschema_(rhs.isMetaschema_), instanceMap_(std::move(rhs.instanceMap_))
+	, flags_(rhs.flags_), metaschema_doc_(rhs.metaschema_doc_), metaschema_(rhs.metaschema_), instanceMap_(std::move(rhs.instanceMap_))
 #endif // RAPIDJSON_YGGDRASIL
     {
         rhs.remoteProvider_ = 0;
@@ -10285,7 +11969,7 @@ public:
         RAPIDJSON_DELETE(ownAllocator_);
 
 #ifdef RAPIDJSON_YGGDRASIL
-	if ((metaschema_) && (!isMetaschema_)) {
+	if ((metaschema_) && (!isMetaschema())) {
 	  delete metaschema_;
 	  delete metaschema_doc_;
 	  metaschema_ = NULL;
@@ -10582,9 +12266,9 @@ public:
 	    } else if (!HandleRefSchema(pointer, schema, v, document, id, singular, parentSchema, parentKey)) {
 	        SchemaType* s = NULL;
 		if (singular)
-		  s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id, isMetaschema_, *singular, parentSchema, parentKey);
+		  s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id, flags_, *singular, parentSchema, parentKey);
 		else
-		  s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id, isMetaschema_);
+		  s = new (allocator_->Malloc(sizeof(SchemaType))) SchemaType(this, pointer, v, document, allocator_, id, flags_);
 		if (schema)
 		    *schema = s;
 		return s->GetId();
@@ -10615,14 +12299,14 @@ public:
 #ifdef RAPIDJSON_YGGDRASIL
   const UriType& CreateMetaSchema(const SchemaType** schema) {
       if (!metaschema_) {
-	if (isMetaschema_) {
+	if (isMetaschema()) {
 	  metaschema_ = this;
 	} else {
 	  GenericDocument<EncodingType, typename ValueType::AllocatorType>* new_doc;
 	  new_doc = new GenericDocument<EncodingType, typename ValueType::AllocatorType>();
 	  new_doc->Parse(get_metaschema<Ch>());
 	  metaschema_doc_ = new_doc;
-	  metaschema_ = new GenericSchemaDocument<ValueType, AllocatorType>(*metaschema_doc_, 0, 0, 0, 0, PointerType(), Specification(kDraft04), true);
+	  metaschema_ = new GenericSchemaDocument<ValueType, AllocatorType>(*metaschema_doc_, 0, 0, 0, 0, PointerType(), Specification(kDraft04), (1 << SchemaType::kMetaschemaFlag));
 	}
       }
       const SchemaType* sc = &(metaschema_->GetRoot());
@@ -10659,7 +12343,7 @@ public:
 			d.GetAllocator()).Move(),
 	      d.GetAllocator());
 	}
-	InstanceSchemaDoc* new_doc = new (allocator_->Malloc(sizeof(InstanceSchemaDoc))) InstanceSchemaDoc(d, 0, 0, 0, 0, PointerType(), Specification(kDraft04), true);
+	InstanceSchemaDoc* new_doc = new (allocator_->Malloc(sizeof(InstanceSchemaDoc))) InstanceSchemaDoc(d, 0, 0, 0, 0, PointerType(), Specification(kDraft04), (1 << SchemaType::kInstanceFlag));
 	sd = new_doc;
 	InstanceSchemaEntry *entry = instanceMap_.template Push<InstanceSchemaEntry>();
 	new (entry) InstanceSchemaEntry(pointer, new_doc, true, allocator_);
@@ -10895,6 +12579,16 @@ public:
 
     const SchemaType* GetTypeless() const { return typeless_; }
 
+    bool isMetaschema(bool ignoreInstance=false) const {
+      if (ignoreInstance)
+	return (flags_ & (1 << SchemaType::kMetaschemaFlag));
+      return (flags_ & ((1 << SchemaType::kMetaschemaFlag) |
+			(1 << SchemaType::kInstanceFlag)));
+    }
+    bool isInstance() const {
+      return (flags_ & (1 << SchemaType::kInstanceFlag));
+    }
+
     static const size_t kInitialSchemaMapSize = 64;
     static const size_t kInitialSchemaRefSize = 64;
 
@@ -10912,9 +12606,9 @@ public:
     GValue currentError_;
 #ifdef RAPIDJSON_YGGDRASIL
     static const size_t kInitialInstanceMapSize = 4;
+    const unsigned int flags_;
     const GenericDocument<EncodingType, typename ValueType::AllocatorType>* metaschema_doc_;
     const GenericSchemaDocument<ValueT, Allocator>* metaschema_;
-    bool isMetaschema_;
     internal::Stack<Allocator> instanceMap_;
 #endif // RAPIDJSON_YGGDRASIL
 };
@@ -10946,6 +12640,10 @@ template <
 class GenericSchemaValidator :
     public internal::ISchemaStateFactory<typename SchemaDocumentType::SchemaType>, 
     public internal::ISchemaValidator,
+#ifdef RAPIDJSON_YGGDRASIL
+    public internal::ISchemaIterator<typename SchemaDocumentType::SchemaType>,
+    public internal::ISchemaHandler<typename SchemaDocumentType::SchemaType>,
+#endif // RAPIDJSON_YGGDRASIL
     public internal::IValidationErrorHandler<typename SchemaDocumentType::SchemaType> {
 public:
     typedef typename SchemaDocumentType::SchemaType SchemaType;
@@ -10959,6 +12657,10 @@ public:
     template <typename, typename, typename>
     friend class GenericSchemaNormalizer;
     typedef internal::SharedProperties<SchemaDocumentType> SharedPropertiesType;
+    typedef internal::ISchemaIterator<SchemaType> SchemaIteratorType;
+    typedef internal::ISchemaHandler<SchemaType> SchemaHandlerType;
+    typedef internal::IJointSchemaHandler<SchemaType> JointSchemaHandlerType;
+    typedef internal::IValidationErrorHandler<SchemaType> ErrorHandlerType;
 #endif // RAPIDJSON_YGGDRASIL
 
     //! Constructor without output handler.
@@ -10991,7 +12693,9 @@ public:
 	, warning_(kObjectType),
 	currentWarning_(),
 	relativePathRoot_(),
-	python_disabled_(false)
+	python_disabled_(false),
+	mode_(Context::kValidationMode),
+	schema_handler_(0), joint_schema_handler_(0)
 #endif // RAPIDJSON_YGGDRASIL
     {
         RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::GenericSchemaValidator");
@@ -11028,7 +12732,9 @@ public:
 	, warning_(kObjectType),
 	currentWarning_(),
 	relativePathRoot_(),
-	python_disabled_(false)
+	python_disabled_(false),
+	mode_(Context::kValidationMode),
+	schema_handler_(0), joint_schema_handler_(0)
 #endif // RAPIDJSON_YGGDRASIL
     {
         RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::GenericSchemaValidator (output handler)");
@@ -11102,6 +12808,40 @@ public:
 	for (SizeType i = 0; i < Nc; i++)
 	  tmp[len + i] = c;
       }
+    }
+    // void GetSchemaIteratorPointer() const {
+    //   if (IsSchemaIterator())
+    // 	return GetInvalidSchemaPointer();
+    //   if (IsSchemaHandler())
+    //   return PointerType();
+    // }
+    // void GetSchemaHandlerPointer() const {
+    //   if (IsSchemaHandler())
+    // 	return GetInvalidSchemaPointer();
+    //   return PointerType();
+    // }
+    bool IsSchemaIterator() const {
+      return (mode_ == Context::kSchemaIteratorMode);
+    }
+    bool IsSchemaHandler() const {
+      return (mode_ != Context::kSchemaIteratorMode &&
+	      mode_ != Context::kValidationMode &&
+	      mode_ != Context::kNormalizationMode);
+    }
+    void SetSchemaHandler(SchemaHandlerType* handler) {
+      RAPIDJSON_ASSERT(!schema_handler_);
+      schema_handler_ = handler;
+    }
+
+    void SetJointSchemaHandler(JointSchemaHandlerType* handler) {
+      RAPIDJSON_ASSERT(!joint_schema_handler_);
+      joint_schema_handler_ = handler;
+      SetMode(Context::kJointSchemaHandlerMode);
+    }
+
+    void SetMode(const typename SchemaType::Context::ValidatorMode mode) {
+      // RAPIDJSON_ASSERT(mode_ == Context::kValidationMode);
+      mode_ = mode;
     }
 
     void DisablePython() {
@@ -11575,7 +13315,7 @@ public:
       AddCurrentError(kValidateErrorGeneric);
     }
 #endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-    void IncompatibleSchemas(const typename SchemaType::ValueType& key, const SValue& expected, const SValue& actual, typename SchemaType::PointerType ptr1, typename SchemaType::PointerType ptr2, bool existingValues) {
+    void IncompatibleSchemas(const typename SchemaType::ValueType& key, const SValue& expected, const SValue& actual, bool existingValues) {
       if (!existingValues)
 	currentError_.SetObject();
       currentError_.AddMember(GetPropertyString(),
@@ -11589,16 +13329,31 @@ public:
 				ValueType(actual, GetStateAllocator()).Move(),
 				GetStateAllocator());
       }
-      AddErrorCode(currentError_, kIncompatibleSchemas);
-      AddErrorSchemaLocation(currentError_, ptr2);
-      typename ValueType::MemberIterator it = currentError_.FindMember(GetSchemaRefString());
-      RAPIDJSON_ASSERT(it != currentError_.MemberEnd());
-      currentError_.AddMember(GetInstanceRefString(),
-			      ValueType(it->value, GetStateAllocator()).Move(),
-			      GetStateAllocator());
-      currentError_.RemoveMember(GetSchemaRefString());
-      AddErrorSchemaLocation(currentError_, ptr1);
-      AddError(ValueType(SchemaType::GetValidateErrorKeyword(kIncompatibleSchemas), GetStateAllocator(), false).Move(), currentError_);
+      AddCurrentError(kIncompatibleSchemas);
+    }
+    void SchemaHandlerError(const SValue& error) {
+      ValueType cpy(error, GetStateAllocator(), true);
+      MergeError(cpy);
+    }
+    void StartDisallowedProperties() {
+        currentError_.SetArray();
+    }
+    void AddDisallowedProperty(const SValue& name) {
+        currentError_.PushBack(ValueType(name, GetStateAllocator()).Move(), GetStateAllocator());
+    }
+    bool EndDisallowedProperties() {
+        if (currentError_.Empty())
+            return false;
+        ValueType error(kObjectType);
+        error.AddMember(GetDisallowedString(), currentError_, GetStateAllocator());
+        currentError_ = error;
+        AddCurrentError(kValidateErrorAdditionalProperties);
+        return true;
+    }
+    void AddMissingSubschema(const SValue& name) {
+        currentError_.SetObject();
+	currentError_.AddMember(GetMissingString(), ValueType(name, GetStateAllocator()).Move(), GetStateAllocator());
+        AddCurrentError(kValidateErrorMissingSubschema);
     }
 #endif // RAPIDJSON_YGGDRASIL
     void PropertyViolations(ISchemaValidator** subvalidators, SizeType count) {
@@ -11950,6 +13705,8 @@ public:
     RAPIDJSON_STRING_(Duplicates, 'd', 'u', 'p', 'l', 'i', 'c', 'a', 't', 'e', 's')
     RAPIDJSON_STRING_(Matches, 'm', 'a', 't', 'c', 'h', 'e', 's')
 #ifdef RAPIDJSON_YGGDRASIL
+    RAPIDJSON_STRING_(SchemaIteratorRef, 's', 'c', 'h', 'e', 'm', 'a', 'I', 't', 'e', 'r', 'a', 't', 'o', 'r', 'R', 'e', 'f')
+    RAPIDJSON_STRING_(SchemaHandlerRef, 's', 'c', 'h', 'e', 'm', 'a', 'H', 'a', 'n', 'd', 'l', 'e', 'r', 'R', 'e', 'f')
     RAPIDJSON_STRING_(Circular, 'c', 'i', 'r', 'c', 'u', 'l', 'a', 'r')
     RAPIDJSON_STRING_(Conflicting, 'c', 'o', 'n', 'f', 'l', 'i', 'c', 't', 'i', 'n', 'g')
     RAPIDJSON_STRING_(Type, 't', 'y', 'p', 'e')
@@ -11973,6 +13730,22 @@ public:
         return valid_;\
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+#define RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(method, arg2)\
+    for (Context* context = schemaStack_.template Bottom<Context>(); context != schemaStack_.template End<Context>(); context++) {\
+        if (context->hasher)\
+            static_cast<HasherType*>(context->hasher)->method arg2;\
+        if (context->validators)\
+            for (SizeType i_ = 0; i_ < context->validatorCount; i_++)\
+                static_cast<GenericSchemaValidator*>(context->validators[i_])->method arg2;\
+        if (context->patternPropertiesValidators)\
+            for (SizeType i_ = 0; i_ < context->patternPropertiesValidatorCount; i_++)\
+                static_cast<GenericSchemaValidator*>(context->patternPropertiesValidators[i_])->method arg2;\
+	if (context->otherValidators)\
+	    for (SizeType i_ = 0; i_ < context->otherValidatorCount; i_++)\
+	        static_cast<GenericSchemaValidator*>(context->otherValidators[i_])->method arg2;\
+    }
+#else // RAPIDJSON_YGGDRASIL
 #define RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(method, arg2)\
     for (Context* context = schemaStack_.template Bottom<Context>(); context != schemaStack_.template End<Context>(); context++) {\
         if (context->hasher)\
@@ -11984,6 +13757,7 @@ public:
             for (SizeType i_ = 0; i_ < context->patternPropertiesValidatorCount; i_++)\
                 static_cast<GenericSchemaValidator*>(context->patternPropertiesValidators[i_])->method arg2;\
     }
+#endif // RAPIDJSON_YGGDRASIL
 
 #define RAPIDJSON_SCHEMA_HANDLE_END_(method, arg2)\
     valid_ = (EndValue() || GetContinueOnErrors()) && (!outputHandler_ || outputHandler_->method arg2);\
@@ -12091,10 +13865,337 @@ public:
         }
         RAPIDJSON_SCHEMA_HANDLE_END_(EndArray, (elementCount));
     }
-
+  
 #undef RAPIDJSON_SCHEMA_HANDLE_BEGIN_
 #undef RAPIDJSON_SCHEMA_HANDLE_PARALLEL_
 #undef RAPIDJSON_SCHEMA_HANDLE_VALUE_
+
+#ifdef RAPIDJSON_YGGDRASIL
+    //////////////////////////
+    // SchemaAccept methods
+    //////////////////////////
+    // Call a schema handler for this schema & its subschemas
+    bool SchemaAccept(SchemaHandlerType& handler) {
+        typename Context::ValidatorMode prev_mode = mode_;
+	SetMode(Context::kSchemaIteratorMode);
+        SetSchemaHandler(&handler);
+	bool out = IterSchema();
+	schema_handler_ = nullptr;
+	mode_ = prev_mode;
+	return out;
+    }
+
+    bool JointSchemaAccept(GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>& rhs,
+			   JointSchemaHandlerType& handler) {
+	typename Context::ValidatorMode prev_mode = rhs.mode_;
+        rhs.SetJointSchemaHandler(&handler);
+	bool out = SchemaAccept(rhs);
+	rhs.mode_ = prev_mode;
+	rhs.joint_schema_handler_ = nullptr;
+	return out;
+    }
+
+    // Implementation of ISchemaIterator<SchemaType>
+#define RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_(method, arg1)\
+    if (!valid_) return false; \
+    if ((!BeginValue() && !GetContinueOnErrors()) || (!CurrentSchema().method arg1 && !GetContinueOnErrors())) {\
+        *documentStack_.template Push<Ch>() = '\0';\
+        documentStack_.template Pop<Ch>(1);\
+        RAPIDJSON_SCHEMA_PRINT(InvalidDocument, documentStack_.template Bottom<Ch>());\
+        valid_ = false;\
+        return valid_;\
+    }
+#define RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_(method, arg2)\
+    for (Context* context = schemaStack_.template Bottom<Context>(); context != schemaStack_.template End<Context>(); context++) {\
+        if (context->validators)\
+            for (SizeType i_ = 0; i_ < context->validatorCount; i_++)\
+	        if (context->validators[i_])\
+                    static_cast<GenericSchemaValidator*>(context->validators[i_])->method arg2;\
+        if (context->patternPropertiesValidators)\
+            for (SizeType i_ = 0; i_ < context->patternPropertiesValidatorCount; i_++)\
+	        if (context->patternPropertiesValidators[i_])\
+                    static_cast<GenericSchemaValidator*>(context->patternPropertiesValidators[i_])->method arg2;\
+	if (context->otherValidators)\
+	    for (SizeType i_ = 0; i_ < context->otherValidatorCount; i_++)\
+	        if (context->otherValidators[i_])\
+	            static_cast<GenericSchemaValidator*>(context->otherValidators[i_])->method arg2;\
+    }
+#define RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_(method, arg2)\
+    valid_ = (EndValue() || GetContinueOnErrors());\
+    return valid_;
+
+    virtual bool IterSchemaSkip() {
+      return CurrentSchema().IterSchemaSkip(CurrentContext());
+    }
+
+  // Iterate over the schema without an external document driver. Any
+  //   registered handler will be called for each subschema
+  // validator1->IterSchema
+  //   validator1->BeginValue
+  //     schema1->BeginValue
+  //   schema1->IterSchema
+  //     CreateParallelValidator(context1)
+  //     validator2->SchemaStart(schema1)
+  //       validator2->BeginValue
+  //         schema2->BeginValue
+  //       schema2->SchemaStart(schema1)
+  //         CreateParallelValidator(context2)
+  //       parallelValidators2->SchemaStart(schema1)
+  //     validator2->SchemaValue(schema1)
+  //       schema2->SchemaValue(schema1)
+  //       parallelValidators2->SchemaValue(schema1)
+  //     [SUBSCHEMAS] validator1->IterSchema for subschemas
+  //     validator2->SchemaEnd
+  //       parallelValidators2->SchemaEnd
+  //       schema2->SchemaEnd
+  //       validator2->EndValue
+  //         schema2->EndValue
+  //           check parallelValidators2
+  //   parallelValidators1->IterSchema
+  //   validator1->EndValue
+  //     schema1->EndValue
+  //       check parallelValidators1
+  //
+  // not_
+  //   core1 vs. core2 true
+  //   core1 vs. not2  false->true
+  //   not1 vs core2 
+  //   not1 vs not2  true->false
+    virtual bool IterSchema() {
+      RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_(IterSchema, (CurrentContext(), this));
+      RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_(IterSchema, ());
+      RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_(IterSchema, ());
+    }
+
+#define RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(method, arg1)\
+    if (!valid_) return false; \
+    if ((!CurrentSchema().method arg1 && !GetContinueOnErrors())) {\
+        *documentStack_.template Push<Ch>() = '\0';\
+        documentStack_.template Pop<Ch>(1);\
+        RAPIDJSON_SCHEMA_PRINT(InvalidDocument, documentStack_.template Bottom<Ch>());\
+        valid_ = false;\
+        return valid_;\
+    }
+#define RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(method, arg2)
+#define RAPIDJSON_SCHEMA_ITER_HANDLE_END_(method, arg2)\
+    return valid_;
+  
+    virtual bool IterSchemaStartObject() {
+      RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(IterSchemaStartObject, (CurrentContext()));
+      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaStartObject, ());
+      return valid_;
+    }
+    virtual bool IterSchemaKey(const Ch* str, SizeType len, bool isPattern=false) {
+      if (!valid_) return false;
+      AppendToken(str, len);
+      if (!CurrentSchema().IterSchemaKey(CurrentContext(), str, len, isPattern) && !GetContinueOnErrors()) {
+	valid_ = false;
+	return valid_;
+      }
+      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaKey, (str, len, isPattern));
+      return valid_;
+    }
+    virtual bool IterSchemaAdditionalProperties() {
+      if (!valid_) return false;
+      AppendToken(SchemaType::GetAdditionalPropertiesString().GetString(),
+		  SchemaType::GetAdditionalPropertiesString().GetStringLength());
+      if (!CurrentSchema().IterSchemaAdditionalProperties(CurrentContext()) && !GetContinueOnErrors()) {
+	valid_ = false;
+	return valid_;
+      }
+      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaAdditionalProperties, ());
+      return valid_;
+    }
+    virtual bool IterSchemaEndObject() {
+      if (!valid_) return false;
+      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaEndObject, ());
+      if (!CurrentSchema().IterSchemaEndObject(CurrentContext()) && !GetContinueOnErrors()) { 
+	valid_ = false; 
+	return valid_; 
+      }
+      RAPIDJSON_SCHEMA_ITER_HANDLE_END_(IterSchemaEndObject, ());
+    }
+    virtual bool IterSchemaStartArray() {
+      RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(IterSchemaStartArray, (CurrentContext()));
+      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaStartArray, ());
+      return valid_;
+    }
+    virtual bool IterSchemaAdditionalItems() {
+      if (!valid_) return false;
+      AppendToken(SchemaType::GetAdditionalItemsString().GetString(),
+		  SchemaType::GetAdditionalItemsString().GetStringLength());
+      if (!CurrentSchema().IterSchemaAdditionalItems(CurrentContext()) && !GetContinueOnErrors()) {
+	valid_ = false;
+	return valid_;
+      }
+      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaAdditionalItems, ());
+      return valid_;
+    }
+    virtual bool IterSchemaEndArray() {
+      if (!valid_) return false;
+      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaEndArray, ());
+      if (!CurrentSchema().IterSchemaEndArray(CurrentContext()) && !GetContinueOnErrors()) {
+	valid_ = false;
+	return valid_;
+      }
+      RAPIDJSON_SCHEMA_ITER_HANDLE_END_(IterSchemaEndArray, ());
+    }
+    // End implementation of ISchemaIterator<SchemaType>
+  
+    // Implementation of ISchemaHandler<SchemaType>
+#define RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(method, arg1)\
+    RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(method, arg1)
+#define RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(method, arg2)\
+    RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_(method, arg2)
+#define RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(method, arg2)\
+    return valid_;
+
+    // virtual const typename SchemaType::ValueType& GetSchemaHandlerError() const {
+    //   return GetError();
+    // }
+
+    virtual void TransferHandlerError(ErrorHandlerType& error_handler) const {
+      typename SchemaType::AllocatorType allocator;
+      SValue tmp(GetError(), allocator);
+      error_handler.SchemaHandlerError(tmp);
+    }
+    virtual SchemaHandlerType* CreateSchemaHandler() {
+      if (schemaStack_.Empty()) {
+	PointerType p;
+	return static_cast<GenericSchemaValidator*>(CreateSchemaValidator(root_, false, p));
+      }
+      std::cerr << "CreateSchemaHandler: Non-root" << std::endl;
+      return static_cast<GenericSchemaValidator*>(CreateSchemaValidator(CurrentSchema(), false, CurrentContext().schemaPointerAbs));
+    }
+  
+    virtual void DestroySchemaHandler(SchemaHandlerType* handler) {
+        GenericSchemaValidator* v = static_cast<GenericSchemaValidator*>(handler);
+	DestroySchemaValidator(v);
+    }
+
+    virtual bool SchemaSkip(const SchemaType& s) {
+        return CurrentSchema().SchemaSkip(CurrentContext(), s);
+    }
+  
+    virtual bool SchemaStart(const SchemaType& s, typename SchemaType::Context& rhs_context) {
+        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaStart");
+	RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_(SchemaStart, (CurrentContext(), s, rhs_context));
+        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaStart, (s, rhs_context));
+        return valid_;
+    }
+    virtual bool SchemaEnd() {
+        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaEnd");
+        if (!valid_) return false;
+        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaEnd, ());
+        if (!CurrentSchema().SchemaEnd(CurrentContext()) && !GetContinueOnErrors()) { 
+            valid_ = false; 
+            return valid_; 
+        }
+	RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_(SchemaEnd, ());
+    }
+#define RAPIDJSON_SCHEMA_ACCEPT_HANDLE_VALUE_(method, arg1, arg2) \
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(method, arg1);\
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(method, arg2);\
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(method, arg2)
+#define RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(method)\
+    virtual bool Schema ## method(const SchemaType& s) {\
+        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_VALUE_(Schema ## method, (CurrentContext(), s), (s));\
+    }
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Null)
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Boolean)
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(String)
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Number)
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Integer)
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Encoding)
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Scalar)
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(NDArray)
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Python)
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Geometry)
+    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Schema)
+#undef RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_
+#undef RAPIDJSON_SCHEMA_ACCEPT_HANDLE_VALUE_
+    
+    virtual bool SchemaStartObject(const SchemaType& s) {
+        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaStartObject");
+        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(SchemaStartObject, (CurrentContext(), s));
+        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaStartObject, (s));
+        return valid_;
+    }
+    virtual bool SchemaKey(const Ch* str, SizeType len, bool isPattern=false) {
+        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaKey", str);
+        if (!valid_) return false;
+        AppendToken(str, len);
+        if (!CurrentSchema().SchemaKey(CurrentContext(), str, len, isPattern) && !GetContinueOnErrors()) {
+            valid_ = false;
+            return valid_;
+        }
+        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaKey, (str, len, isPattern));
+        return valid_;
+    }
+    virtual bool SchemaAdditionalProperties() {
+        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaAdditionalProperties");
+        if (!valid_) return false;
+        AppendToken(SchemaType::GetAdditionalPropertiesString().GetString(),
+		    SchemaType::GetAdditionalPropertiesString().GetStringLength());
+        if (!CurrentSchema().SchemaAdditionalProperties(CurrentContext()) && !GetContinueOnErrors()) {
+            valid_ = false;
+            return valid_;
+        }
+        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaAdditionalProperties, ());
+        return valid_;
+    }
+    virtual bool SchemaEndObject(SizeType memberCount, const bool additionalProperties=false) {
+        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaEndObject");
+        if (!valid_) return false;
+        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaEndObject, (memberCount, additionalProperties));
+        if (!CurrentSchema().SchemaEndObject(CurrentContext(), memberCount, additionalProperties) && !GetContinueOnErrors()) { 
+            valid_ = false; 
+            return valid_; 
+        }
+	RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(SchemaEndObject, (memberCount, additionalProperties));
+    }
+    virtual bool SchemaStartArray(const SchemaType& s) {
+        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaStartArray");
+	RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(SchemaStartArray, (CurrentContext(), s));
+	RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaStartArray, (s));
+        return valid_;
+    }
+    virtual bool SchemaAdditionalItems() {
+        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaAdditionalItems");
+        if (!valid_) return false;
+        AppendToken(SchemaType::GetAdditionalItemsString().GetString(),
+		    SchemaType::GetAdditionalItemsString().GetStringLength());
+        if (!CurrentSchema().SchemaAdditionalItems(CurrentContext()) && !GetContinueOnErrors()) {
+            valid_ = false;
+            return valid_;
+        }
+        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaAdditionalItems, ());
+        return valid_;
+    }
+    virtual bool SchemaEndArray(SizeType elementCount, const bool additionalItems=false) {
+        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaEndArray");
+        if (!valid_) return false;
+	RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaEndArray, (elementCount, additionalItems));
+        if (!CurrentSchema().SchemaEndArray(CurrentContext(), elementCount, additionalItems) && !GetContinueOnErrors()) {
+            valid_ = false;
+            return valid_;
+        }
+	RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(SchemaEndArray, (elementCount, additionalItems));
+    }
+    
+#undef RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_
+#undef RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_
+#undef RAPIDJSON_SCHEMA_ITER_HANDLE_END_
+    
+#undef RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_
+#undef RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_
+#undef RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_
+  
+#undef RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_
+#undef RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_
+#undef RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_
+    // End implementation of ISchemaHandler<SchemaType>
+#endif // RAPIDJSON_YGGDRASIL
 
     // Implementation of ISchemaStateFactory<SchemaType>
     virtual ISchemaValidator* CreateSchemaValidator(const SchemaType& root, const bool inheritContinueOnErrors
@@ -12114,12 +14215,24 @@ public:
 	if (relativePathRoot_.IsString())
 	  static_cast<GenericSchemaValidator*>(sv)->SetRelativePathRoot(relativePathRoot_.GetString(),
 									relativePathRoot_.GetStringLength());
+	if (schema_handler_)
+	  static_cast<GenericSchemaValidator*>(sv)->SetSchemaHandler(schema_handler_->CreateSchemaHandler());
+	if (joint_schema_handler_)
+	  static_cast<GenericSchemaValidator*>(sv)->SetJointSchemaHandler(joint_schema_handler_->CreateJointSchemaHandler());
+	if (mode_)
+	  static_cast<GenericSchemaValidator*>(sv)->SetMode(mode_);
 #endif // RAPIDJSON_YGGDRASIL
         return sv;
     }
 
     virtual void DestroySchemaValidator(ISchemaValidator* validator) {
         GenericSchemaValidator* v = static_cast<GenericSchemaValidator*>(validator);
+	if (schema_handler_ && v->schema_handler_) {
+	  schema_handler_->DestroySchemaHandler(v->schema_handler_);
+	  v->schema_handler_ = nullptr;
+	}
+	if (joint_schema_handler_ && v->joint_schema_handler_)
+	  joint_schema_handler_->DestroyJointSchemaHandler(v->joint_schema_handler_);
         v->~GenericSchemaValidator();
         StateAllocator::Free(v);
     }
@@ -12149,10 +14262,11 @@ public:
 
 #ifdef RAPIDJSON_YGGDRASIL
     //! Compare against another schema
-    bool Compare(const GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>& rhs) {
-      PushSchema(root_);
-      bool out = root_.Compare(rhs.root_, CurrentContext());
-      PopSchema();
+    bool Compare(GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>& rhs) {
+      typename Context::ValidatorMode prev_mode = rhs.mode_;
+      rhs.SetMode(Context::kComparisonMode);
+      bool out = SchemaAccept(rhs);
+      rhs.mode_ = prev_mode;
       return out;
     }
     bool Compare(const SchemaDocumentType& rhs) {
@@ -12163,10 +14277,18 @@ public:
       SchemaDocumentType rhs_sd(rhs);
       return Compare(rhs_sd);
     }
+    //! Check if schema can be an NDArray
+    bool CanBeNDArray() {
+      PushSchema(root_);
+      bool out = root_.CanBeNDArray(CurrentContext());
+      PopSchema();
+      return out;
+    }
     //! Generate data according to a schema
     template<typename VT>
     bool GenerateData(VT& data) {
       PushSchema(root_);
+      CurrentContext().mode = Context::kGenerateMode;
       typename VT::ValueType& dataV = *((typename VT::ValueType*)(&data));
       bool out = root_.GenerateData(dataV, CurrentContext(), data.GetAllocator());
       PopSchema();
@@ -12205,7 +14327,9 @@ private:
 	, warning_(kObjectType),
 	currentWarning_(),
 	relativePathRoot_(),
-	python_disabled_(false)
+	python_disabled_(false),
+	mode_(Context::kValidationMode),
+	schema_handler_(0), joint_schema_handler_(0)
 #endif // RAPIDJSON_YGGDRASIL
     {
         RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::GenericSchemaValidator (internal)", basePath && basePathSize ? basePath : "");
@@ -12242,6 +14366,10 @@ private:
 #ifdef RAPIDJSON_YGGDRASIL
 	    PointerType prevValuePointer = CurrentContext().valuePointer;
 	    PointerType* pa = CurrentContext().patternPropertiesPointers;
+	    SizeType countOther = CurrentContext().otherSchemaCount;
+	    const SchemaType** saOther = CurrentContext().otherSchemas;
+	    PointerType* paOther = CurrentContext().otherPointers;
+	    typename Context::OtherValidatorType otherValidatorType = CurrentContext().valueOtherValidatorType;
 #endif // RAPIDJSON_YGGDRASIL
             typename Context::PatternValidatorType patternValidatorType = CurrentContext().valuePatternValidatorType;
             bool valueUniqueness = CurrentContext().valueUniqueness;
@@ -12264,6 +14392,19 @@ private:
 #endif // RAPIDJSON_YGGDRASIL
             }
 
+#ifdef RAPIDJSON_YGGDRASIL
+	    if (countOther > 0) {
+                CurrentContext().objectOtherValidatorType = otherValidatorType;
+                ISchemaValidator**& va = CurrentContext().otherValidators;
+                SizeType& validatorCount = CurrentContext().otherValidatorCount;
+                va = static_cast<ISchemaValidator**>(MallocState(sizeof(ISchemaValidator*) * countOther));
+                std::memset(va, 0, sizeof(ISchemaValidator*) * countOther);
+		RAPIDJSON_ASSERT(paOther);
+                for (SizeType i = 0; i < countOther; i++)
+		    va[validatorCount++] = CreateSchemaValidator(*saOther[i], true, paOther[i]);  // Inherit continueOnError
+	    }
+#endif // RAPIDJSON_YGGDRASIL
+
             CurrentContext().arrayUniqueness = valueUniqueness;
 #ifdef RAPIDJSON_YGGDRASIL
 	    CurrentContext().valuePointer = prevValuePointer;
@@ -12271,10 +14412,15 @@ private:
 #endif // RAPIDJSON_YGGDRASIL
         }
 #ifdef RAPIDJSON_YGGDRASIL
+	CurrentContext().mode = mode_;
+	CurrentContext().schema_handler = schema_handler_;
+	CurrentContext().joint_schema_handler = joint_schema_handler_;
 	CurrentContext().python_disabled = python_disabled_;
 	if (relativePathRoot_.IsString())
 	  CurrentContext().relativePathRoot.SetString(relativePathRoot_.GetString(),
 						      relativePathRoot_.GetStringLength());
+	if (IsSchemaIterator())
+	  CurrentContext().schema_iterator = this;
 #endif // RAPIDJSON_YGGDRASIL
         return true;
     }
@@ -12353,7 +14499,52 @@ private:
         c->~Context();
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+    virtual void GetSchemaLocation(GenericStringBuffer<EncodingType>& sb,
+				   const bool parent = false,
+				   PointerType schema = PointerType()) const {
+        SizeType len = CurrentSchema().GetURI().GetStringLength();
+        if (len) memcpy(sb.Push(len), CurrentSchema().GetURI().GetString(), len * sizeof(Ch));
+	if (!schema.GetTokenCount())
+	  schema = GetInvalidSchemaPointer();
+	((parent && schema.GetTokenCount() > 0)
+	 ? PointerType(schema.GetTokens(), schema.GetTokenCount() - 1)
+	 : schema).StringifyUriFragment(sb);
+    }
+    void AddErrorSchemaIteratorLocation(ValueType& result, bool parent=false) {
+        GenericStringBuffer<EncodingType> sb;
+	if (IsSchemaIterator())
+	  GetSchemaLocation(sb, parent);
+	else if (CurrentContext().iterationContext &&
+		 CurrentContext().iterationContext->schema_iterator)
+	  CurrentContext().iterationContext->schema_iterator->GetSchemaLocation(sb, parent);
+	ValueType iteratorRef(sb.GetString(), static_cast<SizeType>(sb.GetSize() / sizeof(Ch)),
+			      GetStateAllocator());
+	result.AddMember(GetSchemaIteratorRefString(), iteratorRef, GetStateAllocator());
+    }
+    void AddErrorSchemaHandlerLocation(ValueType& result) {
+        if (!IsSchemaHandler())
+	  return;
+        GenericStringBuffer<EncodingType> sb;
+	if (IsSchemaHandler())
+	  GetSchemaLocation(sb);
+	else if (CurrentContext().schema_handler)
+	  CurrentContext().schema_handler->GetSchemaLocation(sb);
+	// else if (schema_handler_)
+	//   schema_handler_->GetSchemaLocation(sb);
+	ValueType handlerRef(sb.GetString(), static_cast<SizeType>(sb.GetSize() / sizeof(Ch)),
+			     GetStateAllocator());
+	result.AddMember(GetSchemaHandlerRefString(), handlerRef, GetStateAllocator());
+    }
+#endif // RAPIDJSON_YGGDRASIL
+
     void AddErrorInstanceLocation(ValueType& result, bool parent) {
+#ifdef RAPIDJSON_YGGDRASIL
+	if (IsSchemaIterator() || IsSchemaHandler()) {
+	  AddErrorSchemaIteratorLocation(result, parent);
+	  return;
+	}
+#endif // RAPIDJSON_YGGDRASIL
         GenericStringBuffer<EncodingType> sb;
         PointerType instancePointer = GetInvalidDocumentPointer();
         ((parent && instancePointer.GetTokenCount() > 0)
@@ -12365,6 +14556,13 @@ private:
     }
 
     void AddErrorSchemaLocation(ValueType& result, PointerType schema = PointerType()) {
+#ifdef RAPIDJSON_YGGDRASIL
+	if (IsSchemaIterator() || IsSchemaHandler()) {
+	  RAPIDJSON_ASSERT(schema.GetTokenCount() == 0);
+	  AddErrorSchemaHandlerLocation(result);
+	  return;
+	}
+#endif // RAPIDJSON_YGGDRASIL
         GenericStringBuffer<EncodingType> sb;
         SizeType len = CurrentSchema().GetURI().GetStringLength();
         if (len) memcpy(sb.Push(len), CurrentSchema().GetURI().GetString(), len * sizeof(Ch));
@@ -12374,6 +14572,18 @@ private:
             GetStateAllocator());
         result.AddMember(GetSchemaRefString(), schemaRef, GetStateAllocator());
     }
+
+#ifdef RAPIDJSON_YGGDRASIL
+    void AddErrorSchemaLocation(const StringRefType& key,
+				ValueType& result,
+				PointerType schema = PointerType()) {
+        GenericStringBuffer<EncodingType> sb;
+	GetSchemaLocation(sb, false, schema);
+        ValueType schemaRef(sb.GetString(), static_cast<SizeType>(sb.GetSize() / sizeof(Ch)),
+            GetStateAllocator());
+        result.AddMember(key, schemaRef, GetStateAllocator());
+    }
+#endif // RAPIDJSON_YGGDRASIL
 
     void AddErrorCode(ValueType& result, const ValidateErrorCode code) {
         result.AddMember(GetErrorCodeString(), code, GetStateAllocator());
@@ -12492,6 +14702,9 @@ private:
     ValueType currentWarning_;
     ValueType relativePathRoot_;
     bool python_disabled_;
+    typename Context::ValidatorMode mode_;
+    SchemaHandlerType* schema_handler_;
+    JointSchemaHandlerType* joint_schema_handler_;
 #endif // RAPIDJSON_YGGDRASIL
 };
 
@@ -12577,6 +14790,8 @@ private:
 
 #ifdef RAPIDJSON_YGGDRASIL
 
+/////////////////////////////////////////////////////////////////////
+// GenericSchemaNormalizer
 template <
   typename SchemaDocumentType,
   typename OutputHandler = BaseReaderHandler<typename SchemaDocumentType::SchemaType::EncodingType>,
@@ -12604,6 +14819,7 @@ public:
      schemaStackCapacity,
      documentStackCapacity),
     normalized_(0, &this->GetStateAllocator()), normalization_depth_(0), validator_index_(0), child_validators_(0), temp_instanceRef_(NULL), temp_schemaRef_(NULL), schemaPointerAbs_(allocator) {
+    this->SetMode(SchemaType::Context::kNormalizationMode);
     normalized_.SetDocumentStack(&this->documentStack_);
   }
   GenericSchemaNormalizer(
@@ -12621,6 +14837,7 @@ public:
     normalized_(0, &this->GetStateAllocator()), normalization_depth_(0), validator_index_(0), child_validators_(0),
     temp_instanceRef_(NULL), temp_schemaRef_(NULL),
     schemaPointerAbs_(allocator) {
+    this->SetMode(SchemaType::Context::kNormalizationMode);
     normalized_.SetDocumentStack(&this->documentStack_);
   }
   GenericSchemaNormalizer(
@@ -12645,6 +14862,7 @@ public:
     validator_index_(0), child_validators_(0),
     temp_instanceRef_(NULL), temp_schemaRef_(NULL),
     schemaPointerAbs_(schemaPointerAbs, &normalized_.GetAllocator()) {
+    this->SetMode(SchemaType::Context::kNormalizationMode);
     normalized_.core_ = &core;
     normalized_.SetDocumentStack(&this->documentStack_);
   }
@@ -12678,6 +14896,7 @@ private:
     normalization_depth_(normalization_depth), validator_index_(validator_index), child_validators_(0),
     temp_instanceRef_(NULL), temp_schemaRef_(NULL),
     schemaPointerAbs_(schemaPointerAbs, &normalized_.GetAllocator()) {
+    this->SetMode(Context::kNormalizationMode);
     normalized_.SetDocumentStack(&this->documentStack_);
   }
   
@@ -12754,11 +14973,23 @@ public:
     if (this->relativePathRoot_.IsString())
       static_cast<GenericSchemaNormalizer*>(sv)->SetRelativePathRoot(this->relativePathRoot_.GetString(),
 								     this->relativePathRoot_.GetStringLength());
+    if (this->schema_handler_)
+      static_cast<GenericSchemaNormalizer*>(sv)->SetSchemaHandler(this->schema_handler_->CreateSchemaHandler());
+    if (this->joint_schema_handler_)
+      static_cast<GenericSchemaNormalizer*>(sv)->SetJointSchemaHandler(this->joint_schema_handler_->CreateJointSchemaHandler());
+    if (this->mode_)
+      static_cast<GenericSchemaNormalizer*>(sv)->SetMode(this->mode_);
     return sv;
   }
 
   void DestroySchemaValidator(ISchemaValidator* validator) OVERRIDE_CXX11 {
     GenericSchemaNormalizer* v = static_cast<GenericSchemaNormalizer*>(validator);
+    if (this->schema_handler_ && v->schema_handler_) {
+      this->schema_handler_->DestroySchemaHandler(v->schema_handler_);
+      v->schema_handler_ = nullptr;
+    }
+    if (this->joint_schema_handler_ && v->joint_schema_handler_)
+      this->joint_schema_handler_->DestroyJointSchemaHandler(v->joint_schema_handler_);
     v->~GenericSchemaNormalizer();
     StateAllocator::Free(v);
   }
@@ -12799,7 +15030,7 @@ public:
 
 typedef GenericSchemaNormalizer<SchemaDocument> SchemaNormalizer;
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
 // SchemaEncoder
 //
 //! Handler to encode schema from an object
@@ -12943,6 +15174,174 @@ private:
 typedef GenericSchemaEncoder<UTF8<char> > SchemaEncoder;
 
 
+/////////////////////////////////////////////////////////////
+// Class for generating documents to match a schema
+#ifdef INVALID_MACRO_YGKSDFLKD
+template <typename SchemaDocumentType>
+class GenericSchemaGenerator :
+    public internal::ISchemaHandler<typename SchemaDocumentType::SchemaType> {
+    typedef typename SchemaDocumentType::SchemaType SchemaType;
+    typedef typename SchemaDocumentType::PointerType PointerType;
+    typedef typename SchemaType::EncodingType EncodingType;
+    typedef typename SchemaType::SValue SValue;
+    typedef typename EncodingType::Ch Ch;
+    template<typename VT>
+    bool GenerateNull(Context& context, VT& data) const {
+      data.SetNull();
+      return Null(context);
+    }
+    template<typename T>
+    T GenerateNumberData(const T& def, T offset=0) const {
+      T out = def;
+      if (!multipleOf_.IsNull()) {
+	offset = static_cast<T>(2 * multipleOf_.GetDouble());
+      }
+      if ((!minimum_.IsNull()) && (!maximum_.IsNull()))
+	out = static_cast<T>((minimum_.GetDouble() + maximum_.GetDouble()) / 2.0);
+      else if (!minimum_.IsNull())
+	out = static_cast<T>(minimum_.GetDouble()) + offset;
+      else if (!maximum_.IsNull())
+	out = static_cast<T>(maximum_.GetDouble()) - offset;
+      if (!multipleOf_.IsNull())
+	out = static_cast<T>(multipleOf_.GetDouble() * internal::value_floor((double)out / multipleOf_.GetDouble()));
+      return out;
+    }
+#define YGG_GENERATE_NUMBER_DATA(method, T, def, offset)		\
+    template<typename VT>						\
+    T Generate ## method(Context& context, VT& data) const {		\
+      data.Set ## method(GenerateNumberData<T>(def, offset));		\
+      return method(context, data.Get ## method());			\
+    }
+    template<typename VT>
+    bool GenerateBool(Context& context, VT& data) const {
+      data.SetBool(true);
+      return Bool(context, true);
+    }
+    YGG_GENERATE_NUMBER_DATA(Int, int, 0, 1);
+    YGG_GENERATE_NUMBER_DATA(Uint, unsigned int, 0, 1);
+    YGG_GENERATE_NUMBER_DATA(Int64, int64_t, 0, 1);
+    YGG_GENERATE_NUMBER_DATA(Uint64, uint64_t, 0, 1);
+    YGG_GENERATE_NUMBER_DATA(Double, double, 0.0, 0.5);
+  // Int
+  //Uint
+  //Int64
+  //Uint64
+  //Double
+  //RawNumber?
+  //String
+  //YggdrasilString
+  //YggdrasilStartObject
+  //StartObject
+  //Key
+  //EndObject
+  //StartArrray
+  //EndArray
+};
+typedef GenericSchemaGenerator<SchemaDocument> SchemaGenerator;
+
+/////////////////////////////////////////////////////////////
+// Class for comparing schemas
+template <typename SchemaDocumentType>
+class GenericSchemaComparer :
+    public internal::IJointSchemaHandler<typename SchemaDocumentType::SchemaType> {
+  typedef typename SchemaDocumentType::SchemaType SchemaType;
+  typedef typename SchemaDocumentType::PointerType PointerType;
+  typedef typename SchemaType::EncodingType EncodingType;
+  typedef typename SchemaType::SValue SValue;
+  typedef typename EncodingType::Ch Ch;
+
+public:
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA(key, expected, actual)		\
+      {									\
+	context.error_handler.IncompatibleSchemas(key, expected, actual); \
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
+      }
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(key, expected, actual)	\
+      {									\
+	context.error_handler.IncompatibleSchemas(key, expected, actual, true); \
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
+      }
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, a, b)	\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a).Move(), SValue(b).Move())
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(key, a, b)	\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a.GetString(), a.GetStringLength()).Move(), SValue(b.GetString(), b.GetStringLength()).Move())
+#define RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(key, a, b)	\
+      RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, (bool)(a), (bool)(b))
+#define CHECK_INCOMPATIBLE_IF_SET(key, err, def)	\
+      if (lhs.key != def && rhs.key != def && lhs.key != rhs.key)	\
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), SValue(lhs.key).Move(), SValue(rhs.key).Move())
+#define CHECK_INCOMPATIBLE_IF_PRESENT(key, err) \
+      if (!lhs.key.IsNull() && !rhs.key.IsNull() && lhs.key != rhs.key)	\
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), lhs.key, rhs.key)
+  bool Start(Context& context, const SchemaType& lhs, const SchemaType& rhs) {
+      bool native_scalar = false;
+      bool lhs_any = (lhs.type_ == ((1 << kTotalSchemaType) - 1));
+      bool rhs_any = (rhs.type_ == ((1 << kTotalSchemaType) - 1));
+      // Type
+      if (!(((lhs.type_ || rhs.type_) && (lhs.type_ & rhs.type_)) ||
+	    ((lhs.yggtype_ || rhs.yggtype_) && (lhs.yggtype_ & rhs.yggtype_)))) {
+	if (lhs.CompareNativeScalar(rhs.type_) ||
+	    rhs.CompareNativeScalar(lhs.type_)) {
+	  native_scalar = true;
+	} else if (((lhs.type_ & (1 << kObjectSchemaType)) &&
+		    (rhs.yggtype_ & ((1 << kYggPythonInstanceSchemaType) |
+				     (1 << kYggSchemaSchemaType)))) ||
+		   ((rhs.type_ & (1 << kObjectSchemaType)) &&
+		    (lhs.yggtype_ & ((1 << kYggPythonInstanceSchemaType) |
+				 (1 << kYggSchemaSchemaType))))) {
+	} else {
+	  lhs.DisallowedTypeKey(context);
+	  rhs.DisallowedTypeKey(context, true);
+	  RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+	}
+      }
+      if ((!native_scalar) && (!(rhs_any || lhs_any))
+	  && (!(lhs.subtype_ & rhs.subtype_))) {
+	lhs.DisallowedSubTypeKey(context);
+	rhs.DisallowedSubTypeKey(context, true);
+	RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetSubTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+      }
+      // Enum
+      if (lhs.enumCount_ || rhs.enumCount_) {
+	for (SizeType i = 0; i < lhs.enumCount_; i++) {
+	  for (SizeType j = 0; j < rhs.enumCount_; j++) {
+	    if (lhs.enum_[i] == rhs.enum_[j])
+	      goto foundEnum;
+	  }
+	}
+	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetEnumString(), lhs.enumValues_, rhs.enumValues_);
+      foundEnum:;
+      }
+      return true;
+  }
+
+#undef CHECK_INCOMPATIBLE_IF_PRESENT
+#undef CHECK_INCOMPATIBLE_IF_SET
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_STR
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP
+#undef RAPIDJSON_INCOMPATIBLE_SCHEMA
+
+};
+typedef GenericSchemaComparer<SchemaDocument> SchemaComparer;
+  
+/////////////////////////////////////////////////////////////
+// Class for merging schemas
+template <typename SchemaDocumentType>
+class GenericSchemaMerger :
+    public internal::IJointSchemaHandler<typename SchemaDocumentType::SchemaType> {
+    typedef typename SchemaDocumentType::SchemaType SchemaType;
+    typedef typename SchemaDocumentType::PointerType PointerType;
+    typedef typename SchemaType::EncodingType EncodingType;
+    typedef typename SchemaType::SValue SValue;
+    typedef typename EncodingType::Ch Ch;
+};
+typedef GenericSchemaMerger<SchemaDocument> SchemaMerger;
+#endif
+  
+/////////////////////////////////////////////////////////////
+// Document methods using validation/normalization classes
 template <typename Encoding, typename Allocator, typename StackAllocator>
 bool GenericDocument<Encoding,Allocator,StackAllocator>::Normalize(const ValueType& schema, StringBuffer* error) {
   GenericSchemaDocument<ValueType> sd(schema);
@@ -12962,6 +15361,19 @@ bool GenericDocument<Encoding,Allocator,StackAllocator>::Normalize(const ValueTy
       return false;
     this->FinalizeFromStack();
   }
+  return true;
+}
+
+template <typename Encoding, typename Allocator, typename StackAllocator>
+bool GenericDocument<Encoding,Allocator,StackAllocator>::EncodeSchema(const ValueType& doc, const bool minimal) {
+  GenericSchemaEncoder<Encoding, Allocator, StackAllocator> encoder(minimal);
+  doc.Accept(encoder);
+  if (!this->Accept(encoder))
+    return false;
+  this->SetNull();
+  if (!encoder.GetSchema().Accept(*this))
+    return false;
+  this->FinalizeFromStack();
   return true;
 }
 

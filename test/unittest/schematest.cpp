@@ -4843,7 +4843,7 @@ TEST(SchemaValidator, ReadOnlyWhenWriting) {
     VALIDATE(s, "{ \"rprop\": \"hello\" }", true);
     INVALIDATE_(s, "{ \"rprop\": \"hello\" }", "/properties/rprop", "readOnly", "/rprop",
         "{ \"readOnly\": {"
-        "    \"errorCode\": 46, \"instanceRef\": \"#/rprop\", \"schemaRef\": \"#/properties/rprop\""
+        "    \"errorCode\": 48, \"instanceRef\": \"#/rprop\", \"schemaRef\": \"#/properties/rprop\""
         "  }"
         "}",
         kValidateDefaultFlags | kValidateWriteFlag, SchemaValidator, Pointer);
@@ -4865,7 +4865,7 @@ TEST(SchemaValidator, WriteOnlyWhenReading) {
     VALIDATE(s, "{ \"wprop\": true }", true);
     INVALIDATE_(s, "{ \"wprop\": true }", "/properties/wprop", "writeOnly", "/wprop",
         "{ \"writeOnly\": {"
-        "    \"errorCode\": 47, \"instanceRef\": \"#/wprop\", \"schemaRef\": \"#/properties/wprop\""
+        "    \"errorCode\": 49, \"instanceRef\": \"#/wprop\", \"schemaRef\": \"#/properties/wprop\""
         "  }"
         "}",
         kValidateDefaultFlags | kValidateReadFlag, SchemaValidator, Pointer);
@@ -5116,6 +5116,16 @@ TEST(SchemaEncoder, Schema) {
 		   "}");
 }
 
+#define COMPARE_SHOW_DOCS                                               \
+  {                                                                     \
+    StringBuffer sb_lhs, sb_rhs;                                        \
+    PrettyWriter<StringBuffer> w_lhs(sb_lhs), w_rhs(sb_rhs);            \
+    sd_lhs.Accept(w_lhs);                                               \
+    sd_rhs.Accept(w_rhs);                                               \
+    printf("LHS:\n%s\nRHS:\n%s\n",                                      \
+           sb_lhs.GetString(), sb_rhs.GetString());                     \
+  }
+                                                        
 #define COMPARE(lhs, rhs)						\
   {									\
     Document sd_lhs, sd_rhs;						\
@@ -5132,10 +5142,11 @@ TEST(SchemaEncoder, Schema) {
     EXPECT_TRUE(code == kValidateErrorNone);				\
     EXPECT_TRUE(validator_lhs.GetInvalidSchemaKeyword() == 0);		\
     if (!result) {							\
-      StringBuffer sb;							\
-      PrettyWriter<StringBuffer> w(sb);					\
+      StringBuffer sb;                                                  \
+      PrettyWriter<StringBuffer> w(sb);                                 \
       validator_lhs.GetError().Accept(w);				\
-      printf("Comparison error: %s\n", sb.GetString());			\
+      COMPARE_SHOW_DOCS;                                                \
+      printf("Comparison error:\n%s\n", sb.GetString());                \
     }									\
   }
 #define INVALID_COMPARE(lhs, rhs, error)				\
@@ -5157,23 +5168,39 @@ TEST(SchemaEncoder, Schema) {
       StringBuffer sb_t;						\
       PrettyWriter<StringBuffer> w_t(sb_t);				\
       printf("ErrorMsg = %s\n", sb_t.GetString());			\
-      StringBuffer sb;							\
-      PrettyWriter<StringBuffer> w(sb);					\
-      validator_lhs.GetError().Accept(w);				\
-      printf("GetError(): %s", sb.GetString());				\
+      StringBuffer sb_lhs;                                              \
+      PrettyWriter<StringBuffer> w_lhs(sb_lhs);                         \
+      validator_lhs.GetError().Accept(w_lhs);				\
+      StringBuffer sb_rhs;                                              \
+      PrettyWriter<StringBuffer> w_rhs(sb_rhs);                         \
+      validator_rhs.GetError().Accept(w_rhs);				\
+      printf("lhs.GetError(): %s\nrhs.GetError(): %s", sb_lhs.GetString(), sb_rhs.GetString()); \
       ADD_FAILURE();							\
     }									\
     if (validator_lhs.GetError() != e) {				\
-      StringBuffer sb;							\
-      PrettyWriter<StringBuffer> w(sb);					\
-      validator_lhs.GetError().Accept(w);				\
+      COMPARE_SHOW_DOCS;                                                \
+      StringBuffer sb_lhs;                                              \
+      PrettyWriter<StringBuffer> w_lhs(sb_lhs);                         \
+      validator_lhs.GetError().Accept(w_lhs);				\
+      StringBuffer sb_rhs;						\
+      PrettyWriter<StringBuffer> w_rhs(sb_rhs);                         \
+      validator_rhs.GetError().Accept(w_rhs);                           \
       StringBuffer sb_e;						\
       PrettyWriter<StringBuffer> w_e(sb_e);				\
       e.Accept(w_e);							\
-      printf("GetError() Expected: %s Actual: %s\n", sb_e.GetString(), sb.GetString()); \
+      printf("lhs.GetError()\nExpected: %s\nActual RHS: %s\nActual LHS: %s\n", sb_e.GetString(), sb_lhs.GetString(), sb_rhs.GetString()); \
       ADD_FAILURE();							\
     }									\
   }
+#define COMPARE_SYMMETRIC(lhs, rhs)                     \
+  COMPARE(lhs, rhs);                                    \
+  COMPARE(rhs, lhs)
+#define INVALID_COMPARE_SYMMETRIC(lhs, rhs, error)      \
+  INVALID_COMPARE(lhs, rhs, error);                     \
+  INVALID_COMPARE(rhs, lhs, error)
+#define INVALID_COMPARE_ASYMMETRIC(lhs, rhs, error_lhs, error_rhs)      \
+  INVALID_COMPARE(lhs, rhs, error_lhs);                                 \
+  INVALID_COMPARE(rhs, lhs, error_rhs)
   
 TEST(SchemaCompare, Type) {
   COMPARE("{"
@@ -5196,9 +5223,10 @@ TEST(SchemaCompare, Type) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"type\","
-		  "    \"expected\": [\"schema\"], \"actual\": [\"string\"]"
+		  "    \"expected\": [\"schema\"],"
+                  "    \"actual\": [\"string\"]"
 		  "}}");
 }
 TEST(SchemaCompare, SubType) {
@@ -5224,7 +5252,7 @@ TEST(SchemaCompare, SubType) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"subtype\","
 		  "    \"expected\": [\"float\"], \"actual\": [\"int\"]"
 		  "}}");
@@ -5242,7 +5270,7 @@ TEST(SchemaCompare, Precision) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"precision\","
 		  "    \"expected\": 8, \"actual\": 4"
 		  "}}");
@@ -5285,7 +5313,7 @@ TEST(SchemaCompare, Units) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"units\","
 		  "    \"expected\": \"cm\", \"actual\": \"kg\""
 		  "}}");
@@ -5328,7 +5356,7 @@ TEST(SchemaCompare, Shape) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"shape\","
 		  "    \"expected\": [2, 3], \"actual\": [4, 5]"
 		  "}}");
@@ -5383,7 +5411,7 @@ TEST(SchemaCompare, NDim) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"ndim\","
 		  "    \"expected\": 2, \"actual\": 3"
 		  "}}");
@@ -5414,7 +5442,7 @@ TEST(SchemaCompare, Encoding) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"encoding\","
 		  "    \"expected\": \"UTF8\", \"actual\": \"null\""
 		  "}}");
@@ -5447,7 +5475,7 @@ TEST(SchemaCompare, Class) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"class\","
 		  "    \"expected\": \"example_python:ExampleClass\", \"actual\": \"example_python:OtherClass\""
 		  "}}");
@@ -5468,7 +5496,7 @@ TEST(SchemaCompare, Enum) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"enum\","
 		  "    \"expected\": [\"NW\", \"NE\"], \"actual\": [\"SW\", \"SE\"]"
 		  "}}");
@@ -5499,11 +5527,10 @@ TEST(SchemaCompare, Not) {
 		  "{"
 		  "  \"not\": { \"type\": \"schema\" }"
 		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-		  "    \"property\": \"not\","
-		  "    \"expected\": false, \"actual\": true"
+		  "{ \"not\": {"
+		  "  \"errorCode\": 25,"
+		  "  \"schemaIteratorRef\": \"#\""
+                  // "  \"schemaHandlerRef\": \"#\""
 		  "}}");
 }
 TEST(SchemaCompare, AllOf) {
@@ -5540,13 +5567,31 @@ TEST(SchemaCompare, AllOf) {
 		  "      \"maxLength\": 3 }"
 		  "  ]"
 		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#/allOf/0\","
-		  "    \"schemaRef\": \"#/allOf/1\","
-		  "    \"property\": \"maxLength\","
-		  "    \"expected\": 5, \"actual\": 3"
-		  "}}");
+                  "{"
+                  "  \"allOf\": {"
+                  "    \"errors\": ["
+                  "      {},"
+                  "      {"
+                  "        \"allOf\": {"
+                  "          \"errors\": [{"
+		  "            \"compare\": {"
+		  "              \"property\": \"maxLength\","
+		  "              \"expected\": 5, \"actual\": 3,"
+		  "              \"errorCode\": 45,"
+		  "              \"schemaIteratorRef\": \"#/allOf/1\","
+		  "              \"schemaHandlerRef\": \"#/allOf/0\""
+                  "            }"
+                  "          }],"
+                  "          \"errorCode\": 23,"
+		  "          \"schemaIteratorRef\": \"#/allOf/1\","
+		  "          \"schemaHandlerRef\": \"#\""
+                  "        }"
+                  "      }"
+                  "    ],"
+                  "    \"errorCode\": 23,"
+                  "    \"schemaIteratorRef\": \"#\""
+                  "  }"
+                  "}");
   INVALID_COMPARE("{"
 		  "  \"allOf\": ["
 		  "    { \"type\": \"string\" },"
@@ -5559,13 +5604,33 @@ TEST(SchemaCompare, AllOf) {
 		  "    { \"maxLength\": 3 }"
 		  "  ]"
 		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/allOf/1\","
-		  "    \"instanceRef\": \"#/allOf/1\","
-		  "    \"property\": \"maxLength\","
-		  "    \"expected\": 5, \"actual\": 3"
-		  "}}");
+                  "{"
+                  "  \"allOf\": {"
+                  "    \"errors\": ["
+                  "      {},"
+                  "      {"
+                  "        \"allOf\": {"
+                  "          \"errors\": ["
+                  "            {},"
+                  "            {"
+		  "              \"compare\": {"
+		  "                \"property\": \"maxLength\","
+		  "                \"expected\": 5, \"actual\": 3,"
+		  "                \"errorCode\": 45,"
+		  "                \"schemaIteratorRef\": \"#/allOf/1\","
+		  "                \"schemaHandlerRef\": \"#/allOf/1\""
+                  "              }"
+                  "            }],"
+                  "          \"errorCode\": 23,"
+		  "          \"schemaIteratorRef\": \"#/allOf/1\","
+		  "          \"schemaHandlerRef\": \"#\""
+                  "        }"
+                  "      }"
+                  "    ],"
+                  "    \"errorCode\": 23,"
+                  "    \"schemaIteratorRef\": \"#\""
+                  "  }"
+                  "}");
 }
 TEST(SchemaCompare, AnyOf) {
   COMPARE("{"
@@ -5602,12 +5667,47 @@ TEST(SchemaCompare, AnyOf) {
 		  "      \"maxLength\": 3 }"
 		  "  ]"
 		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-		  "    \"property\": \"anyOf\","
-		  "    \"expected\": true, \"actual\": false"
-		  "}}");
+                  "{"
+                  "  \"anyOf\": {"
+                  "    \"errors\": ["
+                  "      {"
+                  "        \"anyOf\": {"
+                  "          \"errors\": [{"
+		  "            \"compare\": {"
+		  "              \"property\": \"type\","
+		  "              \"expected\": [\"boolean\"],"
+                  "              \"actual\": [\"string\"],"
+		  "              \"errorCode\": 45,"
+		  "              \"schemaIteratorRef\": \"#/anyOf/0\","
+		  "              \"schemaHandlerRef\": \"#/anyOf/0\""
+                  "            }"
+                  "          }],"
+                  "          \"errorCode\": 24,"
+                  "          \"schemaIteratorRef\": \"#/anyOf/0\","
+                  "          \"schemaHandlerRef\": \"#\""
+                  "        }"
+                  "      },"
+                  "      {"
+                  "        \"anyOf\": {"
+                  "          \"errors\": [{"
+		  "            \"compare\": {"
+		  "              \"property\": \"maxLength\","
+		  "              \"expected\": 5, \"actual\": 3,"
+		  "              \"errorCode\": 45,"
+		  "              \"schemaIteratorRef\": \"#/anyOf/1\","
+		  "              \"schemaHandlerRef\": \"#/anyOf/0\""
+                  "            }"
+                  "          }],"
+                  "          \"errorCode\": 24,"
+                  "          \"schemaIteratorRef\": \"#/anyOf/1\","
+                  "          \"schemaHandlerRef\": \"#\""
+                  "        }"
+                  "      }"
+                  "    ],"
+                  "    \"errorCode\": 24,"
+                  "    \"schemaIteratorRef\": \"#\""
+                  "  }"
+		  "}");
 }
 TEST(SchemaCompare, OneOf) {
   COMPARE("{"
@@ -5642,11 +5742,10 @@ TEST(SchemaCompare, OneOf) {
 		  "    { \"type\": \"string\" }"
 		  "  ]"
 		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-		  "    \"property\": \"oneOf\","
-		  "    \"expected\": 1, \"actual\": 2"
+		  "{ \"oneOf\": {"
+		  "    \"errorCode\": 22,"
+                  "    \"matches\": [0, 1],"
+		  "    \"schemaIteratorRef\": \"#\""
 		  "}}");
 }
 TEST(SchemaCompare, Properties) {
@@ -5684,7 +5783,7 @@ TEST(SchemaCompare, Properties) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#/properties/b\", \"schemaRef\": \"#/properties/b\","
+		  "    \"schemaIteratorRef\": \"#/properties/b\", \"schemaHandlerRef\": \"#/properties/b\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
 		  "}}");
@@ -5724,6 +5823,28 @@ TEST(SchemaCompare, Properties) {
 	  "}");
   INVALID_COMPARE("{"
 		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"},"
+		  "    \"c\": {\"type\": \"boolean\"}"
+		  "  }"
+		  "}",
+		  "{"
+		  "  \"type\": \"object\","
+		  "  \"properties\": {"
+		  "    \"a\": {\"type\": \"string\"},"
+		  "    \"b\": {\"type\": \"boolean\"}"
+		  "  },"
+                  "  \"additionalProperties\": false"
+		  "}",
+		  "{ \"additionalProperties\": {"
+		  "    \"errorCode\": 16,"
+		  "    \"schemaIteratorRef\": \"#\","
+                  "    \"schemaHandlerRef\": \"#\","
+		  "    \"disallowed\": \"c\""
+		  "}}");
+  INVALID_COMPARE("{"
+		  "  \"type\": \"object\","
 		  "  \"required\": [\"a\", \"b\", \"c\"],"
 		  "  \"properties\": {"
 		  "    \"a\": {\"type\": \"string\"},"
@@ -5739,11 +5860,10 @@ TEST(SchemaCompare, Properties) {
 		  "    \"b\": {\"type\": \"boolean\"}"
 		  "  }"
 		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-		  "    \"property\": \"properties\","
-		  "    \"expected\": \"c\", \"actual\": null"
+		  "{ \"required\": {"
+                  "    \"missing\": [\"c\"],"
+		  "    \"errorCode\": 15,"
+		  "    \"schemaIteratorRef\": \"#\""
 		  "}}");
   INVALID_COMPARE("{"
 		  "  \"type\": \"object\","
@@ -5762,11 +5882,11 @@ TEST(SchemaCompare, Properties) {
 		  "    \"c\": {\"type\": \"boolean\"}"
 		  "  }"
 		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-		  "    \"property\": \"properties\","
-		  "    \"expected\": null, \"actual\": \"c\""
+		  "{ \"required\": {"
+                  "    \"missing\": [\"c\"],"
+		  "    \"errorCode\": 15,"
+		  "    \"schemaIteratorRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\""
 		  "}}");
 }
 TEST(SchemaCompare, AdditionalProperties) {
@@ -5796,7 +5916,7 @@ TEST(SchemaCompare, AdditionalProperties) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#/additionalProperties\", \"schemaRef\": \"#/additionalProperties\","
+		  "    \"schemaIteratorRef\": \"#/additionalProperties\", \"schemaHandlerRef\": \"#/additionalProperties\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
 		  "}}");
@@ -5818,7 +5938,7 @@ TEST(SchemaCompare, AdditionalProperties) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"additionalProperties\","
 		  "    \"expected\": false, \"actual\": true"
 		  "}}");
@@ -5854,7 +5974,7 @@ TEST(SchemaCompare, PatternProperties) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#/patternProperties/%5ES_\", \"schemaRef\": \"#/patternProperties/%5ES_\","
+		  "    \"schemaIteratorRef\": \"#/patternProperties/%5ES_\", \"schemaHandlerRef\": \"#/patternProperties/%5ES_\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
 		  "}}");
@@ -5894,8 +6014,8 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"minProperties\","
 		  "    \"expected\": 2, \"actual\": 3"
 		  "}}");
@@ -5917,8 +6037,8 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxProperties\","
 		  "    \"expected\": 10, \"actual\": 15"
 		  "}}");
@@ -5953,8 +6073,8 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"minProperties\","
 		  "    \"expected\": 1, \"actual\": 2"
 		  "}}");
@@ -6009,8 +6129,8 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxProperties\","
 		  "    \"expected\": 4294967295, \"actual\": 3"
 		  "}}");
@@ -6032,8 +6152,8 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxProperties\","
 		  "    \"expected\": 3, \"actual\": 4294967295"
 		  "}}");
@@ -6055,8 +6175,8 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxProperties\","
 		  "    \"expected\": 3, \"actual\": 2"
 		  "}}");
@@ -6078,8 +6198,8 @@ TEST(SchemaCompare, PropertiesCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxProperties\","
 		  "    \"expected\": 2, \"actual\": 3"
 		  "}}");
@@ -6104,11 +6224,11 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "    \"c\": {\"type\": \"boolean\"}"
 		  "  }"
 		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-		  "    \"property\": \"properties\","
-		  "    \"expected\": null, \"actual\": \"c\""
+		  "{ \"additionalProperties\": {"
+		  "    \"errorCode\": 16,"
+		  "    \"schemaIteratorRef\": \"#\","
+                  "    \"schemaHandlerRef\": \"#\","
+		  "    \"disallowed\": [\"c\"]"
 		  "}}");
   INVALID_COMPARE("{"
 		  "  \"type\": \"object\","
@@ -6128,11 +6248,11 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "  },"
 		  "  \"additionalProperties\": false"
 		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
-		  "    \"property\": \"properties\","
-		  "    \"expected\": \"c\", \"actual\": null"
+		  "{ \"additionalProperties\": {"
+		  "    \"errorCode\": 16,"
+		  "    \"schemaIteratorRef\": \"#\","
+                  "    \"schemaHandlerRef\": \"#\","
+		  "    \"disallowed\": \"c\""
 		  "}}");
   // Missing property matches additional properties
   COMPARE("{"
@@ -6175,8 +6295,8 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/properties/c\","
-		  "    \"instanceRef\": \"#/additionalProperties\","
+		  "    \"schemaIteratorRef\": \"#/properties/c\","
+		  "    \"schemaHandlerRef\": \"#/additionalProperties\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
 		  "}}");
@@ -6240,8 +6360,8 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/properties/I_0\","
-		  "    \"instanceRef\": \"#/patternProperties/%5EI_\","
+		  "    \"schemaIteratorRef\": \"#/properties/I_0\","
+		  "    \"schemaHandlerRef\": \"#/patternProperties/%5EI_\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
 		  "}}");
@@ -6266,8 +6386,8 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/patternProperties/%5EI_\","
-		  "    \"instanceRef\": \"#/properties/I_0\","
+		  "    \"schemaIteratorRef\": \"#/patternProperties/%5EI_\","
+		  "    \"schemaHandlerRef\": \"#/properties/I_0\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
 		  "}}");
@@ -6337,8 +6457,8 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/additionalProperties\","
-		  "    \"instanceRef\": \"#/patternProperties/%5EI_\","
+		  "    \"schemaIteratorRef\": \"#/additionalProperties\","
+		  "    \"schemaHandlerRef\": \"#/patternProperties/%5EI_\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
 		  "}}");
@@ -6365,8 +6485,8 @@ TEST(SchemaCompare, PropertiesComplex) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/patternProperties/%5EI_\","
-		  "    \"instanceRef\": \"#/additionalProperties\","
+		  "    \"schemaIteratorRef\": \"#/patternProperties/%5EI_\","
+		  "    \"schemaHandlerRef\": \"#/additionalProperties\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
 		  "}}");
@@ -6398,8 +6518,8 @@ TEST(SchemaCompare, ItemsList) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/items\","
-		  "    \"instanceRef\": \"#/items\","
+		  "    \"schemaHandlerRef\": \"#/items\","
+		  "    \"schemaIteratorRef\": \"#/items\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
 		  "}}");
@@ -6439,14 +6559,15 @@ TEST(SchemaCompare, ItemsTuple) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/items/2\","
-		  "    \"instanceRef\": \"#/items/2\","
+		  "    \"schemaHandlerRef\": \"#/items/2\","
+		  "    \"schemaIteratorRef\": \"#/items/2\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"integer\"], \"actual\": [\"string\"]"
 		  "}}");
 }
 TEST(SchemaCompare, ItemsListTuple) {
-  COMPARE("{"
+  COMPARE_SYMMETRIC(
+          "{"
 	  "  \"type\": \"array\","
 	  "  \"items\": {"
 	  "    \"type\": \"string\""
@@ -6459,20 +6580,6 @@ TEST(SchemaCompare, ItemsListTuple) {
 	  "    {\"type\": \"string\"},"
 	  "    {\"type\": \"string\"}"
 	  "  ]"
-	  "}");
-  COMPARE("{"
-	  "  \"type\": \"array\","
-	  "  \"items\": ["
-	  "    {\"type\": \"string\"},"
-	  "    {\"type\": \"string\"},"
-	  "    {\"type\": \"string\"}"
-	  "  ]"
-	  "}",
-	  "{"
-	  "  \"type\": \"array\","
-	  "  \"items\": {"
-	  "    \"type\": \"string\""
-	  "  }"
 	  "}");
   INVALID_COMPARE("{"
 		  "  \"type\": \"array\","
@@ -6490,8 +6597,8 @@ TEST(SchemaCompare, ItemsListTuple) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/items\","
-		  "    \"instanceRef\": \"#/items/2\","
+		  "    \"schemaIteratorRef\": \"#/items\","
+		  "    \"schemaHandlerRef\": \"#/items/2\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
 		  "}}");
@@ -6511,8 +6618,8 @@ TEST(SchemaCompare, ItemsListTuple) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/items/2\","
-		  "    \"instanceRef\": \"#/items\","
+		  "    \"schemaIteratorRef\": \"#/items/2\","
+		  "    \"schemaHandlerRef\": \"#/items\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
 		  "}}");
@@ -6530,6 +6637,7 @@ TEST(SchemaCompare, AdditionalItems) {
 	  "    \"type\": \"string\""
 	  "  }"
 	  "}");
+  std::cerr << "HERE" << std::endl;
   INVALID_COMPARE("{"
 		  "  \"type\": \"array\","
 		  "  \"additionalItems\": {"
@@ -6544,7 +6652,7 @@ TEST(SchemaCompare, AdditionalItems) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#/additionalItems\", \"schemaRef\": \"#/additionalItems\","
+		  "    \"schemaIteratorRef\": \"#/additionalItems\", \"schemaHandlerRef\": \"#/additionalItems\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"string\"], \"actual\": [\"boolean\"]"
 		  "}}");
@@ -6566,12 +6674,13 @@ TEST(SchemaCompare, AdditionalItems) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"additionalItems\","
 		  "    \"expected\": false, \"actual\": true"
 		  "}}");
   // Missing item with & without additional items
-  COMPARE("{"
+  COMPARE_SYMMETRIC(
+          "{"
 	  "  \"type\": \"array\","
 	  "  \"items\": ["
 	  "    {\"type\": \"string\"},"
@@ -6588,69 +6697,35 @@ TEST(SchemaCompare, AdditionalItems) {
 	  "  ],"
 	  "  \"additionalItems\": true"
 	  "}");
-  COMPARE("{"
-	  "  \"type\": \"array\","
-	  "  \"items\": ["
-	  "    {\"type\": \"string\"},"
-	  "    {\"type\": \"boolean\"},"
-	  "    {\"type\": \"integer\"}"
-	  "  ],"
-	  "  \"additionalItems\": true"
-	  "}",
-	  "{"
-	  "  \"type\": \"array\","
-	  "  \"items\": ["
-	  "    {\"type\": \"string\"},"
-	  "    {\"type\": \"boolean\"}"
-	  "  ],"
-	  "  \"additionalItems\": true"
-	  "}");
-  INVALID_COMPARE("{"
-		  "  \"type\": \"array\","
-		  "  \"items\": ["
-		  "    {\"type\": \"string\"},"
-		  "    {\"type\": \"boolean\"}"
-		  "  ],"
-		  "  \"additionalItems\": false"
-		  "}",
-		  "{"
-		  "  \"type\": \"array\","
-		  "  \"items\": ["
-		  "    {\"type\": \"string\"},"
-		  "    {\"type\": \"boolean\"},"
-		  "    {\"type\": \"integer\"}"
-		  "  ]"
-		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
-		  "    \"property\": \"items\","
-		  "    \"expected\": null, \"actual\": 2"
-		  "}}");
-  INVALID_COMPARE("{"
-		  "  \"type\": \"array\","
-		  "  \"items\": ["
-		  "    {\"type\": \"string\"},"
-		  "    {\"type\": \"boolean\"},"
-		  "    {\"type\": \"integer\"}"
-		  "  ]"
-		  "}",
-		  "{"
-		  "  \"type\": \"array\","
-		  "  \"items\": ["
-		  "    {\"type\": \"string\"},"
-		  "    {\"type\": \"boolean\"}"
-		  "  ],"
-		  "  \"additionalItems\": false"
-		  "}",
-		  "{ \"compare\": {"
-		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
-		  "    \"property\": \"items\","
-		  "    \"expected\": 2, \"actual\": null"
-		  "}}");
+  INVALID_COMPARE_ASYMMETRIC(
+          "{"
+          "  \"type\": \"array\","
+          "  \"items\": ["
+          "    {\"type\": \"string\"},"
+          "    {\"type\": \"boolean\"}"
+          "  ],"
+          "  \"additionalItems\": false"
+          "}",
+          "{"
+          "  \"type\": \"array\","
+          "  \"items\": ["
+          "    {\"type\": \"string\"},"
+          "    {\"type\": \"boolean\"},"
+          "    {\"type\": \"integer\"}"
+          "  ]"
+          "}",
+          "{ \"minItems\": {"
+          "    \"errorCode\": 10,"
+          "    \"schemaHandlerRef\": \"#\","
+          "    \"schemaIteratorRef\": \"#\","
+          "    \"expected\": 3, \"actual\": 2"
+          "}}",
+          "{ \"additionalItems\": {"
+          "    \"errorCode\": 12,"
+          "    \"schemaIteratorRef\": \"#/items\","
+          "    \"schemaHandlerRef\": \"#\","
+          "    \"disallowed\": 2"
+          "}}");
 }
 TEST(SchemaCompare, ItemsCount) {
   COMPARE("{"
@@ -6687,8 +6762,8 @@ TEST(SchemaCompare, ItemsCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"minItems\","
 		  "    \"expected\": 2, \"actual\": 3"
 		  "}}");
@@ -6710,8 +6785,8 @@ TEST(SchemaCompare, ItemsCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxItems\","
 		  "    \"expected\": 10, \"actual\": 15"
 		  "}}");
@@ -6761,8 +6836,8 @@ TEST(SchemaCompare, ItemsCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"minItems\","
 		  "    \"expected\": 1, \"actual\": 2"
 		  "}}");
@@ -6781,8 +6856,8 @@ TEST(SchemaCompare, ItemsCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"minItems\","
 		  "    \"expected\": 2, \"actual\": 1"
 		  "}}");
@@ -6837,8 +6912,8 @@ TEST(SchemaCompare, ItemsCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxItems\","
 		  "    \"expected\": 4294967295, \"actual\": 3"
 		  "}}");
@@ -6860,8 +6935,8 @@ TEST(SchemaCompare, ItemsCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxItems\","
 		  "    \"expected\": 3, \"actual\": 4294967295"
 		  "}}");
@@ -6883,8 +6958,8 @@ TEST(SchemaCompare, ItemsCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxItems\","
 		  "    \"expected\": 3, \"actual\": 2"
 		  "}}");
@@ -6906,8 +6981,8 @@ TEST(SchemaCompare, ItemsCount) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxItems\","
 		  "    \"expected\": 2, \"actual\": 3"
 		  "}}");
@@ -6940,8 +7015,8 @@ TEST(SchemaCompare, ItemsComplex) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/items\","
-		  "    \"instanceRef\": \"#/additionalItems\","
+		  "    \"schemaIteratorRef\": \"#/items\","
+		  "    \"schemaHandlerRef\": \"#/additionalItems\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"boolean\"], \"actual\": [\"string\"]"
 		  "}}");
@@ -6984,8 +7059,8 @@ TEST(SchemaCompare, ItemsComplex) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#/items/2\","
-		  "    \"instanceRef\": \"#/additionalItems\","
+		  "    \"schemaIteratorRef\": \"#/items/2\","
+		  "    \"schemaHandlerRef\": \"#/additionalItems\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"integer\"], \"actual\": [\"boolean\"]"
 		  "}}");
@@ -7021,8 +7096,8 @@ TEST(SchemaCompare, UniqueItems) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"uniqueItems\","
 		  "    \"expected\": true, \"actual\": false"
 		  "}}");
@@ -7046,8 +7121,8 @@ TEST(SchemaCompare, Minimum) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"minimum\","
 		  "    \"expected\": 0, \"actual\": 5"
 		  "}}");
@@ -7071,8 +7146,8 @@ TEST(SchemaCompare, Maximum) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maximum\","
 		  "    \"expected\": 0, \"actual\": 5"
 		  "}}");
@@ -7096,8 +7171,8 @@ TEST(SchemaCompare, MultipleOf) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"multipleOf\","
 		  "    \"expected\": 1, \"actual\": 5"
 		  "}}");
@@ -7129,8 +7204,8 @@ TEST(SchemaCompare, String) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"minLength\","
 		  "    \"expected\": 1, \"actual\": 3"
 		  "}}");
@@ -7148,8 +7223,8 @@ TEST(SchemaCompare, String) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"maxLength\","
 		  "    \"expected\": 4, \"actual\": 10"
 		  "}}");
@@ -7167,8 +7242,8 @@ TEST(SchemaCompare, String) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"pattern\","
 		  "    \"expected\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\","
 		  "    \"actual\": \"^[0-9]{3}-[0-9]{4}$\""
@@ -7195,13 +7270,26 @@ TEST(SchemaCompare, AllowSingular) {
 		  "{"
 		  "  \"type\": \"string\""
 		  "}",
-		  "{ \"compare\": {"
+		  "{"
+                  "  \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"type\","
-		  "    \"expected\": [\"array\"], \"actual\": [\"string\"]"
-		  "}}");
+		  "    \"expected\": [\"array\"],"
+                  "    \"actual\": [\"string\"]"
+		  "  },"
+                  "  \"singular\": {"
+                  "    \"compare\": {"
+		  "      \"errorCode\": 45,"
+		  "      \"schemaHandlerRef\": \"#\","
+		  "      \"schemaIteratorRef\": \"#/items\","
+		  "      \"property\": \"type\","
+		  "      \"expected\": [\"boolean\"],"
+                  "      \"actual\": [\"string\"]"
+		  "    }"
+                  "  }"
+                  "}");
   COMPARE("{"
 	  "  \"type\": \"object\","
 	  "  \"properties\": {"
@@ -7222,12 +7310,26 @@ TEST(SchemaCompare, AllowSingular) {
 		  "{"
 		  "  \"type\": \"string\""
 		  "}",
-		  "{ \"compare\": {"
+		  "{"
+                  "  \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
+                  "    \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"type\","
-		  "    \"expected\": [\"object\"], \"actual\": [\"string\"]"
-		  "}}");
+		  "    \"expected\": [\"object\"],"
+                  "    \"actual\": [\"string\"]"
+		  "  },"
+                  "  \"singular\": {"
+                  "    \"compare\": {"
+		  "      \"errorCode\": 45,"
+		  "      \"schemaIteratorRef\": \"#/properties/a\","
+                  "      \"schemaHandlerRef\": \"#\","
+		  "      \"property\": \"type\","
+		  "      \"expected\": [\"boolean\"],"
+                  "      \"actual\": [\"string\"]"
+		  "    }"
+                  "  }"
+                  "}");
 }
 TEST(SchemaCompare, NativeScalars) {
   COMPARE("{"
@@ -7276,8 +7378,8 @@ TEST(SchemaCompare, NativeScalars) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"integer\"],"
 		  "    \"actual\": [\"scalar\"]"
@@ -7292,13 +7394,19 @@ TEST(SchemaCompare, NativeScalars) {
 		  "}",
 		  "{ \"compare\": {"
 		  "    \"errorCode\": 45,"
-		  "    \"schemaRef\": \"#\","
-		  "    \"instanceRef\": \"#\","
+		  "    \"schemaHandlerRef\": \"#\","
+		  "    \"schemaIteratorRef\": \"#\","
 		  "    \"property\": \"type\","
 		  "    \"expected\": [\"number\"],"
 		  "    \"actual\": [\"scalar\"]"
 		  "}}");
 }
+
+#undef INVALID_COMPARE_SYMMETRIC
+#undef INVALID_COMPARE_ASYMMETRIC
+#undef INVALID_COMPARE
+#undef COMPARE_SYMMETRIC
+#undef COMPARE_SHOW_DOCS
 
 #define GENERATE(schema, s_expected)					\
   {									\

@@ -135,6 +135,8 @@ inline const RAPIDJSON_ERROR_CHARTYPE* GetValidateError_En(ValidateErrorCode val
 	// Generic error for debugging
         case kValidateErrorGeneric:                     return RAPIDJSON_ERROR_STRING("Generic error occurred: %message");
         case kIncompatibleSchemas:                      return RAPIDJSON_ERROR_STRING("Incompatible schema property '%property': %expected vs %actual.");
+        case kValidateErrorMissingSubschema:            return RAPIDJSON_ERROR_STRING("Subschema is missing from one of the two schemas.");
+        case kValidateErrorSubschemas:                  return RAPIDJSON_ERROR_STRING("Object has one or more invalid subschemas.");
 #endif // RAPIDJSON_YGGDRASIL
 
         case kValidateErrorReadOnly:                    return RAPIDJSON_ERROR_STRING("Property is read-only but has been provided when validation is for writing.");
