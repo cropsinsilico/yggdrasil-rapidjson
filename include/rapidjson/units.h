@@ -1401,16 +1401,21 @@ public:
     }
     return NULL;
   }
-  //! \brief Convert units to the system used by another set of units in place
-  //!   and determine the conversion factors necessary to convert quantities
-  //!   with these units to the new unit system.
-  //! \param x Unit system to convert to.
-  //! \return Array of conversion factors where the first element is the
-  //!   factor that values should be multiplied by and the second element is
-  //!   the offset between the zero points in this and x.
-  std::vector<double> convert_to_units_system(const GenericUnits& x) {
-    if (dimension() == x.dimension())
-      return convert_to(x);
+  //! \brief Get the equivalent of this set of units in the units system
+  //!   used by another set of units.
+  //! \param x Unit system to get units in.
+  //! \return Equivalent units in the x unit system.
+  GenericUnits<Encoding> as_units_system(const GenericUnits& x) const {
+    GenericUnits<Encoding> new_Units;
+    as_units_system(x, new_Units);
+    return new_Units;
+  }
+  //! \brief Get the equivalent of this set of units in the units system
+  //!   used by another set of units.
+  //! \param x Unit system to get units in.
+  //! \param[out] dest Destination for equivalent units in the x unit
+  //!   system.
+  void as_units_system(const GenericUnits& x, GenericUnits& dest) const {
     std::vector<GenericUnit<Encoding> > new_units;
     for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++) {
       if (it->is_null())
@@ -1425,7 +1430,20 @@ public:
 	new_units.push_back(tmp);
       }
     }
-    GenericUnits<Encoding> new_Units(new_units);
+    dest = GenericUnits<Encoding>(new_units);
+  }
+  
+  //! \brief Convert units to the system used by another set of units in place
+  //!   and determine the conversion factors necessary to convert quantities
+  //!   with these units to the new unit system.
+  //! \param x Unit system to convert to.
+  //! \return Array of conversion factors where the first element is the
+  //!   factor that values should be multiplied by and the second element is
+  //!   the offset between the zero points in this and x.
+  std::vector<double> convert_to_units_system(const GenericUnits& x) {
+    if (dimension() == x.dimension())
+      return convert_to(x);
+    GenericUnits<Encoding> new_Units = as_units_system(x);
     return convert_to(new_Units);
   }
 private:
@@ -2818,9 +2836,11 @@ public:
   }
   //! \brief Convert quantity to the system used by another set of units in
   //!   place.
-  //! \param units Unit system to convert to.
-  void convert_to_units_system(const UnitsType& units) {
-    std::vector<double> factor = units_.convert_to_units_system(units);
+  //! \param unitSystem Unit system to convert to.
+  void convert_to_units_system(const UnitsType& unitSystem) {
+    // UnitsType new_units = units_.as_units_system(unitSystem);
+    // std::vector<double> factor = units_.convert_to(new_units);
+    std::vector<double> factor = units_.convert_to_units_system(unitSystem);
     apply_conversion_factor(factor);
   }
   //! \brief Create a new quantity by converting this one to a new set of
