@@ -14981,11 +14981,11 @@ class GenericSchemaGenerator :
       data.SetBool(true);
       return Bool(context, true);
     }
-    YGG_GENERATE_NUMBER_DATA(Int, int, 0, 1);
-    YGG_GENERATE_NUMBER_DATA(Uint, unsigned int, 0, 1);
-    YGG_GENERATE_NUMBER_DATA(Int64, int64_t, 0, 1);
-    YGG_GENERATE_NUMBER_DATA(Uint64, uint64_t, 0, 1);
-    YGG_GENERATE_NUMBER_DATA(Double, double, 0.0, 0.5);
+    YGG_GENERATE_NUMBER_DATA(Int, int, 0, 1)
+    YGG_GENERATE_NUMBER_DATA(Uint, unsigned int, 0, 1)
+    YGG_GENERATE_NUMBER_DATA(Int64, int64_t, 0, 1)
+    YGG_GENERATE_NUMBER_DATA(Uint64, uint64_t, 0, 1)
+    YGG_GENERATE_NUMBER_DATA(Double, double, 0.0, 0.5)
   // Int
   //Uint
   //Int64
