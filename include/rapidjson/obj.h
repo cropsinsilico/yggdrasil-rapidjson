@@ -1331,7 +1331,19 @@ bool ObjPropertyType::read(std::istream& in) {
       in >> std::skipws;
       return true;
     }
-    else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_READ_)
+    // Do this explicitly because string can't be initialized with 0
+    // else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_READ_)
+    else if (second & ObjTypeCurve) {
+      HANDLE_VECTOR_READ_(T, ObjRefCurve);
+    } else if (second & ObjTypeSurface) {
+      HANDLE_VECTOR_READ_(T, ObjRefSurface);
+    } else if (second & ObjTypeString) {
+      std::vector<std::string>* val = (std::vector<std::string>*)mem;
+      std::string x = 0;
+      while ((in.peek() != '\n') && (in >> x))
+	val->push_back(x);
+      return true;
+    }
     else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_READ_)
   }
   else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_SCALAR_READ_)
