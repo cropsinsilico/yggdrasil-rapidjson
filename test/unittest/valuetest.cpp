@@ -2734,10 +2734,11 @@ TEST(Value, BigNestedObject) {
     MemoryPoolAllocator<> allocator;
     Value x(kObjectType);
     static const SizeType n = 200;
+    const char* format = std::numeric_limits<SizeType>::is_signed ? "%d" : "%u";
 
     for (SizeType i = 0; i < n; i++) {
         char name1[10];
-        snprintf(name1, 10, "%d", i);
+        snprintf(name1, 10, format, i);
 
         // Value name(name1); // should not compile
         Value name(name1, static_cast<SizeType>(strlen(name1)), allocator);
@@ -2745,7 +2746,7 @@ TEST(Value, BigNestedObject) {
 
         for (SizeType j = 0; j < n; j++) {
             char name2[10];
-            snprintf(name2, 10, "%d", j);
+            snprintf(name2, 10, format, j);
 
             Value name3(name2, static_cast<SizeType>(strlen(name2)), allocator);
             Value number(static_cast<int>(i * n + j));
@@ -2758,11 +2759,11 @@ TEST(Value, BigNestedObject) {
 
     for (SizeType i = 0; i < n; i++) {
         char name1[10];
-        snprintf(name1, 10, "%d", i);
+        snprintf(name1, 10, format, i);
 
         for (SizeType j = 0; j < n; j++) {
             char name2[10];
-            snprintf(name2, 10, "%d", j);
+            snprintf(name2, 10, format, j);
             x[name1];
             EXPECT_EQ(static_cast<int>(i * n + j), x[name1][name2].GetInt());
         }
@@ -2939,6 +2940,14 @@ TEST(Value, MergeDuplicateKey) {
     EXPECT_NE(d2, d);
     MergeDuplicateKey(d, d.GetAllocator());
     EXPECT_EQ(d2, d);
+}
+
+TEST(Value, SSOMemoryOverlapTest) {
+    Document d;
+    d.Parse("{\"project\":\"rapidjson\",\"stars\":\"ssovalue\"}");
+    Value &s = d["stars"];
+    s.SetString(GenericStringRef<char>(&(s.GetString()[1]), 5), d.GetAllocator());
+    EXPECT_TRUE(strcmp(s.GetString(),"soval") == 0);
 }
 
 #ifdef __clang__

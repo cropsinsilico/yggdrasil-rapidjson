@@ -107,7 +107,6 @@ set_tests_properties(unittest PROPERTIES
                      ENVIRONMENT
 		     "${RAPIDJSON_PYTHON_ENV}")
 
-
 if(NOT RAPIDJSON_SKIP_VALGRIND_TESTS)
     # Not running SIMD.* unit test cases for Valgrind
     add_test(NAME valgrind_unittest
