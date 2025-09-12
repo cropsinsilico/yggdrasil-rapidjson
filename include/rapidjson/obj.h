@@ -1339,7 +1339,7 @@ bool ObjPropertyType::read(std::istream& in) {
       HANDLE_VECTOR_READ_(T, ObjRefSurface);
     } else if (second & ObjTypeString) {
       std::vector<std::string>* val = (std::vector<std::string>*)mem;
-      std::string x = 0;
+      std::string x;
       while ((in.peek() != '\n') && (in >> x))
 	val->push_back(x);
       return true;
