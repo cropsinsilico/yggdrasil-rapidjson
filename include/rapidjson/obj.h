@@ -205,12 +205,15 @@ inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
 struct ObjPropertyType {
 public:
   ObjPropertyType(void* mem0, std::string name0, uint16_t flag0, size_t idx0=0) :
-    mem(mem0), first(name0), second(flag0), idx(idx0), missing(false), is_index(false) {
+    mem(mem0), first(name0), second(flag0), idx(idx0), missing(false), is_index(false), is_color(false) {
     is_index = (first.size() > 6 && (first.substr(first.size() - 6) == "_index"));
+    is_color = (first == "red" ||
+		first == "green" ||
+		first == "blue");
   }
   ObjPropertyType(const ObjPropertyType& other) :
     mem(other.mem), first(other.first), second(other.second), idx(other.idx),
-    missing(other.missing), is_index(other.is_index) {}
+    missing(other.missing), is_index(other.is_index), is_color(other.is_color) {}
   //! \brief Copy assignment.
   ObjPropertyType& operator=(const ObjPropertyType& other) {
     mem = other.mem;
@@ -219,6 +222,7 @@ public:
     idx = other.idx;
     missing = other.missing;
     is_index = other.is_index;
+    is_color = other.is_color;
     return *this;
   }
   void* mem;
@@ -227,6 +231,7 @@ public:
   size_t idx;
   bool missing;
   bool is_index;
+  bool is_color;
 
   //! \brief Determine if the property contains a vector of values.
   //! \return true if it contains a vector, false otherwise.
@@ -291,6 +296,22 @@ public:
   /*! \param dec If true and the property is an index, it will be decremented. */ \
   /*! \return true if successful, false otherwise. */			\
   bool index(const size_t index, T& out, bool dec=false) const
+  //! \brief Set a non-integer color
+  //! \tparam T Type of source value.
+  //! \param val Value to copy.
+  //! \param inc If true and the property is an index, it will be incremented.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  RAPIDJSON_DISABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
+    setColor(const T& val, bool inc);
+  //! \brief Set an integer color
+  //! \tparam T Type of source value.
+  //! \param val Value to copy.
+  //! \param inc If true and the property is an index, it will be incremented.
+  //! \return true if successful, false otherwise.
+  template<typename T>
+  RAPIDJSON_ENABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
+    setColor(const T& val, bool inc);
   //! \brief Set the property values by copying from a vector.
   //! \tparam T Type in source vector.
   //! \param val Vector of values to copy from.
@@ -302,7 +323,7 @@ public:
 			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     set(const std::vector<T>& val, bool inc=false);
   //! \brief Set the property value.
-  //! \tparam T Type of source valuue.
+  //! \tparam T Type of source value.
   //! \param val Value to copy.
   //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
@@ -1181,6 +1202,19 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     return false;							\
   }
 template<typename T>
+RAPIDJSON_DISABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
+ObjPropertyType::setColor(const T& val, bool inc) {
+  if ((!mem) || second & ObjTypeList) return false;
+  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_SET_)
+  return true;
+}
+template<typename T>
+RAPIDJSON_ENABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
+ObjPropertyType::setColor(const T& val, bool inc) {
+  double valF = static_cast<double>(val) / 255.0;
+  return setColor(valF, inc);
+}
+template<typename T>
 RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)> >), (bool))
@@ -1194,6 +1228,9 @@ RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::set(const T& val, bool inc) {
+  if (is_color) {
+    return setColor(val, inc);
+  }
   if ((!mem) || second & ObjTypeList) return false;
   RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_SET_)
   return true;
@@ -3142,9 +3179,9 @@ public:
   void get_colors_array(std::vector<uint8_t>& out,
 			uint8_t defaultValue=0) const OVERRIDE_CXX11 {
     if (color.is_set) {
-      out.push_back(static_cast<uint8_t>(color.r/255.0));
-      out.push_back(static_cast<uint8_t>(color.g/255.0));
-      out.push_back(static_cast<uint8_t>(color.b/255.0));
+      out.push_back(static_cast<uint8_t>(color.r * 255.0));
+      out.push_back(static_cast<uint8_t>(color.g * 255.0));
+      out.push_back(static_cast<uint8_t>(color.b * 255.0));
     } else {
       out.push_back(defaultValue);
       out.push_back(defaultValue);

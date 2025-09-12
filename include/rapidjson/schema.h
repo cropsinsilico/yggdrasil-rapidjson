@@ -7058,30 +7058,8 @@ public:
             RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
 
-        if (minLength_ != 0 || maxLength_ != SizeType(~0)) {
-            SizeType count;
-            if (internal::CountStringCodePoint<EncodingType>(str, length, &count)) {
-                if (count < minLength_) {
-                    context.error_handler.TooShort(str, length, minLength_);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinLength);
-                }
-                if (count > maxLength_) {
-                    context.error_handler.TooLong(str, length, maxLength_);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxLength);
-                }
-            }
-        }
-
-        if (pattern_ && !IsPatternMatch(pattern_, str, length)) {
-#ifdef RAPIDJSON_YGGDRASIL
-	    context.error_handler.DoesNotMatch(str, length,
-					       patternStr_.GetString(),
-					       patternStr_.GetStringLength());
-#else // RAPIDJSON_YGGDRASIL
-            context.error_handler.DoesNotMatch(str, length);
-#endif // RAPIDJSON_YGGDRASIL
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPattern);
-        }
+        if (!CheckString(context, str, length))
+          return false;
 
 #ifdef RAPIDJSON_YGGDRASIL
 	if ((yggtype_ & ((1 << kYggPythonClassSchemaType) |
@@ -7121,28 +7099,50 @@ public:
     const ValueType v(vs->value.GetString(), vs->value.GetStringLength(),
 		      allocator);
     bool isScalar = (v == GetScalarString());
-    if (isScalar && (yggtype_ & (1 << kYggScalarSchemaType))) {
-      if (!(CheckSubType(context, *schema) &&
-	    CheckPrecision(context, *schema) &&
-	    CheckUnits(context, *schema) &&
-	    CheckEncoding(context, *schema))) {
-	CLEANUP_;
-	return false;
+    if (isScalar && ((yggtype_ & (1 << kYggScalarSchemaType)) ||
+                     (type_ & (1 << kNumberSchemaType)) ||
+                     (type_ & (1 << kIntegerSchemaType)) ||
+                     (type_ & (1 << kStringSchemaType)))) {
+      unsigned int validSubtypes = 0;
+      if (yggtype_ & (1 << kYggScalarSchemaType))
+        validSubtypes = validSubtypes | subtype_;
+      if (type_ & (1 << kNumberSchemaType))
+        validSubtypes = validSubtypes | (1 << kYggFloatSchemaSubType);
+      if (type_ & (1 << kIntegerSchemaType))
+        validSubtypes = validSubtypes | (1 << kYggIntSchemaSubType);
+      if (type_ & (1 << kStringSchemaType))
+        validSubtypes = validSubtypes | (1 << kYggStringSchemaSubType);
+      if (!CheckSubType(context, *schema, validSubtypes)) {
+        CLEANUP_;
+        return false;
       }
-    } else if (isScalar && (type_ & (1 << kNumberSchemaType))) {
-      if (!(CheckSubType(context, *schema, (1 << kYggFloatSchemaSubType)) &&
-	    CheckPrecision(context, *schema, SValue(8).Move()))) {
-	CLEANUP_;
-	return false;
+      if (yggtype_ & (1 << kYggScalarSchemaType)) {
+        if (!(CheckSubType(context, *schema, validSubtypes) &&
+              CheckPrecision(context, *schema) &&
+              CheckUnits(context, *schema) &&
+              CheckEncoding(context, *schema))) {
+          CLEANUP_;
+          return false;
+        }
       }
-    } else if (isScalar && (type_ & (1 << kIntegerSchemaType))) {
-      if (!(CheckSubType(context, *schema, (1 << kYggIntSchemaSubType)) &&
-	    CheckPrecision(context, *schema, SValue(8).Move()))) {
-	CLEANUP_;
-	return false;
+      // if (type_ & ((1 << kNumberSchemaType) |
+      //              (1 << kIntegerSchemaType))) {
+      //   if (!CheckPrecision(context, *schema, SValue(8).Move())) {
+      //     CLEANUP_;
+      //     return false;
+      //   }
+      // }
+      typename YggSchemaValueType::ConstMemberIterator vsub = schema->FindMember(GetSubTypeString());
+      if ((type_ & (1 << kStringSchemaType)) &&
+          vsub != schema->MemberEnd() &&
+          vsub->value == YggSchemaValueType::GetStringSubTypeString()) {
+        if (!CheckString(context, str, length)) {
+          CLEANUP_;
+          return false;
+        }
       }
     } else if (((v == Get1DArrayString()) || (v == GetNDArrayString())) &&
-	       (yggtype_ & (1 << kYggNDArraySchemaType))) {
+               (yggtype_ & (1 << kYggNDArraySchemaType))) {
       if (!(CheckSubType(context, *schema) &&
 	    CheckPrecision(context, *schema) &&
 	    CheckUnits(context, *schema) &&
@@ -7185,43 +7185,12 @@ public:
 	context.error_handler.InvalidObjWavefront(str, length);
 	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorObjWavefront);
       }
-    } else if ((v == GetScalarString() || v == GetStringString()) &&
-	       (type_ & (1 << kStringSchemaType)) &&
-	       (yggtype_ == 0)) {
-      typename YggSchemaValueType::ConstMemberIterator vsub = schema->FindMember(GetSubTypeString());
-      if ((v == GetStringString()) ||
-	  (vsub != schema->MemberEnd() && vsub->value == YggSchemaValueType::GetStringSubTypeString())) {
-        if (minLength_ != 0 || maxLength_ != SizeType(~0)) {
-	  SizeType count;
-	  if (internal::CountStringCodePoint<EncodingType>(str, length, &count)) {
-	    if (count < minLength_) {
-	      CLEANUP_;
-	      context.error_handler.TooShort(str, length, minLength_);
-	      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinLength);
-	    }
-	    if (count > maxLength_) {
-	      CLEANUP_;
-	      context.error_handler.TooLong(str, length, maxLength_);
-	      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxLength);
-	    }
-	  }
-        }
-
-        if (pattern_ && !IsPatternMatch(pattern_, str, length)) {
-	    CLEANUP_;
-#ifdef RAPIDJSON_YGGDRASIL
-            context.error_handler.DoesNotMatch(str, length,
-					       patternStr_.GetString(),
-					       patternStr_.GetStringLength());
-#else // RAPIDJSON_YGGDRASIL
-            context.error_handler.DoesNotMatch(str, length);
-#endif // RAPIDJSON_YGGDRASIL
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPattern);
-        }
-      } else {
-	CLEANUP_;
-	YggDisallowedType(context, v);
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+    } else if (v == GetStringString() &&
+               (type_ & (1 << kStringSchemaType)) &&
+               (yggtype_ == 0)) {
+      if (!CheckString(context, str, length)) {
+        CLEANUP_;
+        return false;
       }
     } else {
       CLEANUP_;
@@ -8752,6 +8721,34 @@ protected:
       return false;
     return true;
   }
+  bool CheckString(Context& context, const Ch* str, SizeType length) const {
+    if (minLength_ != 0 || maxLength_ != SizeType(~0)) {
+      SizeType count;
+      if (internal::CountStringCodePoint<EncodingType>(str, length, &count)) {
+        if (count < minLength_) {
+          context.error_handler.TooShort(str, length, minLength_);
+          RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinLength);
+        }
+        if (count > maxLength_) {
+          context.error_handler.TooLong(str, length, maxLength_);
+          RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxLength);
+        }
+      }
+    }
+
+    if (pattern_ && !IsPatternMatch(pattern_, str, length)) {
+#ifdef RAPIDJSON_YGGDRASIL
+      context.error_handler.DoesNotMatch(str, length,
+                                         patternStr_.GetString(),
+                                         patternStr_.GetStringLength());
+#else // RAPIDJSON_YGGDRASIL
+      context.error_handler.DoesNotMatch(str, length);
+#endif // RAPIDJSON_YGGDRASIL
+      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPattern);
+    }
+    return true;
+  }
+
   bool CheckSubType(Context& context, const ValueType* subtype_str,
 		    const bool has_encoding) const {
     return CheckSubType(context, subtype_str, has_encoding, subtype_);
@@ -12755,6 +12752,10 @@ public:
 	return false;
       MemberIter iRef = err->FindMember(GetInstanceRefString());
       MemberIter sRef = err->FindMember(GetSchemaRefString());
+      if (iRef == err->MemberEnd())
+        iRef = err->FindMember(GetSchemaIteratorRefString());
+      if (sRef == err->MemberEnd())
+        sRef = err->FindMember(GetSchemaHandlerRefString());
       if (iRef != err->MemberEnd()) {
 	switch ((ValidateErrorCode)(code->value.GetInt())) {
 	case kValidateErrorType:

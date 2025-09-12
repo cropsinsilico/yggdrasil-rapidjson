@@ -26,17 +26,33 @@ void ObjWavefront::fromPly(const Ply& p) {
     if ((*name) == "vertex") {
       for (std::vector<PlyElement>::const_iterator it = p.elements.find(*name)->second.elements.begin();
 	   it != p.elements.find(*name)->second.elements.end(); it++) {
-	this->add_element("v", it->get_double_array());
+	ObjElement* ito = this->add_element("v", it->get_double_array(true));
+	if (it->colors.size() > 0) {
+	  std::vector<uint8_t> icolors = it->get_colors_array();
+	  ito->add_colors(icolors.data(), static_cast<SizeType>(icolors.size()));
+	}
 	nvert++;
       }
     } else if ((*name) == "face") {
       for (std::vector<PlyElement>::const_iterator it = p.elements.find(*name)->second.elements.begin();
-	   it != p.elements.find(*name)->second.elements.end(); it++)
-	this->add_element("f", it->get_int_array(nvert));
+	   it != p.elements.find(*name)->second.elements.end(); it++) {
+	this->add_element("f", it->get_int_array(nvert, true));
+	// Face colors not supported
+	// if (it->colors.size() > 0) {
+	//   std::vector<uint8_t> icolors = it->get_colors_array();
+	//   ito->add_colors(icolors.data(), static_cast<SizeType>(icolors.size()));
+	// }
+      }
     } else if ((*name) == "edge") {
       for (std::vector<PlyElement>::const_iterator it = p.elements.find(*name)->second.elements.begin();
-	   it != p.elements.find(*name)->second.elements.end(); it++)
+	   it != p.elements.find(*name)->second.elements.end(); it++) {
 	this->add_element("l", it->get_int_array(nvert));
+	// Edge colors not supported
+	// if (it->colors.size() > 0) {
+	//   std::vector<uint8_t> icolors = it->get_colors_array();
+	//   ito->add_colors(icolors.data(), static_cast<SizeType>(icolors.size()));
+	// }
+      }
     } else
       RAPIDJSON_ASSERT(((*name) == "vertex") ||
 		       ((*name) == "face") ||
