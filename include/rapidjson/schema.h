@@ -13991,12 +13991,14 @@ public:
 
     virtual void DestroySchemaValidator(ISchemaValidator* validator) {
         GenericSchemaValidator* v = static_cast<GenericSchemaValidator*>(validator);
+#ifdef RAPIDJSON_YGGDRASIL
 	if (schema_handler_ && v->schema_handler_) {
 	  schema_handler_->DestroySchemaHandler(v->schema_handler_);
 	  v->schema_handler_ = nullptr;
 	}
 	if (joint_schema_handler_ && v->joint_schema_handler_)
 	  joint_schema_handler_->DestroyJointSchemaHandler(v->joint_schema_handler_);
+#endif // RAPIDJSON_YGGDRASIL
         v->~GenericSchemaValidator();
         StateAllocator::Free(v);
     }
