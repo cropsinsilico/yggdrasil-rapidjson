@@ -35,6 +35,10 @@ jobs:
           valgrind --version
           # sudo apt autoremove -y
           # sudo apt autoclean -y
+      - name: Install dependencies on MacOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install doxygen
       - name: Setup Python
         uses: actions/setup-python@v2
       - name: Fix Python path on mac

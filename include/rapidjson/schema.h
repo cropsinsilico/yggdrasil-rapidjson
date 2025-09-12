@@ -25,6 +25,7 @@
 #endif
 #include <cmath> // abs, floor
 #ifdef RAPIDJSON_YGGDRASIL
+#include <iostream>
 #include "units.h"
 #include "writer.h"
 #include "metaschema.h"
@@ -668,8 +669,6 @@ public:
     bool IsValid() const { return stack_.GetSize() == sizeof(uint64_t); }
 
     uint64_t GetHashCode() const {
-        if (!IsValid())
-	  std::cerr << "GetHashCode: !IsValid()" << std::endl;
         RAPIDJSON_ASSERT(IsValid());
         return *stack_.template Top<uint64_t>();
     }
@@ -12345,6 +12344,7 @@ public:
 
     const SchemaType* GetTypeless() const { return typeless_; }
 
+#ifdef RAPIDJSON_YGGDRASIL
     bool isMetaschema(bool ignoreInstance=false) const {
       if (ignoreInstance)
 	return (flags_ & (1 << SchemaType::kMetaschemaFlag));
@@ -12354,6 +12354,7 @@ public:
     bool isInstance() const {
       return (flags_ & (1 << SchemaType::kInstanceFlag));
     }
+#endif // RAPIDJSON_YGGDRASIL
 
     static const size_t kInitialSchemaMapSize = 64;
     static const size_t kInitialSchemaRefSize = 64;

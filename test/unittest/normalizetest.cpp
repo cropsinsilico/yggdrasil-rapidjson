@@ -12,6 +12,8 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
+#ifdef RAPIDJSON_YGGDRASIL
+
 #define RAPIDJSON_SCHEMA_VERBOSE 0
 #define RAPIDJSON_HAS_STDSTRING 1
 
@@ -2368,3 +2370,5 @@ TEST(SchemaNormalizer, YggSchema) {
 #if defined(_MSC_VER) || defined(__clang__)
 RAPIDJSON_DIAG_POP
 #endif
+
+#endif // RAPIDJSON_YGGDRASIL

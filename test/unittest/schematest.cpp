@@ -152,6 +152,29 @@ TEST(SchemaValidator, Hasher) {
     }\
 }
 
+#ifdef RAPIDJSON_YGGDRASIL
+#define SHOW_ERROR_MESSAGE_(name, instance)                             \
+  RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;                      \
+  Value e_msg;                                                          \
+  if (!instance.Get ## name ## Msg(e_msg, error_msg_allocator)) {	\
+    StringBuffer sb_t;                                                  \
+    PrettyWriter<StringBuffer> w_t(sb_t);                               \
+    printf("%sMsg = %s\n", #name, sb_t.GetString());                    \
+    StringBuffer sb;                                                    \
+    PrettyWriter<StringBuffer> w(sb);                                   \
+    validator.GetError().Accept(w);                                     \
+    printf("Get%s(): %s", #name, sb.GetString());                       \
+    ADD_FAILURE();                                                      \
+  }
+#define SHOW_ERROR_MESSAGE(instance)            \
+  SHOW_ERROR_MESSAGE_(Error, instance)
+#define SHOW_WARNING_MESSAGE(instance)          \
+  SHOW_ERROR_MESSAGE_(Warning, instance)
+#else
+#define SHOW_ERROR_MESSAGE(instance)
+#define SHOW_WARNING_MESSAGE(instance)
+#endif
+
 #define INVALIDATE(schema, json, invalidSchemaPointer, invalidSchemaKeyword, invalidDocumentPointer, error) \
 {\
     INVALIDATE_(schema, json, invalidSchemaPointer, invalidSchemaKeyword, invalidDocumentPointer, error, kValidateDefaultFlags, SchemaValidator, Pointer) \
@@ -192,18 +215,7 @@ TEST(SchemaValidator, Hasher) {
     }\
     Document e;\
     e.Parse(error);\
-    RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;\
-    Value e_msg;\
-    if (!validator.GetErrorMsg(e_msg, error_msg_allocator)) {	\
-      StringBuffer sb_t;			\
-      PrettyWriter<StringBuffer> w_t(sb_t);			\
-      printf("ErrorMsg = %s\n", sb_t.GetString());		\
-      StringBuffer sb;						\
-      PrettyWriter<StringBuffer> w(sb);				\
-      validator.GetError().Accept(w);				\
-      printf("GetError(): %s", sb.GetString());			\
-      ADD_FAILURE();						\
-    }\
+    SHOW_ERROR_MESSAGE(validator)\
     if (validator.GetError() != e) {\
         StringBuffer sb;\
         PrettyWriter<StringBuffer> w(sb);\
@@ -254,18 +266,7 @@ TEST(SchemaValidator, Hasher) {
     }\
     Document e;\
     e.Parse(warning);\
-    RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;\
-    Value e_msg;\
-    if (!validator.GetWarningMsg(e_msg, error_msg_allocator)) {	\
-      StringBuffer sb_t;					\
-      PrettyWriter<StringBuffer> w_t(sb_t);			\
-      printf("WarningMsg = %s\n", sb_t.GetString());		\
-      StringBuffer sb;						\
-      PrettyWriter<StringBuffer> w(sb);				\
-      validator.GetWarning().Accept(w);				\
-      printf("GetWarning(): %s", sb.GetString());		\
-      ADD_FAILURE();						\
-    }\
+    SHOW_WARNING_MESSAGE(validator)\
     if (validator.GetWarning() != e) {\
         StringBuffer sb;\
         PrettyWriter<StringBuffer> w(sb);		\
@@ -4223,12 +4224,21 @@ TEST(SchemaValidator, ContinueOnErrors_UniqueItems) {
     INVALIDATE_(s, "{\"phones\":[\"12-34\",\"12-34\"]}", "#", "errors", "#",
         "{\"uniqueItems\": {\"duplicates\": [0,1], \"errorCode\": 11, \"instanceRef\": \"#/phones\", \"schemaRef\": \"#/properties/phones\"}}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
+#ifdef RAPIDJSON_YGGDRASIL
     INVALIDATE_(s, "{\"phones\":[\"ab-34\",\"cd-78\"]}", "#", "errors", "#",
         "{\"pattern\": ["
         "  {\"actual\": \"ab-34\", \"expected\": \"^[0-9]*-[0-9]*\", \"errorCode\": 8, \"instanceRef\": \"#/phones/0\", \"schemaRef\": \"#/definitions/phone_type\"},"
         "  {\"actual\": \"cd-78\", \"expected\": \"^[0-9]*-[0-9]*\", \"errorCode\": 8, \"instanceRef\": \"#/phones/1\", \"schemaRef\": \"#/definitions/phone_type\"}"
         "]}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
+#else // RAPIDJSON_YGGDRASIL
+    INVALIDATE_(s, "{\"phones\":[\"ab-34\",\"cd-78\"]}", "#", "errors", "#",
+        "{\"pattern\": ["
+        "  {\"actual\": \"ab-34\", \"errorCode\": 8, \"instanceRef\": \"#/phones/0\", \"schemaRef\": \"#/definitions/phone_type\"},"
+        "  {\"actual\": \"cd-78\", \"errorCode\": 8, \"instanceRef\": \"#/phones/1\", \"schemaRef\": \"#/definitions/phone_type\"}"
+        "]}",
+        kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
+#endif // RAPIDJSON_YGGDRASIL
     CrtAllocator::Free(schema);
 }
 
@@ -4844,12 +4854,21 @@ TEST(SchemaValidator, ReadOnlyWhenWriting) {
         "}");
     SchemaDocument s(sd, 0, 0, 0, 0, 0, Specification(kVersion20));
     VALIDATE(s, "{ \"rprop\": \"hello\" }", true);
+#ifdef RAPIDJSON_YGGDRASIL
     INVALIDATE_(s, "{ \"rprop\": \"hello\" }", "/properties/rprop", "readOnly", "/rprop",
         "{ \"readOnly\": {"
         "    \"errorCode\": 48, \"instanceRef\": \"#/rprop\", \"schemaRef\": \"#/properties/rprop\""
         "  }"
         "}",
         kValidateDefaultFlags | kValidateWriteFlag, SchemaValidator, Pointer);
+#else // RAPIDJSON_YGGDRASIL
+    INVALIDATE_(s, "{ \"rprop\": \"hello\" }", "/properties/rprop", "readOnly", "/rprop",
+        "{ \"readOnly\": {"
+        "    \"errorCode\": 26, \"instanceRef\": \"#/rprop\", \"schemaRef\": \"#/properties/rprop\""
+        "  }"
+        "}",
+        kValidateDefaultFlags | kValidateWriteFlag, SchemaValidator, Pointer);
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(SchemaValidator, WriteOnlyWhenReading) {
@@ -4866,12 +4885,21 @@ TEST(SchemaValidator, WriteOnlyWhenReading) {
         "}");
     SchemaDocument s(sd, 0, 0, 0, 0, 0, Specification(kVersion30));
     VALIDATE(s, "{ \"wprop\": true }", true);
+#ifdef RAPIDJSON_YGGDRASIL
     INVALIDATE_(s, "{ \"wprop\": true }", "/properties/wprop", "writeOnly", "/wprop",
         "{ \"writeOnly\": {"
         "    \"errorCode\": 49, \"instanceRef\": \"#/wprop\", \"schemaRef\": \"#/properties/wprop\""
         "  }"
         "}",
         kValidateDefaultFlags | kValidateReadFlag, SchemaValidator, Pointer);
+#else // RAPIDJSON_YGGDRASIL
+    INVALIDATE_(s, "{ \"wprop\": true }", "/properties/wprop", "writeOnly", "/wprop",
+        "{ \"writeOnly\": {"
+        "    \"errorCode\": 27, \"instanceRef\": \"#/wprop\", \"schemaRef\": \"#/properties/wprop\""
+        "  }"
+        "}",
+        kValidateDefaultFlags | kValidateReadFlag, SchemaValidator, Pointer);
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(SchemaValidator, NullableTrue) {
@@ -7470,18 +7498,7 @@ TEST(SchemaCompare, NativeScalars) {
     EXPECT_FALSE(result);						\
     Document e;								\
     e.Parse(error);							\
-    RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;			\
-    Value e_msg;							\
-    if (!validator.GetErrorMsg(e_msg, error_msg_allocator)) {		\
-      StringBuffer sb_t;						\
-      PrettyWriter<StringBuffer> w_t(sb_t);				\
-      printf("ErrorMsg = %s\n", sb_t.GetString());			\
-      StringBuffer sb;							\
-      PrettyWriter<StringBuffer> w(sb);					\
-      validator.GetError().Accept(w);					\
-      printf("GetError(): %s", sb.GetString());				\
-      ADD_FAILURE();							\
-    }									\
+    SHOW_ERROR_MESSAGE(validator)                                       \
     if (validator.GetError() != e) {					\
       StringBuffer sb;							\
       PrettyWriter<StringBuffer> w(sb);					\
