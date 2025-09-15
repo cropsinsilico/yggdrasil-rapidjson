@@ -5664,28 +5664,27 @@ TEST(SchemaCompare, AllOf) {
                   "}");
 }
 TEST(SchemaCompare, AnyOf) {
-  // TODO: Re-enable these once leak is fixed
-  // COMPARE("{"
-  //         "  \"type\": \"string\""
-  //         "}",
-  //         "{"
-  //         "  \"anyOf\": ["
-  //         "    { \"type\": \"string\" },"
-  //         "    { \"maxLength\": 5 }"
-  //         "  ]"
-  //         "}");
-  // COMPARE("{"
-  //         "  \"anyOf\": ["
-  //         "    { \"type\": \"string\" },"
-  //         "    { \"maxLength\": 5 }"
-  //         "  ]"
-  //         "}",
-  //         "{"
-  //         "  \"anyOf\": ["
-  //         "    { \"type\": \"string\" },"
-  //         "    { \"maxLength\": 5 }"
-  //         "  ]"
-  //         "}");
+  COMPARE("{"
+          "  \"type\": \"string\""
+          "}",
+          "{"
+          "  \"anyOf\": ["
+          "    { \"type\": \"string\" },"
+          "    { \"maxLength\": 5 }"
+          "  ]"
+          "}");
+  COMPARE("{"
+          "  \"anyOf\": ["
+          "    { \"type\": \"string\" },"
+          "    { \"maxLength\": 5 }"
+          "  ]"
+          "}",
+          "{"
+          "  \"anyOf\": ["
+          "    { \"type\": \"string\" },"
+          "    { \"maxLength\": 5 }"
+          "  ]"
+          "}");
   INVALID_COMPARE("{"
         	  "  \"anyOf\": ["
         	  "    { \"type\": \"boolean\" },"
