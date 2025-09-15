@@ -1,5 +1,11 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
-
+if(POLICY CMP0025)
+  # detect Apple's Clang
+  cmake_policy(SET CMP0025 NEW)
+endif()
+if(POLICY CMP0054)
+  cmake_policy(SET CMP0054 NEW)
+endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    if("$ENV{SDKROOT}")
@@ -13,7 +19,7 @@ set(LIB_MINOR_VERSION "1")
 set(LIB_PATCH_VERSION "0")
 set(LIB_VERSION_STRING "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_PATCH_VERSION}")
 
-PROJECT(RapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES CXX)
+PROJECT(RapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES C CXX)
 
 if(POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
     cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python
