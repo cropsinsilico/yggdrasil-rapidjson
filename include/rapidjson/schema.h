@@ -8633,6 +8633,34 @@ protected:
         return true;
     }
 
+    bool CheckString(Context& context, const Ch* str, SizeType length) const {
+      if (minLength_ != 0 || maxLength_ != SizeType(~0)) {
+	SizeType count;
+	if (internal::CountStringCodePoint<EncodingType>(str, length, &count)) {
+	  if (count < minLength_) {
+	    context.error_handler.TooShort(str, length, minLength_);
+	    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinLength);
+	  }
+	  if (count > maxLength_) {
+	    context.error_handler.TooLong(str, length, maxLength_);
+	    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxLength);
+	  }
+	}
+      }
+      
+      if (pattern_ && !IsPatternMatch(pattern_, str, length)) {
+#ifdef RAPIDJSON_YGGDRASIL
+	context.error_handler.DoesNotMatch(str, length,
+					   patternStr_.GetString(),
+					   patternStr_.GetStringLength());
+#else // RAPIDJSON_YGGDRASIL
+	context.error_handler.DoesNotMatch(str, length);
+#endif // RAPIDJSON_YGGDRASIL
+	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPattern);
+      }
+      return true;
+    }
+
 #ifdef RAPIDJSON_YGGDRASIL
     void YggDisallowedType(Context& context, const ValueType& actualType) const {
 #define CHECK_(name)				\
@@ -8721,34 +8749,6 @@ protected:
       return false;
     return true;
   }
-  bool CheckString(Context& context, const Ch* str, SizeType length) const {
-    if (minLength_ != 0 || maxLength_ != SizeType(~0)) {
-      SizeType count;
-      if (internal::CountStringCodePoint<EncodingType>(str, length, &count)) {
-        if (count < minLength_) {
-          context.error_handler.TooShort(str, length, minLength_);
-          RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinLength);
-        }
-        if (count > maxLength_) {
-          context.error_handler.TooLong(str, length, maxLength_);
-          RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxLength);
-        }
-      }
-    }
-
-    if (pattern_ && !IsPatternMatch(pattern_, str, length)) {
-#ifdef RAPIDJSON_YGGDRASIL
-      context.error_handler.DoesNotMatch(str, length,
-                                         patternStr_.GetString(),
-                                         patternStr_.GetStringLength());
-#else // RAPIDJSON_YGGDRASIL
-      context.error_handler.DoesNotMatch(str, length);
-#endif // RAPIDJSON_YGGDRASIL
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPattern);
-    }
-    return true;
-  }
-
   bool CheckSubType(Context& context, const ValueType* subtype_str,
 		    const bool has_encoding) const {
     return CheckSubType(context, subtype_str, has_encoding, subtype_);
