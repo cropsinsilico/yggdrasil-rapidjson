@@ -494,7 +494,11 @@ TEST(Writer, InvalidEncoding) {
         StringBuffer buffer;
         Writer<StringBuffer, UTF32<> > writer(buffer);
         static const UTF32<>::Ch s[] = { 0x110000, 0 }; // Out of U+0000 to U+10FFFF
-        EXPECT_FALSE(writer.String(s));
+        // langmm: To allow compat w/ FreeBSD libc++ which dropped
+        //   std::char_traits<> for types other than
+        //   char, wchar_t, char8_t, char16_t, char32_t
+        EXPECT_FALSE(writer.String(s, 2));
+        // EXPECT_FALSE(writer.String(s));
     }
 
     // Fail in unicode escaping in ASCII output
@@ -502,7 +506,11 @@ TEST(Writer, InvalidEncoding) {
         StringBuffer buffer;
         Writer<StringBuffer, UTF32<>, ASCII<> > writer(buffer);
         static const UTF32<>::Ch s[] = { 0x110000, 0 }; // Out of U+0000 to U+10FFFF
-        EXPECT_FALSE(writer.String(s));
+        // langmm: To allow compat w/ FreeBSD libc++ which dropped
+        //   std::char_traits<> for types other than
+        //   char, wchar_t, char8_t, char16_t, char32_t
+        EXPECT_FALSE(writer.String(s, 2));
+        // EXPECT_FALSE(writer.String(s));
     }
 }
 
