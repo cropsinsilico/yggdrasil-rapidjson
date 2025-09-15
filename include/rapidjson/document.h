@@ -5158,27 +5158,39 @@ public:
 	    goto cleanup_array;
 	  }
 	  Py_ssize_t max_len = 0;
-	  for (Py_ssize_t j = 0; j < PyObject_Size(ival); j++) {
-	    vv = PySequence_GetItem(ival, j);
-	    if (vv == NULL) {
-	      error = true;
-	      goto cleanup_array;
+	  if (PyObject_Size(ival) == 0) {
+	    // For an empty field with OBJECT type, information about
+	    // which string type (unicode or bytes) cannot be determined
+	    // so we just assume bytes
+	    vtype = (PyObject*)(&PyBytes_Type);
+	    Py_INCREF(vtype);
+	  } else {
+	    for (Py_ssize_t j = 0; j < PyObject_Size(ival); j++) {
+	      vv = PySequence_GetItem(ival, j);
+	      if (vv == NULL) {
+		error = true;
+		goto cleanup_array;
+	      }
+	      if (vtype == NULL) {
+		vtype = PyObject_Type(vv);
+		std::string vtype_str;
+		PyObject* vtype_repr = PyObject_Str(vtype);
+		vtype_str.assign(PyUnicode_AsUTF8(vtype_repr));
+		Py_CLEAR(vtype_repr);
+	      } else if (!PyObject_IsInstance(vv, vtype)) {
+		error = true;
+		goto cleanup_array;
+	      }
+	      Py_ssize_t new_len = 0;
+	      if (vtype == (PyObject*)(&PyUnicode_Type)) {
+		new_len = PyUnicode_GET_LENGTH(vv);
+	      } else {
+		new_len = PyObject_Size(vv);
+	      }
+	      Py_CLEAR(vv);
+	      if (new_len > max_len)
+		max_len = new_len;
 	    }
-	    if (vtype == NULL) {
-	      vtype = PyObject_Type(vv);
-	    } else if (!PyObject_IsInstance(vv, vtype)) {
-	      error = true;
-	      goto cleanup_array;
-	    }
-	    Py_ssize_t new_len = 0;
-	    if (vtype == (PyObject*)(&PyUnicode_Type)) {
-	      new_len = PyUnicode_GET_LENGTH(vv);
-	    } else {
-	      new_len = PyObject_Size(vv);
-	    }
-	    Py_CLEAR(vv);
-	    if (new_len > max_len)
-	      max_len = new_len;
 	  }
 	  new_itype_str = "";
 	  if (vtype == (PyObject*)(&PyUnicode_Type)) {
@@ -5597,8 +5609,8 @@ public:
 				Allocator& allocator) {
     if (desc->type_num == NPY_STRING || desc->type_num == NPY_UNICODE) {
       if (itemsize == 0) {
-	if (PyDataType_ELSIZE(desc) == 0)
-	  return false;
+	// if (PyDataType_ELSIZE(desc) == 0)
+	//   return false;
 	itemsize = (SizeType)(PyDataType_ELSIZE(desc));
       }
       precision = itemsize;
