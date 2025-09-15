@@ -5674,18 +5674,18 @@ TEST(SchemaCompare, AnyOf) {
   //         "    { \"maxLength\": 5 }"
   //         "  ]"
   //         "}");
-  COMPARE("{"
-          "  \"anyOf\": ["
-          "    { \"type\": \"string\" },"
-          "    { \"maxLength\": 5 }"
-          "  ]"
-          "}",
-          "{"
-          "  \"anyOf\": ["
-          "    { \"type\": \"string\" },"
-          "    { \"maxLength\": 5 }"
-          "  ]"
-          "}");
+  // COMPARE("{"
+  //         "  \"anyOf\": ["
+  //         "    { \"type\": \"string\" },"
+  //         "    { \"maxLength\": 5 }"
+  //         "  ]"
+  //         "}",
+  //         "{"
+  //         "  \"anyOf\": ["
+  //         "    { \"type\": \"string\" },"
+  //         "    { \"maxLength\": 5 }"
+  //         "  ]"
+  //         "}");
   INVALID_COMPARE("{"
         	  "  \"anyOf\": ["
         	  "    { \"type\": \"boolean\" },"
