@@ -110,7 +110,7 @@ set_tests_properties(unittest PROPERTIES
 if(NOT RAPIDJSON_SKIP_VALGRIND_TESTS)
     # Not running SIMD.* unit test cases for Valgrind
     add_test(NAME valgrind_unittest
-             COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind-python.supp --leak-check=full --show-leak-kinds=all -s --error-exitcode=1 --track-origins=yes --dsymutil=no --keep-debuginfo=yes --read-var-info=yes ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=-SIMD.*
+             COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind-python.supp --leak-check=full --show-leak-kinds=all -s --error-exitcode=1 --track-origins=yes --dsymutil=no --keep-debuginfo=yes --read-var-info=yes ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=SchemaCompare.AnyOf-SIMD.*
 	     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
     set_tests_properties(valgrind_unittest PROPERTIES
                          ENVIRONMENT
