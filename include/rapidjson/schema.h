@@ -12510,6 +12510,14 @@ public:
         RAPIDJSON_DELETE(ownStateAllocator_);
     }
 
+#ifdef RAPIDJSON_YGGDRASIL
+    void ResetStack() {
+        while (!schemaStack_.Empty())
+            PopSchema();
+        documentStack_.Clear();
+    }
+#endif // RAPIDJSON_YGGDRASIL
+
     //! Reset the internal states.
     void Reset() {
         while (!schemaStack_.Empty())
@@ -12593,12 +12601,20 @@ public:
 	      mode_ != Context::kNormalizationMode);
     }
     void SetSchemaHandler(SchemaHandlerType* handler) {
-      RAPIDJSON_ASSERT(!schema_handler_);
+      if (handler) {
+	RAPIDJSON_ASSERT(!schema_handler_);
+      } else {
+	ResetStack();
+      }
       schema_handler_ = handler;
     }
 
     void SetJointSchemaHandler(JointSchemaHandlerType* handler) {
-      RAPIDJSON_ASSERT(!joint_schema_handler_);
+      if (handler) {
+	RAPIDJSON_ASSERT(!joint_schema_handler_);
+      } else {
+	ResetStack();
+      }
       joint_schema_handler_ = handler;
       SetMode(Context::kJointSchemaHandlerMode);
     }
@@ -13648,7 +13664,7 @@ public:
 	SetMode(Context::kSchemaIteratorMode);
         SetSchemaHandler(&handler);
 	bool out = IterSchema();
-	schema_handler_ = nullptr;
+	SetSchemaHandler(nullptr);
 	mode_ = prev_mode;
 	return out;
     }
@@ -13658,8 +13674,8 @@ public:
 	typename Context::ValidatorMode prev_mode = rhs.mode_;
         rhs.SetJointSchemaHandler(&handler);
 	bool out = SchemaAccept(rhs);
+	rhs.SetJointSchemaHandler(nullptr);
 	rhs.mode_ = prev_mode;
-	rhs.joint_schema_handler_ = nullptr;
 	return out;
     }
 
