@@ -34,6 +34,8 @@ option(RAPIDJSON_CREATE_METASCHEMA "Re-create the metaschema" OFF)
 option(RAPIDJSON_CREATE_METASCHEMA_FULL "Re-create the metaschema and the full_schema.yaml file" OFF)
 option(RAPIDJSON_YGGDRASIL_TESTS "Build tests using the yggdrasil schema" OFF)
 
+add_definitions(-D_USE_MATH_DEFINES)
+
 if(RAPIDJSON_YGGDRASIL)
   add_definitions(-DRAPIDJSON_YGGDRASIL)
 else()
@@ -89,6 +91,13 @@ else()
     if(NOT Python3_FOUND)
         message(FATAL_ERROR "Python libraries not found")
     endif()
+
+    # TODO: Don't add these for all targets
+    add_definitions(-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION) 
+    include_directories(
+        SYSTEM ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
+    )
+    link_libraries(${Python3_LIBRARIES})
 
     # Set environment variables required for embedding Python
     set(RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Python3_EXECUTABLE}")
