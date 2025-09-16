@@ -27,12 +27,27 @@ endif()
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 
+option(RAPIDJSON_YGGDRASIL "Build with yggdrasil extensions" ON)
 option(YGGDRASIL_PYGIL_NO_MANAGEMENT "Disable any handling of the Python GIL" OFF)
+option(YGGDRASIL_DISABLE_PYTHON_C_API "Disable the Python C API" OFF)
+option(RAPIDJSON_CREATE_METASCHEMA "Re-create the metaschema" OFF)
+option(RAPIDJSON_CREATE_METASCHEMA_FULL "Re-create the metaschema and the full_schema.yaml file" OFF)
+option(RAPIDJSON_YGGDRASIL_TESTS "Build tests using the yggdrasil schema" OFF)
+
+if(RAPIDJSON_YGGDRASIL)
+  add_definitions(-DRAPIDJSON_YGGDRASIL)
+else()
+  set(YGGDRASIL_PYGIL_NO_MANAGEMENT OFF)
+  set(YGGDRASIL_DISABLE_PYTHON_C_API OFF)
+  set(RAPIDJSON_CREATE_METASCHEMA OFF)
+  set(RAPIDJSON_CREATE_METASCHEMA_FULL OFF)
+  set(RAPIDJSON_YGGDRASIL_TESTS OFF)
+endif()
+
 if (YGGDRASIL_PYGIL_NO_MANAGEMENT)
     add_definitions(-DYGGDRASIL_PYGIL_NO_MANAGEMENT)
 endif()
 
-option(YGGDRASIL_DISABLE_PYTHON_C_API "Disable the Python C API" OFF)
 if(YGGDRASIL_DISABLE_PYTHON_C_API)
     add_definitions(-DYGGDRASIL_DISABLE_PYTHON_C_API)
 else()
@@ -86,9 +101,6 @@ else()
 endif()
 
 # Generate the metaschema header file
-option(RAPIDJSON_CREATE_METASCHEMA "Re-create the metaschema" OFF)
-option(RAPIDJSON_CREATE_METASCHEMA_FULL "Re-create the metaschema and the full_schema.yaml file" OFF)
-option(RAPIDJSON_YGGDRASIL_TESTS "Build tests using the yggdrasil schema" OFF)
 if(RAPIDJSON_CREATE_METASCHEMA_FULL)
   set(RAPIDJSON_CREATE_METASCHEMA ON)
 endif()
@@ -318,9 +330,9 @@ install(FILES readme.md
         COMPONENT doc)
 
 # Add an interface target to export it
-add_library(RapidJSON INTERFACE)
+add_library(${PROJECT_NAME} INTERFACE)
 
-target_include_directories(RapidJSON INTERFACE $<INSTALL_INTERFACE:include>)
+target_include_directories(${PROJECT_NAME} INTERFACE $<INSTALL_INTERFACE:include>)
 
 install(DIRECTORY include/rapidjson
     DESTINATION "${INCLUDE_INSTALL_DIR}"
@@ -377,6 +389,6 @@ IF(CMAKE_INSTALL_DIR)
         DESTINATION "${CMAKE_INSTALL_DIR}"
         COMPONENT dev)
 
-    INSTALL(TARGETS RapidJSON EXPORT RapidJSON-targets)
-    INSTALL(EXPORT RapidJSON-targets DESTINATION ${CMAKE_INSTALL_DIR})
+    INSTALL(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}-targets)
+    INSTALL(EXPORT ${PROJECT_NAME}-targets DESTINATION ${CMAKE_INSTALL_DIR})
 ENDIF()
