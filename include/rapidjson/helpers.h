@@ -131,9 +131,14 @@ inline bool TranslateEncoding_inner(const void* src, SizeType srcNbytes,
   while (RAPIDJSON_LIKELY(is.Tell() < srcLength)) {
     Transcoder<SourceEncoding, DestEncoding>::Transcode(is, os);
   }
-  dstNbytes = (SizeType)os.GetLength() * (SizeType)sizeof(typename DestEncoding::Ch);
-  dst = allocator.Malloc(dstNbytes);
-  if (!dst) return false;
+  if (dst == NULL) {
+    dstNbytes = (SizeType)os.GetLength() * (SizeType)sizeof(typename DestEncoding::Ch);
+    dst = allocator.Malloc(dstNbytes);
+    if (!dst) return false;
+  } else {
+    if (dstNbytes != (SizeType)os.GetLength() * (SizeType)sizeof(typename DestEncoding::Ch))
+      return false;
+  }
   memcpy(dst, os.GetString(), dstNbytes);
   return true;
 }

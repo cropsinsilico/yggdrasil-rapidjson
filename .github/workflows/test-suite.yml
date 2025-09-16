@@ -117,7 +117,6 @@ jobs:
           channels: conda-forge
           channel-priority: strict
           miniforge-version: latest
-          # miniforge-variant: Mambaforge
           use-mamba: true
           conda-remove-defaults: true
       - name: Install packages not current on conda-forge (gcovr)

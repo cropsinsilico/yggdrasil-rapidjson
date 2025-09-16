@@ -1,0 +1,55 @@
+{% set name = "yggdrasil_rapidjson" %}
+{% set version = "1.1.0" %}
+# {% set version = os.getenv("VERSION_OVERRIDE") or GIT_DESCRIBE_TAG %}
+{% set PY_VER_MAJOR = PY_VER.split('.')[0] %}
+{% set PY_VER_MINOR = PY_VER.split('.')[1] %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ../
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - cmake
+    - ninja
+    - python                                 # [build_platform != target_platform]
+    - cross-python_{{ target_platform }}     # [build_platform != target_platform]
+    - ${{ stdlib('c') }}
+    - ${{ compiler('c') }}
+    - {{ compiler('cxx') }}
+  host:
+    - python
+  run:
+    - python
+
+tests:
+  - package_contents:
+      files:
+        - if: win
+          then:
+            - Library/cmake/YggdrasilRapidJSONConfig.cmake
+            - Library/cmake/YggdrasilRapidJSONConfigVersion.cmake
+        - if: unix
+          then:
+            - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfig.cmake
+            - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake
+      include:
+        - yggdrasil_rapidjson/rapidjson.h
+
+about:
+  summary: |
+    A header-only C++ library for JSON operation extended for use with
+    yggdrasil
+  license: MIT
+  license_file: license.txt
+  homepage: https://github.com/cropsinsilico/rapidjson
+
+extra:
+  recipe-maintainers:
+    - langmm

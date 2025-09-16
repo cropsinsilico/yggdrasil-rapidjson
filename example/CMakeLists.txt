@@ -15,6 +15,7 @@ set(EXAMPLES
     parsebyparts
     pretty
     prettyauto
+    schemanormalizer
     schemavalidator
     serialize
     simpledom
@@ -22,7 +23,9 @@ set(EXAMPLES
     simplepullreader
     simplewriter
     sortkeys
-    tutorial)
+    tutorial
+    units
+    yggdrasil)
     
 include_directories("../include/")
 
