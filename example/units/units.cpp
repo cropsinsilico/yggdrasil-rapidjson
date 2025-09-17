@@ -1,7 +1,7 @@
 // Example of using Yggdrasil units
 
-#include "rapidjson/units.h"        // Units
-#include <iostream>
+#include "rapidjson/units.h"         // Units
+#include "rapidjson/internal/meta.h" // values_eq for floating point comparison
 
 using namespace rapidjson;
 using namespace std;
@@ -12,7 +12,7 @@ int main(int, char*[]) {
     {
       // Scalar
       units::Quantity<float> x(5.0, "cm");
-      assert(x.value() == (float)5.0);
+      assert(internal::values_eq(x.value(), (float)5.0));
       assert(x.unitsStr() == "cm");
 
       // Underlying type can be any number type
@@ -47,19 +47,19 @@ int main(int, char*[]) {
       units::Quantity<double> x(5.0, "cm");
       units::Quantity<double> y(2.5, "s");
       units::Quantity<double> z = x / y;
-      assert(z.value() == 2.0);
+      assert(internal::values_eq(z.value(), 2.0));
       assert(z.unitsStr() == "cm*(s**-1)");
 
       // For addition / subtraction values are converted first
       units::Quantity<double> a(5.0, "cm");
       units::Quantity<double> b(1.0, "m");
       units::Quantity<double> c = a + b;
-      assert(c.value() == 105.0);
+      assert(internal::values_eq(c.value(), 105.0));
       assert(a.unitsStr() == "cm");
 
       // Operations can also be performed in place
       c += b;
-      assert(c.value() == 205.0);
+      assert(internal::values_eq(c.value(), 205.0));
       assert(a.unitsStr() == "cm");
     }
     {
@@ -68,7 +68,7 @@ int main(int, char*[]) {
       units::QuantityArray<double> y({2.0, 2.0, 3.0, 3.0}, "s");
       units::QuantityArray<double> z = x / y;
       assert(z.nelements() == 4);
-      assert(z.value()[1] == 1.0);
+      assert(internal::values_eq(z.value()[1], 1.0));
       assert(z.unitsStr() == "cm*(s**-1)");
     }
     {
@@ -77,7 +77,7 @@ int main(int, char*[]) {
       units::Quantity<double> y(2.5, "s");
       units::QuantityArray<double> z = x / y;
       assert(z.nelements() == 4);
-      assert(z.value()[1] == 0.8);
+      assert(internal::values_eq(z.value()[1], 0.8));
       assert(z.unitsStr() == "cm*(s**-1)");
     }
   
@@ -96,14 +96,14 @@ int main(int, char*[]) {
 
       // In-place conversion
       x.convert_to("m");
-      assert(x.value() == 0.01);
+      assert(internal::values_eq(x.value(), 0.01));
       assert(x.unitsStr() == "m");
 
       // Copy conversion
       units::Quantity<double> y = x.as("cm");
-      assert(x.value() == 0.01);
+      assert(internal::values_eq(x.value(), 0.01));
       assert(x.unitsStr() == "m");
-      assert(y.value() == 1.0);
+      assert(internal::values_eq(y.value(), 1.0));
       assert(y.unitsStr() == "cm");
     }
     
@@ -114,10 +114,10 @@ int main(int, char*[]) {
       units::Units mks("m kg s");
       units::Quantity<double> x(1.0, "cm*(min**-1)");
       units::Quantity<double> y = x.as_units_system(cgs);
-      assert(y.value() == 0.016666666666666666);
+      assert(internal::values_eq(y.value(), 0.016666666666666666));
       assert(y.unitsStr() == "cm*(s**-1)");
       units::Quantity<double> z = x.as_units_system(mks);
-      assert(z.value() == 0.00016666666666666666);
+      assert(internal::values_eq(z.value(), 0.00016666666666666666));
       assert(z.unitsStr() == "m*(s**-1)");
     }
     

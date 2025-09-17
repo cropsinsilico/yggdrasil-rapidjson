@@ -3,6 +3,7 @@
 
 #include "rapidjson/document.h"     // rapidjson's DOM-style API
 #include "rapidjson/prettywriter.h" // for stringify JSON
+#include "rapidjson/internal/meta.h" // values_eq for floating point comparison
 #include <cstdio>
 
 using namespace rapidjson;
@@ -105,10 +106,10 @@ int main(int, char*[]) {
       assert(document["Array2D"].GetNElements() == (8 * 3));
       float dest_stack[8][3];
       document["Array2D"].GetNDArray(dest_stack);
-      assert(dest_stack[6][2] == 1.0);
+      assert(internal::values_eq(dest_stack[6][2], (float)1.0));
       // Can also get the array in a version allocated on heap
       float* dest_heap = document["Array2D"].GetNDArray<float>(document.GetAllocator());
-      assert(dest_heap[6 * 3 + 2] == 1.0);
+      assert(internal::values_eq(dest_heap[6 * 3 + 2], (float)1.0));
     }
     {
       // Array on heap
@@ -122,10 +123,10 @@ int main(int, char*[]) {
       assert(document["Array3D"].GetNElements() == nelements);
       float dest_stack[2][3][3];
       document["Array3D"].GetNDArray(dest_stack);
-      assert(dest_stack[1][2][2] == (float)0.85);
+      assert(internal::values_eq(dest_stack[1][2][2], (float)0.85));
       // Can also get the array in a version allocated on heap
       float* dest_heap = document["Array3D"].GetNDArray<float>(document.GetAllocator());
-      assert(dest_heap[nelements - 1] == (float)0.85);
+      assert(internal::values_eq(dest_heap[nelements - 1], (float)0.85));
     }
 
     // Scalars/arrays with units
@@ -133,10 +134,10 @@ int main(int, char*[]) {
       assert(document["ScalarUnits"].IsScalar());
       assert(document["ScalarUnits"].IsScalar<double>());
       assert(document["ScalarUnits"].HasUnits());
-      assert(document["ScalarUnits"].GetScalar<double>() == 0.5);
-      assert(document["ScalarUnits"].GetScalar<double>("mm/s") == 5.0);
+      assert(internal::values_eq(document["ScalarUnits"].GetScalar<double>(), 0.5));
+      assert(internal::values_eq(document["ScalarUnits"].GetScalar<double>("mm/s"), 5.0));
       units::Quantity<double> scalar = document["ScalarUnits"].GetScalarQuantity<double>();
-      assert(scalar.value() == 0.5);
+      assert(internal::values_eq(scalar.value(), 0.5));
     }
     {
       assert(document["ArrayUnits"].IsNDArray());
@@ -148,12 +149,12 @@ int main(int, char*[]) {
       assert(document["ArrayUnits"].GetNElements() == (8 * 3));
       float dest_stack[8][3];
       document["ArrayUnits"].GetNDArray(dest_stack);
-      assert(dest_stack[6][2] == 1.0);
+      assert(internal::values_eq(dest_stack[6][2], 1.0));
       float dest_stack_mmps[8][3];
       document["ArrayUnits"].GetNDArray(dest_stack_mmps, "mm/s");
-      assert(dest_stack_mmps[6][2] == (float)10.0);
+      assert(internal::values_eq(dest_stack_mmps[6][2], (float)10.0));
       units::QuantityArray<float> array = document["ArrayUnits"].GetArrayQuantity<float>(document.GetAllocator());
-      assert(array.value()[6 * 3 + 2] == (float)1.0);
+      assert(internal::values_eq(array.value()[6 * 3 + 2], (float)1.0));
     }
 
     // Strings with specific encoding
