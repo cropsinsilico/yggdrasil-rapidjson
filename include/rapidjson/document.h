@@ -6211,16 +6211,19 @@ public:
 		     shape != NULL &&
 		     ndim == GetNDim() &&
 		     precision == GetPrecision());
+    SizeType nbytes_data = precision;
     for (SizeType i = 0; i < ndim; i++) {
       RAPIDJSON_ASSERT(shape[i] == GetShape()[i]);
+      nbytes_data *= shape[i];
     }
     if (encoding.IsNull()) {
-      std::memcpy(data, GetString(), GetNBytes());
+      RAPIDJSON_ASSERT(nbytes_data == GetNBytes());
+      std::memcpy(data, GetString(), nbytes_data);
     } else {
       Allocator allocator;
       ValueType encoded = GetTranscodedString(encoding, allocator);
       SizeType nbytes = encoded.GetStringLength() * sizeof(Ch);
-      RAPIDJSON_ASSERT(nbytes == GetNBytes());
+      RAPIDJSON_ASSERT(nbytes == nbytes_data);
       std::memcpy(data, encoded.GetString(), nbytes);
     }
   }
@@ -6254,8 +6257,10 @@ public:
 		     data != NULL &&
 		     shape != NULL &&
 		     ndim == GetNDim());
+    SizeType nbytes_data = sizeof(T);
     for (SizeType i = 0; i < ndim; i++) {
       RAPIDJSON_ASSERT(shape[i] == GetShape()[i]);
+      nbytes_data *= shape[i];
     }
     size_t length = (size_t)(GetStringLength() * sizeof(Ch));
     RAPIDJSON_ASSERT((SizeType)length == GetNBytes());
@@ -6264,7 +6269,7 @@ public:
       SizeType nelements = GetNElements();
       unsigned char* decoded_bytes = (unsigned char*)ChangePrecision<T>(
 	(const unsigned char *)GetString(), nelements, allocator);
-      length = sizeof(T) * nelements;
+      length = nbytes_data;
       std::memcpy(data, decoded_bytes, length);
       allocator.Free(decoded_bytes);
     } else {
@@ -6870,6 +6875,8 @@ public:
 				  encoding.GetString(), allocator, true);
     }
     RAPIDJSON_ASSERT(encoded);
+    if (not encoded)
+      return ValueType(kNullType);
     return ValueType((Ch*)dst, dst_len / sizeof(Ch));
   }
 
