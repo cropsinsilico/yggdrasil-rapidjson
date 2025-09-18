@@ -50,12 +50,14 @@ extern "C" {
 #ifdef _DEBUG
 #undef _DEBUG
 #include <Python.h>
+#include "pythoncapi_compat.h"
 #include <numpy/arrayobject.h>
 #include <numpy/ndarrayobject.h>
 #include <numpy/npy_common.h>
 #define _DEBUG
 #else
 #include <Python.h>
+#include "pythoncapi_compat.h"
 #include <numpy/arrayobject.h>
 #include <numpy/ndarrayobject.h>
 #include <numpy/npy_common.h>
