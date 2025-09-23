@@ -203,7 +203,7 @@ int main(int argc, char *argv[]) {
 #else // RAPIDJSON_YGGDRASIL
 
 int main(int, char*[]) {
-  return EXIT_SUCCESS;
+  return 0;
 }
 
 #endif // RAPIDJSON_YGGDRASIL

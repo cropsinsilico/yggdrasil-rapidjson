@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -42,6 +42,7 @@ jobs:
           conda-remove-defaults: true
       - name: Install conda-build
         run: |
+          conda config --add channels conda-forge
           conda info
           conda list
           conda install conda-build cmake numpy -y
@@ -52,7 +53,7 @@ jobs:
           conda create -n test python=${{ matrix.python-version }}
       - name: Build conda recipe
         run: |
-          conda-build --use-local --no-anaconda-upload --output-folder ./local_channel/ --python ${{ matrix.python-version }} recipe/
+          conda-build --no-anaconda-upload --output-folder ./local_channel/ --python ${{ matrix.python-version }} recipe/
       - name: Install from local conda recipe
         run: |
           conda install -n test -c ./local_channel yggdrasil_rapidjson

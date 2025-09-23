@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
         with:
           submodules: true
       # - name: Patch gtest
@@ -45,7 +45,7 @@ jobs:
         run: |
           brew install doxygen
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v6
       - name: Fix Python path on mac
         if: matrix.os == 'macos-latest'
         run: |
@@ -95,7 +95,7 @@ jobs:
         shell: bash -l {0}
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
         with:
           submodules: true
       # - name: Patch gtest
