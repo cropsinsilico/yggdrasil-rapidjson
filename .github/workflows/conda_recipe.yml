@@ -66,6 +66,7 @@ jobs:
           conda info
           conda list
           conda create -n test python=${{ matrix.python-version }}
+          mkdir -p ./local_channel
       - name: Build conda recipe (using conda-build)
         if: matrix.builder == 'conda'
         run: |

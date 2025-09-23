@@ -11,7 +11,7 @@ cmake %CMAKE_ARGS% ^
       -D RAPIDJSON_BUILD_DOC:BOOL=OFF ^
       -D RAPIDJSON_YGGDRASIL:BOOL=ON ^
       -D CMAKE_VERBOSE_MAKEFILE:BOOL=ON ^
-      -D "Python_EXECUTABLE:FILEPATH=%PYTHON%" ^
+      -D "Python3_EXECUTABLE:FILEPATH=%PYTHON%" ^
       ..
 if errorlevel 1 exit 1
 
