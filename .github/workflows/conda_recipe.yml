@@ -76,7 +76,7 @@ jobs:
         if: matrix.builder == 'rattler'
         with:
           upload-artifact: false
-          build-args: --output-dir $HOME/local_channel/ --target-platform ${{ matrix.target-platform }}
+          build-args: --output-dir $HOME/local_channel/ --target-platform ${{ matrix.target-platform }} --variant python=${{ matrix.python-version }}
       - name: Install from local conda recipe
         run: |
           conda install -n test -c $HOME/local_channel yggdrasil-rapidjson
@@ -90,20 +90,20 @@ jobs:
         run: |
           mkdir example/serialize/build
           cd example/serialize/build
-          conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
+          conda run -n test cmake -G "Ninja" -DCMAKE_PREFIX_PATH=$CONDA_PREFIX -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
           conda run -n test cmake --build . --config Debug
           conda run -n test ./serialize
       - name: Build & run yggdrasil test example using conda installation
         run: |
           mkdir example/yggdrasil/build
           cd example/yggdrasil/build
-          conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
+          conda run -n test cmake -G "Ninja" -DCMAKE_PREFIX_PATH=$CONDA_PREFIX -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
           conda run -n test cmake --build . --config Debug
           conda run -n test ./yggdrasil
       - name: Build & run schemanormalizer test example using conda installation
         run: |
           mkdir example/units/build
           cd example/units/build
-          conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
+          conda run -n test cmake -G "Ninja" -DCMAKE_PREFIX_PATH=$CONDA_PREFIX -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
           conda run -n test cmake --build . --config Debug
           conda run -n test ./units
