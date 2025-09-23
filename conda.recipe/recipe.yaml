@@ -43,7 +43,7 @@ tests:
             - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfig.cmake
             - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake
       include:
-        - yggdrasil_rapidjson/rapidjson.h
+        - yggdrasil_rapidjson/rapidjson/rapidjson.h
 
 about:
   homepage: https://github.com/cropsinsilico/yggdrasil-rapidjson
