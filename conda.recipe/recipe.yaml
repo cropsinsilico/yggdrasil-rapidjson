@@ -16,6 +16,7 @@ requirements:
   build:
     - cmake
     - ninja
+    - numpy
     - if: build_platform != target_platform
       then:
         - python
@@ -25,8 +26,10 @@ requirements:
     - ${{ compiler('cxx') }}
   host:
     - python
+    - numpy
   run:
     - python
+    - numpy
 
 tests:
   - package_contents:
