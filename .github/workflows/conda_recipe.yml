@@ -19,19 +19,19 @@ jobs:
         python-version: ["3.11"]
         builder: [conda]
         target-platform: [none]
-      include:
-        - os: ubuntu-latest
-          target-platform: linux-64
-          python-version: "3.11"
-          builder: rattler
-        - os: macos-latest
-          target-platform: osx-arm64
-          python-version: "3.11"
-          builder: rattler
-        - os: windows-latest
-          target-platform: win-64
-          python-version: "3.11"
-          builder: rattler
+        include:
+          - os: ubuntu-latest
+            target-platform: linux-64
+            python-version: "3.11"
+            builder: rattler
+          - os: macos-latest
+            target-platform: osx-arm64
+            python-version: "3.11"
+            builder: rattler
+          - os: windows-latest
+            target-platform: win-64
+            python-version: "3.11"
+            builder: rattler
       fail-fast: false
     steps:
       - name: Check out repository code
