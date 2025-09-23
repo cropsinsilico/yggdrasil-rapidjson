@@ -1,8 +1,6 @@
-{% set name = "yggdrasil_rapidjson" %}
-{% set version = "1.1.0" %}
-# {% set version = os.getenv("VERSION_OVERRIDE") or GIT_DESCRIBE_TAG %}
-{% set PY_VER_MAJOR = PY_VER.split('.')[0] %}
-{% set PY_VER_MINOR = PY_VER.split('.')[1] %}
+context:
+  name: yggdrasil-rapidjson
+  version: 1.1.0
 
 package:
   name: {{ name|lower }}
