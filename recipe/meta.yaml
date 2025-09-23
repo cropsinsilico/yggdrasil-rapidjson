@@ -35,7 +35,7 @@ test:
     - if not exist %LIBRARY_INC%\\yggdrasil_rapidjson/rapidjson/rapidjson.h exit 1  # [win]
 
 about:
-  home: https://github.com/cropsinsilico/rapidjson
+  home: https://github.com/cropsinsilico/yggdrasil-rapidjson
   license: MIT
   license_file: license.txt
   summary: |

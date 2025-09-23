@@ -17,7 +17,21 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.11"]
-        builder: [rattler, conda]
+        builder: [conda]
+        target-platform: [none]
+      include:
+        - os: ubuntu-latest
+          target-platform: linux-64
+          python-version: "3.11"
+          builder: rattler
+        - os: macos-latest
+          target-platform: osx-arm64
+          python-version: "3.11"
+          builder: rattler
+        - os: windows-latest
+          target-platform: win-64
+          python-version: "3.11"
+          builder: rattler
       fail-fast: false
     steps:
       - name: Check out repository code
@@ -55,13 +69,13 @@ jobs:
       - name: Build conda recipe (using conda-build)
         if: matrix.builder == 'conda'
         run: |
-          conda-build --no-anaconda-upload --output-folder ./local_channel/ --python ${{ matrix.python-version }} recipe/
+          conda-build --use-local --no-anaconda-upload --output-folder ./local_channel/ --python ${{ matrix.python-version }} recipe/
       - name: Build conda recipe (using rattler-build action)
         uses: prefix-dev/rattler-build-action@v0.2.34
         if: matrix.builder == 'rattler'
         with:
           upload-artifact: false
-          build-args: --output-dir ./local_channel/
+          build-args: --output-dir ./local_channel/ --target-platform ${{ matrix.target-platform }}
       - name: Install from local conda recipe
         run: |
           conda install -n test -c ./local_channel yggdrasil-rapidjson
