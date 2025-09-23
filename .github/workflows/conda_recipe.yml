@@ -65,7 +65,7 @@ jobs:
         run: |
           conda info
           conda list
-          conda create -n test python=${{ matrix.python-version }}
+          conda create -n test python=${{ matrix.python-version }} cmake cxx-compiler
           mkdir -p $HOME/local_channel
       - name: Build conda recipe (using conda-build)
         if: matrix.builder == 'conda'
