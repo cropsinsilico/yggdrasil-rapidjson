@@ -3,8 +3,8 @@ context:
   version: 1.1.0
 
 package:
-  name: {{ name|lower }}
-  version: {{ version }}
+  name: ${{ name|lower }}
+  version: ${{ version }}
 
 source:
   path: ../
@@ -17,10 +17,10 @@ requirements:
     - cmake
     - ninja
     - python                                 # [build_platform != target_platform]
-    - cross-python_{{ target_platform }}     # [build_platform != target_platform]
-    - {{ stdlib('c') }}
-    - {{ compiler('c') }}
-    - {{ compiler('cxx') }}
+    - cross-python_${{ target_platform }}     # [build_platform != target_platform]
+    - ${{ stdlib('c') }}
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
   host:
     - python
   run:

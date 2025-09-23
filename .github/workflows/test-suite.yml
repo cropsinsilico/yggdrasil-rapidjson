@@ -15,6 +15,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-install: [pip]
+        python-version: [3.11]
         with-yggdrasil: [true]
         include:
           - os: ubuntu-latest
@@ -46,6 +47,13 @@ jobs:
           brew install doxygen
       - name: Setup Python
         uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Check Python environment variables
+        shell: bash -l {0}
+        run: |
+          echo "pythonLocation=${pythonLocation}"
+          echo "Python3_ROOT_DIR=${Python3_ROOT_DIR}"
       - name: Fix Python path on mac
         if: matrix.os == 'macos-latest'
         run: |
@@ -88,6 +96,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-install: [conda]
+        python-version: [3.11]
         with-yggdrasil: [true]
       fail-fast: false
     defaults:
@@ -119,6 +128,7 @@ jobs:
           miniforge-version: latest
           use-mamba: true
           conda-remove-defaults: true
+          python-version: ${{ matrix.python-version }}
       - name: Install packages not current on conda-forge (gcovr)
         run: |
           pip install gcovr
