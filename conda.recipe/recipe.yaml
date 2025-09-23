@@ -43,7 +43,8 @@ tests:
         - yggdrasil_rapidjson/rapidjson.h
 
 about:
-  home: https://github.com/cropsinsilico/yggdrasil-rapidjson
+  homepage: https://github.com/cropsinsilico/yggdrasil-rapidjson
+  repository: https://github.com/cropsinsilico/yggdrasil-rapidjson
   summary: |
     A header-only C++ library for JSON operation extended for use with
     yggdrasil
