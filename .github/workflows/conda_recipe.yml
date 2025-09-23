@@ -65,7 +65,7 @@ jobs:
         run: |
           conda info
           conda list
-          conda create -n test python=${{ matrix.python-version }} cmake cxx-compiler
+          conda create -n test python=${{ matrix.python-version }} cmake cxx-compiler ninja
           mkdir -p $HOME/local_channel
       - name: Build conda recipe (using conda-build)
         if: matrix.builder == 'conda'
@@ -90,20 +90,20 @@ jobs:
         run: |
           mkdir example/serialize/build
           cd example/serialize/build
-          conda run -n test cmake .. -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
+          conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
           conda run -n test cmake --build . --config Debug
           conda run -n test ./serialize
       - name: Build & run yggdrasil test example using conda installation
         run: |
           mkdir example/yggdrasil/build
           cd example/yggdrasil/build
-          conda run -n test cmake .. -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
+          conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
           conda run -n test cmake --build . --config Debug
           conda run -n test ./yggdrasil
       - name: Build & run schemanormalizer test example using conda installation
         run: |
           mkdir example/units/build
           cd example/units/build
-          conda run -n test cmake .. -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
+          conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
           conda run -n test cmake --build . --config Debug
           conda run -n test ./units
