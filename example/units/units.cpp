@@ -1,5 +1,7 @@
 // Example of using Yggdrasil units
 
+#ifdef RAPIDJSON_YGGDRASIL
+
 #include "rapidjson/units.h"         // Units
 #include "rapidjson/internal/meta.h" // values_eq for floating point comparison
 
@@ -123,3 +125,5 @@ int main(int, char*[]) {
     
     return 0;
 }
+
+#endif // RAPIDJSON_YGGDRASIL

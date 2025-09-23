@@ -2,6 +2,8 @@
 
 // The example validates JSON text from stdin with a JSON schema specified in the argument.
 
+#ifdef RAPIDJSON_YGGDRASIL
+
 #define RAPIDJSON_HAS_STDSTRING 1
 
 #include "rapidjson/error/en.h"
@@ -197,3 +199,5 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 }
+
+#endif // RAPIDJSON_YGGDRASIL

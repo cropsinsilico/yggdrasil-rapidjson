@@ -22,7 +22,7 @@ requirements:
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
     - ${{ stdlib('c') }}
     - ${{ compiler('c') }}
-    - {{ compiler('cxx') }}
+    - ${{ compiler('cxx') }}
   host:
     - python
   run:

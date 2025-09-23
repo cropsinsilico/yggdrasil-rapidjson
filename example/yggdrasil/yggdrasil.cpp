@@ -1,6 +1,8 @@
 // Hello World example w/ Yggdrasil extension types
 // This example shows basic usage of DOM-style API for the yggdrasil types.
 
+#ifdef RAPIDJSON_YGGDRASIL
+
 #include "rapidjson/document.h"     // rapidjson's DOM-style API
 #include "rapidjson/prettywriter.h" // for stringify JSON
 #include "rapidjson/internal/meta.h" // values_eq for floating point comparison
@@ -44,7 +46,7 @@ int main(int, char*[]) {
       SizeType nelements = 2 * 3 * 3;
       float* array3d = (float*)allocator.Malloc(nelements * sizeof(float));
       for (SizeType i = 0; i < nelements; i++) {
-        array3d[i] = i * 0.05;
+        array3d[i] = (float)(i * 0.05);
       }
       Value v(array3d, shape, 3, allocator);
       document.AddMember("Array3D", v, allocator);
@@ -75,8 +77,8 @@ int main(int, char*[]) {
       StringBuffer os;
       os.Clear();
       UTF8<>::Encode(os, 0x0370);
-      Value v(os.GetString(), os.GetLength(), "UCS4", 4,
-              document.GetAllocator());
+      Value v(os.GetString(), static_cast<SizeType>(os.GetLength()),
+              "UCS4", 4, document.GetAllocator());
       document.AddMember("Encoded", v, document.GetAllocator());
     }
 
@@ -186,3 +188,5 @@ int main(int, char*[]) {
     
     return 0;
 }
+
+#endif // RAPIDJSON_YGGDRASIL
