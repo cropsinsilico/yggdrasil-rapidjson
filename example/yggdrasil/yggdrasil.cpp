@@ -189,4 +189,10 @@ int main(int, char*[]) {
     return 0;
 }
 
+#else // RAPIDJSON_YGGDRASIL
+
+int main(int, char*[]) {
+  return 0;
+}
+
 #endif // RAPIDJSON_YGGDRASIL

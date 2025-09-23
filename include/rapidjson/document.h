@@ -6875,7 +6875,7 @@ public:
 				  encoding.GetString(), allocator, true);
     }
     RAPIDJSON_ASSERT(encoded);
-    if (not encoded)
+    if (!encoded)
       return ValueType(kNullType);
     return ValueType((Ch*)dst, dst_len / sizeof(Ch));
   }

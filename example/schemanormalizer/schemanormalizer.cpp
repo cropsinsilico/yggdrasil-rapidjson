@@ -200,4 +200,10 @@ int main(int argc, char *argv[]) {
     }
 }
 
+#else // RAPIDJSON_YGGDRASIL
+
+int main(int, char*[]) {
+  return EXIT_SUCCESS;
+}
+
 #endif // RAPIDJSON_YGGDRASIL
