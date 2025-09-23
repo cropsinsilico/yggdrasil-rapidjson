@@ -61,10 +61,10 @@ jobs:
         if: matrix.builder == 'rattler'
         with:
           upload-artifact: false
-          build-args: --output-dir ./local_channel/ --python ${{ matrix.python-version }}
+          build-args: --output-dir ./local_channel/
       - name: Install from local conda recipe
         run: |
-          conda install -n test -c ./local_channel yggdrasil_rapidjson
+          conda install -n test -c ./local_channel yggdrasil-rapidjson
           conda list -n test
 
       ###################################

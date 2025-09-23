@@ -1,4 +1,4 @@
-{% set name = "yggdrasil_rapidjson" %}
+{% set name = "yggdrasil-rapidjson" %}
 {% set version = "1.1.0" %}
 
 package:
@@ -25,27 +25,22 @@ requirements:
   run:
     - python
 
-tests:
-  - package_contents:
-      files:
-        - if: win
-          then:
-            - Library/cmake/YggdrasilRapidJSONConfig.cmake
-            - Library/cmake/YggdrasilRapidJSONConfigVersion.cmake
-        - if: unix
-          then:
-            - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfig.cmake
-            - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake
-      include:
-        - yggdrasil_rapidjson/rapidjson.h
+test:
+  commands:
+    - test -f $PREFIX/lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfig.cmake  # [unix]
+    - test -f $PREFIX/lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake  # [unix]
+    - test -f $PREFIX/include/yggdrasil_rapidjson/rapidjson/rapidjson.h  # [unix]
+    - if not exist %LIBRARY_LIB%\\cmake\\YggdrasilRapidJSONConfig.cmake exit 1  # [win]
+    - if not exist %LIBRARY_LIB%\\cmake\\YggdrasilRapidJSONConfigVersion.cmake exit 1  # [win]
+    - if not exist %LIBRARY_INC%\\yggdrasil_rapidjson/rapidjson/rapidjson.h exit 1  # [win]
 
 about:
+  home: https://github.com/cropsinsilico/rapidjson
+  license: MIT
+  license_file: license.txt
   summary: |
     A header-only C++ library for JSON operation extended for use with
     yggdrasil
-  license: MIT
-  license_file: license.txt
-  homepage: https://github.com/cropsinsilico/rapidjson
 
 extra:
   recipe-maintainers:
