@@ -95,25 +95,45 @@ jobs:
       ###################################
       # Test
       ###################################
-      # TODO: Update to yggdrasil version
-      - name: Build & run serialize test example using conda installation
+      - name: Build serialize test example using conda installation
         run: |
           mkdir example/serialize/build
           cd example/serialize/build
           conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
           conda run -n test cmake --build . --config Debug
+      - name: (UNIX) Run serialize test example using conda installation
+        if: matrix.os != 'windows-latest'
+        run: |
           conda run -n test ./serialize
-      - name: Build & run yggdrasil test example using conda installation
+      - name: (WINDOWS) Run serialize test example using conda installation
+        if: matrix.os == 'windows-latest'
+        run: |
+          conda run -n test ./serialize.exe
+      - name: Run yggdrasil test example using conda installation
         run: |
           mkdir example/yggdrasil/build
           cd example/yggdrasil/build
           conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
           conda run -n test cmake --build . --config Debug
-          conda run -n test ./yggdrasil
-      - name: Build & run schemanormalizer test example using conda installation
+      - name: (UNIX) Run yggdrasil test example using conda installation
+        if: matrix.os != 'windows-latest'
+        run: |
+          conda run -n test yggdrasil
+      - name: (WINDOWS) Run yggdrasil test example using conda installation
+        if: matrix.os == 'windows-latest'
+        run: |
+          conda run -n test yggdrasil.exe
+      - name: Run units test example using conda installation
         run: |
           mkdir example/units/build
           cd example/units/build
           conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
           conda run -n test cmake --build . --config Debug
-          conda run -n test ./units
+      - name: (UNIX) Run units test example using conda installation
+        if: matrix.os != 'windows-latest'
+        run: |
+          conda run -n test units
+      - name: (WINDOWS) Run units test example using conda installation
+        if: matrix.os == 'windows-latest'
+        run: |
+          conda run -n test units.exe
