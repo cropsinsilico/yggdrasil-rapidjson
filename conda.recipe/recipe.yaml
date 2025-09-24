@@ -50,11 +50,12 @@ tests:
       - if: win
         then: tests/run_test.bat
     requirements:
-      - ${{ stdlib('c') }}
-      - ${{ compiler('c') }}
-      - ${{ compiler('cxx') }}
-      - cmake
-      - ninja
+      run:
+        - ${{ stdlib('c') }}
+        - ${{ compiler('c') }}
+        - ${{ compiler('cxx') }}
+        - cmake
+        - ninja
     files:
       source:
         - example/

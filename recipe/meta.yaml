@@ -39,9 +39,9 @@ test:
   source_files:
     - example
   requires:
-    - ${{ stdlib('c') }}
-    - ${{ compiler('c') }}
-    - ${{ compiler('cxx') }}
+    - {{ stdlib('c') }}
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
     - cmake
     - ninja
 
