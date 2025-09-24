@@ -1,26 +1,27 @@
-@setlocal
-setlocal EnableDelayedExpansion
+for %%x in (serialize yggdrasil units) do echo %%x
+rem @setlocal
+rem setlocal EnableDelayedExpansion
 
-set examples=serialize yggdrasil units
+rem set examples=serialize yggdrasil units
 
-for %%example in (%examples%) do (
-  rem echo "Building %%example"
-  rem set builddir="example\%%example\build"
-  rem if not exist "!builddir!" mkdir "!builddir!"
-  rem if !errorlevel! neq 0 exit /b !errorlevel!
-  rem cd "!builddir!"
-  rem cmake -G "Ninja" ^
-  rem       -D CMAKE_VERBOSE_MAKEFILE:BOOL=ON ^
-  rem       ..
-  rem if !errorlevel! neq 0 exit /b !errorlevel!
-  rem cmake --build . --config Debug
-  rem if !errorlevel! neq 0 exit /b !errorlevel!
+rem for %%example in (%examples%) do (
+rem   rem echo "Building %%example"
+rem   rem set builddir="example\%%example\build"
+rem   rem if not exist "!builddir!" mkdir "!builddir!"
+rem   rem if !errorlevel! neq 0 exit /b !errorlevel!
+rem   rem cd "!builddir!"
+rem   rem cmake -G "Ninja" ^
+rem   rem       -D CMAKE_VERBOSE_MAKEFILE:BOOL=ON ^
+rem   rem       ..
+rem   rem if !errorlevel! neq 0 exit /b !errorlevel!
+rem   rem cmake --build . --config Debug
+rem   rem if !errorlevel! neq 0 exit /b !errorlevel!
 
-  rem echo "Running %%example"
-  rem "%%example.exe"
-  rem if !errorlevel! neq 0 exit /b !errorlevel!
+rem   rem echo "Running %%example"
+rem   rem "%%example.exe"
+rem   rem if !errorlevel! neq 0 exit /b !errorlevel!
 
-  rem cd ..\..\..
-)
+rem   rem cd ..\..\..
+rem )
 
-@endlocal
+rem @endlocal
