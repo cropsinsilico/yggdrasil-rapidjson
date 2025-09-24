@@ -18,7 +18,7 @@ requirements:
     - numpy
     - python                                 # [build_platform != target_platform]
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
-    # - {{ stdlib('c') }}
+    - {{ stdlib('c') }}
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
   host:
@@ -36,6 +36,14 @@ test:
     - if not exist %LIBRARY_PREFIX%\\cmake\\YggdrasilRapidJSONConfig.cmake exit 1  # [win]
     - if not exist %LIBRARY_PREFIX%\\cmake\\YggdrasilRapidJSONConfigVersion.cmake exit 1  # [win]
     - if not exist %LIBRARY_PREFIX%\\include\\yggdrasil_rapidjson\\rapidjson\\rapidjson.h exit 1  # [win]
+  source_files:
+    - example
+  requires:
+    - ${{ stdlib('c') }}
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
+    - cmake
+    - ninja
 
 about:
   home: https://github.com/cropsinsilico/yggdrasil-rapidjson

@@ -21,7 +21,7 @@ requirements:
       then:
         - python
         - cross-python_${{ target_platform }}
-    # - ${{ stdlib('c') }}
+    - ${{ stdlib('c') }}
     - ${{ compiler('c') }}
     - ${{ compiler('cxx') }}
   host:
@@ -44,18 +44,20 @@ tests:
             - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake
       include:
         - yggdrasil_rapidjson/rapidjson/rapidjson.h
-  - if: win
-    then:
-      script: tests/run_test.bat
-      files:
-        source:
-          - example/
-  - if: unix
-    then:
-      script: tests/run_test.sh
-      files:
-        source:
-          - example/
+  - script:
+      - if: unix
+        then: tests/run_test.sh
+      - if: win
+        then: tests/run_test.bat
+    requirements:
+      - ${{ stdlib('c') }}
+      - ${{ compiler('c') }}
+      - ${{ compiler('cxx') }}
+      - cmake
+      - ninja
+    files:
+      source:
+        - example/
 
 about:
   homepage: https://github.com/cropsinsilico/yggdrasil-rapidjson
