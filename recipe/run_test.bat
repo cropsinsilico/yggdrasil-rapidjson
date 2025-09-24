@@ -1,5 +1,10 @@
+setlocal EnableDelayedExpansion
+
 for %%x in (serialize yggdrasil units) do (
   echo %%x
+  dir
+  set "builddir=example\\%%example\\build"
+  echo !builddir!
 )
 rem @setlocal
 rem setlocal EnableDelayedExpansion

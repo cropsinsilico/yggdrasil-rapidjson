@@ -1,4 +1,9 @@
-for %%x in (serialize yggdrasil units) do echo %%x
+setlocal EnableDelayedExpansion
+
+for %%x in (serialize yggdrasil units) do (
+  echo %%x
+  dir
+)
 rem @setlocal
 rem setlocal EnableDelayedExpansion
 
