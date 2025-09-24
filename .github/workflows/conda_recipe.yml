@@ -105,10 +105,12 @@ jobs:
       - name: (UNIX) Run serialize test example using conda installation
         if: matrix.os != 'windows-latest'
         run: |
+          cd example/serialize/build
           conda run -n test ./serialize
       - name: (WINDOWS) Run serialize test example using conda installation
         if: matrix.os == 'windows-latest'
         run: |
+          cd example/serialize/build
           conda run -n test ./serialize.exe
       - name: Run yggdrasil test example using conda installation
         run: |
@@ -119,10 +121,12 @@ jobs:
       - name: (UNIX) Run yggdrasil test example using conda installation
         if: matrix.os != 'windows-latest'
         run: |
+          cd example/yggdrasil/build
           conda run -n test yggdrasil
       - name: (WINDOWS) Run yggdrasil test example using conda installation
         if: matrix.os == 'windows-latest'
         run: |
+          cd example/yggdrasil/build
           conda run -n test yggdrasil.exe
       - name: Run units test example using conda installation
         run: |
@@ -133,8 +137,10 @@ jobs:
       - name: (UNIX) Run units test example using conda installation
         if: matrix.os != 'windows-latest'
         run: |
+          cd example/units/build
           conda run -n test units
       - name: (WINDOWS) Run units test example using conda installation
         if: matrix.os == 'windows-latest'
         run: |
+          cd example/units/build
           conda run -n test units.exe
