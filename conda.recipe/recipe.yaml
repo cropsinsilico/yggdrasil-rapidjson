@@ -49,13 +49,13 @@ tests:
       script: tests/run_test.bat
       files:
         source:
-          - examples/
+          - example/
   - if: unix
     then:
       script: tests/run_test.sh
       files:
         source:
-          - examples/
+          - example/
 
 about:
   homepage: https://github.com/cropsinsilico/yggdrasil-rapidjson
