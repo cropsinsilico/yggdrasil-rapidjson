@@ -20,6 +20,7 @@ jobs:
         include:
           - os: ubuntu-latest
             python-install: pip
+            python-version: [3.11]
             with-yggdrasil: false
       fail-fast: false
     steps:
