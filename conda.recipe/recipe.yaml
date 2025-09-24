@@ -1,6 +1,6 @@
 context:
   name: "yggdrasil-rapidjson"
-  version: "1.1.0"
+  version: "1.1.0.0"
 
 package:
   name: ${{ name|lower }}
@@ -21,7 +21,7 @@ requirements:
       then:
         - python
         - cross-python_${{ target_platform }}
-    # - ${{ stdlib('c') }}
+    - ${{ stdlib('c') }}
     - ${{ compiler('c') }}
     - ${{ compiler('cxx') }}
   host:
@@ -44,6 +44,21 @@ tests:
             - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake
       include:
         - yggdrasil_rapidjson/rapidjson/rapidjson.h
+  - script:
+      - if: unix
+        then: tests/run_test.sh
+      - if: win
+        then: tests/run_test.bat
+    requirements:
+      run:
+        - ${{ stdlib('c') }}
+        - ${{ compiler('c') }}
+        - ${{ compiler('cxx') }}
+        - cmake
+        - ninja
+    files:
+      source:
+        - example/
 
 about:
   homepage: https://github.com/cropsinsilico/yggdrasil-rapidjson

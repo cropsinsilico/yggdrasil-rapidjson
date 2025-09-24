@@ -1,41 +1,37 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
+Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJSON version is used with the addition of a EXTEN version after the PATCH version (i.e. MAJOR.MINOR.PATCH.EXTEN) to indicate the YggdrasilRapidJSON version. The EXTEN version will restart at 0 when/if RapidJSON increments their version.
 
-## Yggdrasil Specific
+## 1.1.0.0 - 2025-09-24
 
-### TODO
-* Remove use of standard libraries (std::basic_string, std::vector, std::map)?
-* Use explicit allocator for QuantityArray?
-* Add test for conflicting aliases in allOf set
-* Add test for array of strings & complex
-* Allow for different character types in Ply & ObjWavefront classes
-* Add units to ply/obj
-* Store scalars in standard yggdrasil data
-
-### IN PROGRESS
-* Add docstrings to new methods
-
-### COMPLETE
-* Require allocator for yggdrasil types
-* Added schema to document class
+### Features
 * Scalars w/ variable precision
 * ND arrays (1+)
+* Unit-full scalars/NDArrays w/ validation & normalization
 * Python import
 * Python class (including numpy scalars & arrays)
 * Python function
 * Python instance
-* Coverage (via gcov/llvm-cov gcovr and cmake)
-* Added Unit-full type w/ validation & normalization
 * Schema type
-* Continuous integration
+* Added schema to document class
 * Validation of circular, conflicting, & singular aliases
 * Normalization of default, aliases, & allowSingular w/ error handling
 * Warning messages during validation for deprecated properties
 * Normalization of compatible type/precision conversion
-* Made validation/normalization errors more verbose to match jsonschema
 * Added "encoding" property for scalar strings
 * Added allowWrapped flag for validating/normalizing to single element in array/object
+
+### Improvements
+* Made validation/normalization errors more verbose to match jsonschema
+* Require allocator for yggdrasil types
+
+### Maintenance
+* Continuous integration
+* Coverage (via gcov/llvm-cov gcovr and cmake)
+* Conda recipes (v0 & v1 versions)
+* Examples of yggdrasil extension types, units, & normalization
+
 
 ## [Unreleased]
 
