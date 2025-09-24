@@ -79,7 +79,7 @@ jobs:
           conda-build --no-anaconda-upload --output-folder $HOME/local_channel/ --python ${{ matrix.python-version }} recipe/
       - name: Build conda recipe (using rattler-build)
         if: matrix.builder == 'rattler'
-        run |
+        run: |
           rattler-build build --recipe "conda.recipe/recipe.yaml" --output-dir $HOME/local_channel/ --target-platform ${{ matrix.target-platform }} --variant python=${{ matrix.python-version }}
       # - name: Build conda recipe (using rattler-build action)
       #   uses: prefix-dev/rattler-build-action@v0.2.34
