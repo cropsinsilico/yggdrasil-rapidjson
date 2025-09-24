@@ -5,12 +5,12 @@ set examples=serialize yggdrasil units
 
 for %%example in (%examples%) do (
   rem echo HERE
-  dir
+  rem dir
   rem echo "Building %%example"
   set builddir="example\%%example\build"
-  if not exist "!builddir!" mkdir "!builddir!"
-  if !errorlevel! neq 0 exit /b !errorlevel!
-  cd "!builddir!"
+  rem if not exist "!builddir!" mkdir "!builddir!"
+  rem if !errorlevel! neq 0 exit /b !errorlevel!
+  rem cd "!builddir!"
   rem cmake -G "Ninja" ^
   rem       -D CMAKE_VERBOSE_MAKEFILE:BOOL=ON ^
   rem       ..

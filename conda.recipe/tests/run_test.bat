@@ -4,9 +4,9 @@ setlocal EnableDelayedExpansion
 set examples=serialize yggdrasil units
 
 for %%example in (%examples%) do (
-  echo "Building %%example"
-  set builddir="example\%%example\build"
-  if not exist "!builddir!" mkdir "!builddir!"
+  rem echo "Building %%example"
+  rem set builddir="example\%%example\build"
+  rem if not exist "!builddir!" mkdir "!builddir!"
   rem if !errorlevel! neq 0 exit /b !errorlevel!
   rem cd "!builddir!"
   rem cmake -G "Ninja" ^
