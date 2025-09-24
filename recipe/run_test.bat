@@ -4,9 +4,9 @@ setlocal EnableDelayedExpansion
 set examples=serialize yggdrasil units
 
 for %%example in (%examples%) do (
-  echo HERE
+  rem echo HERE
   dir
-  echo "Building %%example"
+  rem echo "Building %%example"
   set builddir="example\%%example\build"
   if not exist "!builddir!" mkdir "!builddir!"
   if !errorlevel! neq 0 exit /b !errorlevel!
