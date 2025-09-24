@@ -123,4 +123,6 @@ The steps below outline how a release should be produced.
    * `git tag -a vX.X.X.X -m "Release vX.X.X.X"`
    * `git push origin --tags`
 7. Create a release on github
-8. Ensure the conda feedstock is updated
+8. Generate the checksum for the release tar.gz by running
+   * `curl -sL https://github.com/cropsinsilico/yggdrasil-rapidjso/archive/vX.X.X.X.tar.gz | openssl sha256`
+9. Ensure the conda feedstock is updated
