@@ -1069,8 +1069,8 @@ public:
     typedef GenericObject<true, ValueType> ConstObject;
 
 #ifdef RAPIDJSON_YGGDRASIL
-    typedef units::GenericUnits<Encoding> UnitsType;
-    typedef GenericDocument<Encoding, Allocator, Allocator> SchemaValueType;
+    typedef units::GenericUnits<Encoding> UnitsType; //!< Units type with the same encoding
+    typedef GenericDocument<Encoding, Allocator, Allocator> SchemaValueType; //!< Document type used for storing document schema
     // typedef GenericDocument<Encoding, Allocator, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> SchemaValueType;
 #define YGG_SCHEMA_INIT , schema_(0)  // NULL)
 #define YGG_SCHEMA_INIT_ONLY : schema_(0) // NULL)
@@ -1397,6 +1397,14 @@ public:
         return *this;
     }
 #ifdef RAPIDJSON_YGGDRASIL
+    //! Deep-copy assignment into Value
+    /*! Assigns a \b copy of the current Value object into the provided
+        rhs Value object.
+        \tparam SourceAllocator Allocator type of \c rhs
+        \param rhs Value to copy into
+        \param allocator Allocator to use for copying
+        \param copyConstStrings Force copying of constant strings (e.g. referencing an in-situ buffer)
+     */
     template <typename SourceAllocator>
     GenericValue& CopyInto(GenericValue<Encoding, SourceAllocator>& rhs, Allocator& allocator, bool copyConstStrings = false) const {
       return rhs.CopyFrom(*this, allocator, copyConstStrings);
@@ -1501,13 +1509,19 @@ public:
     bool operator==(const std::basic_string<Ch>& rhs) const { return *this == GenericValue(StringRef(rhs)); }
 #endif
 
+#ifdef RAPIDJSON_YGGDRASIL
     //! Equal-to operator with primitive types
     /*! \tparam T Either \ref Type, \c int, \c unsigned, \c int64_t, \c uint64_t, \c double, \c true, \c false
     */
-#ifdef RAPIDJSON_YGGDRASIL
     template <typename T> RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::OrExpr<internal::IsPointer<T>,internal::IsGenericValue<T> >, YGGDRASIL_IS_SCALAR_TYPE(T)>), (bool)) operator==(const T& rhs) const { return *this == GenericValue(rhs); }
+    //! Equal-to operator with scalar types not covered by the primitive types
+    /*! \tparam T Either \c float16_t, \c uint8_t, \c uint16_t, \c int8_t, \c int16_t, \c long double, \c std::complex<float>, \c std::complex<double>, \c std::complex<long double>
+    */
     template <typename T> RAPIDJSON_ENABLEIF_RETURN((YGGDRASIL_IS_SCALAR_TYPE(T)), (bool)) operator==(const T& rhs) const { Allocator allocator; return *this == GenericValue(rhs, allocator); }
 #else // RAPIDJSON_YGGDRASIL
+    //! Equal-to operator with primitive types
+    /*! \tparam T Either \ref Type, \c int, \c unsigned, \c int64_t, \c uint64_t, \c double, \c true, \c false
+    */
     template <typename T> RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,internal::IsGenericValue<T> >), (bool)) operator==(const T& rhs) const { return *this == GenericValue(rhs); }
 #endif // RAPIDJSON_YGGDRASIL
 
@@ -1825,11 +1839,21 @@ public:
     }
 
 #ifdef RAPIDJSON_YGGDRASIL
-  GenericValue& AddMember(const GenericValue& name, GenericValue& value, Allocator& allocator) {
-    RAPIDJSON_ASSERT(name.IsString());
-    GenericValue name_cpy(name, allocator);  // StringRef(name.GetString()));
-    return AddMember(name_cpy, value, allocator);
-  }
+    //! Add a member (name-value pair) to the object w/ constant name Value.
+    /*! \param name A string value as name of member (read-only).
+        \param value Value of any type.
+        \param allocator    Allocator for reallocating memory. It must be the same one as used before. Commonly use GenericDocument::GetAllocator().
+        \return The value itself for fluent API.
+        \note The ownership of \c value will be transferred to this object on success.
+        \pre  IsObject() && name.IsString()
+        \post name.IsNull() && value.IsNull()
+        \note Amortized Constant time complexity.
+    */
+    GenericValue& AddMember(const GenericValue& name, GenericValue& value, Allocator& allocator) {
+        RAPIDJSON_ASSERT(name.IsString());
+        GenericValue name_cpy(name, allocator);  // StringRef(name.GetString()));
+        return AddMember(name_cpy, value, allocator);
+    }
 #endif // RAPIDJSON_YGGDRASIL
 
     //! Add a constant string value as member (name-value pair) to the object.
@@ -1862,25 +1886,17 @@ public:
     }
 #endif
 
-    //! Add any primitive value as member (name-value pair) to the object.
-    /*! \tparam T Either \ref Type, \c int, \c unsigned, \c int64_t, \c uint64_t
+#ifdef RAPIDJSON_YGGDRASIL
+    
+    //! Add any scalar value not covered by primitive types as member (name-value pair) to the object.
+    /*! \tparam T Either \c float16_t, \c uint8_t, \c uint16_t, \c int8_t, \c int16_t, \c long double, \c std::complex<float>, \c std::complex<double>, \c std::complex<long double>
         \param name A string value as name of member.
-        \param value Value of primitive type \c T as value of member
+        \param value Value of scalar type \c T as value of member
         \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
         \return The value itself for fluent API.
         \pre  IsObject()
-
-        \note The source type \c T explicitly disallows all pointer types,
-            especially (\c const) \ref Ch*.  This helps avoiding implicitly
-            referencing character strings with insufficient lifetime, use
-            \ref AddMember(StringRefType, GenericValue&, Allocator&) or \ref
-            AddMember(StringRefType, StringRefType, Allocator&).
-            All other pointer types would implicitly convert to \c bool,
-            use an explicit cast instead, if needed.
         \note Amortized Constant time complexity.
     */
-#ifdef RAPIDJSON_YGGDRASIL
-    
     template <typename T>
     RAPIDJSON_ENABLEIF_RETURN((YGGDRASIL_IS_SCALAR_TYPE(T)),
 			      (GenericValue&))
@@ -1888,6 +1904,15 @@ public:
       GenericValue v(value, allocator);
       return AddMember(name, v, allocator);
     }
+    //! Add Quantity value as member (name-value pair) to the object.
+    /*! \tparam T Type of underlying scalar contained by the value.
+        \param name A string value as name of member.
+        \param value Value of Quantity type \c T as value of member (read-only).
+        \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
+        \return The value itself for fluent API.
+        \pre  IsObject()
+        \note Amortized Constant time complexity.
+    */
     template <typename T>
     GenericValue& AddMember(GenericValue& name,
 			    const units::GenericQuantity<T, EncodingType>& value,
@@ -1895,6 +1920,15 @@ public:
       GenericValue v(value, allocator);
       return AddMember(name, v, allocator);
     }
+    //! Add QuantityArray value as member (name-value pair) to the object.
+    /*! \tparam T Type of underlying array elements contained by the value.
+        \param name A string value as name of member.
+        \param value Value of QuantityArray type \c T as value of member (read-only).
+        \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
+        \return The value itself for fluent API.
+        \pre  IsObject()
+        \note Amortized Constant time complexity.
+    */
     template <typename T>
     GenericValue& AddMember(GenericValue& name,
 			    const units::GenericQuantityArray<T, EncodingType>& value,
@@ -1902,6 +1936,16 @@ public:
       GenericValue v(value, allocator);
       return AddMember(name, v, allocator);
     }
+    //! Add 1D array of Quantity value as member (name-value pair) to the object.
+    /*! \tparam T Type of underlying scalar contained by the value.
+        \param name A string value as name of member.
+        \param value Array of values of Quantity type \c T as value of member (read-only).
+        \param nelements Number of elements in \c value.
+        \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
+        \return The value itself for fluent API.
+        \pre  IsObject()
+        \note Amortized Constant time complexity.
+    */
     template <typename T>
     GenericValue& AddMember(GenericValue& name,
 			    units::GenericQuantity<T, EncodingType>* value,
@@ -1909,6 +1953,17 @@ public:
       GenericValue v(value, nelements, allocator);
       return AddMember(name, v, allocator);
     }
+    //! Add ND array of Quantity value as member (name-value pair) to the object.
+    /*! \tparam T Type of underlying scalar contained by the value.
+        \param name A string value as name of member.
+        \param value Array of values of Quantity type \c T in column-major order as value of member (read-only).
+        \param shape Number of elements along each dimension in \c value.
+        \param ndim Number of dimensions in \c value (and \c shape).
+        \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
+        \return The value itself for fluent API.
+        \pre  IsObject()
+        \note Amortized Constant time complexity.
+    */
     template <typename T>
     GenericValue& AddMember(GenericValue& name,
 			    units::GenericQuantity<T, EncodingType>* value,
@@ -1946,6 +2001,23 @@ public:
 #endif // RAPIDJSON_YGGDRASIL
 			       
 
+    //! Add any primitive value as member (name-value pair) to the object.
+    /*! \tparam T Either \ref Type, \c int, \c unsigned, \c int64_t, \c uint64_t
+        \param name A string value as name of member.
+        \param value Value of primitive type \c T as value of member
+        \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
+        \return The value itself for fluent API.
+        \pre  IsObject()
+
+        \note The source type \c T explicitly disallows all pointer types,
+            especially (\c const) \ref Ch*.  This helps avoiding implicitly
+            referencing character strings with insufficient lifetime, use
+            \ref AddMember(StringRefType, GenericValue&, Allocator&) or \ref
+            AddMember(StringRefType, StringRefType, Allocator&).
+            All other pointer types would implicitly convert to \c bool,
+            use an explicit cast instead, if needed.
+        \note Amortized Constant time complexity.
+    */
 #ifdef RAPIDJSON_YGGDRASIL
     template <typename T>
     RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
