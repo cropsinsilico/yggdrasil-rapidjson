@@ -33,9 +33,9 @@ test:
     - test -f $PREFIX/lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfig.cmake  # [unix]
     - test -f $PREFIX/lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake  # [unix]
     - test -f $PREFIX/include/yggdrasil_rapidjson/rapidjson/rapidjson.h  # [unix]
-    - if not exist %LIBRARY_LIB%\\cmake\\YggdrasilRapidJSONConfig.cmake exit 1  # [win]
-    - if not exist %LIBRARY_LIB%\\cmake\\YggdrasilRapidJSONConfigVersion.cmake exit 1  # [win]
-    - if not exist %LIBRARY_INC%\\yggdrasil_rapidjson/rapidjson/rapidjson.h exit 1  # [win]
+    - if not exist %LIBRARY_PREFIX%\\cmake\\YggdrasilRapidJSONConfig.cmake exit 1  # [win]
+    - if not exist %LIBRARY_PREFIX%\\cmake\\YggdrasilRapidJSONConfigVersion.cmake exit 1  # [win]
+    - if not exist %LIBRARY_PREFIX%\\include\\yggdrasil_rapidjson\\rapidjson\\rapidjson.h exit 1  # [win]
 
 about:
   home: https://github.com/cropsinsilico/yggdrasil-rapidjson
