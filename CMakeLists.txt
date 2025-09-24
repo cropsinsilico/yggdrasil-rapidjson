@@ -19,7 +19,8 @@ set(LIB_MINOR_VERSION "1")
 set(LIB_PATCH_VERSION "0")
 set(LIB_VERSION_STRING "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_PATCH_VERSION}")
 
-PROJECT(RapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES C CXX)
+PROJECT(YggdrasilRapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES C CXX)
+set(PROJECT_NAME_LOWER "yggdrasil_rapidjson")
 
 if(POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
     cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python
@@ -34,10 +35,12 @@ option(RAPIDJSON_CREATE_METASCHEMA "Re-create the metaschema" OFF)
 option(RAPIDJSON_CREATE_METASCHEMA_FULL "Re-create the metaschema and the full_schema.yaml file" OFF)
 option(RAPIDJSON_YGGDRASIL_TESTS "Build tests using the yggdrasil schema" OFF)
 
-add_definitions(-D_USE_MATH_DEFINES)
+set(INTERFACE_COMPILATION_OPTIONS -D_USE_MATH_DEFINES)
+set(INTERFACE_INCLUDE_DIRECTORIES)
+set(INTERFACE_LIBRARIES)
 
 if(RAPIDJSON_YGGDRASIL)
-  add_definitions(-DRAPIDJSON_YGGDRASIL)
+  list(APPEND INTERFACE_COMPILATION_OPTIONS -DRAPIDJSON_YGGDRASIL)
 else()
   set(YGGDRASIL_PYGIL_NO_MANAGEMENT OFF)
   set(YGGDRASIL_DISABLE_PYTHON_C_API OFF)
@@ -92,12 +95,21 @@ else()
         message(FATAL_ERROR "Python libraries not found")
     endif()
 
-    # TODO: Don't add these for all targets
-    add_definitions(-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION) 
-    include_directories(
-        SYSTEM ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
+    # include_directories(
+    #     SYSTEM ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
+    # )
+    list(
+        APPEND INTERFACE_COMPILATION_OPTIONS
+        -DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
     )
-    link_libraries(${Python3_LIBRARIES})
+    list(
+        APPEND INTERFACE_INCLUDE_DIRECTORIES
+        ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
+    )
+    list(
+        APPEND INTERFACE_LIBRARIES
+        ${Python3_LIBRARIES}
+    )
 
     # Set environment variables required for embedding Python
     set(RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Python3_EXECUTABLE}")
@@ -290,18 +302,22 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
 endif()
 
 #add extra search paths for libraries and includes
-SET(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include" CACHE PATH "The directory the headers are installed in")
-SET(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/lib" CACHE STRING "Directory where lib will install")
-SET(DOC_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/doc/${PROJECT_NAME}" CACHE PATH "Path to the documentation")
-
+include(GNUInstallDirs)
+SET(INCLUDE_INSTALL_DIR "include" CACHE PATH "The directory the headers are installed in")
+SET(LIB_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR} CACHE STRING "Directory where lib will install")
+SET(DOC_INSTALL_DIR "share/doc/${PROJECT_NAME}" CACHE PATH "Path to the documentation")
 IF(UNIX OR CYGWIN)
     SET(_CMAKE_INSTALL_DIR "${LIB_INSTALL_DIR}/cmake/${PROJECT_NAME}")
 ELSEIF(WIN32)
-    SET(_CMAKE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/cmake")
+    SET(_CMAKE_INSTALL_DIR "cmake")
 ENDIF()
 SET(CMAKE_INSTALL_DIR "${_CMAKE_INSTALL_DIR}" CACHE PATH "The directory cmake files are installed in")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+include_directories(${INTERFACE_INCLUDE_DIRECTORIES})
+add_definitions(${INTERFACE_COMPILATION_OPTIONS})
+link_libraries(${INTERFACE_LIBRARIES})
 
 if(RAPIDJSON_BUILD_DOC)
     add_subdirectory(doc)
@@ -324,6 +340,33 @@ if(RAPIDJSON_BUILD_TESTS)
     include(CTest)
 endif()
 
+# ===============================
+# Interface for export
+# ===============================
+
+add_library(${PROJECT_NAME} INTERFACE)
+
+target_include_directories(
+    ${PROJECT_NAME} INTERFACE
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME_LOWER}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+target_compile_options(
+    ${PROJECT_NAME} INTERFACE ${INTERFACE_COMPILATION_OPTIONS}
+)
+target_include_directories(
+    ${PROJECT_NAME} INTERFACE ${INTERFACE_INCLUDE_DIRECTORIES}
+)
+target_link_libraries(
+    ${PROJECT_NAME} INTERFACE ${INTERFACE_LIBRARIES}
+)
+
+# ===============================
+# Install
+# ===============================
+
+include(CMakePackageConfigHelpers)
+
 # pkg-config
 IF (UNIX OR CYGWIN)
   CONFIGURE_FILE (${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.pc.in
@@ -338,13 +381,8 @@ install(FILES readme.md
         DESTINATION "${DOC_INSTALL_DIR}"
         COMPONENT doc)
 
-# Add an interface target to export it
-add_library(${PROJECT_NAME} INTERFACE)
-
-target_include_directories(${PROJECT_NAME} INTERFACE $<INSTALL_INTERFACE:include>)
-
 install(DIRECTORY include/rapidjson
-    DESTINATION "${INCLUDE_INSTALL_DIR}"
+    DESTINATION "${INCLUDE_INSTALL_DIR}/${PROJECT_NAME_LOWER}"
     COMPONENT dev)
 
 install(DIRECTORY example/
@@ -359,6 +397,11 @@ install(DIRECTORY example/
 # Provide config and version files to be used by other applications
 # ===============================
 
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${PROJECT_NAME}ConfigVersion.cmake
+    COMPATIBILITY AnyNewerVersion
+)
+
 ################################################################################
 # Export package for use from the build tree
 EXPORT( PACKAGE ${PROJECT_NAME} )
@@ -367,34 +410,25 @@ EXPORT( PACKAGE ${PROJECT_NAME} )
 # ... for the build tree
 SET( CONFIG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 SET( CONFIG_DIR ${CMAKE_CURRENT_BINARY_DIR})
-SET( ${PROJECT_NAME}_INCLUDE_DIR "\${${PROJECT_NAME}_SOURCE_DIR}/include" )
 
-INCLUDE(CMakePackageConfigHelpers)
 CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake @ONLY )
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}ConfigVersion.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake @ONLY)
 
 # ... for the install tree
-SET( CMAKECONFIG_INSTALL_DIR ${LIB_INSTALL_DIR}/cmake/${PROJECT_NAME} )
-FILE( RELATIVE_PATH REL_INCLUDE_DIR
-    "${CMAKECONFIG_INSTALL_DIR}"
-    "${CMAKE_INSTALL_PREFIX}/include" )
 
-SET( ${PROJECT_NAME}_INCLUDE_DIR "\${${PROJECT_NAME}_CMAKE_DIR}/${REL_INCLUDE_DIR}" )
 SET( CONFIG_SOURCE_DIR )
 SET( CONFIG_DIR )
-CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${PROJECT_NAME}Config.cmake @ONLY )
-
-INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${PROJECT_NAME}Config.cmake"
-        DESTINATION ${CMAKECONFIG_INSTALL_DIR} )
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${PROJECT_NAME}Config.cmake
+  INSTALL_DESTINATION "${CMAKE_INSTALL_DIR}"
+)
 
 # Install files
 IF(CMAKE_INSTALL_DIR)
     INSTALL(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${PROJECT_NAME}Config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${PROJECT_NAME}ConfigVersion.cmake
         DESTINATION "${CMAKE_INSTALL_DIR}"
         COMPONENT dev)
 

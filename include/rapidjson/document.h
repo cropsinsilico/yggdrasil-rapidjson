@@ -1890,7 +1890,14 @@ public:
     }
     template <typename T>
     GenericValue& AddMember(GenericValue& name,
-			    units::GenericQuantity<T, EncodingType> value,
+			    const units::GenericQuantity<T, EncodingType>& value,
+			    Allocator& allocator) {
+      GenericValue v(value, allocator);
+      return AddMember(name, v, allocator);
+    }
+    template <typename T>
+    GenericValue& AddMember(GenericValue& name,
+			    const units::GenericQuantityArray<T, EncodingType>& value,
 			    Allocator& allocator) {
       GenericValue v(value, allocator);
       return AddMember(name, v, allocator);
@@ -3394,7 +3401,7 @@ public:
     RAPIDJSON_NOEXCEPT : data_() YGG_SCHEMA_INIT
   {
     SizeType nelements = 1;
-    SetNDArrayRaw(&x, &nelements, 1, allocator);
+    SetNDArrayRaw(&x, &nelements, 0, allocator);
   }
   template <typename T, SizeType N>
   explicit GenericValue(const units::GenericQuantity<T, EncodingType> (&x)[N],
@@ -5757,12 +5764,15 @@ public:
     RAPIDJSON_ASSERT(encoding != schema_->MemberEnd());
     return encoding->value;
   }
-  
   const ValueType& GetShape() const {
     RAPIDJSON_ASSERT(IsNDArray());
     ConstMemberIterator shape = schema_->FindMember(GetShapeString());
     RAPIDJSON_ASSERT(shape != schema_->MemberEnd());
     return shape->value;
+  }
+  SizeType GetNDim() const {
+    const ValueType& shape = GetShape();
+    return shape.Size();
   }
   SizeType* GetShape(SizeType &ndim, Allocator& allocator) const {
     RAPIDJSON_ASSERT(IsYggdrasil());
@@ -6093,15 +6103,42 @@ public:
     GetScalarValue(data);
   }
   template <typename T>
-  void GetScalar(T& data, const UnitsType data_units) const {
+  void GetScalar(T& data, const UnitsType data_units,
+		 RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
     units::GenericQuantity<T, EncodingType> x(data, data_units);
     GetScalarQuantity(x);
     data = x.value();
   }
-  template <typename T>
-  void GetScalar(T& data, const Ch* units_str) const {
-    UnitsType data_units(units_str);
-    GetScalar(data, data_units);
+  void GetScalar(Ch* data, const SizeType& precision) const {
+    SizeType ndim = 1;
+    SizeType* shape = &ndim;
+    GetNDArray(data, shape, ndim, precision);
+  }
+  void GetScalar(Ch* data, const SizeType& precision,
+		 const ValueType& encoding) const {
+    SizeType ndim = 1;
+    SizeType* shape = &ndim;
+    GetNDArray(data, shape, ndim, precision, encoding);
+  }
+  void GetScalar(Ch*& data, Allocator& allocator) const {
+    RAPIDJSON_ASSERT(data == NULL);
+    SizeType precision = 0;
+    GetScalar(data, precision, allocator);
+  }
+  void GetScalar(Ch*& data, const ValueType& encoding,
+		 Allocator& allocator) const {
+    RAPIDJSON_ASSERT(data == NULL);
+    SizeType precision = 0;
+    GetScalar(data, precision, encoding, allocator);
+  }
+  void GetScalar(Ch*& data, SizeType& precision,
+		 const ValueType& encoding, Allocator& allocator) const {
+    SizeType* shape = NULL;
+    SizeType ndim = 1;
+    if (data != NULL) {
+      shape = &ndim;
+    }
+    GetNDArray(data, shape, ndim, precision, encoding, allocator);
   }
   template <typename T>
   T GetScalar(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
@@ -6165,31 +6202,93 @@ public:
     return out;
   }
 
+  void GetArrayValueBase(Ch* data, const SizeType& ndim,
+			 const SizeType* shape,
+			 const SizeType& precision,
+			 const ValueType& encoding) const {
+    RAPIDJSON_ASSERT(GetSubType() == GetStringSubTypeString() &&
+		     data != NULL &&
+		     shape != NULL &&
+		     ndim == GetNDim() &&
+		     precision == GetPrecision());
+    SizeType nbytes_data = precision;
+    for (SizeType i = 0; i < ndim; i++) {
+      RAPIDJSON_ASSERT(shape[i] == GetShape()[i]);
+      nbytes_data *= shape[i];
+    }
+    if (encoding.IsNull()) {
+      RAPIDJSON_ASSERT(nbytes_data == GetNBytes());
+      std::memcpy(data, GetString(), nbytes_data);
+    } else {
+      Allocator allocator;
+      ValueType encoded = GetTranscodedString(encoding, allocator);
+      SizeType nbytes = encoded.GetStringLength() * sizeof(Ch);
+      RAPIDJSON_ASSERT(nbytes == nbytes_data);
+      std::memcpy(data, encoded.GetString(), nbytes);
+    }
+  }
+  void GetArrayValueBase(Ch*& data, SizeType& ndim, SizeType*& shape,
+			 SizeType& precision, const ValueType& encoding,
+			 Allocator& allocator) const {
+    if (data == NULL) {
+      RAPIDJSON_ASSERT(shape == NULL);
+      shape = GetShape(ndim, allocator);
+      RAPIDJSON_ASSERT(shape);
+      precision = GetPrecision();
+      if (!encoding.IsNull()) {
+	ValueType encoded = GetTranscodedString(encoding, allocator);
+	SizeType nbytes = encoded.GetStringLength() * sizeof(Ch);
+	data = (Ch*)allocator.Malloc(nbytes);
+	RAPIDJSON_ASSERT(data);
+	std::memcpy(data, encoded.GetString(), nbytes);
+	precision = nbytes / GetNElements();
+	return;
+      }
+      data = (Ch*)allocator.Malloc(GetNBytes());
+      RAPIDJSON_ASSERT(data);
+    }
+    GetArrayValueBase(data, ndim, shape, precision, encoding);
+  }
+  template <typename T>
+  void GetArrayValueBase(T* data, const SizeType& ndim,
+			 const SizeType* shape,
+			 RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
+    RAPIDJSON_ASSERT(YggSubTypeString<T>() == GetSubType() &&
+		     data != NULL &&
+		     shape != NULL &&
+		     ndim == GetNDim());
+    SizeType nbytes_data = sizeof(T);
+    for (SizeType i = 0; i < ndim; i++) {
+      RAPIDJSON_ASSERT(shape[i] == GetShape()[i]);
+      nbytes_data *= shape[i];
+    }
+    size_t length = (size_t)(GetStringLength() * sizeof(Ch));
+    RAPIDJSON_ASSERT((SizeType)length == GetNBytes());
+    if (sizeof(T) != GetPrecision()) {
+      AllocatorType allocator; // temporary
+      SizeType nelements = GetNElements();
+      unsigned char* decoded_bytes = (unsigned char*)ChangePrecision<T>(
+	(const unsigned char *)GetString(), nelements, allocator);
+      length = nbytes_data;
+      std::memcpy(data, decoded_bytes, length);
+      allocator.Free(decoded_bytes);
+    } else {
+      std::memcpy(data, GetString(), length);
+    }
+  }
   template <typename T>
   void GetArrayValueBase(T*& data, SizeType& ndim, SizeType*& shape,
-			 Allocator& allocator) const {
-    RAPIDJSON_ASSERT(GetSubType() == GetStringSubTypeString() ||
-		     YggSubTypeString<T>() == GetSubType());
-    size_t length = 0;
-    unsigned char* decoded_bytes = GetDecodedString(length, allocator);
-    RAPIDJSON_ASSERT((SizeType)length == GetNBytes());
-    shape = GetShape(ndim, allocator);
-    RAPIDJSON_ASSERT(shape);
-    SizeType nelements = GetNElements();
-    if (sizeof(T) != GetPrecision() && GetSubType() != GetStringSubTypeString()) {
-      unsigned char* old_decoded_bytes = decoded_bytes;
-      decoded_bytes = (unsigned char*)ChangePrecision<T>(decoded_bytes,
-							 nelements,
-							 allocator);
-      allocator.Free(old_decoded_bytes);
-      old_decoded_bytes = NULL;
-      length = sizeof(T) * nelements;
+			 Allocator& allocator,
+			 RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
+    if (data == NULL) {
+      RAPIDJSON_ASSERT(shape == NULL);
+      shape = GetShape(ndim, allocator);
+      RAPIDJSON_ASSERT(shape);
+      SizeType nbytes = GetNElements() * sizeof(T);
+      data = (T*)allocator.Malloc(nbytes);
+      RAPIDJSON_ASSERT(data);
     }
-    if (data != NULL) {
-      free(data);
-      data = NULL;
-    }
-    data = reinterpret_cast<T*>(decoded_bytes);
+    GetArrayValueBase(data, ndim, shape);
   }
   template <typename T>
   void GetArrayQuantity(units::GenericQuantityArray<T, EncodingType>* data,
@@ -6280,41 +6379,322 @@ public:
   }
   
   // ND array access
+  // This version does not require allocator because memory is allocated
+  /*!
+    @brief Copy an ND array into the destination memory.
+    @tparam T Type of array elements. If different than the value being
+      accessed, attempts will be made to cast the array contents.
+    @param[in, out] data Pointer to preallocated memory that the array
+      should be copied into.
+    @param[in] shape Elements in data along each dimension. This is used
+      to determine how much memory has been allocated at the provided
+      address.
+    @param[in] ndim Number of dimensions in data (and elements in shape).
+    @param[in] data_units Units that the returned array should be
+      converted to.
+   */
+  template <typename T>
+  void GetNDArray(T* data, const SizeType* shape, const SizeType& ndim,
+		  const UnitsType data_units = UnitsType(),
+		  RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
+    if (data_units.is_empty()) {
+      GetArrayValueBase(data, ndim, shape);
+      return;
+    }
+    RAPIDJSON_ASSERT(data != NULL);
+    RAPIDJSON_ASSERT(shape != NULL);
+    RAPIDJSON_ASSERT(ndim == GetNDim());
+    AllocatorType allocator; // temporary
+    units::GenericQuantityArray<T, EncodingType> x;
+    GetArrayQuantity<T>(&x, allocator, data_units);
+    for (SizeType i = 0; i < ndim; i++) {
+      RAPIDJSON_ASSERT(shape[i] == x.shape()[i]);
+    }
+    for (SizeType i = 0; i < x.nelements(); i++)
+      data[i] = x.value()[i];
+  }
+  /*!
+    @brief Copy an ND array of strings into the destination memory.
+    @param[in, out] data Pointer to preallocated memory that the array
+      should be copied into.
+    @param[in] shape Elements in data along each dimension. This is used
+      to determine how much memory has been allocated at the provided
+      address.
+    @param[in] ndim Number of dimensions in data (and elements in shape).
+    @param[in] precision Number of characters stored for each string
+      element in data.
+   */
+  void GetNDArray(Ch* data, const SizeType* shape, const SizeType& ndim,
+		  const SizeType& precision) const {
+    GetArrayValueBase(data, ndim, shape, precision,
+		      ValueType(kNullType).Move());
+  }
+  /*!
+    @brief Copy an ND array of strings into the destination memory.
+    @param[in, out] data Pointer to preallocated memory that the array
+      should be copied into.
+    @param[in] shape Elements in data along each dimension. This is used
+      to determine how much memory has been allocated at the provided
+      address.
+    @param[in] ndim Number of dimensions in data (and elements in shape).
+    @param[in] precision Number of characters stored for each string
+      element in data.
+    @param[in] encoding Name of the encoding that the returned array
+      should be translated to.
+   */
+  void GetNDArray(Ch* data, const SizeType* shape, const SizeType& ndim,
+		  const SizeType& precision, const ValueType& encoding) const {
+    GetArrayValueBase(data, ndim, shape, precision, encoding);
+  }
+  /*!
+    @brief Copy a 1D array into the destination memory on stack.
+    @tparam T Type of array elements. If different than the value being
+      accessed, attempts will be made to cast the array contents.
+    @tparam N Number of array elements in data.
+    @param[in, out] data Stack allocated 1D array that the array contents
+      should be copied into.
+    @param[in] data_units Units that the returned array should be
+      converted to.
+   */
+  template <typename T, SizeType N>
+  void GetNDArray(T (&data)[N],
+		  const UnitsType data_units = UnitsType(),
+		  RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
+    SizeType shape[] = {N};
+    GetNDArray(&(data[0]), &(shape[0]), 1, data_units);
+  }
+  /*!
+    @brief Copy a 2D array into the destination memory on stack.
+    @tparam T Type of array elements. If different than the value being
+      accessed, attempts will be made to cast the array contents.
+    @tparam M Number of array elements in data along the 1st dimension.
+    @tparam N Number of array elements in data along the 2nd dimension.
+    @param[in, out] data Stack allocated 2D array that the array contents
+      should be copied into.
+    @param[in] data_units Units that the returned array should be
+      converted to.
+   */
+  template <typename T, SizeType M, SizeType N>
+  void GetNDArray(T (&data)[M][N],
+		  const UnitsType data_units = UnitsType(),
+		  RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
+    SizeType shape[] = {M, N};
+    GetNDArray(&(data[0][0]), &(shape[0]), 2, data_units);
+  }
+  /*!
+    @brief Copy a 3D array into the destination memory on stack.
+    @tparam T Type of array elements. If different than the value being
+      accessed, attempts will be made to cast the array contents.
+    @tparam L Number of array elements in data along the 1st dimension.
+    @tparam M Number of array elements in data along the 2nd dimension.
+    @tparam N Number of array elements in data along the 3nd dimension.
+    @param[in, out] data Stack allocated 3D array that the array contents
+      should be copied into.
+    @param[in] data_units Units that the returned array should be
+      converted to.
+   */
+  template <typename T, SizeType L, SizeType M, SizeType N>
+  void GetNDArray(T (&data)[L][M][N],
+		  const UnitsType data_units = UnitsType(),
+		  RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
+    SizeType shape[] = {L, M, N};
+    GetNDArray(&(data[0][0][0]), &(shape[0]), 3, data_units);
+  }
+  /*!
+    @brief Copy a 1D array of strings into the destination memory on stack.
+    @tparam M Number of array elements in data.
+    @tparam N Number of characters in each string element in the array.
+    @param[in, out] data Stack allocated 1D array of strings that the
+      array contents should be copied into.
+   */
+  template <SizeType M, SizeType N>
+  void GetNDArray(Ch (&data)[M][N]) const {
+    SizeType shape[] = {M};
+    GetNDArray(&(data[0][0]), &(shape[0]), 1, N);
+  }
+  /*!
+    @brief Copy a 2D array of strings into the destination memory on stack.
+    @tparam L Number of array elements in data along the 1st dimension.
+    @tparam M Number of array elements in data along the 2nd dimension.
+    @tparam N Number of characters in each string element in the array.
+    @param[in, out] data Stack allocated 2D array of strings that the
+      array contents should be copied into.
+   */
+  template <SizeType L, SizeType M, SizeType N>
+  void GetNDArray(Ch (&data)[L][M][N]) const {
+    SizeType shape[] = {L, M};
+    GetNDArray(&(data[0][0][0]), &(shape[0]), 2, N);
+  }
+  /*!
+    @brief Copy a 3D array of strings into the destination memory on stack.
+    @tparam K Number of array elements in data along the 1st dimension.
+    @tparam L Number of array elements in data along the 2nd dimension.
+    @tparam M Number of array elements in data along the 3rd dimension.
+    @tparam N Number of characters in each string element in the array.
+    @param[in, out] data Stack allocated 3D array of strings that the
+      array contents should be copied into.
+   */
+  template <SizeType K, SizeType L, SizeType M, SizeType N>
+  void GetNDArray(Ch (&data)[K][L][M][N]) const {
+    SizeType shape[] = {K, L, M};
+    GetNDArray(&(data[0][0][0][0]), &(shape[0]), 3, N);
+  }
+  // Versions with encodings
+  /*!
+    @brief Copy a 1D array of strings into the destination memory on stack.
+    @tparam M Number of array elements in data.
+    @tparam N Number of characters in each string element in the array.
+    @param[in, out] data Stack allocated 1D array of strings that the
+      array contents should be copied into.
+    @param[in] encoding Name of the encoding that the returned array
+      should be translated to.
+   */
+  template <SizeType M, SizeType N>
+    void GetNDArray(Ch (&data)[M][N], const ValueType& encoding) const {
+    SizeType shape[] = {M};
+    GetNDArray(&(data[0][0]), &(shape[0]), 1, N, encoding);
+  }
+  /*!
+    @brief Copy a 2D array of strings into the destination memory on stack.
+    @tparam L Number of array elements in data along the 1st dimension.
+    @tparam M Number of array elements in data along the 2nd dimension.
+    @tparam N Number of characters in each string element in the array.
+    @param[in, out] data Stack allocated 2D array of strings that the
+      array contents should be copied into.
+    @param[in] encoding Name of the encoding that the returned array
+      should be translated to.
+   */
+  template <SizeType L, SizeType M, SizeType N>
+    void GetNDArray(Ch (&data)[L][M][N], const ValueType& encoding) const {
+    SizeType shape[] = {L, M};
+    GetNDArray(&(data[0][0][0]), &(shape[0]), 2, N, encoding);
+  }
+  /*!
+    @brief Copy a 3D array of strings into the destination memory on stack.
+    @tparam K Number of array elements in data along the 1st dimension.
+    @tparam L Number of array elements in data along the 2nd dimension.
+    @tparam M Number of array elements in data along the 3rd dimension.
+    @tparam N Number of characters in each string element in the array.
+    @param[in, out] data Stack allocated 3D array of strings that the
+      array contents should be copied into.
+    @param[in] encoding Name of the encoding that the returned array
+      should be translated to.
+   */
+  template <SizeType K, SizeType L, SizeType M, SizeType N>
+  void GetNDArray(Ch (&data)[K][L][M][N], const ValueType& encoding) const {
+    SizeType shape[] = {K, L, M};
+    GetNDArray(&(data[0][0][0][0]), &(shape[0]), 3, N, encoding);
+  }
+  // This version will reallocate data & shape using the provided
+  //   allocator.
+  /*!
+    @brief Copy an ND array into the destination memory, allocating it if
+      necessary.
+    @tparam T Type of array elements. If different than the value being
+      accessed, attempts will be made to cast the array contents.
+    @param[in, out] data Pointer to memory that the array should be
+      copied into. If NULL, memory will be allocated using allocator and
+      this will be set to the allocated address.
+    @param[in,out] shape Pointer to memory where the array shape should
+      be stored. If NULL, memory will be allocated using allocator.
+    @param[out] ndim This will be set to the number of dimensions in the
+      return array (and the number of elements in shape).
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+    @param[in] data_units Units that the returned array should be
+      converted to.
+   */
   template <typename T>
   void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
 		  Allocator& allocator,
 		  const UnitsType data_units = UnitsType(),
 		  RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
-    SizeType nelements = 1;
-    units::GenericQuantityArray<T, EncodingType> x;
-    GetArrayQuantity<T>(&x, allocator, data_units);
-    ndim = x.ndim();
-    if (shape != NULL) {
-      free(shape);
-      shape = NULL;
+    if (data_units.is_empty()) {
+      GetArrayValueBase(data, ndim, shape, allocator);
+      return;
     }
-    shape = (SizeType*)allocator.Malloc(ndim * sizeof(SizeType));
-    RAPIDJSON_ASSERT(shape);
+    if (data == NULL) {
+      SizeType nbytes = GetNElements() * sizeof(T);
+      if (GetSubType() == GetStringSubTypeString())
+	nbytes = nbytes * GetPrecision();
+      data = (T*)allocator.Malloc(nbytes);
+      RAPIDJSON_ASSERT(data);
+    }
+    if (shape == NULL) {
+      ndim = GetNDim();
+      shape = (SizeType*)allocator.Malloc(ndim * sizeof(SizeType));
+      RAPIDJSON_ASSERT(shape);
+    }
+    RAPIDJSON_ASSERT(ndim == GetNDim());
+    const ValueType& shape0 = GetShape();
     for (SizeType i = 0; i < ndim; i++) {
-      shape[i] = x.shape()[i];
-      nelements = nelements * shape[i];
+      shape[i] = shape0[i].GetUint();
     }
-    if (data != NULL) {
-      free(data);
-      data = NULL;
-    }
-    data = (T*)allocator.Malloc(nelements * sizeof(T));
-    RAPIDJSON_ASSERT(data);
-    for (SizeType i = 0; i < nelements; i++)
-      data[i] = x.value()[i];
-    // shape = x.pop_shape();
-    // data = x.pop_value();
+    GetNDArray(data, shape, ndim, data_units);
   }
-  template <typename T>
-  void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
-		  Allocator& allocator, const Ch* units_str) const {
-    return GetNDArray(data, shape, ndim, allocator, UnitsType(units_str)); }
-      
+  /*!
+    @brief Copy an ND array of strings into the destination memory,
+      allocating it if necessary.
+    @param[in, out] data Pointer to memory that the array should be
+      copied into. If NULL, memory will be allocated using allocator and
+      this will be set to the allocated address.
+    @param[in,out] shape Pointer to memory where the array shape should
+      be stored. If NULL, memory will be allocated using allocator.
+    @param[out] ndim This will be set to the number of dimensions in the
+      return array (and the number of elements in shape).
+    @param[in] precision This will be set to the number of characters
+      stored for each string element in data.
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+   */
+  void GetNDArray(Ch*& data, SizeType*& shape, SizeType& ndim,
+		  SizeType& precision, Allocator& allocator) const {
+    if (data != NULL) {
+      GetNDArray(data, shape, ndim, precision);
+      return;
+    }
+    GetArrayValueBase(data, ndim, shape, precision,
+		      ValueType(kNullType).Move(), allocator);
+  }
+  /*!
+    @brief Copy an ND array of strings into the destination memory,
+      allocating it if necessary.
+    @param[in, out] data Pointer to memory that the array should be
+      copied into. If NULL, memory will be allocated using allocator and
+      this will be set to the allocated address.
+    @param[in,out] shape Pointer to memory where the array shape should
+      be stored. If NULL, memory will be allocated using allocator.
+    @param[out] ndim This will be set to the number of dimensions in the
+      return array (and the number of elements in shape).
+    @param[in] precision This will be set to the number of characters
+      stored for each string element in data.
+    @param[in] encoding Name of the encoding that the returned array
+      should be translated to.
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+   */
+  void GetNDArray(Ch*& data, SizeType*& shape, SizeType& ndim,
+		  SizeType& precision, const ValueType& encoding,
+		  Allocator& allocator) const {
+    RAPIDJSON_ASSERT(encoding.IsString());
+    GetArrayValueBase(data, ndim, shape, precision,
+		      encoding, allocator);
+  }
+  /*!
+    @brief Get a copy of an ND array allocated on heap.
+    @tparam T Type of array elements that should be returned. If different
+      than the value being accessed, attempts will be made to cast the
+      array contents.
+    @param[in,out] shape Pointer to memory where the array shape should
+      be stored.
+    @param[out] ndim This will be set to the number of dimensions in the
+      return array (and the number of elements in shape).
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+    @param[in] data_units Units that the returned array should be
+      converted to.
+    @returns Pointer to allocated memory containing the array data.
+   */
   template <typename T>
   T* GetNDArray(SizeType*& shape, SizeType& ndim, Allocator& allocator,
 		const UnitsType data_units = UnitsType()) const {
@@ -6322,26 +6702,183 @@ public:
     GetNDArray(data, shape, ndim, allocator, data_units);
     return data;
   }
+  // template <typename T>
+  // void GetNDArray(T*& data, SizeType*& shape, SizeType& ndim,
+  // 		  Allocator& allocator, const Ch* units_str) const {
+  //   return GetNDArray(data, shape, ndim, allocator, UnitsType(units_str));
+  // }
+  // Minimal version for getting allocatable array on heap
+  /*!
+    @brief Copy an ND array into the destination memory, allocating it if
+      necessary.
+    @tparam T Type of array elements. If different than the value being
+      accessed, attempts will be made to cast the array contents.
+    @param[in, out] data Pointer to memory that the array should be
+      copied into. If NULL, memory will be allocated using allocator and
+      this will be set to the allocated address.
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+    @param[in] data_units Units that the returned array should be
+      converted to.
+   */
   template <typename T>
-  T* GetNDArray(SizeType*& shape, SizeType& ndim, Allocator& allocator,
-		const Ch* units_str) const {
-    return GetNDArray<T>(shape, ndim, allocator, UnitsType(units_str)); }
-  // ND string array access
-  void GetNDArray(Ch*& data, SizeType*& shape, SizeType& ndim,
-		  SizeType& precision, Allocator& allocator) const {
-    GetArrayValueBase(data, ndim, shape, allocator);
-    precision = GetPrecision();
+  void GetNDArray(T*& data, Allocator& allocator,
+		  const UnitsType data_units = UnitsType(),
+		  RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
+    SizeType ndim = 1;
+    SizeType* shape = NULL;
+    GetNDArray(data, shape, ndim, allocator, data_units);
+    allocator.Free(shape);
   }
+  /*!
+    @brief Get a copy of an ND array allocated on heap.
+    @tparam T Type of array elements that should be returned. If different
+      than the value being accessed, attempts will be made to cast the
+      array contents.
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+    @param[in] data_units Units that the returned array should be
+      converted to.
+    @returns Pointer to allocated memory containing the array data.
+   */
+  template <typename T>
+  T* GetNDArray(Allocator& allocator,
+		const UnitsType data_units = UnitsType()) const {
+    T* data = NULL;
+    GetNDArray(data, allocator, data_units);
+    return data;
+  }
+  /*!
+    @brief Copy an ND array of strings into the destination memory,
+      allocating it if necessary.
+    @param[in, out] data Pointer to memory that the array should be
+      copied into. If NULL, memory will be allocated using allocator and
+      this will be set to the allocated address.
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+   */
+  void GetNDArray(Ch*& data, Allocator& allocator) const {
+    SizeType ndim = 1;
+    SizeType* shape = NULL;
+    SizeType precision = 0;
+    GetArrayValueBase(data, ndim, shape, precision,
+		      ValueType(kNullType).Move(), allocator);
+    allocator.Free(shape);
+  }
+  /*!
+    @brief Copy an ND array of strings into the destination memory,
+      allocating it if necessary.
+    @param[in, out] data Pointer to memory that the array should be
+      copied into. If NULL, memory will be allocated using allocator and
+      this will be set to the allocated address.
+    @param[in] encoding Name of the encoding that the returned array
+      should be translated to.
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+   */
+  void GetNDArray(Ch*& data, const ValueType& encoding,
+		  Allocator& allocator) const {
+    SizeType ndim = 1;
+    SizeType* shape = NULL;
+    SizeType precision = 0;
+    GetArrayValueBase(data, ndim, shape, precision,
+		      encoding, allocator);
+    allocator.Free(shape);
+  }
+  /*!
+    @brief Get a copy of an ND array of strings allocated on heap.
+    @param[in,out] shape Pointer to memory where the array shape should
+      be stored.
+    @param[out] ndim This will be set to the number of dimensions in the
+      return array (and the number of elements in shape).
+    @param[in] precision This will be set to the number of characters
+      stored for each string element in data.
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+    @returns Pointer to allocated memory containing the array data.
+   */
   Ch* GetNDArray(SizeType*& shape, SizeType& ndim, SizeType& precision,
 		 Allocator& allocator) const {
     Ch* data = NULL;
     GetNDArray(data, shape, ndim, precision, allocator);
     return data;
   }
+  /*!
+    @brief Get a copy of an ND array of strings allocated on heap.
+    @param[in,out] shape Pointer to memory where the array shape should
+      be stored.
+    @param[out] ndim This will be set to the number of dimensions in the
+      return array (and the number of elements in shape).
+    @param[in] precision This will be set to the number of characters
+      stored for each string element in data.
+    @param[in] encoding Name of the encoding that the returned array
+      should be translated to.
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+    @returns Pointer to allocated memory containing the array data.
+   */
+  Ch* GetNDArray(SizeType*& shape, SizeType& ndim, SizeType& precision,
+		 const ValueType& encoding, Allocator& allocator) const {
+    Ch* data = NULL;
+    GetNDArray(data, shape, ndim, precision, encoding, allocator);
+    return data;
+  }
+  /*!
+    @brief Get a copy of an ND array of strings allocated on heap.
+    @param[in] encoding Name of the encoding that the returned array
+      should be translated to.
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+    @returns Pointer to allocated memory containing the array data.
+   */
+  Ch* GetNDArray(const ValueType& encoding, Allocator& allocator) const {
+    Ch* data = NULL;
+    GetNDArray(data, encoding, allocator);
+    return data;
+  }
+  /*!
+    @brief Get a copy of an ND array of strings allocated on heap.
+    @param[in] allocator Allocator that should be used to allocate the
+      memory for the returned array and shape.
+    @returns Pointer to allocated memory containing the array data.
+   */
+  Ch* GetNDArray(Allocator& allocator) const {
+    Ch* data = NULL;
+    GetNDArray(data, allocator);
+    return data;
+  }
   
   template <typename T>
   T* Get(SizeType** shape, SizeType& ndim, Allocator& allocator) const {
-    return GetNDArray<T>(shape, ndim, allocator); }
+    return GetNDArray<T>(shape, ndim, allocator);
+  }
+
+  ValueType GetTranscodedString(const ValueType& encoding,
+				Allocator& allocator) const {
+    RAPIDJSON_ASSERT(IsScalar() &&
+		     GetSubType() == GetStringSubTypeString() &&
+		     encoding.IsString());
+    void* dst = NULL;
+    SizeType dst_len = 0;
+    bool encoded = false;
+    if (!HasEncoding()) {
+      encoded = TranslateEncoding(GetString(),
+				  GetStringLength() * sizeof(Ch),
+				  "null",
+				  dst, dst_len,
+				  encoding.GetString(), allocator, true);
+    } else {
+      encoded = TranslateEncoding(GetString(),
+				  GetStringLength() * sizeof(Ch),
+				  GetEncoding().GetString(),
+				  dst, dst_len,
+				  encoding.GetString(), allocator, true);
+    }
+    RAPIDJSON_ASSERT(encoded);
+    if (!encoded)
+      return ValueType(kNullType);
+    return ValueType((Ch*)dst, dst_len / sizeof(Ch));
+  }
 
   unsigned char* GetDecodedString(size_t &length, Allocator &allocator) const {
     length = (size_t)(GetStringLength() * sizeof(Ch));

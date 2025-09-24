@@ -2349,6 +2349,18 @@ class QuantityArray;
   DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE, OP, IOP) \
   ADD_DEFAULT_OPERATOR(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, IOP)	\
   ADD_DEFAULT_OPERATOR(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, IOP)
+#define INPLACE_OP_QUANTITY_DIFF_(OP, IOP)                              \
+  template<typename T2>							\
+  GenericQuantityArray& operator IOP(const GenericQuantity<T2, Encoding>& x) { \
+    METHOD_FACTOR_PULL_(operator IOP, (x.units()));			\
+    METHOD_FACTOR_APPLY_						\
+    SizeType N = nelements();						\
+    for (SizeType i = 0; i < N; i++) {					\
+      value_[i] IOP castPrecision<T2,T>(x.value());			\
+    }									\
+    return *this;							\
+  }
+  // DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_TYPE, OP, IOP)
 #define INPLACE_OP_QUANTITY_COMBINE_(OP, IOP)				\
   template<typename T2>							\
   GenericQuantityArray& operator IOP(const GenericQuantityArray<T2, Encoding>& x) { \
@@ -2714,10 +2726,12 @@ public:
   //! \param x Scalar or QuantityArray to multiply by.
   //! \return Result of multiplication.
   INPLACE_OP_QUANTITY_COMBINE_(*, *=)
+  INPLACE_OP_QUANTITY_DIFF_(*, *=)
   //! \brief Divide by a scalar or QuantityArray element by element inplace.
   //! \param x Scalar or QuantityArray to divide by.
   //! \return Result of division.
   INPLACE_OP_QUANTITY_COMBINE_(/, /=)
+  INPLACE_OP_QUANTITY_DIFF_(/, /=)
   //! \brief Modulo by another quantity in place element by element.
   //! \param x QuantityArray to modulo by.
   //! \return Result of modulo.
@@ -2730,6 +2744,7 @@ public:
     return *this;
   }
   DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE, %, %=)
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_TYPE, %, %=)
   //! \brief Modulo by a scalar in place.
   //! \tparam T2 Scalar type.
   //! \param x Scalar to modulo by.

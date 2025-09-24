@@ -1,0 +1,131 @@
+name: Test of conda recipe build
+'on':
+  push:
+    branches-ignore:
+     - gh-pages
+    tags:
+     - '*'
+  schedule:
+  - cron: 0 10 * * 1
+jobs:
+  build_conda_recipe:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.11"]
+        builder: [conda, rattler]
+      fail-fast: false
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      ###################################
+      # CONDA SETUP
+      ###################################
+      - name: Set up MSVC Compiler on windows
+        uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.os == 'windows-latest'
+      - name: Set up miniconda test environment
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: ""
+          auto-activate-base: true
+          auto-update-conda: true
+          channels: conda-forge
+          channel-priority: strict
+          miniforge-version: latest
+          conda-remove-defaults: true
+      - name: Install conda-build
+        if: matrix.builder == 'conda'
+        run: |
+          conda info
+          conda list
+          conda install conda-build cmake numpy -y
+      - name: Install rattler-build
+        if: matrix.builder == 'rattler'
+        run: |
+          conda info
+          conda list
+          conda install rattler-build -y
+      - name: Check conda installation & create test environment
+        run: |
+          conda info
+          conda list
+          conda create -n test python=${{ matrix.python-version }} cmake cxx-compiler ninja
+          mkdir -p $HOME/local_channel
+      - name: Build conda recipe (using conda-build)
+        if: matrix.builder == 'conda'
+        run: |
+          conda-build --no-anaconda-upload --output-folder $HOME/local_channel/ --python ${{ matrix.python-version }} recipe/
+      - name: Build conda recipe (using rattler-build)
+        if: matrix.builder == 'rattler'
+        run: |
+          rattler-build build --recipe "conda.recipe/recipe.yaml" --output-dir $HOME/local_channel/ --variant python=${{ matrix.python-version }}
+      # - name: Build conda recipe (using rattler-build action)
+      #   uses: prefix-dev/rattler-build-action@v0.2.34
+      #   if: matrix.builder == 'rattler'
+      #   with:
+      #     upload-artifact: false
+      #     build-args: --output-dir $HOME/local_channel/ --target-platform ${{ matrix.target-platform }} --variant python=${{ matrix.python-version }}
+      - name: Install from local conda recipe
+        run: |
+          conda install -n test -c $HOME/local_channel yggdrasil-rapidjson
+          conda list -n test
+
+      ###################################
+      # Test
+      ###################################
+      - name: Build serialize test example using conda installation
+        run: |
+          mkdir example/serialize/build
+          cd example/serialize/build
+          conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
+          conda run -n test cmake --build . --config Debug
+      - name: (UNIX) Run serialize test example using conda installation
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd example/serialize/build
+          conda run -n test ./serialize
+      - name: (WINDOWS) Run serialize test example using conda installation
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd example/serialize/build
+          conda run -n test serialize.exe
+      - name: Run yggdrasil test example using conda installation
+        run: |
+          mkdir example/yggdrasil/build
+          cd example/yggdrasil/build
+          conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
+          conda run -n test cmake --build . --config Debug
+      - name: (UNIX) Run yggdrasil test example using conda installation
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd example/yggdrasil/build
+          conda run -n test ./yggdrasil
+      - name: (WINDOWS) Run yggdrasil test example using conda installation
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd example/yggdrasil/build
+          conda run -n test yggdrasil.exe
+      - name: Run units test example using conda installation
+        run: |
+          mkdir example/units/build
+          cd example/units/build
+          conda run -n test cmake -G "Ninja" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
+          conda run -n test cmake --build . --config Debug
+      - name: (UNIX) Run units test example using conda installation
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd example/units/build
+          conda run -n test ./units
+      - name: (WINDOWS) Run units test example using conda installation
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd example/units/build
+          conda run -n test units.exe
