@@ -1,27 +1,4 @@
 var searchData=
 [
-  ['capacity_0',['Capacity',['../classrapidjson_1_1_memory_pool_allocator.html#acf80d2330d6ae72643674a95ac62c0bd',1,'rapidjson::MemoryPoolAllocator::Capacity()'],['../classrapidjson_1_1_generic_value.html#a812e5c07f74a90566e7636330740eb6a',1,'rapidjson::GenericValue::Capacity()']]],
-  ['ch_1',['Ch',['../classrapidjson_1_1_generic_reader.html#a0781d19e8c6bc044d9cc5f5d3dde287e',1,'rapidjson::GenericReader::Ch()'],['../classrapidjson_1_1_generic_pointer.html#a850f78846c5548565f8395be5f3427b7',1,'rapidjson::GenericPointer::Ch()'],['../classrapidjson_1_1_base64_input_stream_wrapper.html#ac4eca3f734225c6a66f4c175dbd4eb64',1,'rapidjson::Base64InputStreamWrapper::Ch()'],['../classrapidjson_1_1_base64_output_stream_wrapper.html#a8ae4feafc3489c766fb5c4455c15bec9',1,'rapidjson::Base64OutputStreamWrapper::Ch()'],['../structrapidjson_1_1_generic_string_ref.html#aa2a8eccae3d7eb14c30bc21afb7d6fba',1,'rapidjson::GenericStringRef::Ch()'],['../classrapidjson_1_1_generic_value.html#adcdbc7fa85a9a41b78966d7e0dcc2ac4',1,'rapidjson::GenericValue::Ch()'],['../classrapidjson_1_1_generic_document.html#a8367a827588dd91d02e21ef945bec9f5',1,'rapidjson::GenericDocument::Ch()'],['../classrapidjson_1_1_file_read_stream.html#a4a5f34875b40d22def206c9a09ecd929',1,'rapidjson::FileReadStream::Ch()'],['../classrapidjson_1_1_file_write_stream.html#afc606cc81f6c3709d81bf99b30566330',1,'rapidjson::FileWriteStream::Ch()']]],
-  ['change_20log_2',['Change Log',['../md__c_h_a_n_g_e_l_o_g.html',1,'']]],
-  ['cleanuplocals_3',['CleanupLocals',['../classrapidjson_1_1_cleanup_locals.html',1,'rapidjson']]],
-  ['clear_4',['Clear',['../classrapidjson_1_1_memory_pool_allocator.html#afa5935b0dc40420085822bdb5a3f2840',1,'rapidjson::MemoryPoolAllocator::Clear()'],['../classrapidjson_1_1_generic_value.html#aa56b69bac5423622eff6998ce4802106',1,'rapidjson::GenericValue::Clear()'],['../group___r_a_p_i_d_j_s_o_n___e_r_r_o_r_s.html#a17c9f7f81675283393222658d613000f',1,'rapidjson::ParseResult::Clear()']]],
-  ['code_5',['code',['../classrapidjson_1_1_obj_element.html#a4ea856bb1af1f0268edc71e9f686cc14',1,'rapidjson::ObjElement']]],
-  ['code_6',['Code',['../group___r_a_p_i_d_j_s_o_n___e_r_r_o_r_s.html#a3c6a1f7b7dc21363a255eb10a3c0e00e',1,'rapidjson::ParseResult']]],
-  ['color_7',['color',['../classrapidjson_1_1_obj_vertex.html#a9d3e21a86e5b7fa5df3e355b6f6b4a49',1,'rapidjson::ObjVertex']]],
-  ['colors_8',['colors',['../classrapidjson_1_1_ply_element_set.html#a7feeec69dcf4e39170653d246080187a',1,'rapidjson::PlyElementSet::colors()'],['../classrapidjson_1_1_ply_element.html#a27117d0471b0d0d9220f736b9663956c',1,'rapidjson::PlyElement::colors()']]],
-  ['comments_9',['comments',['../classrapidjson_1_1_ply.html#a2e550c2a71c2b20223204a832439e9b2',1,'rapidjson::Ply']]],
-  ['constiterator_10',['ConstIterator',['../classrapidjson_1_1_generic_member_iterator.html#a61b9a9ba8a5917d90406532f104605cc',1,'rapidjson::GenericMemberIterator']]],
-  ['constmemberiterator_11',['ConstMemberIterator',['../classrapidjson_1_1_generic_value.html#a6cd2b09795c48d2892bebc0ae350d51f',1,'rapidjson::GenericValue']]],
-  ['constvalueiterator_12',['ConstValueIterator',['../classrapidjson_1_1_generic_value.html#a89a6588121742fc3f154b10b8f15f45f',1,'rapidjson::GenericValue']]],
-  ['copy_13',['copy',['../structrapidjson_1_1_obj_property_type.html#adfb2025d7abb7dbc3fdf179140be6731',1,'rapidjson::ObjPropertyType::copy()'],['../classrapidjson_1_1_obj_element.html#a6101ccf63019bab175603b21e395872c',1,'rapidjson::ObjElement::copy()']]],
-  ['copy_5felement_14',['copy_element',['../classrapidjson_1_1_obj_group_base.html#a622b6e74e4c4d8d9a96ea144aec825b1',1,'rapidjson::ObjGroupBase']]],
-  ['copy_5fmembers_15',['copy_members',['../classrapidjson_1_1_obj_element.html#aa8c178539dbd532550e62cd7e475b67b',1,'rapidjson::ObjElement::copy_members()'],['../classrapidjson_1_1_obj_group_base.html#aa49a7acbbe903004ee25967696382ffe',1,'rapidjson::ObjGroupBase::copy_members()']]],
-  ['copyfrom_16',['CopyFrom',['../classrapidjson_1_1_generic_value.html#a9e1a4c6a7a56f9fed74907394baa88d5',1,'rapidjson::GenericValue']]],
-  ['count_5fdecimals_17',['count_decimals',['../structrapidjson_1_1_obj_property_type.html#a3bd3e4d32f84fd8c648b5b3cc1419dca',1,'rapidjson::ObjPropertyType']]],
-  ['count_5felements_18',['count_elements',['../classrapidjson_1_1_obj_group_base.html#a858b41fd67262f27f8ff8fae633e0962',1,'rapidjson::ObjGroupBase::count_elements()'],['../classrapidjson_1_1_ply.html#a8cac1cee2cca63c2b815a4380484399b',1,'rapidjson::Ply::count_elements()']]],
-  ['countvarargs_19',['countVarArgs',['../namespacerapidjson.html#a457cf6a2e6ddb0996a246eff67a17836',1,'rapidjson']]],
-  ['create_20',['Create',['../classrapidjson_1_1_generic_pointer.html#a3408cdb1417caefd022acceb75cd5f84',1,'rapidjson::GenericPointer::Create(ValueType &amp;root, typename ValueType::AllocatorType &amp;allocator, bool *alreadyExist=0) const'],['../classrapidjson_1_1_generic_pointer.html#a6c2226d8e49a9bc24b180e59b07521b0',1,'rapidjson::GenericPointer::Create(GenericDocument&lt; EncodingType, typename ValueType::AllocatorType, stackAllocator &gt; &amp;document, bool *alreadyExist=0) const']]],
-  ['crtallocator_21',['CrtAllocator',['../classrapidjson_1_1_crt_allocator.html',1,'rapidjson']]],
-  ['cursorstreamwrapper_22',['CursorStreamWrapper',['../classrapidjson_1_1_cursor_stream_wrapper.html',1,'rapidjson']]],
-  ['curv2d_23',['curv2d',['../classrapidjson_1_1_obj_ref_curve.html#a81c0fabce0b70908544da4ee30419844',1,'rapidjson::ObjRefCurve::curv2d()'],['../classrapidjson_1_1_obj_ref_surface.html#af699e0310eff4aacec5ebb3208907457',1,'rapidjson::ObjRefSurface::curv2d()']]]
+  ['8_0',['1.0-beta - 2015-04-8',['../md__c_h_a_n_g_e_l_o_g.html#autotoc_md34',1,'']]]
 ];

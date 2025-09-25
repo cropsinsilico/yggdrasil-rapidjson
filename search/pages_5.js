@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['internals_0',['Internals',['../md_doc_internals.html',1,'']]]
+  ['header_20only_20library_20for_20use_20with_20yggdrasil_0',['An extension of the RapidJSON C++ header-only library for use with yggdrasil',['../index.html',1,'']]]
 ];
