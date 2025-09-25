@@ -8,7 +8,8 @@ name: Build the docs & publish to GitHub Pages
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    contents: write
+    permissions:
+      contents: write
     steps:
       - name: Check out repository code
         uses: actions/checkout@v5
