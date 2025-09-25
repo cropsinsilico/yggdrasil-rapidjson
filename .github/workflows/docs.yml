@@ -22,7 +22,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DRAPIDJSON_BUILD_DOC=ON -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
+          cmake .. -DRAPIDJSON_BUILD_DOC_FOR_PUBLISH=ON -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
           cmake --build .
       - name: Add changes & push to deploy
         run: |

@@ -137,7 +137,7 @@ to the gh-pages branch as below.
 ```
 mkdir build_docs
 cd build_docs
-cmake .. -DRAPIDJSON_BUILD_DOC=ON -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
+cmake .. -DRAPIDJSON_BUILD_DOC_FOR_PUBLISH=ON -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
 cmake --build .
 cd doc/html
 git add -A

@@ -11,9 +11,17 @@ ELSE()
 
     file(GLOB DOXYFILES ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile*)
 
+    set(GIT_COMMANDS)
+    if(RAPIDJSON_BUILD_DOC_FOR_PUBLISH)
+        set(
+            GIT_COMMANDS
+            COMMAND git fetch origin gh-pages
+            COMMAND git worktree add -f ${CMAKE_CURRENT_BINARY_DIR}/html gh-pages
+        )
+    endif()
+
     add_custom_command(OUTPUT html
-        COMMAND git fetch origin gh-pages
-        COMMAND git worktree add -f ${CMAKE_CURRENT_BINARY_DIR}/html gh-pages
+        ${GIT_COMMANDS}
         COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/html
         DEPENDS ${MARKDOWN_DOC} ${SOURCES} ${DOXYFILES}
