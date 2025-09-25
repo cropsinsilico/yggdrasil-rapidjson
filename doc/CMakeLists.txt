@@ -12,6 +12,7 @@ ELSE()
     file(GLOB DOXYFILES ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile*)
 
     add_custom_command(OUTPUT html
+        COMMAND git fetch origin gh-pages
         COMMAND git worktree add -f ${CMAKE_CURRENT_BINARY_DIR}/html gh-pages
         COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/html
