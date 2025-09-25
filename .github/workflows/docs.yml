@@ -1,0 +1,32 @@
+name: Build the docs & publish to GitHub Pages
+'on':
+  push:
+    branches:
+      - docs
+    tags:
+      - 'v*'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    contents: write
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+      - name: Configure git
+        run: |
+          git config --global user.name 'Meagan Lang'
+          git config --global user.email 'langmm.astro@gmail.com'
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DRAPIDJSON_BUILD_DOC=ON -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
+          cmake --build .
+      - name: Add changes & push to deploy
+        run: |
+          cd build/doc/html
+          git add -A
+          git commit --allow-empty -m "Updated docs [via GitHub Action]"
+          git push origin gh-pages

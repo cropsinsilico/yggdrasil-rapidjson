@@ -127,3 +127,20 @@ The steps below outline how a release should be produced.
    * `wget https://github.com/cropsinsilico/yggdrasil-rapidjso/archive/refs/tags/vX.X.X.X.tar.gz`
    * `openssl sha256 vX.X.X.X.tar.gz`
 9. Ensure the conda feedstock is updated
+
+### Publishing the docs
+
+The docs should be automatically be built and published any time a
+tag is pushed, but they can be built & published manually by pushing
+to the gh-pages branch as below.
+
+```
+mkdir build_docs
+cd build_docs
+cmake .. -DRAPIDJSON_BUILD_DOC=ON -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
+cmake --build .
+cd doc/html
+git add -A
+git commit -m "Updated docs"
+git push origin gh-pages
+```
