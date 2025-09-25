@@ -19,11 +19,17 @@ jobs:
         run: |
           git config --global user.name 'Meagan Lang'
           git config --global user.email 'langmm.astro@gmail.com'
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
       - name: Build
         run: |
           mkdir build
           cd build
-          cmake .. -DRAPIDJSON_BUILD_DOC_FOR_PUBLISH=ON -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
+          cmake .. -DRAPIDJSON_BUILD_DOC_FOR_PUBLISH=ON -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF -DPython3_ROOT_DIR=${pythonLocation}
           cmake --build .
       - name: Add changes & push to deploy
         run: |
