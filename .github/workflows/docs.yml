@@ -19,6 +19,9 @@ jobs:
         run: |
           git config --global user.name 'Meagan Lang'
           git config --global user.email 'langmm.astro@gmail.com'
+      - name: Install doxygen
+        run: |
+          sudo apt-get install doxygen graphviz -y
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
