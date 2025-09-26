@@ -54,6 +54,7 @@ about:
   summary: |
     A header-only C++ library for JSON operation extended for use with
     yggdrasil
+  doc_url: https://cropsinsilico.github.io/yggdrasil-rapidjson/
 
 extra:
   recipe-maintainers:

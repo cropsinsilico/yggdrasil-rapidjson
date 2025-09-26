@@ -8,6 +8,14 @@
 * Store scalars in standard yggdrasil data
 * Version yggdrasil storage format
 * Update yggdrasil data format to have human readable header
+* Add to yggdrasil example (& docs)
+  * python types
+  * 3D geometry types
+* SchemaNormalizingReader
+* Update to use Document.Populate where appropriate
+* Add units docs
+* Link in docs to RapidJSON docs
+* Prune docs to just YggdrasilRapidJSON extension stuff
 
 ### IN PROGRESS
 * Add docstrings to new methods

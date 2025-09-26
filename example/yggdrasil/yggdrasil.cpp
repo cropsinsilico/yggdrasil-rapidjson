@@ -21,7 +21,12 @@ int main(int, char*[]) {
     {
       uint8_t x = 25;
       document.AddMember("uint8", x, document.GetAllocator());
-      assert(document["uint8"].IsScalar());
+    }
+
+    // Complex numbers
+    {
+      std::complex<float> x(3.4F, 6.2F);
+      document.AddMember("complex", x, document.GetAllocator());
     }
 
     // ND Arrays
@@ -91,9 +96,21 @@ int main(int, char*[]) {
       assert(document["uint8"].IsScalar<uint8_t>()); // Check type
       uint8_t x = document["uint8"].GetScalar<uint8_t>();
       assert(x == 25);
+      // Inspect scalar properties
+      assert(document["uint8"].GetPrecision() == 1);
+      assert(document["uint8"].GetSubTypeCode() == kYggUintSubType);
       // Get scalar converted to higher precision
       uint32_t y = document["uint8"].GetScalar<uint32_t>();
       assert(y == 25);
+    }
+
+    // Complex numbers
+    {
+      assert(document["complex"].IsScalar());
+      assert(document["complex"].IsScalar<std::complex<float>>());
+      std::complex<float> x = document["complex"].GetScalar<std::complex<float> >();
+      assert(internal::values_eq(x.real(), 3.4F));
+      assert(internal::values_eq(x.imag(), 6.2F));
     }
     
     // ND Arrays
@@ -106,6 +123,7 @@ int main(int, char*[]) {
       const Value& shape = document["Array2D"].GetShape();
       assert(shape[0] == 8);
       assert(document["Array2D"].GetNElements() == (8 * 3));
+      // Can copy the array into a destination on stack
       float dest_stack[8][3];
       document["Array2D"].GetNDArray(dest_stack);
       assert(internal::values_eq(dest_stack[6][2], (float)1.0));
@@ -123,6 +141,7 @@ int main(int, char*[]) {
       assert(shape[0] == 2);
       SizeType nelements = 2 * 3 * 3;
       assert(document["Array3D"].GetNElements() == nelements);
+      // Can copy the array into a destination on stack
       float dest_stack[2][3][3];
       document["Array3D"].GetNDArray(dest_stack);
       assert(internal::values_eq(dest_stack[1][2][2], (float)0.85));

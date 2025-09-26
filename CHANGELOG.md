@@ -9,6 +9,10 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 * Updates to docs to document YggdrasilRapidJSON specific features and remove RapidJSON specific information
 * Workflow to deploy docs on tags (or docs branch)
+* Added to example/yggdrasil/yggdrasil.cpp (complex numbers)
+* Fixed corner cases for units operations include type promotion
+* Added additional units tests
+* Added to example/yggdrasil/units.cpp for missing operators
 
 ## 1.1.0.0 - 2025-09-24
 

@@ -175,6 +175,24 @@ bool canCast(YggSubType S1, SizeType P1,
 		 return false);
 }
 
+template <typename T>
+bool isInt(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_INT_TYPE(T)))) {
+  return true;
+}
+template <typename T>
+bool isInt(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_INT_TYPE(T)))) {
+  return false;
+}
+
+template <typename T>
+bool isUint(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_UINT_TYPE(T)))) {
+  return true;
+}
+template <typename T>
+bool isUint(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_UINT_TYPE(T)))) {
+  return false;
+}
+
 template <typename T1, typename T2>
 T2 castPrecision(const T1& v1,
 		 RAPIDJSON_DISABLEIF((internal::OrExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),

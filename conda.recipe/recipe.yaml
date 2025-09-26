@@ -70,6 +70,7 @@ about:
     yggdrasil
   license: MIT
   license_file: license.txt
+  documentation: https://cropsinsilico.github.io/yggdrasil-rapidjson/
 
 extra:
   recipe-maintainers:

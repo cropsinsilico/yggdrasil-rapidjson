@@ -1,18 +1,25 @@
 # Schema
 
-(This feature was released in v1.1.0)
+JSON Schema is a draft standard for describing the format of JSON data. The schema itself is also JSON data. RapidJSON added support for [validating JSON](https://rapidjson.org/md_doc_schema.html) structures against JSON schema in v1.1.0. YggdrasilRapidJSON extended this by adding support for additional properties that can be specified (mostly pertaining to the added data types), normalization of JSON structures using JSON schema, and some additional utilities for interactiving with the schema classes.
 
-JSON Schema is a draft standard for describing the format of JSON data. The schema itself is also JSON data. By validating a JSON structure with JSON Schema, your code can safely access the DOM without manually checking types, or whether a key exists, etc. It can also ensure that the serialized JSON conform to a specified schema.
+Because YggdrasilRapidJSON JSON schema features are built upon RapidJSON's JSON schema classes & functions, refer to the [RapidJSON JSON schema](https://rapidjson.org/md_doc_schema.html) documentation for additional information on the schema implementation and examples.
 
-RapidJSON implemented a JSON Schema validator for [JSON Schema Draft v4](http://json-schema.org/documentation.html). If you are not familiar with JSON Schema, you may refer to [Understanding JSON Schema](http://spacetelescope.github.io/understanding-json-schema/).
+Like RapidJSON's JSON schema features, YggdrasilRapidJSON's schema features implement [JSON Schema Draft v4](http://json-schema.org/documentation.html). If you are not familiar with JSON Schema, you may refer to [Understanding JSON Schema](http://spacetelescope.github.io/understanding-json-schema/).
+
 
 [TOC]
 
-# Basic Usage {#Basic}
+# Normalization
+
+JSON normalization modifies the JSON structure (when possible) to be compliant with a JSON schema. If the structure cannot be normalized, validation errors will be set.
+
+The normalizer can be used in all of the same ways as the RapidJSON validator (e.g. serialization, with remote schemas). Use of normalizer as in the examples from the RapidJSON documentation will be the same with the replacement of "Validator" with "Normalizer". The one exception of this is the lack of a normalization equivalent to the `SchemaValidatingReader` helper class which will be implemented in a future release.
+
+## Basic Usage {#Basic}
 
 First of all, you need to parse a JSON Schema into `Document`, and then compile the `Document` into a `SchemaDocument`.
 
-Secondly, construct a `SchemaValidator` with the `SchemaDocument`. It is similar to a `Writer` in the sense of handling SAX events. So, you can use `document.Accept(validator)` to validate a document, and then check the validity.
+Secondly, construct a `SchemaNormalizer` with the `SchemaDocument`. It is similar to a `Writer` in the sense of handling SAX events. So, you can use `document.Accept(normalizer)` to normalize a document, check the validity, and then get the normalized document if it is valid.
 
 ~~~cpp
 #include "rapidjson/schema.h"
@@ -41,293 +48,120 @@ if (d.Parse(inputJson).HasParseError()) {
     // ...       
 }
 
-SchemaValidator validator(schema);
-if (!d.Accept(validator)) {
+SchemaNormalizer normalizer(schema);
+if (!d.Accept(normalizer)) {
     // Input JSON is invalid according to the schema
     // Output diagnostic information
     StringBuffer sb;
-    validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
+    normalizer.GetInvalidSchemaPointer().StringifyUriFragment(sb);
     printf("Invalid schema: %s\n", sb.GetString());
-    printf("Invalid keyword: %s\n", validator.GetInvalidSchemaKeyword());
+    printf("Invalid keyword: %s\n", normalizer.GetInvalidSchemaKeyword());
     sb.Clear();
-    validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
+    normalizer.GetInvalidDocumentPointer().StringifyUriFragment(sb);
     printf("Invalid document: %s\n", sb.GetString());
 }
-~~~
-
-Some notes:
-
-* One `SchemaDocument` can be referenced by multiple `SchemaValidator`s. It will not be modified by `SchemaValidator`s.
-* A `SchemaValidator` may be reused to validate multiple documents. To run it for other documents, call `validator.Reset()` first.
-
-# Validation during parsing/serialization {#Fused}
-
-Unlike most JSON Schema validator implementations, RapidJSON provides a SAX-based schema validator. Therefore, you can parse a JSON from a stream while validating it on the fly. If the validator encounters a JSON value that invalidates the supplied schema, the parsing will be terminated immediately. This design is especially useful for parsing large JSON files.
-
-## DOM parsing {#DOM}
-
-For using DOM in parsing, `Document` needs some preparation and finalizing tasks, in addition to receiving SAX events, thus it needs some work to route the reader, validator and the document. `SchemaValidatingReader` is a helper class that doing such work.
-
-~~~cpp
-#include "rapidjson/filereadstream.h"
-
-// ...
-SchemaDocument schema(sd); // Compile a Document to SchemaDocument
-
-// Use reader to parse the JSON
-FILE* fp = fopen("big.json", "r");
-FileReadStream is(fp, buffer, sizeof(buffer));
-
-// Parse JSON from reader, validate the SAX events, and store in d.
-Document d;
-SchemaValidatingReader<kParseDefaultFlags, FileReadStream, UTF8<> > reader(is, schema);
-d.Populate(reader);
-
-if (!reader.GetParseResult()) {
-    // Not a valid JSON
-    // When reader.GetParseResult().Code() == kParseErrorTermination,
-    // it may be terminated by:
-    // (1) the validator found that the JSON is invalid according to schema; or
-    // (2) the input stream has I/O error.
-
-    // Check the validation result
-    if (!reader.IsValid()) {
-        // Input JSON is invalid according to the schema
-        // Output diagnostic information
-        StringBuffer sb;
-        reader.GetInvalidSchemaPointer().StringifyUriFragment(sb);
-        printf("Invalid schema: %s\n", sb.GetString());
-        printf("Invalid keyword: %s\n", reader.GetInvalidSchemaKeyword());
-        sb.Clear();
-        reader.GetInvalidDocumentPointer().StringifyUriFragment(sb);
-        printf("Invalid document: %s\n", sb.GetString());
-    }
-}
-~~~
-
-## SAX parsing {#SAX}
-
-For using SAX in parsing, it is much simpler. If it only need to validate the JSON without further processing, it is simply:
+const Value& normalized = normalizer.GetNormalized();
 
 ~~~
-SchemaValidator validator(schema);
-Reader reader;
-if (!reader.Parse(stream, validator)) {
-    if (!validator.IsValid()) {
-        // ...    
-    }
-}
-~~~
 
-This is exactly the method used in the [schemavalidator](example/schemavalidator/schemavalidator.cpp) example. The distinct advantage is low memory usage, no matter how big the JSON was (the memory usage depends on the complexity of the schema).
 
-If you need to handle the SAX events further, then you need to use the template class `GenericSchemaValidator` to set the output handler of the validator:
+# Extension properties {#Extension}
 
-~~~
-MyHandler handler;
-GenericSchemaValidator<SchemaDocument, MyHandler> validator(schema, handler);
-Reader reader;
-if (!reader.Parse(ss, validator)) {
-    if (!validator.IsValid()) {
-        // ...    
-    }
-}
-~~~
+In addition to the JSON schema standard implemented by RapidJSON, YggdrasilRapidJSON supports several additional schema properties for validating YggdrasilRapidJSON documents.
 
-## Serialization {#Serialization}
+## Validation keywords for any instance type {#AnyTypes}
 
-It is also possible to do validation during serializing. This can ensure the result JSON is valid according to the JSON schema.
+### enum {#enum}
 
-~~~
-StringBuffer sb;
-Writer<StringBuffer> writer(sb);
-GenericSchemaValidator<SchemaDocument, Writer<StringBuffer> > validator(s, writer);
-if (!d.Accept(validator)) {
-    // Some problem during Accept(), it may be validation or encoding issues.
-    if (!validator.IsValid()) {
-        // ...
-    }
-}
-~~~
+This keyword has no additional properties
+beyond `instanceRef` and `schemaRef`.
 
-Of course, if your application only needs SAX-style serialization, it can simply send SAX events to `SchemaValidator` instead of `Writer`.
+* The allowed values are not listed
+  because `SchemaDocument` does not store them in original form.
+* The violating value is not reported
+  because it might be unwieldy.
 
-# Remote Schema {#Remote}
+If you need to report these details to your users,
+you can access the necessary information
+by following `instanceRef` and `schemaRef`.
 
-JSON Schema supports [`$ref` keyword](http://spacetelescope.github.io/understanding-json-schema/structuring.html), which is a [JSON pointer](doc/pointer.md) referencing to a local or remote schema. Local pointer is prefixed with `#`, while remote pointer is an relative or absolute URI. For example:
+### type {#type}
 
-~~~js
-{ "$ref": "definitions.json#/address" }
-~~~
+* `expected`: required array of one or more unique strings,
+  each of which is one of the seven primitive types
+  defined by the JSON Schema Draft 04 Core specification.
+  Lists the types allowed by the `type` schema keyword.
+* `actual`: required string, also one of seven primitive types.
+  The primitive type of the instance.
 
-As `SchemaDocument` does not know how to resolve such URI, it needs a user-provided `IRemoteSchemaDocumentProvider` instance to do so.
+### allOf, anyOf, and oneOf {#allOf-anyOf-oneOf}
 
-~~~
-class MyRemoteSchemaDocumentProvider : public IRemoteSchemaDocumentProvider {
-public:
-    virtual const SchemaDocument* GetRemoteDocument(const char* uri, SizeType length) {
-        // Resolve the uri and returns a pointer to that schema.
-    }
-};
+* `errors`: required array of at least one object.
+  There will be as many items as there are subschemas
+  in the `allOf`, `anyOf` or `oneOf` schema keyword, respectively.
+  Each item will be the error value
+  produced by validating the instance
+  against the corresponding subschema.
 
-// ...
+For `allOf`, at least one error value will be non-empty.
+For `anyOf`, all error values will be non-empty.
+For `oneOf`, either all error values will be non-empty,
+or more than one will be empty.
 
-MyRemoteSchemaDocumentProvider provider;
-SchemaDocument schema(sd, &provider);
-~~~
+### not {#not}
 
-# Conformance {#Conformance}
+This keyword has no additional properties
+apart from `instanceRef` and `schemaRef`.
 
-RapidJSON passed 262 out of 263 tests in [JSON Schema Test Suite](https://github.com/json-schema/JSON-Schema-Test-Suite) (Json Schema draft 4).
 
-The failed test is "changed scope ref invalid" of "change resolution scope" in `refRemote.json`. It is due to that `id` schema keyword and URI combining function are not implemented.
+## Keywords for numeric scalars (and ndarrays) {#Scalars}
 
-Besides, the `format` schema keyword for string values is ignored, since it is not required by the specification.
+### subtype {#subtype}
 
-## Regular Expression {#Regex}
+* `expected`: required array of one or more unique strings,
+  each of which is one of the five yggdrasil subtypes for scalars and
+  ndarrays (TODO: REFERENCE TO DOCS ON NEW TYPES)
+  Lists the types allowed by the `subtype` schema keyword.
+* `actual`: required string, also one of five yggdrasil subtypes.
+  The scalar/ndarray subtype of the instance.
 
-The schema keyword `pattern` and `patternProperties` uses regular expression to match the required pattern.
+The following type transformation are allowed to normalize a document to the subtype(s) specified by a schema if the precision schema property can also be normalized. When the instance satisfies multiple specified by the schema under normalization, the first one will be used in the normalized document.
 
-RapidJSON implemented a simple NFA regular expression engine, which is used by default. It supports the following syntax.
+#### Normalizable to float subtype
 
-|Syntax|Description|
-|------|-----------|
-|`ab`    | Concatenation |
-|<code>a&#124;b</code>   | Alternation |
-|`a?`    | Zero or one |
-|`a*`    | Zero or more |
-|`a+`    | One or more |
-|`a{3}`  | Exactly 3 times |
-|`a{3,}` | At least 3 times |
-|`a{3,5}`| 3 to 5 times |
-|`(ab)`  | Grouping |
-|`^a`    | At the beginning |
-|`a$`    | At the end |
-|`.`     | Any character |
-|`[abc]` | Character classes |
-|`[a-c]` | Character class range |
-|`[a-z0-9_]` | Character class combination |
-|`[^abc]` | Negated character classes |
-|`[^a-c]` | Negated character class range |
-|`[\b]`   | Backspace (U+0008) |
-|<code>\\&#124;</code>, `\\`, ...  | Escape characters |
-|`\f` | Form feed (U+000C) |
-|`\n` | Line feed (U+000A) |
-|`\r` | Carriage return (U+000D) |
-|`\t` | Tab (U+0009) |
-|`\v` | Vertical tab (U+000B) |
+* `{"type": "scalar", "subtype": "int"}`
+* `{"type": "scalar", "subtype": "uint"}`
+* `{"type": "number"}`
+* `{"type": "integer"}`
 
-For C++11 compiler, it is also possible to use the `std::regex` by defining `RAPIDJSON_SCHEMA_USE_INTERNALREGEX=0` and `RAPIDJSON_SCHEMA_USE_STDREGEX=1`. If your schemas do not need `pattern` and `patternProperties`, you can set both macros to zero to disable this feature, which will reduce some code size.
+#### Normalizable to int subtype
 
-# Performance {#Performance}
+* `{"type": "scalar", "subtype": "uint"}`
+* `{"type": "integer"}`
+* `{"type": "scalar", "subtype": "float"}` if the instance is a whole number
+* `{"type": "number"}` if the instance is a whole number
 
-Most C++ JSON libraries do not yet support JSON Schema. So we tried to evaluate the performance of RapidJSON's JSON Schema validator according to [json-schema-benchmark](https://github.com/ebdrup/json-schema-benchmark), which tests 11 JavaScript libraries running on Node.js.
+#### Normalizable to uint subtype
+* `{"type": "scalar", "subtype": "int"}` if the instance is >=0
+* `{"type": "integer"}` if the instance is >=0
+* `{"type": "scalar", "subtype": "float"}` if the instance is a positive whole number
+* `{"type": "number"}` if the instance is a positive whole number
 
-That benchmark runs validations on [JSON Schema Test Suite](https://github.com/json-schema/JSON-Schema-Test-Suite), in which some test suites and tests are excluded. We made the same benchmarking procedure in [`schematest.cpp`](test/perftest/schematest.cpp).
+#### Normalizable to string subtype
+* `{"type": "string"}`
 
-On a Mac Book Pro (2.8 GHz Intel Core i7), the following results are collected.
 
-|Validator|Relative speed|Number of test runs per second|
-|---------|:------------:|:----------------------------:|
-|RapidJSON|155%|30682|
-|[`ajv`](https://github.com/epoberezkin/ajv)|100%|19770 (± 1.31%)|
-|[`is-my-json-valid`](https://github.com/mafintosh/is-my-json-valid)|70%|13835 (± 2.84%)|
-|[`jsen`](https://github.com/bugventure/jsen)|57.7%|11411 (± 1.27%)|
-|[`schemasaurus`](https://github.com/AlexeyGrishin/schemasaurus)|26%|5145 (± 1.62%)|
-|[`themis`](https://github.com/playlyfe/themis)|19.9%|3935 (± 2.69%)|
-|[`z-schema`](https://github.com/zaggino/z-schema)|7%|1388 (± 0.84%)|
-|[`jsck`](https://github.com/pandastrike/jsck#readme)|3.1%|606 (± 2.84%)|
-|[`jsonschema`](https://github.com/tdegrunt/jsonschema#readme)|0.9%|185 (± 1.01%)|
-|[`skeemas`](https://github.com/Prestaul/skeemas#readme)|0.8%|154 (± 0.79%)|
-|tv4|0.5%|93 (± 0.94%)|
-|[`jayschema`](https://github.com/natesilva/jayschema)|0.1%|21 (± 1.14%)|
+### precision {#precision}
 
-That is, RapidJSON is about 1.5x faster than the fastest JavaScript library (ajv). And 1400x faster than the slowest one.
+* `expected`: required integer strictly greater than 0.
+  The value of the `precision` keyword specified in the schema
+  defining the minimum allowed precision (in bytes) for scalars or
+  ndarray elements.
+* `actual`: required integer.
+  The instance precision.
 
-# Schema violation reporting {#Reporting}
+For numbers, instances can be cast to precision/subtype if they are within the range allowable for the equivalent type in C++. For strings (both primative and scalars/arrays), an instance can only be normalized to a larger precision (it is padded with spaces).
 
-(Unreleased as of 2017-09-20)
-
-When validating an instance against a JSON Schema,
-it is often desirable to report not only whether the instance is valid,
-but also the ways in which it violates the schema.
-
-The `SchemaValidator` class
-collects errors encountered during validation
-into a JSON `Value`.
-This error object can then be accessed as `validator.GetError()`.
-
-The structure of the error object is subject to change
-in future versions of RapidJSON,
-as there is no standard schema for violations.
-The details below this point are provisional only.
-
-## General provisions {#ReportingGeneral}
-
-Validation of an instance value against a schema
-produces an error value.
-The error value is always an object.
-An empty object `{}` indicates the instance is valid.
-
-* The name of each member
-  corresponds to the JSON Schema keyword that is violated.
-* The value is either an object describing a single violation,
-  or an array of such objects.
-
-Each violation object contains two string-valued members
-named `instanceRef` and `schemaRef`.
-`instanceRef` contains the URI fragment serialization
-of a JSON Pointer to the instance subobject
-in which the violation was detected.
-`schemaRef` contains the URI of the schema
-and the fragment serialization of a JSON Pointer
-to the subschema that was violated.
-
-Individual violation objects can contain other keyword-specific members.
-These are detailed further.
-
-For example, validating this instance:
-
-~~~json
-{"numbers": [1, 2, "3", 4, 5]}
-~~~
-
-against this schema:
-
-~~~json
-{
-  "type": "object",
-  "properties": {
-    "numbers": {"$ref": "numbers.schema.json"}
-  }
-}
-~~~
-
-where `numbers.schema.json` refers
-(via a suitable `IRemoteSchemaDocumentProvider`)
-to this schema:
-
-~~~json
-{
-  "type": "array",
-  "items": {"type": "number"}
-}
-~~~
-
-produces the following error object:
-
-~~~json
-{
-  "type": {
-    "instanceRef": "#/numbers/2",
-    "schemaRef": "numbers.schema.json#/items",
-    "expected": ["number"],
-    "actual": "string"
-  }
-}
-~~~
-
-## Validation keywords for numbers {#Numbers}
 
 ### multipleOf {#multipleof}
 
@@ -468,46 +302,3 @@ with the name of the controlling property
 and its value will be an array of one or more unique strings
 listing the missing dependent properties.
 
-## Validation keywords for any instance type {#AnyTypes}
-
-### enum {#enum}
-
-This keyword has no additional properties
-beyond `instanceRef` and `schemaRef`.
-
-* The allowed values are not listed
-  because `SchemaDocument` does not store them in original form.
-* The violating value is not reported
-  because it might be unwieldy.
-
-If you need to report these details to your users,
-you can access the necessary information
-by following `instanceRef` and `schemaRef`.
-
-### type {#type}
-
-* `expected`: required array of one or more unique strings,
-  each of which is one of the seven primitive types
-  defined by the JSON Schema Draft 04 Core specification.
-  Lists the types allowed by the `type` schema keyword.
-* `actual`: required string, also one of seven primitive types.
-  The primitive type of the instance.
-
-### allOf, anyOf, and oneOf {#allOf-anyOf-oneOf}
-
-* `errors`: required array of at least one object.
-  There will be as many items as there are subschemas
-  in the `allOf`, `anyOf` or `oneOf` schema keyword, respectively.
-  Each item will be the error value
-  produced by validating the instance
-  against the corresponding subschema.
-
-For `allOf`, at least one error value will be non-empty.
-For `anyOf`, all error values will be non-empty.
-For `oneOf`, either all error values will be non-empty,
-or more than one will be empty.
-
-### not {#not}
-
-This keyword has no additional properties
-apart from `instanceRef` and `schemaRef`.

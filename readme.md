@@ -1,6 +1,13 @@
 
 ## An extension of the RapidJSON C++ header-only library for use with yggdrasil
 
+* [YggdrasilRapidJSON GitHub](https://github.com/cropsinsilico/yggdrasil-rapidjson)
+* [YggdrasilRapidJSON Documentation](https://cropsinsilico.github.io/yggdrasil-rapidjson)
+* [RapidJSON GitHub](https://github.com/Tencent/rapidjson)
+* [RapidJSON Documentation](https://rapidjson.org/)
+
+The [yggdrasil-python-rapidjson](https://github.com/cropsinsilico/yggdrasil-python-rapidjson) package wraps this library in a Python C-extension so it can be used from Python.
+
 ## Introduction
 
 [RapidJSON](https://github.com/Tencent/rapidjson) is a JSON parser and generator for C++. YggdrasilRapidJSON is built upon RapidJSON with support for several features that were required by the [yggdrasil](https://github.com/cropsinsilico/yggdrasil) package for language interoperability between scientific models. Features added by YggdrasilRapidJSON include:
@@ -124,7 +131,7 @@ The steps below outline how a release should be produced.
    * `git push origin --tags`
 7. Create a release on github
 8. Generate the checksum for the release tar.gz by running
-   * `wget https://github.com/cropsinsilico/yggdrasil-rapidjso/archive/refs/tags/vX.X.X.X.tar.gz`
+   * `wget https://github.com/cropsinsilico/yggdrasil-rapidjson/archive/refs/tags/vX.X.X.X.tar.gz`
    * `openssl sha256 vX.X.X.X.tar.gz`
 9. Ensure the conda feedstock is updated
 

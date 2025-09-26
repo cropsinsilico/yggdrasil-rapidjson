@@ -503,19 +503,47 @@ const std::basic_string<typename DestEncoding::Ch> convert_chars(const std::basi
   return out;
 }
 								 
-//! GenericUnit prefix.
+//! Represents a unit prefix modifying a base unit.
+/*!
+  A prefix is defined by the full string (e.g. "kilo") and abbreviation
+  (e.g. "k"), and a scale factor that should be applied when converting
+  from the prefixed unit to the base unit (e.g. 1e3).
+  \tparam Encoding Encoding of the prefix string.
+ */
 template<typename Encoding>
 class GenericUnitPrefix {
 public:
   typedef Encoding EncodingType;    //!< Encoding type from template parameter.
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
+  //! Default constructor creates an empty prefix.
   GenericUnitPrefix() : abbr(), factor(1.0), name() {}
+  //! Constructor from C-style string types
+  /*!
+    \param[in] abbr0 Abbreviation to use for the prefix.
+    \param[in] factor0 Scale factor when going from the prefixed unit to
+      the base unit.
+    \param[in] name0 Full name to use for the prefix.
+   */
   GenericUnitPrefix(const Ch* abbr0, const double& factor0, const Ch* name0) :
     abbr(abbr0), factor(factor0), name(name0) {}
+  //! Constructor from C++-style string types
+  /*!
+    \param[in] abbr0 Abbreviation to use for the prefix.
+    \param[in] factor0 Scale factor when going from the prefixed unit to
+      the base unit.
+    \param[in] name0 Full name to use for the prefix.
+   */
   GenericUnitPrefix(const std::basic_string<Ch> abbr0, const double& factor0,
 		    const std::basic_string<Ch> name0) :
     abbr(abbr0), factor(factor0), name(name0) {}
 #if RAPIDJSON_HAS_CXX20
+  //! Constructor from C-style string types with char8_t prefix
+  /*!
+    \param[in] abbr0 Abbreviation to use for the prefix.
+    \param[in] factor0 Scale factor when going from the prefixed unit to
+      the base unit.
+    \param[in] name0 Full name to use for the prefix.
+   */
   GenericUnitPrefix(const char8_t* abbr0, const double& factor0, const Ch* name0) :
     abbr(reinterpret_cast<const char*>(abbr0)),
     factor(factor0), name(name0) {}
@@ -564,6 +592,14 @@ public:
   template<typename Ch2, typename Enc2>
   friend std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2>& os, const GenericUnitPrefix<Enc2> &x);
 };
+//! Output stream operator for GenericUnitPrefix.
+/*!
+  \tparam Ch Type used to represent characters in the output stream.
+  \tparam Encoding Encoding of the prefix string.
+  \param os Output stream.
+  \param[in] x Prefix to output.
+  \returns Output stream.
+ */
 template<typename Ch, typename Encoding>
 inline std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch>& os, const GenericUnitPrefix<Encoding> &x) {
   if (x.abbr.size() > 0)
@@ -574,9 +610,15 @@ inline std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch>& os, const G
   //! Generic UnitPrefix with UTF8 encoding
   typedef GenericUnitPrefix<UTF8<char> > UnitPrefix;
 
+//! Macro for constructing UnitPrefix entries for prefix LUTs.
 #define PACK_PREFIX(...) PACK_LUT(UnitPrefix, (__VA_ARGS__))
-  
-  // This dictionary formatting from magnitude package (secondarily via unyt), credit to Juan Reyero.
+
+  /*!
+    \brief Cached lookup table containing recognized SI unit prefixes.
+    
+    This dictionary formatting was adapted from the magnitude package
+    (secondarily via unyt), credit to Juan Reyero.
+  */
   static CachedLUT<UnitPrefix> _unit_prefixes(
       PACK_PREFIX("Y", 1e24, "yotta"),
       PACK_PREFIX("Z", 1e21, "zetta"),
@@ -610,7 +652,18 @@ inline std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch>& os, const G
 
 #undef PACK_PREFIX
 
-//! GenericUnit.
+//! Class to represent a single unit.
+/*!
+  A unit is defined by the set of names that can be interpreted as the
+  unit, abbreviations that are associated with the unit, the
+  dimension that the unit measures, the scale factor that should be
+  applied to convert the unit to the unit measuring the same dimension in
+  the MKS unit system, the offset that should be applied to convert the
+  unit to the MKS unit system, a flag indicating if the unit represents
+  a difference within a dimension, the power that the unit is raised to
+  (e.g. m**2), and the prefix that is applied to the unit.
+  \tparam Encoding Encoding of the name, abbreviation, & prefix strings.
+ */
 template<typename Encoding>
 class GenericUnit {
 public:
@@ -926,6 +979,7 @@ public:
   //! \param str String to find a unit for.
   //! \return true if a unit could be located, false otherwise.
   bool from_table(const std::basic_string<Ch> str);
+
 private:
   std::vector<std::basic_string<Ch> > names_;
   std::vector<std::basic_string<Ch> > abbrs_;
@@ -962,6 +1016,14 @@ private:
   template<typename Ch2, typename Encoding2>
   friend std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2>& os, const GenericUnit<Encoding2> &x);
 };
+//! Output stream operator for GenericUnit.
+/*!
+  \tparam Ch2 Type used to represent characters in the output stream.
+  \tparam Encoding Encoding of the unit strings.
+  \param os Output stream.
+  \param[in] x Unit to output.
+  \returns Output stream.
+ */
 template<typename Ch2, typename Encoding>
 inline std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2>& os, const GenericUnit<Encoding> &x) {
   bool has_factor = x.has_factor();
@@ -983,7 +1045,11 @@ inline std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2>& os, const
 //! GenericUnit with UTF8 encoding
 typedef GenericUnit<UTF8<char> > Unit;
 
-//! \brief GenericUnits class.
+//! Class to represent a set of units.
+/*!
+  Container for a set of units (GenericUnit instances) stored in a vector.
+  \tparam Encoding Encoding of the units in the set.
+ */
 template<typename Encoding>
 class GenericUnits {
 public:
@@ -1221,6 +1287,10 @@ public:
     RAPIDJSON_ASSERT(_check_valid());
     return *this;
   }
+  /*!
+    Report whether or not any of the units have a non-unity scale factor.
+    \returns true if there is a non-unity scale factor, false otherwise.
+   */
   bool has_factor() const {
     for (typename std::vector<GenericUnit<Encoding> >::const_iterator it = units_.begin(); it != units_.end(); it++) {
       if (!(it->is_null())) continue;
@@ -1229,6 +1299,12 @@ public:
     }
     return false;
   }
+  /*!
+    Pull out all of the scale factors from the units that are
+    dimensionless, removing them. If only dimensionless units are present
+    a single dimensionless unit will remain with a unitary (1.0) factor.
+    \returns Product of all dimensionless scale factors.
+   */
   double pull_factor() {
     double factor = 1.0;
     std::vector<size_t> idx_remove;
@@ -1244,6 +1320,10 @@ public:
       units_.erase(units_.begin() + (int)(*it));
     return factor;
   }
+  /*!
+    Add a dimensionless scale factor to the unit set.
+    \param factor Scale factor to add.
+   */
   void add_factor(double factor) {
     std::basic_string<Ch> empty;
 #if RAPIDJSON_HAS_CXX11
@@ -1460,6 +1540,14 @@ private:
   template<typename Ch2, typename Enc2>
   friend std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2> &os, const GenericUnits<Enc2> &x);
 };
+//! Output stream operator for GenericUnits.
+/*!
+  \tparam Ch2 Type used to represent characters in the output stream.
+  \tparam Encoding Encoding of the unit strings.
+  \param os Output stream.
+  \param[in] x Unit set to output.
+  \returns Output stream.
+ */
 template<typename Ch2, typename Encoding>
 inline std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2> &os, const GenericUnits<Encoding> &x) {
     size_t i = 0;
@@ -1475,6 +1563,13 @@ inline std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2> &os, const
     return os;
 }
 
+//! Multiplication operator for two units.
+/*!
+  Perform multiplication of two units, creating a unit set.
+  \param[in] a First unit factor in multiplication.
+  \param[in] b Second unit factor in multiplication.
+  \returns Result of unit multiplication.
+ */
 template<typename Encoding>
 GenericUnits<Encoding> operator*(const GenericUnit<Encoding>& a, const GenericUnit<Encoding>& b) {
   std::vector<GenericUnit<Encoding> > units_a, units_b;
@@ -1483,19 +1578,33 @@ GenericUnits<Encoding> operator*(const GenericUnit<Encoding>& a, const GenericUn
   GenericUnits<Encoding> Units_a = GenericUnits<Encoding>(units_a);
   GenericUnits<Encoding> Units_b = GenericUnits<Encoding>(units_b);
   Units_a *= Units_b;
-  return Units_a; }
+  return Units_a;
+}
+//! Division operator for two units.
+/*!
+  Perform division of two units, creating a unit set.
+  \param[in] a Numerator unit in division.
+  \param[in] b Denominator unit in division.
+  \returns Result of unit division.
+ */
 template<typename Encoding>
 GenericUnits<Encoding> operator/(const GenericUnit<Encoding>& a, const GenericUnit<Encoding>& b) {
-  return a * b.pow(-1); }
+  return a * b.pow(-1);
+}
 
-
-//! GenericUUnits with UTF8 encoding
+//! GenericUnits with UTF8 encoding
 typedef GenericUnits<UTF8<char> > Units;
 
+//! Macro for constructing Unit entries for unit LUTs.
 #define PACK_UNIT(...) PACK_LUT(Unit, (__VA_ARGS__))
+//! Macro for packing multiple names/abbreviations for unit construction
 #define VSTR(...) pack_strings<char>(__VA_ARGS__, (char*)NULL)
 
-  // MKS as base, units that can have SI prefixes
+  /*!
+    \brief Cached lookup table containing the base unit set (MKS).
+
+    This unit set can have SI prefixes.
+   */
   static CachedLUT<Unit> _base_units (
       PACK_UNIT(VSTR("meter", "metre"), VSTR("m"), dimensions::length),
       PACK_UNIT(VSTR("gram", "gramme"), VSTR("g"), dimensions::mass, 1.0e-3),
@@ -1507,7 +1616,11 @@ typedef GenericUnits<UTF8<char> > Units;
       PACK_UNIT("radian", "rad", dimensions::angle),
       (void*)NULL
     );
-  
+
+  /*!
+    \brief Cached lookup table containing units that can be given SI unit
+      prefixes.
+   */
   static CachedLUT<Unit> _prefixable_units (
 #if RAPIDJSON_HAS_CXX11
       _base_units.template get<Unit>(),
@@ -1552,6 +1665,10 @@ typedef GenericUnits<UTF8<char> > Units;
       (void*)NULL
     );
   
+  /*!
+    \brief Cached lookup table containing units that CANNOT be given SI
+      unit prefixes. This includes imperial units and some constants.
+   */
   static CachedLUT<Unit> _unprefixable_units(
     // Imperial units
     PACK_UNIT(VSTR("mil", "thou", "thousandth"), VSTR("mil"), dimensions::length, 1.0e-3 * constants::m_per_inch),
@@ -1678,80 +1795,144 @@ bool GenericUnit<Encoding>::from_table(const std::basic_string<typename Encoding
 
 namespace parser {
 
+//! Identifier for what a token represents.
 enum TokenType {
-  kWhitespaceToken = 0,
-  kOperatorToken = 1,
-  kWordToken = 2,
-  kGroupToken = 3
+  kWhitespaceToken = 0,  //!< Spaces, newlines, tabs
+  kOperatorToken = 1,    //!< Arithmetic operator (e.g. *, /, **)
+  kWordToken = 2,        //!< Unit name/abbreviation
+  kGroupToken = 3        //!< Group of units.
 };
+//! Identifier for how a token was finalized.
 enum TokenFinalization {
-  kTokenFinalizeNull,
-  kTokenFinalizeAlways,
-  kTokenFinalizeBracket,
-  kTokenFinalizeSpace,
-  kTokenFinalizeValue,
-  kTokenFinalizeNext,
-  kTokenFinalizeGroup,
-  kTokenFinalizeFinal
+  kTokenFinalizeNull,    //!< Token has not been finalized.
+  kTokenFinalizeAlways,  //!<
+  kTokenFinalizeBracket, //!<
+  kTokenFinalizeSpace,   //!<
+  kTokenFinalizeValue,   //!<
+  kTokenFinalizeNext,    //!<
+  kTokenFinalizeGroup,   //!<
+  kTokenFinalizeFinal    //!<
 };
 
+//! Forward declaration
 template<typename Encoding>
-class GroupToken; // Forward declaration
+class GroupToken;
 
 
+//! Base class for tokens when parsing unit strings.
+/*!
+  Provides a way to store information extracted from unit strings.
+  \tparam Encoding Token encoding.
+ */
 template<typename Encoding>
 class TokenBase {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 private:
   TokenBase(const TokenBase<Encoding>& rhs);
 public:
+  //! Constructor from token type & parent.
+  /*!
+    \param[in] t0 Type of token being created.
+    \param parent0 Parent token containing this sub-token.
+   */
   TokenBase(const TokenType t0, TokenBase *parent0=NULL) : t(t0), units(), finalized(kTokenFinalizeNull), parent(parent0), value_(0.0), errorFlag(false) {}
+  //! Destructor
   virtual ~TokenBase() {}
+  //! Get the current token.
   virtual TokenBase<Encoding>* current_token() { return this; }
+  //! Finalize this token if it has not been finalized.
+  /*!
+    \param x Identifier for how this token should be finalized.
+    \returns Units represented by this token.
+   */
   virtual GenericUnits<Encoding> finalize(TokenFinalization x) {
     if (!finalized)
       finalized = x;
     return units;
   }
+  //! Reset this token by clearing the units and reseting the state
   void reset() {
     finalized = kTokenFinalizeNull;
     units.clear();
     value_ = 0.0;
   }
+  //! Get the numeric value represented by the token
+  /*!
+    \pre is_numeric()
+    \returns Numeric value for the token.
+   */
   double value() {
     RAPIDJSON_ASSERT(is_numeric());
     finalize(kTokenFinalizeValue);
     return value_;
   }
+  //! Check if the token represents a number.
   virtual bool is_numeric() { return false; }
+  //! Set the error flag for this token and its parent token
   virtual void set_error() {
     errorFlag = true;
     if (parent)
       parent->set_error();
   }
-  virtual void append(const Ch) = 0;
+  //! Append a character to this token.
+  /*!
+    \param c Character to append.
+   */
+  virtual void append(const Ch c) = 0;
+  //! Output this token to an output stream.
+  /*!
+    \param os Output stream.
+    \returns Output stream.
+   */
   virtual std::ostream & display(std::ostream &os) const = 0;
+  //! Copy assignment operator.
   TokenBase<Encoding>& operator=(const TokenBase<Encoding>& other);
-  TokenType t;
-  GenericUnits<Encoding> units;
-  TokenFinalization finalized;
-  TokenBase<Encoding> *parent;
-  double value_;
-  bool errorFlag;
+  TokenType t;                  //!< Token type.
+  GenericUnits<Encoding> units; //!< Units represented by this token
+  TokenFinalization finalized;  //!< Finalization state.
+  TokenBase<Encoding> *parent;  //!< Parent token.
+  double value_;                //!< Numeric token value.
+  bool errorFlag;               //!< Error state.
   template<typename Encoding2>
   friend std::ostream & operator << (std::ostream &os, const TokenBase<Encoding2>* x);
 };
+//! Output stream operator for TokenBase
+/*!
+  \tparam Encoding2 Encoding of the token string.
+  \param os Output stream.
+  \param[in] x Token to output.
+  \returns Output stream.
+ */
 template<typename Encoding2>
 inline std::ostream & operator << (std::ostream &os, const TokenBase<Encoding2>* x) {
   return x->display(os);
 }
-  
+
+//! Token class for unit operators.
+/*!
+  Defined by arithmetic operations between units and/or scalars.
+  \tparam Encoding Token encoding.
+ */
 template<typename Encoding>
 class OperatorToken : public TokenBase<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
+  //! Constructor
+  /*!
+    \param[in] op0 First character representing the operator.
+    \param parent0 Parent token containing this sub-token.
+   */
   OperatorToken(const Ch op0, TokenBase<Encoding> *parent0=NULL) : TokenBase<Encoding>(kOperatorToken, parent0), op(op0) { this->finalize(kTokenFinalizeAlways); }
+  //! \copydoc TokenBase::append
   void append(const Ch c) OVERRIDE_CXX11 { RAPIDJSON_ASSERT(!c); (void)c; } // GCOVR_EXCL_LINE
+  //! Perform the token operation between two sets of units.
+  /*!
+    This only applies to multiplication or division operations.
+    \param[in] a Unit set to the left of the operator.
+    \param[in] b Unit set to the right of the operator.
+    \returns Resulting unit set.
+    \pre (op == '*') || (op == '/')
+   */
   GenericUnits<Encoding> operate(const GenericUnits<Encoding>& a, const GenericUnits<Encoding>& b) {
     switch (op) {
     case '*':
@@ -1763,10 +1944,22 @@ public:
     }
     return this->units; // GCOVR_EXCL_LINE
   }
+  //! Perform the token operation between a unit set and a scalar.
+  /*!
+    \param[in] a Unit set to the left of the operator.
+    \param[in] b Scalar to the right of the operator.
+    \returns Resulting unit set.
+   */
   GenericUnits<Encoding> operate(const GenericUnits<Encoding>& a, const double& b) {
     RAPIDJSON_ASSERT(op == '^');
     return a.pow(b);
   }
+  //! Perform the token operation between two scalars.
+  /*!
+    \param[in] a Scalar to the left of the operator.
+    \param[in] b Scalar to the right of the operator.
+    \returns Resulting scalar.
+   */
   double operate(const double& a, const double& b) {
     switch (op) {
     case '*':
@@ -1785,14 +1978,22 @@ public:
     }
     return 0.0; // GCOVR_EXCL_LINE
   }
+  //! \copydoc TokenBase::is_numeric
   bool is_numeric() OVERRIDE_CXX11 { return true; }
+  //!< Check if this token describes a exponent operator.
   bool is_exp() { return (op == '^'); }
+  //!< Check if this token matches any of the provided operators.
+  /*!
+    \param[in] ops Operators to check this token against.
+    \returns true if this token matches any of the operators in op.
+   */
   bool matches(const std::vector<char> ops) {
     for (std::vector<char>::const_iterator iop = ops.begin(); iop != ops.end(); iop++)
       if (*iop == op)
 	return true;
     return false;
   }
+  //! \copydoc TokenBase::display
   std::ostream & display(std::ostream &os) const OVERRIDE_CXX11 {
     os << "OperatorToken(" << op << ")";
     return os;
@@ -1800,19 +2001,32 @@ public:
   Ch op;
 };
 
+//! Forward declaration
 template<typename Encoding>
-class NumberToken; // Forward declaration
+class NumberToken;
   
+//! Token class for unit names/abbrieviations.
+/*!
+  Defined by unit names/abbrieviations.
+  \tparam Encoding Token encoding.
+ */
 template<typename Encoding>
 class WordToken : public TokenBase<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
+  //! Constructor
+  /*!
+    \param[in] c First character representing the token.
+    \param parent0 Parent token containing this sub-token.
+   */
   WordToken(const Ch c, TokenBase<Encoding> *parent0=NULL) : TokenBase<Encoding>(kWordToken, parent0), word() {
     word.push_back(c);
   }
+  //! \copydoc TokenBase::append
   void append(const Ch c) OVERRIDE_CXX11 {
     word.push_back(c);
   }
+  //! \copydoc TokenBase::finalize
   GenericUnits<Encoding> finalize(TokenFinalization x) OVERRIDE_CXX11 {
     RAPIDJSON_ASSERT(word.size());
     if (!(this->finalized))
@@ -1821,6 +2035,7 @@ public:
       // this->units = GenericUnits<Encoding>({GenericUnit<Encoding>(word)});
     return TokenBase<Encoding>::finalize(x);
   }
+  //! \copydoc TokenBase::display
   std::ostream & display(std::ostream &os) const OVERRIDE_CXX11 {
     os << "WordToken(" << convert_chars<Encoding,UTF8<char> >(word) << ")";
     return os;
@@ -1829,12 +2044,24 @@ public:
   friend class NumberToken<Encoding>;
 };
 
+//! Token class for numbers.
+/*!
+  Defined by number strings.
+  \tparam Encoding Token encoding.
+ */
 template<typename Encoding>
 class NumberToken : public WordToken<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
+  //! Constructor
+  /*!
+    \param[in] c First character representing the token.
+    \param parent0 Parent token containing this sub-token.
+   */
   NumberToken(const Ch c, TokenBase<Encoding> *parent0=NULL) : WordToken<Encoding>(c, parent0) {}
+  //! \copydoc TokenBase::is_numeric
   bool is_numeric() OVERRIDE_CXX11 { return true; }
+  //! \copydoc TokenBase::finalize
   GenericUnits<Encoding> finalize(TokenFinalization x) OVERRIDE_CXX11 {
     if (!(this->finalized)) {
       this->value_ = char_to_double<Ch>(this->word);
@@ -1842,27 +2069,40 @@ public:
     }
     return TokenBase<Encoding>::finalize(x);
   }
+  //! \copydoc TokenBase::display
   std::ostream & display(std::ostream &os) const OVERRIDE_CXX11 {
     os << "NumericToken(" << convert_chars<Encoding,UTF8<char> >(this->word) << ")";
     return os;
   }
 };
 
+//! Token class for groups of sub-tokens.
+/*!
+  Defined by sets of tokens.
+  \tparam Encoding Token encoding.
+ */
 template<typename Encoding>
 class GroupToken : public TokenBase<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
+  //! Constructor
+  /*!
+    \param parent0 Parent token containing this sub-token.
+   */
   GroupToken(TokenBase<Encoding> *parent0=NULL) : TokenBase<Encoding>(kGroupToken, parent0), tokens() {}
+  //! Destructor
   ~GroupToken() OVERRIDE_CXX11 {
     for (size_t i = 0; i < tokens.size(); i++)
       delete tokens[i];
     tokens.clear();
   }
+  //! \copydoc TokenBase::current_token
   TokenBase<Encoding>* current_token() OVERRIDE_CXX11 {
     if (tokens.size() == 0)
       return TokenBase<Encoding>::current_token();
     return tokens[tokens.size() - 1]->current_token();
   }
+  //! Get the current token group.
   GroupToken<Encoding>* current_group() {
     int idx = (int)(tokens.size()) - 1;
     if ((idx >= 0) && (tokens[(size_t)idx]->t == kGroupToken)
@@ -1872,11 +2112,19 @@ public:
     }
     return this;
   }
+  //! Append an operator to this token group.
+  /*!
+    \param[in] c First character in the operator token.
+    \param dont_descend If true, the token will be appended to this group
+      without checking if the token should be appended to a nested group.
+    \returns Created operator token.
+   */
   OperatorToken<Encoding>* append_op(const Ch c, bool dont_descend=false) {
     OperatorToken<Encoding>* op = new OperatorToken<Encoding>(c, this);
     append(op, dont_descend);
     return op;
   }
+  //! \copydoc TokenBase::append
   void append(const Ch c) OVERRIDE_CXX11 {
     TokenBase<Encoding>* curr = current_token();
     if ((curr->t == kGroupToken) || curr->finalized) {
@@ -1915,6 +2163,14 @@ public:
     WordToken<Encoding>* word = static_cast<WordToken<Encoding>*>(curr);
     word->append(c);
   }
+  //! Append a token to this group
+  /*!
+    \param x Pointer to the token that should be appended and updated
+      with parent information.
+    \param dont_descend If true, the token will be appended to this group
+      without checking if the token should be appended to a nested group.
+    \returns Updated token.
+   */
   TokenBase<Encoding>* append(TokenBase<Encoding>* x, bool dont_descend=false) {
     GroupToken<Encoding>* curr;
     if (dont_descend)
@@ -1953,17 +2209,30 @@ public:
     x->parent = curr;
     return x;
   }
+  //! Group operator sub-tokens and the tokens they operate on
+  /*!
+    \param[in] op Operator to group.
+   */
   void group_operators(const char op) {
     std::vector<char> ops;
     ops.push_back(op);
     group_operators(ops);
   }
+  //! Group operator sub-tokens and the tokens they operate on
+  /*!
+    \param[in] op1 First operator to group.
+    \param[in] op2 Second operator to group.
+   */
   void group_operators(const char op1, const char op2) {
     std::vector<char> ops;
     ops.push_back(op1);
     ops.push_back(op2);
     group_operators(ops);
   }
+  //! Group operator sub-tokens and the tokens they operate on
+  /*!
+    \param[in] ops Set of operators that should be grouped.
+   */
   void group_operators(const std::vector<char> ops) {
     if (tokens.size() <= 3)
       return;
@@ -1990,6 +2259,7 @@ public:
     for (std::vector<size_t>::reverse_iterator it = exponents.rbegin(); it != exponents.rend(); it++)
       tokens.erase(tokens.begin() + (int)(*it));
   }
+  //! \copydoc TokenBase::finalize
   GenericUnits<Encoding> finalize(TokenFinalization x) OVERRIDE_CXX11 {
     if ((tokens.size() == 0) || this->finalized)
       return this->units;
@@ -2024,6 +2294,7 @@ public:
     this->units = out;
     return TokenBase<Encoding>::finalize(x);
   }
+  //! \copydoc TokenBase::is_numeric
   bool is_numeric() OVERRIDE_CXX11 {
     for (typename std::vector<TokenBase<Encoding>*>::iterator it = tokens.begin(); it != tokens.end(); it++) {
       if (!((*it)->is_numeric()))
@@ -2031,6 +2302,7 @@ public:
     }
     return true;
   }
+  //! \copydoc TokenBase::display
   std::ostream & display(std::ostream &os) const OVERRIDE_CXX11 {
     os << "GroupToken(";
     size_t i = 0;
@@ -2173,55 +2445,445 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
   return out;
 }
 
-#define DELEGATE_TO_INPLACE_(TMP, CLS, TYP, OP, IOP, IN, ARG)	\
-  TMP								\
-  CLS OP IN const {						\
-    TYP(T) out(*this);						\
-    out.IOP ARG;						\
-    return out;							\
+// Classes to allow operators to be passed
+//! Bitwise flags describing binary operators
+enum BinaryOpFlag {
+  kBinaryOpFlagNull      , //!< No flag
+  kBinaryOpFlagConvert   , //!< Operands must have compatible units
+  kBinaryOpFlagReversible, //!< Operands are reversible
+  kBinaryOpFlagScalar    , //!< RHS operand must be a scalar
+  kBinaryOpFlagMax         //!< Max flag
+};
+//! IDs for binary operators
+enum BinaryOpID {
+  kBinaryOpIDNull,     //!< Base class
+  kBinaryOpIDAdd,      //!< Add operands
+  kBinaryOpIDSubtract, //!< Subtract RHS operand from LHS
+  kBinaryOpIDMultiply, //!< Multiply operands
+  kBinaryOpIDDivide,   //!< Divide LHS operand by RHS
+  kBinaryOpIDModulo,   //!< Perform module on LHS by RHS
+  kBinaryOpIDPower,    //!< Raise RHS operand to power of RHS
+  kBinaryOpIDMax       //!< Max ID
+};
+struct ValueBinaryOp {
+  ValueBinaryOp(BinaryOpID id_, int flags_ = 0) :
+    id(id_), flags(flags_) {
+    switch (id) {
+    case kBinaryOpIDAdd: {
+      flags |= ((1 << kBinaryOpFlagConvert) |
+                (1 << kBinaryOpFlagReversible));
+      break;
+    }
+    case kBinaryOpIDSubtract: {
+      flags |= (1 << kBinaryOpFlagConvert);
+      break;
+    }
+    case kBinaryOpIDMultiply: {
+      flags |= (1 << kBinaryOpFlagReversible);
+      break;
+    }
+    case kBinaryOpIDDivide: {
+      break;
+    }
+    case kBinaryOpIDModulo: {
+      // This is not really true, but ValueBinaryOp is not used for
+      // defining operator%= for quantities, only scalars
+      flags |= (1 << kBinaryOpFlagScalar); 
+      break;
+    }
+    case kBinaryOpIDPower: {
+      flags |= (1 << kBinaryOpFlagScalar);
+      break;
+    }
+    default:
+      RAPIDJSON_ASSERT(id != kBinaryOpIDNull &&
+                       id != kBinaryOpIDMax);
+    }
   }
-#define DELEGATE_TO_INPLACE_OP_QUANTITY_(TYP, OP, IOP)			\
-  template<typename T2>							\
-  friend TYP(T) operator OP(TYP(T) lhs, const TYP(T2)& rhs) {		\
-    lhs IOP rhs;							\
-    return lhs;								\
+  bool requires_convert() const {
+    return (flags & (1 << kBinaryOpFlagConvert));
   }
-#define DELEGATE_TO_INPLACE_OP_SCALAR_(TYP, OP, IOP)			\
-  template<typename T2>							\
-  friend TYP(T) operator OP(TYP(T) lhs, const T2& rhs) {		\
-    lhs IOP rhs;							\
-    return lhs;								\
+  bool reversible() const {
+    return (flags & (1 << kBinaryOpFlagReversible));
+  }
+  bool requires_scalar() const {
+    return (flags & (1 << kBinaryOpFlagScalar));
+  }
+  template <typename T1, typename T2>
+  T1& op_inplace(T1& lv, const T2& rv,
+                 RAPIDJSON_DISABLEIF((
+                   internal::AndExpr<
+                   internal::NotExpr<internal::IsSame<T1,T2> >,
+                   YGGDRASIL_IS_CASTABLE(T2, T1) >))) const {
+    switch (id) {
+    case kBinaryOpIDAdd: {
+      lv += rv;
+      break;
+    }
+    case kBinaryOpIDSubtract: {
+      lv -= rv;
+      break;
+    }
+    case kBinaryOpIDMultiply: {
+      lv *= rv;
+      break;
+    }
+    case kBinaryOpIDDivide: {
+      lv /= rv;
+      break;
+    }
+    case kBinaryOpIDModulo: {
+      lv = _modulo(lv, rv);
+      break;
+    }
+    // case kBinaryOpIDPower: {
+    //   lv = _power(lv, rv);
+    //   break;
+    // }
+    default:
+      RAPIDJSON_ASSERT(id != kBinaryOpIDNull &&
+                       id != kBinaryOpIDMax &&
+                       id != kBinaryOpIDPower);
+    }
+    return lv;
   }
   
-
-#define INHERIT_OP_BASE_INPLACE_(TMP, CLS, TYP, BASE, IOP, IN, ARGBASE)	\
-  TMP									\
-  CLS& IOP IN {								\
-    BASE(T)::IOP ARGBASE;						\
-    return *this;							\
+  template <typename T1, typename T2>
+  T1& op_inplace(T1& lv, const T2& rv,
+                 RAPIDJSON_ENABLEIF((
+                   internal::AndExpr<
+                   internal::NotExpr<internal::IsSame<T1,T2> >,
+                   YGGDRASIL_IS_CASTABLE(T2, T1) >))) const {
+    return op_inplace(lv, castPrecision<T2,T1>(rv));
   }
-#define INHERIT_OP_BASE_(TMP, CLS, TYP, BASE, OP, IOP, IN, ARG, ARGBASE) \
-  INHERIT_OP_BASE_INPLACE_(TMP, CLS, TYP, BASE, IOP, IN, ARGBASE)	\
-  DELEGATE_TO_INPLACE_(TMP, CLS, TYP, OP, IOP, IN, ARG)
-#define INHERIT_OP_BASE_QUANTITY_(CLS, TYP, BASE, OP, IOP)		\
-  INHERIT_OP_BASE_(template<typename T2>, CLS, TYP, BASE, OP, IOP, (const TYP(T2)& x), (x), (*static_cast<const BASE(T2)*>(&x)))
-  // INHERIT_OP_BASE_(template<typename T2>, CLS, TYP, BASE, OP, IOP, (const BASE(T2)& x), (x), (x))
-#define INHERIT_OP_INPLACE_(CLS, TYP, BASE, IOP)			\
-  INHERIT_OP_BASE_INPLACE_(, CLS, TYP, BASE, IOP, (const TYP(T)& x), (*static_cast<const BASE(T)*>(&x)))
-#define INHERIT_OP_BASE_SCALAR_(CLS, TYP, BASE, OP, IOP)	\
-  INHERIT_OP_BASE_(template<typename T2>, CLS, TYP, BASE, OP, IOP, (const T2& x), (x), (x))
-#define INHERIT_OP_(CLS, TYP, BASE, OP, IOP)				\
-  INHERIT_OP_BASE_QUANTITY_(CLS, TYP, BASE, operator OP, operator IOP)
-#define INHERIT_OP_SCALAR_(CLS, TYP, BASE, OP, IOP)			\
-  INHERIT_OP_BASE_QUANTITY_(CLS, TYP, BASE, operator OP, operator IOP)	\
-  INHERIT_OP_BASE_SCALAR_(CLS, TYP, BASE, operator OP, operator IOP)
+  template <typename T1, typename T2>
+  T1 op(const T1& lv, const T2& rv,
+        RAPIDJSON_DISABLEIF((
+          internal::AndExpr<
+          internal::NotExpr<internal::IsSame<T1,T2> >,
+          YGGDRASIL_IS_CASTABLE(T2, T1) >))) const {
+    T1 out = lv;
+    op_inplace(out, rv);
+    return out;
+  }
+  template <typename T1, typename T2>
+  T1 op(const T1& lv, const T2& rv,
+        RAPIDJSON_ENABLEIF((
+          internal::AndExpr<
+          internal::NotExpr<internal::IsSame<T1,T2> >,
+          YGGDRASIL_IS_CASTABLE(T2, T1) >))) const {
+    return op(lv, castPrecision<T2,T1>(rv));
+  }
+  BinaryOpID id; //!< ID for the operator
+  int flags;     //!< Bitwise flags describing the operator
 
+private:
+  template<typename T>
+  T _modulo(const T& lv, const T& rv,
+            RAPIDJSON_ENABLEIF((YGGDRASIL_IS_FLOAT_TYPE(T)))) const {
+    return fmod(lv, rv);
+  }
+  template<typename T>
+  T _modulo(const T& lv, const T& rv,
+            RAPIDJSON_DISABLEIF((YGGDRASIL_IS_FLOAT_TYPE(T)))) const {
+    return lv % rv;
+  }
+  template<typename T>
+  T _power(const T& lv, const T& rv,
+           RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) const {
+    return std::pow(lv, rv);
+  }
+  template<typename T>
+  T _power(const T& lv, const T& rv,
+           RAPIDJSON_DISABLEIF((YGGDRASIL_IS_ANY_SCALAR(T)))) const {
+    return lv.pow(rv);
+  }
+};
+
+// Macros for defining operators/methods
+#define QUANTITY_CASTABLE_FORWARD(T1, T2)   \
+  YGGDRASIL_IS_CASTABLE(T1, T2)
+#define QUANTITY_CASTABLE_REVERSE(T1, T2)               \
+  internal::AndExpr<                                    \
+  internal::NotExpr<YGGDRASIL_IS_CASTABLE(T1, T2) >,    \
+   YGGDRASIL_IS_CASTABLE(T2, T1) >
+
+/*!
+  \brief Define operator for default class that is C++11 compatible
+  \param DEF Default class.
+  \param TYP Macro that will create full class type when provided a
+    template type.
+  \param OP Operator
+ */
+#if RAPIDJSON_HAS_CXX11
+#define DEFINE_OP_DEFAULT_CLASS(DEF, TYP, OP)
+#else
+#define DEFINE_OP_DEFAULT_CLASS(DEF, TYP, OP)				\
+  template<typename T2>							\
+  TYP(T)& operator OP (const DEF<T2>& x) {				\
+    if (!internal::IsSame<Encoding,UTF8<char> >::Value) {		\
+      TYP(T2) tmp = x.template transcode<Encoding>();			\
+      return *this OP tmp;						\
+    }									\
+    return *this OP *((TYP(T2)*)(&x));					\
+  }
+#endif
+  
+
+// Macros for delegating to inplace operators/methods
+/*!
+  \brief Create method from inplace version w/o arguments.
+  \param TYP Macro that will create full class type when provided a
+    template type.
+  \param OP Method name.
+  \param IOP Inplace method name.
+ */
+#define DELEGATE_TO_INPLACE_NOARGS_(TYP, OP, IOP)                       \
+  TYP(T) OP() const {                                                   \
+    TYP(T) out(*this);                                                  \
+    out.IOP();                                                          \
+    return out;                                                         \
+  }
+/*!
+  \brief Create method from inplace version w/o casting arguments.
+  \param TYP Macro that will create full class type when provided a
+    template type.
+  \param TYP2 Macro that will create a full class type when provided
+    a template type for the rhs argument.
+  \param OP Method name.
+  \param IOP Inplace method name.
+ */
+#define DELEGATE_TO_INPLACE_NOCAST_(TYP, TYP2, OP, IOP)                 \
+  template<typename T2>                                                 \
+  TYP(T) OP(const TYP2(T2)& rhs) const {                                \
+    TYP(T) out(*this);                                                  \
+    out.IOP(rhs);                                                       \
+    return out;                                                         \
+  }
+/*!
+  \brief Create method from inplace version for quantity.
+  \param TYP Macro that will create full class type when provided a
+    template type.
+  \param RHS Macro that will create full class type when provided a
+    template type for the argument type.
+  \param OP Method name.
+  \param IOP Inplace method name.
+ */
+#define DELEGATE_TO_INPLACE_METHOD_QUANTITY_(TYP, RHS, OP, IOP)         \
+  template<typename T2>                                                 \
+  RAPIDJSON_ENABLEIF_RETURN((YGGDRASIL_IS_CASTABLE(T2, ScalarType)),    \
+                            (TYP(ScalarType)))                          \
+    OP(const RHS(T2)& rhs) const {                                      \
+    TYP(ScalarType) out = this->_copy_for_op<ScalarType>(rhs);          \
+    out.IOP(rhs);                                                       \
+    return out;                                                         \
+  }                                                                     \
+  template<typename T2>                                                 \
+  RAPIDJSON_ENABLEIF_RETURN((internal::AndExpr<                         \
+                             internal::NotExpr<                         \
+                             YGGDRASIL_IS_CASTABLE(T2, ScalarType) >,   \
+                             YGGDRASIL_IS_CASTABLE(ScalarType, T2) >),  \
+                            (TYP(T2)))                                  \
+    OP(const RHS(T2)& rhs) const {                                      \
+    TYP(T2) out = this->_copy_for_op<T2>(rhs);                          \
+    out.IOP(rhs);                                                       \
+    return out;                                                         \
+  }
+/*!
+  \brief Create method from inplace version for scalar.
+  \param TYP Macro that will create full class type when provided a
+    template type.
+  \param OP Method name.
+  \param IOP Inplace method name.
+ */
+#define DELEGATE_TO_INPLACE_METHOD_SCALAR_(TYP, OP, IOP)                \
+  DELEGATE_TO_INPLACE_METHOD_QUANTITY_(TYP, PASS, OP, IOP)
+/*!
+  \brief Create an operator friend function from the inplace version.
+  \param TYP Macro that will create full class type when provided a
+    template type for the lhs argument type.
+  \param TYP2 Macro that will create full class type when provided a
+    template type for the rhs argument type.
+  \param OP Operator.
+  \param IOP Inplace operator.
+ */
+#define DELEGATE_TO_INPLACE_OP_FRIEND_(TYP, TYP2, OP, IOP)              \
+  template<typename T2>							\
+  friend                                                                \
+  RAPIDJSON_ENABLEIF_RETURN((YGGDRASIL_IS_ANY_SCALAR(T2)), (TYP(T)))    \
+    operator OP(const TYP(T) lhs, const TYP2(T2)& rhs) {                \
+    TYP(T) out(lhs);                                                    \
+    out IOP rhs;                                                        \
+    return out;								\
+  }
+/*!
+  \brief Create an operator method from the inplace version for scalar.
+  \param TYP Macro that will create full class type when provided a
+    template type.
+  \param OP Operator.
+  \param IOP Inplace operator.
+ */
+#define DELEGATE_TO_INPLACE_OP_SCALAR_(TYP, OP, IOP)                    \
+  DELEGATE_TO_INPLACE_METHOD_SCALAR_(TYP, operator OP, operator IOP)
+/*!
+  \brief Create an operator method from the inplace version for quantity.
+  \param TYP Macro that will create full class type when provided a
+    template type.
+  \param RHS Macro that will create full class type when provided a
+    template type for the argument type.
+  \param OP Operator.
+  \param IOP Inplace operator.
+ */
+#define DELEGATE_TO_INPLACE_OP_QUANTITY_(TYP, RHS, OP, IOP)             \
+  DELEGATE_TO_INPLACE_METHOD_QUANTITY_(TYP, RHS, operator OP, operator IOP)
+  
+/*!
+  \brief Create reverse operator method for scalar & quantity
+  \param TYP Macro that will create full class type for rhs operand
+    when provided a template type.
+  \param OP Operator.
+  \param BODY Contents of the operator.
+ */
+#define DELEGATE_OP_FRIEND_REVERSE_(TYP, OP, BODY)                      \
+  template<typename T2>							\
+  friend                                                                \
+  RAPIDJSON_ENABLEIF_RETURN((YGGDRASIL_IS_ANY_SCALAR(T2)), (TYP(T)))    \
+    operator OP(const T2 lhs, const TYP(T)& rhs) {                      \
+    return BODY;                                                        \
+  }
+
+// Macros for inheritance from base class
+/*!
+  \brief Create an in place method w/o args from the base method
+  \param CLS Child class.
+  \param TYP Macro that will create the child class type when provided
+    a template type.
+  \param BASE Macro that will create the base class type when provided
+    a template type.
+  \param IOP Inplace method.
+ */
+#define INHERIT_INPLACE_NOARGS_(CLS, TYP, BASE, IOP) \
+  CLS& IOP() {                                       \
+    BASE(T)::IOP();                                  \
+    return *this;                                    \
+  }
+/*!
+  \brief Create an in place method w/o casting from the base method
+  \param CLS Child class.
+  \param TYP Macro that will create the child class type when provided
+    a template type.
+  \param TYP2 Macro that will create a full class type when provided
+    a template type for the rhs argument.
+  \param BASE Macro that will create the base class type when provided
+    a template type.
+  \param IOP Inplace method.
+ */
+#define INHERIT_INPLACE_NOCAST_(CLS, TYP, TYP2, BASE, IOP)              \
+  template<typename T2>                                                 \
+  CLS& IOP(const TYP2(T2)& rhs) {                                       \
+    BASE(T)::IOP(rhs);                                                  \
+    return *this;                                                       \
+  }
+/*!
+  \brief Create an in place method from the base method
+  \param CLS Child class.
+  \param TYP Macro that will create the child class type when provided
+    a template type.
+  \param TYP2 Macro that will create a full class type when provided
+    a template type for the rhs argument.
+  \param BASE Macro that will create the base class type when provided
+    a template type.
+  \param IOP Inplace method.
+ */
+#define INHERIT_INPLACE_METHOD_(CLS, TYP, TYP2, BASE, IOP)              \
+  template<typename T2>                                                 \
+  RAPIDJSON_ENABLEIF_RETURN((YGGDRASIL_IS_CASTABLE(T2, ScalarType)),    \
+                            (CLS&))                                     \
+    IOP(const TYP2(T2)& rhs) {                                          \
+    BASE(T)::IOP(rhs);                                                  \
+    return *this;                                                       \
+  }
+/*!
+  \brief Create a method with an in place version w/o args.
+  \param CLS Child class.
+  \param TYP Macro that will create the child class type when provided
+    a template type.
+  \param BASE Macro that will create the base class type when provided
+    a template type.
+  \param OP Method.
+  \param IOP Inplace method.
+ */
+#define INHERIT_NOARGS_(CLS, TYP, BASE, OP, IOP) \
+  INHERIT_INPLACE_NOARGS_(CLS, TYP, BASE, IOP)   \
+  DELEGATE_TO_INPLACE_NOARGS_(TYP, OP, IOP)
+/*!
+  \brief Create a method with an in place version w/o casting args.
+  \param CLS Child class.
+  \param TYP Macro that will create the child class type when provided
+    a template type.
+  \param TYP2 Macro that will create a full class type when provided
+    a template type for the rhs argument.
+  \param BASE Macro that will create the base class type when provided
+    a template type.
+  \param OP Method.
+  \param IOP Inplace method.
+ */
+#define INHERIT_NOCAST_(CLS, TYP, TYP2, BASE, OP, IOP)   \
+  INHERIT_INPLACE_NOCAST_(CLS, TYP, TYP2, BASE, IOP)     \
+  DELEGATE_TO_INPLACE_NOCAST_(TYP, TYP2, OP, IOP)
+/*!
+  \brief Create a method with an in place version.
+  \param CLS Child class.
+  \param TYP Macro that will create the child class type when provided
+    a template type.
+  \param TYP2 Macro that will create a full class type when provided
+    a template type for the rhs argument.
+  \param BASE Macro that will create the base class type when provided
+    a template type.
+  \param OP Method.
+  \param IOP Inplace method.
+ */
+#define INHERIT_METHOD_SCALAR_(CLS, TYP, BASE, OP, IOP)    \
+  INHERIT_INPLACE_METHOD_(CLS, TYP, PASS, BASE, IOP)       \
+  DELEGATE_TO_INPLACE_METHOD_SCALAR_(TYP, OP, IOP)
+/*!
+  \brief Create an operator with an in place version.
+  \param CLS Child class.
+  \param TYP Macro that will create the child class type when provided
+    a template type.
+  \param TYP2 Macro that will create a full class type when provided
+    a template type for the rhs argument.
+  \param BASE Macro that will create the base class type when provided
+    a template type.
+  \param OP Operator.
+  \param IOP Inplace operator.
+ */
+#define INHERIT_OP_QUANTITY_(CLS, TYP, BASE, OP, IOP)          \
+  INHERIT_INPLACE_METHOD_(CLS, TYP, TYP, BASE, operator IOP)   \
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(TYP, TYP, OP, IOP)          \
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(BASE, BASE, OP, IOP)
+#define INHERIT_OP_SCALAR_(CLS, TYP, BASE, OP, IOP)            \
+  INHERIT_INPLACE_METHOD_(CLS, TYP, PASS, BASE, operator IOP)  \
+  DELEGATE_TO_INPLACE_OP_SCALAR_(TYP, OP, IOP)
+
+/*!
+  \brief Inherit scalar constructors from the base class.
+  \param CLS Child class.
+  \param BASE Macro that will create the base class type when provided
+    a template type.
+ */
 #define INHERIT_CONSTRUCTORS_(CLS, BASE)				\
   CLS() : BASE(T)() {}							\
   CLS(const CLS& rhs) : BASE(T)(rhs) {}					\
   CLS(const T& value) : BASE(T)(value) {}				\
   CLS(const T& value, const Ch* units) : BASE(T)(value, units) {}	\
   CLS(const T& value, const UnitsType& units) : BASE(T)(value, units) {}
+/*!
+  \brief Inherit array constructors from the base class.
+  \param CLS Child class.
+  \param BASE Macro that will create the base class type when provided
+    a template type.
+ */
 #define INHERIT_CONSTRUCTORS_ARRAY_(CLS, BASE)				\
   INHERIT_CONSTRUCTORS_(CLS, BASE)					\
   CLS(const T* value, const SizeType& ndim, const SizeType* shape,	\
@@ -2245,15 +2907,34 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
   template<SizeType N, SizeType M>					\
   CLS(const T (&value)[N][M], const Ch* units) :			\
     BASE(T)(value, units) {}
+/*!
+  \brief Macro for overriding methods that return the child class type.
+  \param CLS Child class.
+  \param TYP Macro that will create full class type when provided a
+    template type.
+  \param BASE Macro that will create the base class type when provided
+    a template type.
+ */
 #define INHERIT_OPERATORS_(CLS, TYP, BASE)				\
-  INHERIT_OP_(CLS, TYP, BASE, +, +=)					\
-  INHERIT_OP_(CLS, TYP, BASE, -, -=)					\
-  INHERIT_OP_SCALAR_(CLS, TYP, BASE, *, *=)				\
-  INHERIT_OP_SCALAR_(CLS, TYP, BASE, /, /=)				\
-  INHERIT_OP_SCALAR_(CLS, TYP, BASE, %, %=)				\
-  INHERIT_OP_BASE_SCALAR_(CLS, TYP, BASE, pow, pow_inplace)		\
-  INHERIT_OP_BASE_(, CLS, TYP, BASE, floor, floor_inplace, (), (), ())	\
-  INHERIT_OP_INPLACE_(CLS, TYP, BASE, operator=)			\
+  CLS& operator-() {                                                    \
+    return (*this) * -1;                                                \
+  }                                                                     \
+  INHERIT_OP_QUANTITY_(CLS, TYP, BASE, +, +=)                           \
+  INHERIT_OP_QUANTITY_(CLS, TYP, BASE, -, -=)                           \
+  INHERIT_OP_QUANTITY_(CLS, TYP, BASE, *, *=)                           \
+  INHERIT_OP_SCALAR_(CLS, TYP, BASE, *, *=)                             \
+  DELEGATE_OP_FRIEND_REVERSE_(TYP, *, rhs * lhs)                        \
+  INHERIT_OP_QUANTITY_(CLS, TYP, BASE, /, /=)                           \
+  INHERIT_OP_SCALAR_(CLS, TYP, BASE, /, /=)                             \
+  DELEGATE_OP_FRIEND_REVERSE_(TYP, /, rhs.pow(-1) * lhs)                \
+  INHERIT_OP_QUANTITY_(CLS, TYP, BASE, %, %=)                           \
+  INHERIT_OP_SCALAR_(CLS, TYP, BASE, %, %=)                             \
+  INHERIT_NOCAST_(CLS, TYP, PASS, BASE, pow, pow_inplace)               \
+  INHERIT_NOARGS_(CLS, TYP, BASE, floor, floor_inplace)                 \
+  CLS& operator=(const CLS& rhs) {                                      \
+    BASE(T)::operator=(rhs);                                            \
+    return *this;                                                       \
+  }                                                                     \
   TYP(T)* copy() const { return new TYP(T)(*this); }			\
   void* copy_void() const { return (void*)copy(); }			\
   CLS as(const char* units) const {					\
@@ -2271,110 +2952,21 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
     out.convert_to_units_system(units);					\
     return out;								\
   }
-  
+
+// Macros for generating types from template
+#define PASS(TT) TT
 #define GENERIC_QUANTITY_ARRAY_TYPE(TT) GenericQuantityArray<TT, Encoding>
 #define GENERIC_QUANTITY_TYPE(TT) GenericQuantity<TT, Encoding>
 #define QUANTITY_ARRAY_TYPE(TT) QuantityArray<TT>
 #define QUANTITY_TYPE(TT) Quantity<TT>
 
-#if RAPIDJSON_HAS_CXX11
-#define ADD_DEFAULT_OPERATOR(DEF, TYP, OP)
-#else
+#if !RAPIDJSON_HAS_CXX11
+//! Forward declaration
 template<typename T>
 class Quantity;
 template<typename T>
 class QuantityArray;
-#define ADD_DEFAULT_OPERATOR(DEF, TYP, OP)				\
-  template<typename T2>							\
-  TYP(T)& operator OP (const DEF<T2>& x) {				\
-    if (!internal::IsSame<Encoding,UTF8<char> >::Value) {		\
-      TYP(T2) tmp = x.template transcode<Encoding>();			\
-      return *this OP tmp;						\
-    }									\
-    return *this OP *((TYP(T2)*)(&x));					\
-  }
 #endif
-
-#define METHOD_FACTOR_PULL_(UOP, ARGS)					\
-  double factor = 1.0;							\
-  units_.UOP ARGS;							\
-  factor = units_.pull_factor()
-#define METHOD_FACTOR_APPLY_						\
-  for (SizeType i = 0; i < nelements(); i++) {				\
-    value_[i] *= castPrecision<double,T>(factor);			\
-  }
-#define INPLACE_OP_QUANTITY_BASE_(OP)					\
-  RAPIDJSON_ASSERT(is_same_shape(x) || (nelements() == 1) || (x.nelements() == 1)); \
-  SizeType N = nelements();						\
-  if (is_same_shape(x)) {						\
-    for (SizeType i = 0; i < N; i++) {					\
-      value_[i] OP castPrecision<T2,T>(x.value()[i]);			\
-    }									\
-  } else if (N == 1) {							\
-    T value0 = value_[0];						\
-    *this = x;								\
-    N = nelements();							\
-    for (SizeType i = 0; i < N; i++) {					\
-      value_[i] = value0;						\
-    }									\
-    this->operator OP(x);						\
-  } else if (x.nelements() == 1) {					\
-    T2 value0 = x.value()[0];						\
-    GenericQuantityArray<T2, Encoding> x_cpy(*this);			\
-    for (SizeType i = 0; i < N; i++) {					\
-      x_cpy.value_[i] = value0;						\
-    }									\
-    this->operator OP(x_cpy);						\
-  } else {								\
-    return *this;							\
-  }
-#define INPLACE_OP_SCALAR_(OP, IOP)					\
-  template<typename T2>							\
-  GenericQuantityArray& operator IOP(const T2& x) {			\
-    SizeType N = nelements();						\
-    for (SizeType i = 0; i < N; i++) {					\
-      value_[i] IOP castPrecision<T2,T>(x);				\
-    }									\
-    return *this;							\
-  }									\
-  DELEGATE_TO_INPLACE_OP_SCALAR_(GENERIC_QUANTITY_ARRAY_TYPE, OP, IOP)
-#define INPLACE_OP_QUANTITY_CONVERT_(OP, IOP)				\
-  template<typename T2>							\
-  GenericQuantityArray& operator IOP(const GenericQuantityArray<T2, Encoding>& x0) { \
-    GenericQuantityArray<T2, Encoding> x = x0.as_units_system(units_);	\
-    INPLACE_OP_QUANTITY_BASE_(IOP)					\
-    raw_set_delta_from_add(x, #OP);					\
-    return *this;							\
-  }									\
-  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE, OP, IOP) \
-  ADD_DEFAULT_OPERATOR(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, IOP)	\
-  ADD_DEFAULT_OPERATOR(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, IOP)
-#define INPLACE_OP_QUANTITY_DIFF_(OP, IOP)                              \
-  template<typename T2>							\
-  GenericQuantityArray& operator IOP(const GenericQuantity<T2, Encoding>& x) { \
-    METHOD_FACTOR_PULL_(operator IOP, (x.units()));			\
-    METHOD_FACTOR_APPLY_						\
-    SizeType N = nelements();						\
-    for (SizeType i = 0; i < N; i++) {					\
-      value_[i] IOP castPrecision<T2,T>(x.value());			\
-    }									\
-    return *this;							\
-  }
-  // DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_TYPE, OP, IOP)
-#define INPLACE_OP_QUANTITY_COMBINE_(OP, IOP)				\
-  template<typename T2>							\
-  GenericQuantityArray& operator IOP(const GenericQuantityArray<T2, Encoding>& x) { \
-    if (is_same_shape(x)) {						\
-      METHOD_FACTOR_PULL_(operator IOP, (x.units()));			\
-      METHOD_FACTOR_APPLY_						\
-    }									\
-    INPLACE_OP_QUANTITY_BASE_(IOP)					\
-    return *this;							\
-  }									\
-  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE, OP, IOP) \
-  INPLACE_OP_SCALAR_(OP, IOP)						\
-  ADD_DEFAULT_OPERATOR(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, IOP)	\
-  ADD_DEFAULT_OPERATOR(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, IOP)
 
 #if RAPIDJSON_HAS_CXX11
 #define FRIEND_DEFAULT_(CLS)
@@ -2410,18 +3002,46 @@ class QuantityArray;
 template<typename T, typename Encoding>
 class GenericQuantityArray {
 public:
-  typedef Encoding EncodingType;    //!< Encoding type from template parameter.
-  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
+  typedef Encoding EncodingType;            //!< Encoding type from template parameter.
+  typedef typename Encoding::Ch Ch;         //!< Character type from encoding.
   typedef GenericUnits<Encoding> UnitsType; //!< Units type.
-  typedef T ScalarType; //!< Scalar type.
+  typedef T ScalarType;                     //!< Scalar type.
   //! \brief Empty constructor.
   GenericQuantityArray() : value_(), units_(), shape_() {}
+  //! \brief Copy constructor.
+  //! \param rhs QuantityArray to copy.
+  GenericQuantityArray(const GenericQuantityArray<ScalarType, EncodingType>& rhs) :
+    value_(), units_(rhs.units_), shape_()
+  { _init(rhs.value_.data(), rhs.ndim(), rhs.shape_.data()); }
+  //! \brief Copy constructor for array with different type/encoding.
+  //! \tparam T2 Type of elements in rhs.
+  //! \tparam Encoding2 Encoding of units in rhs.
+  //! \param rhs QuantityArray to copy.
+  template<typename T2, typename Encoding2>
+  GenericQuantityArray(const GenericQuantityArray<T2, Encoding2>& rhs,
+                       RAPIDJSON_DISABLEIF((internal::OrExpr<
+                                            internal::AndExpr<
+                                            internal::IsSame<T2, ScalarType>,
+                                            internal::IsSame<Encoding2, EncodingType> >,
+                                            internal::NotExpr<YGGDRASIL_IS_CASTABLE(T2, ScalarType) > >))) :
+    value_(), units_(rhs.units()), shape_()
+  { _init(rhs.value(), rhs.ndim(), rhs.shape()); }
   //! \brief Create a quantity.
   //! \param value Pointer to an array.
   //! \param ndim Number of dimensions in the array.
   //! \param shape Size of the array in each dimension.
   //! \param units Units instance.
   GenericQuantityArray(const ScalarType* value,
+		       const SizeType& ndim, const SizeType* shape,
+		       const UnitsType& units = UnitsType()) :
+    value_(), units_(units), shape_()
+  { _init(value, ndim, shape); }
+  //! \brief Constructor for array with uniform values
+  //! \param value Value that all elements of the array should be set to
+  //! \param ndim Number of dimensions in the array.
+  //! \param shape Size of the array in each dimension.
+  //! \param units Units instance.
+  GenericQuantityArray(const ScalarType& value,
 		       const SizeType& ndim, const SizeType* shape,
 		       const UnitsType& units = UnitsType()) :
     value_(), units_(units), shape_()
@@ -2433,12 +3053,14 @@ public:
 		       const UnitsType& units = UnitsType()) :
     value_(), units_(units), shape_()
   { SizeType len = 1; _init(&value, 1, &len); }
+private:
   //! \brief Create a scalar quantity.
   //! \param value Scalar value.
   //! \param units Units string.
   GenericQuantityArray(const ScalarType value, const Ch* units) :
     value_(), units_(UnitsType(units)), shape_()
   { SizeType len = 1; _init(&value, 1, &len); }
+public:
   //! \brief Create a quantity.
   //! \param value Pointer to an array.
   //! \param len Number of elements in the 1D array.
@@ -2490,24 +3112,44 @@ public:
   GenericQuantityArray(const ScalarType (&value)[N][M], const Ch* units) :
     value_(), units_(UnitsType(units)), shape_()
   { SizeType shape[] = {N, M}; _init(&(value[0][0]), 2, &(shape[0])); }
-  //! \brief Copy constructor.
-  //! \param other QuantityArray to copy.
-  GenericQuantityArray(const GenericQuantityArray<ScalarType, Encoding>& other) :
-    value_(), units_(other.units_), shape_()
-  { _init(other.value_.data(), other.ndim(), other.shape_.data()); }
+  
   //! \brief Destructor.
   ~GenericQuantityArray() {
     value_.clear();
     shape_.clear();
   }
   //! \brief Copy assignment.
-  //! \param other GenericQuantityArray to copy.
-  //! \return Copy.
-  GenericQuantityArray<ScalarType, Encoding>& operator=(const GenericQuantityArray<ScalarType, Encoding>& other) {
+  //! \param rhs GenericQuantityArray to copy.
+  GenericQuantityArray& operator=(const GenericQuantityArray& rhs) {
     this->~GenericQuantityArray();
-    new (this) GenericQuantityArray(other);
+    new (this) GenericQuantityArray(rhs);
     return *this;
   }
+  //! \brief Copy assignment from array with different type/encoding.
+  //! \tparam T2 Type of elements in rhs.
+  //! \tparam Encoding2 Encoding of units in rhs.
+  //! \param rhs GenericQuantityArray to copy.
+  template<typename T2, typename Encoding2>
+  RAPIDJSON_DISABLEIF_RETURN((internal::AndExpr<
+                              internal::IsSame<T2, ScalarType>,
+                              internal::IsSame<Encoding2, EncodingType> >),
+                             (GenericQuantityArray&))
+  operator=(const GenericQuantityArray<T2, Encoding2>& rhs) {
+    this->~GenericQuantityArray();
+    new (this) GenericQuantityArray(rhs);
+    return *this;
+  }
+#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+  //! \brief Move constructor in C++11
+  //! \param rhs Right-hand side reference to move.
+  // GenericQuantityArray(GenericQuantityArray&& rhs) :
+  //   value_
+  //! \brief Move assignment in C++11.
+  //! \param rhs Right-hand side reference to move.
+  GenericQuantityArray& operator=(GenericQuantityArray&& rhs) {
+    return *this = static_cast<GenericQuantityArray&>(rhs);
+  }
+#endif // RAPIDJSON_HAS_CXX11_RVALUE_REFS
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
   template<typename Ch2>
@@ -2565,6 +3207,25 @@ private:
     value_.resize(N);
     for (SizeType i = 0; i < N; i++)
       value_[i] = castPrecision<T2,ScalarType>(value[i]);
+  }
+  template<typename T2>
+  void _init(const T2&, const SizeType, const SizeType*,
+	     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
+    RAPIDJSON_ASSERT(((YGGDRASIL_IS_CASTABLE(T2, ScalarType)::Value)));
+  }
+  template<typename T2>
+  void _init(const T2& value, const SizeType ndim, const SizeType* shape,
+	     RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
+    RAPIDJSON_ASSERT(ndim > 0);
+    // Shape
+    shape_.resize(ndim);
+    for (SizeType i = 0; i < ndim; i++)
+      shape_[i] = shape[i];
+    // Value
+    SizeType N = nelements();
+    value_.resize(N);
+    for (SizeType i = 0; i < N; i++)
+      value_[i] = castPrecision<T2,ScalarType>(value);
   }
   template<typename Ch2>
   void _write_array(std::basic_ostream<Ch2>& os) const {
@@ -2642,6 +3303,11 @@ public:
     }
     return out;
   }
+  //! Update the value array.
+  //! \tparam T2 Type of elements in new_value.
+  //! \param new_value Pointer to an array.
+  //! \param ndim Number of dimensions in the array.
+  //! \param shape Size of the array in each dimension.
   template<typename T2>
   void set_value(const T2* new_value, SizeType ndim, SizeType* shape) {
     _init(new_value, ndim, shape);
@@ -2722,45 +3388,156 @@ public:
   //! \return true if greater than or equal to, false otherwise.
   template<typename T2>
   bool operator>=(const GenericQuantityArray<T2, Encoding>& x) const { return (!(*this < x)); }
-  //! \brief Multiply by a scalar or QuantityArray element by element inplace
-  //! \param x Scalar or QuantityArray to multiply by.
+
+  // ARITHMETIC OPERATORS
+  //! \brief Get the negative of the array
+  //! \return Negative.
+  GenericQuantityArray& operator-() {
+    return (*this) * -1;
+  }
+  //! \brief Multiply by another array or scalar inplace.
+  //! \tparam T2 Type of RHS operand.
+  //! \param rhs Right-hand side operand (scalar or array of the same shape).
   //! \return Result of multiplication.
-  INPLACE_OP_QUANTITY_COMBINE_(*, *=)
-  INPLACE_OP_QUANTITY_DIFF_(*, *=)
-  //! \brief Divide by a scalar or QuantityArray element by element inplace.
-  //! \param x Scalar or QuantityArray to divide by.
-  //! \return Result of division.
-  INPLACE_OP_QUANTITY_COMBINE_(/, /=)
-  INPLACE_OP_QUANTITY_DIFF_(/, /=)
-  //! \brief Modulo by another quantity in place element by element.
-  //! \param x QuantityArray to modulo by.
-  //! \return Result of modulo.
+  //!
+  //! If rhs has the same shape as this array, elements will be
+  //!   multiplied on an element-by-element basis. If rhs is a single
+  //!   element, each element in this array will be multiplied by it.
+  //!   If this array is a single element and rhs is not, this array
+  //!   will be modified into a uniform array with the same shape as rhs
+  //!   before performing the operation.
   template<typename T2>
-  GenericQuantityArray<ScalarType, Encoding>& operator%=(const GenericQuantityArray<T2, Encoding>& x) {
-    GenericQuantityArray<ScalarType, Encoding> val = *this / x;
-    val.floor_inplace();
-    val *= x;
-    *this -= val;
+  GenericQuantityArray& operator*=(const T2& rhs) {
+    _apply_binary_op_inplace_combine(rhs, kBinaryOpIDMultiply);
     return *this;
   }
-  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE, %, %=)
-  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_TYPE, %, %=)
+  //! \brief Multiply by another array or scalar.
+  //! \tparam T2 Type of RHS operand.
+  //! \param rhs Right-hand side operand (scalar or array of the same shape).
+  //! \return Result of multiplication.
+  //!
+  //! If rhs has the same shape as lhs, elements will be multiplied on
+  //!   an element-by-element basis. If rhs or lhs is a single element,
+  //!   the result will be eqivalent to multiplying two arrays with the
+  //!   same shape where the unitary array is replaced by a uniform
+  //!   array of the same shape. Multiplication of arrays with
+  //!   different shapes (outside of scalars) is not permitted.
+  DELEGATE_TO_INPLACE_OP_SCALAR_(GENERIC_QUANTITY_ARRAY_TYPE, *, *=)
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE,
+                                   GENERIC_QUANTITY_ARRAY_TYPE, *, *=)
+  /*!
+    \brief Multiply a scalar by a quantity array.
+    \tparam T2 Type of lhs scalar operand.
+    \param lhs Left-hand side scalar operand.
+    \param rhs Right-hand side quantity array operand.
+    \return Result of multiplication.
+   */
+  DELEGATE_OP_FRIEND_REVERSE_(GENERIC_QUANTITY_ARRAY_TYPE, *, rhs * lhs)
+  DEFINE_OP_DEFAULT_CLASS(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, *=)
+  DEFINE_OP_DEFAULT_CLASS(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, *=)
+  //! \brief Divide by another array or scalar inplace.
+  //! \tparam T2 Type of RHS operand.
+  //! \param rhs Right-hand side operand (scalar or array of the same shape).
+  //! \return Result of division.
+  //!
+  //! If rhs has the same shape as this array, elements will be divided
+  //!   on an element-by-element basis. If rhs is a single element, each
+  //!   element in this array will be divided by it. If this array is
+  //!   a single element and rhs is not, this array will be modified into
+  //!   a uniform array with the same shape as rhs before performing the
+  //!   operation.
+  template<typename T2>
+  GenericQuantityArray& operator/=(const T2& rhs) {
+    _apply_binary_op_inplace_combine(rhs, kBinaryOpIDDivide);
+    return *this;
+  }
+  //! \brief Divide by another array or scalar.
+  //! \tparam T2 Type of RHS operand.
+  //! \param rhs Right-hand side operand (scalar or array of the same shape).
+  //! \return Result of division.
+  //!
+  //! If rhs has the same shape as lhs, elements will be divided on
+  //!   an element-by-element basis. If rhs or lhs is a single element,
+  //!   the result will be eqivalent to dividing two arrays with the
+  //!   same shape where the unitary array is replaced by a uniform
+  //!   array of the same shape. Division of arrays with
+  //!   different shapes (outside of scalars) is not permitted.
+  DELEGATE_TO_INPLACE_OP_SCALAR_(GENERIC_QUANTITY_ARRAY_TYPE, /, /=)
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE,
+                                   GENERIC_QUANTITY_ARRAY_TYPE, /, /=)
+  /*!
+    \brief Divide a scalar by a quantity array.
+    \tparam T2 Type of lhs scalar operand.
+    \param lhs Left-hand side scalar operand.
+    \param rhs Right-hand side quantity array operand.
+    \return Result of division.
+   */
+  DELEGATE_OP_FRIEND_REVERSE_(GENERIC_QUANTITY_ARRAY_TYPE, /,
+                              rhs.pow(-1) * lhs)
+  DEFINE_OP_DEFAULT_CLASS(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, /=)
+  DEFINE_OP_DEFAULT_CLASS(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, /=)
   //! \brief Modulo by a scalar in place.
   //! \tparam T2 Scalar type.
-  //! \param x Scalar to modulo by.
-  //! \return Result of division.
-  INPLACE_OP_SCALAR_(%, %=)
-  ADD_DEFAULT_OPERATOR(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, %=)
-  //! \brief Add a quantity with compatible units.
-  //! \param x QuantityArray to add.
+  //! \param rhs Scalar to modulo by.
+  //! \return Result of modulo.
+  template<typename T2>
+  GenericQuantityArray& operator%=(const T2& rhs) {
+    _apply_binary_op_inplace_combine(rhs, kBinaryOpIDModulo);
+    return *this;
+  }
+  //! \brief Modulo operator.
+  //! \tparam T2 Type of rhs of operator.
+  //! \param rhs Right hand side of operator.
+  //! \return Result of modulo.
+  DELEGATE_TO_INPLACE_OP_SCALAR_(GENERIC_QUANTITY_ARRAY_TYPE, %, %=)
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE,
+                                   GENERIC_QUANTITY_ARRAY_TYPE, %, %=)
+  DEFINE_OP_DEFAULT_CLASS(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, %=)
+  DEFINE_OP_DEFAULT_CLASS(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, %=)
+  //! \brief Add a quantity with compatible units & shape in place.
+  //! \tparam T2 Type of elements in rhs.
+  //! \tparam Encoding2 Encoding of units in rhs array.
+  //! \param rhs Array to add.
   //! \return Result of addition.
-  INPLACE_OP_QUANTITY_CONVERT_(+, +=)
-  //! \brief Subtract a quantity with compatible units.
-  //! \param x QuantityArray to subtract.
+  //!
+  //! If rhs has the same shape as this array, elements will be added on
+  //!   an element-by-element basis. If rhs is a single element, it will
+  //!   be added to each element in this array. If this array is a single
+  //!   element and rhs is not, this array will be modified into a
+  //!   a uniform array with the same shape as rhs before performing the
+  //!   operation.
+  template<typename T2, typename Encoding2>
+  GenericQuantityArray& operator+=(const GenericQuantityArray<T2, Encoding2>& rhs) {
+    _apply_binary_op_inplace_convert(rhs, kBinaryOpIDAdd);
+    return *this;
+  }
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE,
+                                   GENERIC_QUANTITY_ARRAY_TYPE, +, +=)
+  DEFINE_OP_DEFAULT_CLASS(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, +=)
+  DEFINE_OP_DEFAULT_CLASS(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, +=)
+  //! \brief Subtract a quantity with compatible units & shape in place.
+  //! \tparam T2 Type of elements in rhs.
+  //! \tparam Encoding2 Encoding of units in rhs array.
+  //! \param rhs Array to subtract.
   //! \return Result of subtraction.
-  INPLACE_OP_QUANTITY_CONVERT_(-, -=)
+  //!
+  //! If rhs has the same shape as this array, elements will be subtracted
+  //!   on an element-by-element basis. If rhs is a single element, it
+  //!   will be subtracted to each element in this array. If this
+  //!   array is a single element and rhs is not, this array will be
+  //!   modified into a a uniform array with the same shape as rhs
+  //!   before performing the operation.
+  template<typename T2, typename Encoding2>
+  GenericQuantityArray& operator-=(const GenericQuantityArray<T2, Encoding2>& rhs) {
+    _apply_binary_op_inplace_convert(rhs, kBinaryOpIDSubtract);
+    return *this;
+  }
+  DELEGATE_TO_INPLACE_OP_QUANTITY_(GENERIC_QUANTITY_ARRAY_TYPE,
+                                   GENERIC_QUANTITY_ARRAY_TYPE, -, -=)
+  DEFINE_OP_DEFAULT_CLASS(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, -=)
+  DEFINE_OP_DEFAULT_CLASS(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, -=)
   //! \brief Perform floor operation in place.
-  //! \return Resulut of floor.
+  //! \return Result of floor.
   GenericQuantityArray& floor_inplace() {
     if (YGGDRASIL_IS_FLOAT_TYPE(ScalarType)::Value) {
       SizeType N = nelements();
@@ -2770,31 +3547,45 @@ public:
     }
     return *this;
   }
-  //! \brief Perform floor operation in place.
-  //! \return Resulut of floor.
-  DELEGATE_TO_INPLACE_(, GenericQuantityArray, GENERIC_QUANTITY_ARRAY_TYPE,
-		       floor, floor_inplace, (), ())
+  //! \brief Perform floor operation on the quantity value.
+  //! \return Result of floor.
+  GenericQuantityArray floor() const {
+    GenericQuantityArray<T, Encoding> out(*this);
+    out.floor_inplace();
+    return out;
+  }
   //! \brief Perform power operation in place.
   //! \param x Power to raise this quantity to.
   template<typename T2>
   GenericQuantityArray& pow_inplace(const T2& x,
 				    RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
-    METHOD_FACTOR_PULL_(pow_inplace, (x));
-    SizeType N = nelements();
-    for (SizeType i = 0; i < N; i++) {
-      value_[i] = std::pow(value_[i], x);
+    units_.pow_inplace(x);
+    double factor = units_.pull_factor();
+    if (canCast<double, ScalarType>()) {
+      for (SizeType i = 0; i < nelements(); i++) {
+        value_[i] = castPrecision<double,ScalarType>(factor * std::pow(value_[i], x));
+      }
+    } else if (isInt<ScalarType>()) {
+      for (SizeType i = 0; i < nelements(); i++) {
+        value_[i] = castPrecision<int,ScalarType>(static_cast<int>(factor * std::pow(value_[i], x)));
+      }
+    } else if (isUint<ScalarType>()) {
+      for (SizeType i = 0; i < nelements(); i++) {
+        value_[i] = castPrecision<unsigned int,ScalarType>(static_cast<unsigned int>(factor * std::pow(value_[i], x)));
+      }
     }
-    METHOD_FACTOR_APPLY_
     return *this;
   }
   //! \brief Raise this quantity to a power.
   //! \param x Power to raise this quantity to.
   //! \return Resulting quantity.
-  DELEGATE_TO_INPLACE_(template<typename T2>,
-		       GenericQuantityArray, GENERIC_QUANTITY_ARRAY_TYPE,
-		       pow, pow_inplace,
-		       (const T2& x, RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))),
-		       (x))
+  template<typename T2>
+  GenericQuantityArray<T, Encoding> pow(const T2& x,
+                                        RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) const {
+    GenericQuantityArray<T, Encoding> out(*this);
+    out.pow_inplace(x);
+    return out;
+  }
   //! \brief Explicity copy.
   //! \return Copy.
   GenericQuantityArray<ScalarType, Encoding>* copy() const {
@@ -2883,15 +3674,208 @@ public:
     out.convert_to_units_system(units);
     return out;
   }
+
 private:
+  friend class GenericQuantity<ScalarType, EncodingType>;
   std::vector<T> value_;
   UnitsType units_;
   std::vector<SizeType> shape_;
   template<typename Ch2, typename U, typename Encoding2>
   friend std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2> &os, const GenericQuantityArray<U,Encoding2> &x);
+
+  bool _is_singular() const { return false; }
+
+  template<typename Tout, typename T2>
+  GenericQuantityArray<Tout, Encoding>
+  _copy_for_op(const T2&,
+               RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T2)))) const {
+    GenericQuantityArray<Tout, Encoding> out(*this);
+    return out;
+  }
+  template<typename Tout, typename T2, typename Encoding2>
+  GenericQuantityArray<Tout, Encoding>
+  _copy_for_op(const GenericQuantityArray<T2, Encoding2>& rhs) const {
+    GenericQuantityArray<Tout, Encoding> out;
+    if (this->nelements() == 1) {
+      GenericQuantityArray<Tout, Encoding> out(
+        value_[0], rhs.ndim(), rhs.shape(), units_);
+      RAPIDJSON_ASSERT(out.is_same_shape(rhs));
+      return out;
+    } else {
+      GenericQuantityArray<Tout, Encoding> out(*this);
+      RAPIDJSON_ASSERT(out.is_same_shape(rhs) || (rhs.nelements() == 1));
+      return out;
+    }
+  }
+
+  template<typename T2>
+  T _apply_binary_op_inplace_units(const GenericQuantityArray<T2, Encoding>& x,
+                                   const ValueBinaryOp& op) {
+    RAPIDJSON_ASSERT(!op.requires_scalar());
+    RAPIDJSON_ASSERT((op.id == kBinaryOpIDMultiply) ||
+                     (op.id == kBinaryOpIDDivide));
+    switch (op.id) {
+    case (kBinaryOpIDMultiply): {
+      units_ *= x.units();
+      break;
+    }
+    case (kBinaryOpIDDivide): {
+      units_ /= x.units();
+      break;
+    }
+    default: {
+      return castPrecision<double,T>(1.0);
+    }
+    }
+    double factor = units_.pull_factor();
+    return castPrecision<double,T>(factor);
+  }
+  
+  template<typename T2>
+  bool _apply_binary_op_inplace(const T2& x, const ValueBinaryOp& op,
+                                bool direct=false,
+                                RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
+    RAPIDJSON_ASSERT(direct || !op.requires_convert());
+    if (op.requires_convert() && !direct)
+      return false;
+    T x_cast = castPrecision<T2,ScalarType>(x);
+    for (SizeType i = 0; i < nelements(); i++) {
+      op.op_inplace(value_[i], x_cast);
+    }
+    return true;
+  }
+
+  template<typename T2>
+  bool _apply_binary_op_inplace(const GenericQuantityArray<T2, Encoding>& x,
+                                const ValueBinaryOp& op,
+                                bool direct=false,
+                                RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
+    RAPIDJSON_ASSERT(is_same_shape(x) ||   // (nelements() == 1) ||
+                     (x.nelements() == 1));
+    RAPIDJSON_ASSERT(direct || !op.requires_convert());
+    if (op.requires_convert() && !direct)
+      return false;
+    SizeType N = nelements();
+    if (is_same_shape(x)) {
+      for (SizeType i = 0; i < N; i++) {
+        op.op_inplace(value_[i], x.value()[i]);
+      }
+    // } else if (N == 1) {
+    //   T value0 = value_[0];
+    //   *this = x;
+    //   N = nelements();
+    //   for (SizeType i = 0; i < N; i++) {
+    //     value_[i] = value0;
+    //   }
+    //   return _apply_binary_op_inplace(x, op, direct);
+    } else if (x.nelements() == 1) {
+      return _apply_binary_op_inplace(x.value()[0], op, true);
+    } else {
+      return false;
+    }
+    return true;
+  }
+
+  template<typename Tout, typename T2>
+  GenericQuantityArray<Tout, EncodingType>
+  _apply_binary_op_combine(const T2& x, const ValueBinaryOp& op,
+                           RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T2)))) const {
+    GenericQuantityArray<Tout, EncodingType> out = this->_copy_for_op<Tout>(x);
+    out._apply_binary_op_inplace_combine(x, op);
+    return out;
+  }
+  template<typename Tout, typename T2, typename Encoding2>
+  GenericQuantityArray<Tout, EncodingType>
+  _apply_binary_op_combine(const GenericQuantityArray<T2, Encoding2>& x,
+                           const ValueBinaryOp& op) const {
+    GenericQuantityArray<Tout, EncodingType> out = this->_copy_for_op<Tout>(x);
+    out._apply_binary_op_inplace_combine(x, op);
+    return out;
+  }
+  template<typename Tout, typename T2, typename Encoding2>
+  GenericQuantityArray<Tout, EncodingType>
+  _apply_binary_op_convert(const GenericQuantityArray<T2, Encoding2>& x,
+                           const ValueBinaryOp& op) const {
+    GenericQuantityArray<Tout, EncodingType> out = this->_copy_for_op<Tout>(x);
+    out._apply_binary_op_inplace_convert(x, op);
+    return out;
+  }
+
+  // Inplace
+  template<typename T2>
+  bool _apply_binary_op_inplace_combine(const T2& x, const ValueBinaryOp& op,
+                                        RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T2)))) {
+    return _apply_binary_op_inplace(x, op);
+  }
+
+  // template<typename T2, typename Encoding2>
+  // bool _apply_binary_op_inplace_combine(const GenericQuantityArray<T2, Encoding2>& x,
+  //                                       const ValueBinaryOp& op,
+  //                                       RAPIDJSON_DISABLEIF((internal::IsSame<Encoding, Encoding2>))) {
+  //   GenericQuantityArray<T2, Encoding> tmp = x.template transcode<Encoding>();
+  //   return _apply_binary_op_inplace_combine(tmp, op);
+  // }
+  template<typename T2, typename Encoding2>
+  bool _apply_binary_op_inplace_combine(const GenericQuantityArray<T2, Encoding2>& x,
+                                        const ValueBinaryOp& op,
+                                        RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
+    RAPIDJSON_ASSERT(!op.requires_convert());
+    if (op.id == kBinaryOpIDModulo) {
+      GenericQuantityArray<ScalarType, Encoding> val = *this / x;
+      val.floor_inplace();
+      val *= x;
+      *this -= val;
+      return true;
+    }
+    T factor = _apply_binary_op_inplace_units(x, op);
+    bool out = _apply_binary_op_inplace(x, op);
+    for (SizeType i = 0; i < nelements(); i++) {
+      value_[i] *= factor;
+    }
+    return out;
+  }
+
+  // template<typename T2, typename Encoding2>
+  // bool _apply_binary_op_inplace_convert(const GenericQuantityArray<T2, Encoding2>& x,
+  //                                       const ValueBinaryOp& op,
+  //                                       bool direct=false,
+  //                                       RAPIDJSON_DISABLEIF((internal::IsSame<Encoding, Encoding2>))) {
+  //   GenericQuantityArray<T2, Encoding> tmp = x.template transcode<Encoding>();
+  //   return _apply_binary_op_inplace_convert(tmp, op, direct);
+  // }
+  template<typename T2, typename Encoding2>
+  bool _apply_binary_op_inplace_convert(const GenericQuantityArray<T2, Encoding2>& x,
+                                        const ValueBinaryOp& op,
+                                        bool direct=false,
+                                        RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
+    RAPIDJSON_ASSERT(op.requires_convert());
+    if (!direct) {
+      GenericQuantityArray<T2, Encoding2> x2 = x.as_units_system(units_);
+      bool out = _apply_binary_op_inplace_convert(x2, op, true);
+      if (out) {
+        if ((units_.has_difference() && x2.units().is_difference()) ||
+            (units_.is_difference() && x2.units().has_difference()))
+          units_.set_delta(kInactiveDelta);
+        else if ((op.id == kBinaryOpIDSubtract) &&
+                 units_.has_difference())
+          units_.set_delta(kActiveDelta);
+      }
+      return out;
+    }
+    return _apply_binary_op_inplace(x, op, direct);
+  }
   
   FRIEND_DEFAULT_(QuantityArray)
 };
+//! Output stream operator for GenericQuantityArray
+/*!
+  \tparam Ch Type used to represent characters in the output stream.
+  \tparam T Type of elements in x.
+  \tparam Encoding Encoding of the units in x.
+  \param os Output stream.
+  \param[in] x Array to output.
+  \returns Output stream.
+ */
 template<typename Ch, typename T, typename Encoding>
 inline std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch> &os, const GenericQuantityArray<T, Encoding> &x) {
   x._write_array(os);
@@ -2911,15 +3895,28 @@ template<typename T, typename Encoding>
 class GenericQuantity : public GenericQuantityArray<T, Encoding> {
 public:
   typedef GenericQuantityArray<T, Encoding> Base;
-  typedef Encoding EncodingType;    //!< Encoding type from template parameter.
-  typedef typename Encoding::Ch Ch; //!< Character type from encoding.
+  typedef Encoding EncodingType;            //!< Encoding type from template parameter.
+  typedef typename Encoding::Ch Ch;         //!< Character type from encoding.
   typedef GenericUnits<Encoding> UnitsType; //!< Units type.
-  typedef T ScalarType; //!< Scalar type.
+  typedef T ScalarType;                     //!< Scalar type.
   //! \brief Empty constructor.
   GenericQuantity() : Base(_initialize_value<ScalarType>()) {}
   //! \brief Copy constructor.
-  GenericQuantity(const GenericQuantity<ScalarType, Encoding>& rhs) :
-    Base(rhs.value(), rhs.units()) {}
+  //! \param rhs GenericQuantity to copy.
+  GenericQuantity(const GenericQuantity<ScalarType, EncodingType>& rhs) :
+    Base(rhs) {}
+  //! \brief Copy constructor for quantity with different type/encoding.
+  //! \tparam T2 Type of elements in rhs.
+  //! \tparam Encoding2 Encoding of units in rhs.
+  //! \param rhs GenericQuantity to copy.
+  template<typename T2, typename Encoding2>
+  GenericQuantity(const GenericQuantity<T2, Encoding2>& rhs,
+                  RAPIDJSON_DISABLEIF((internal::OrExpr<
+                                       internal::AndExpr<
+                                       internal::IsSame<T2, ScalarType>,
+                                       internal::IsSame<Encoding2, EncodingType> >,
+                                       internal::NotExpr<YGGDRASIL_IS_CASTABLE(T2, ScalarType) > >))) :
+    Base(rhs) {}
   //! \brief Create a quantity without units.
   //! \param value Scalar value.
   GenericQuantity(const ScalarType& value) :
@@ -2934,6 +3931,19 @@ public:
   //! \param units Units instance.
   GenericQuantity(const ScalarType& value, const UnitsType& units) :
     Base(value, units) {}
+  //! \brief Copy assignment from array with different type/encoding.
+  //! \tparam T2 Type of elements in rhs.
+  //! \tparam Encoding2 Encoding of units in rhs.
+  //! \param rhs GenericQuantityArray to copy.
+  template<typename T2, typename Encoding2>
+  RAPIDJSON_DISABLEIF_RETURN((internal::AndExpr<
+                              internal::IsSame<T2, ScalarType>,
+                              internal::IsSame<Encoding2, EncodingType> >),
+                             (GenericQuantity&))
+  operator=(const GenericQuantity<T2, Encoding2>& rhs) {
+    GenericQuantityArray<ScalarType, EncodingType>::operator=(rhs);
+    return *this;
+  }
   //! \brief Print instance information to an output stream.
   //! \param os Output stream.
   template<typename Ch2>
@@ -2969,8 +3979,64 @@ private:
   template<typename Ch2, typename U, typename Encoding2>
   friend std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2> &os, const GenericQuantity<U,Encoding2> &x);
 
+  bool _is_singular() const { return true; }
+
+  template<typename Tout, typename T2>
+  GenericQuantity<Tout, Encoding>
+  _copy_for_op(const T2&,
+               RAPIDJSON_ENABLEIF((YGGDRASIL_IS_ANY_SCALAR(T2)))) const {
+    GenericQuantity<Tout, Encoding> out(*this);
+    return out;
+  }
+  template<typename Tout, typename T2, typename Encoding2>
+  GenericQuantity<Tout, Encoding>
+  _copy_for_op(const GenericQuantity<T2, Encoding2>&) const {
+    GenericQuantity<Tout, Encoding> out(*this);
+    return out;
+  }
+  template<typename Tout, typename T2, typename Encoding2>
+  GenericQuantityArray<Tout, Encoding>
+  _copy_for_op(const GenericQuantityArray<T2, Encoding2>& rhs) const {
+    return GenericQuantityArray<ScalarType, Encoding>::template _copy_for_op<Tout>(rhs);
+  }
+  
   FRIEND_DEFAULT_(Quantity)
+
+  template<typename Tout, typename T2>
+  GenericQuantity<Tout, EncodingType>
+  _apply_binary_op_combine(const T2& x, const ValueBinaryOp& op,
+                           RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) const {
+    GenericQuantity<Tout, EncodingType> out = this->_copy_for_op<Tout>(x);
+    out._apply_binary_op_inplace_combine(x, op);
+    return out;
+  }
+  template<typename Tout, typename T2, typename Encoding2>
+  GenericQuantity<Tout, EncodingType>
+  _apply_binary_op_combine(const GenericQuantity<T2, Encoding2>& x,
+                           const ValueBinaryOp& op) const {
+    GenericQuantity<Tout, EncodingType> out = this->_copy_for_op<Tout>(x);
+    out._apply_binary_op_inplace_combine(x, op);
+    return out;
+  }
+  template<typename Tout, typename T2, typename Encoding2>
+  GenericQuantity<Tout, EncodingType>
+  _apply_binary_op_convert(const GenericQuantity<T2, Encoding2>& x,
+                           const ValueBinaryOp& op) const {
+    GenericQuantity<Tout, EncodingType> out = this->_copy_for_op<Tout>(x);
+    out._apply_binary_op_inplace_convert(x, op);
+    return out;
+  }
+  
 };
+//! Output stream operator for GenericQuantity
+/*!
+  \tparam Ch Type used to represent characters in the output stream.
+  \tparam T Type of elements in x.
+  \tparam Encoding Encoding of the units in x.
+  \param os Output stream.
+  \param[in] x Quantity to output.
+  \returns Output stream.
+ */
 template<typename Ch, typename T, typename Encoding>
 inline std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch> &os, const GenericQuantity<T, Encoding> &x) {
   os << x.value() << ' ' << x.units();
@@ -2982,6 +4048,24 @@ CREATE_DEFAULT_(Quantity, QUANTITY_TYPE,
 		GenericQuantity, GENERIC_QUANTITY_TYPE,
 		UTF8<char>, INHERIT_CONSTRUCTORS_);
 
+  //! Perform unit conversion on raw array bytes.
+  /*!
+    \tparam T Type of elements in the source array.
+    \tparam Encoding Encoding of the source units.
+    \param[in] src_bytes Pointer to the raw bytes containing the source
+      array.
+    \param[in] src_units Units that the source array is in.
+    \param[out] dst_bytes Pointer to pre-allocated memory where the
+      converted array should be stored.
+    \param[in] dst_units Units that the source array should be converted
+      to in the destination.
+    \param[in] nbytes Size of the source array in bytes.
+    \param nelements Number of elements of type T in the source array.
+      If not provided, the number of elements will be determined from
+      nbytes.
+    \pre nelements == (nbytes / (SizeType)sizeof(T))
+    \pre !(nbytes % (SizeType)sizeof(T))
+   */
   template <typename T, typename Encoding>
   void changeUnits(const unsigned char* src_bytes,
 		   const GenericUnits<Encoding>& src_units,
@@ -2999,7 +4083,26 @@ CREATE_DEFAULT_(Quantity, QUANTITY_TYPE,
     memcpy(dst_bytes, qa.value(), (size_t)nelements * sizeof(T));
   }
 
-
+  //! Perform unit conversion on raw array bytes base on a subtype.
+  /*!
+    \tparam Encoding Encoding of the source units.
+    \param[in] subtype Subtype of elements in the source array.
+    \param[in] precision Number of bytes in each element of the source
+      array.
+    \param[in] src_bytes Pointer to the raw bytes containing the source
+      array.
+    \param[in] src_units Units that the source array is in.
+    \param[out] dst_bytes Pointer to pre-allocated memory where the
+      converted array should be stored.
+    \param[in] dst_units Units that the source array should be converted
+      to in the destination.
+    \param[in] nbytes Size of the source array in bytes.
+    \param nelements Number of elements of type T in the source array.
+      If not provided, the number of elements will be determined from
+      nbytes.
+    \pre nelements == (nbytes / (SizeType)sizeof(T))
+    \pre !(nbytes % (SizeType)sizeof(T))
+   */
   template <typename Encoding>
   void changeUnits(YggSubType subtype, SizeType precision,
 		   const unsigned char* src_bytes,
@@ -3016,30 +4119,30 @@ CREATE_DEFAULT_(Quantity, QUANTITY_TYPE,
 #undef ARRAY_ARRAY_OP
 #undef ARRAY_SCALAR_OP
 #undef PACK_LUT
-#undef DELEGATE_TO_INPLACE_
-#undef DELEGATE_TO_INPLACE_OP_QUANTITY_
+#undef DEFINE_OP_DEFAULT_CLASS
 #undef DELEGATE_TO_INPLACE_OP_SCALAR_
-#undef INHERIT_OP_BASE_INPLACE_
-#undef INHERIT_OP_BASE_
-#undef INHERIT_OP_BASE_QUANTITY_
-#undef INHERIT_OP_INPLACE_
-#undef INHERIT_OP_BASE_SCALAR_
+#undef DELEGATE_TO_INPLACE_OP_QUANTITY_
+#undef DELEGATE_TO_INPLACE_OP_FRIEND_
+#undef DELEGATE_OP_FRIEND_REVERSE_
+#undef DELEGATE_TO_INPLACE_METHOD_SCALAR_
+#undef DELEGATE_TO_INPLACE_METHOD_QUANTIY_
+#undef DELEGATE_TO_INPLACE_NOARGS_
+#undef DELEGATE_TO_INPLACE_NOCAST_
+#undef INHERIT_INPLACE_NOARGS_
+#undef INHERIT_INPLACE_NOCAST_
+#undef INHERIT_INPLACE_METHOD_
+#undef INHERIT_NOARGS_
+#undef INHERIT_NOCAST_
+#undef INHERIT_METHOD_
 #undef INHERIT_OP_
-#undef INHERIT_OP_SCALAR_
 #undef INHERIT_CONSTRUCTORS_
 #undef INHERIT_CONSTRUCTORS_ARRAY_
 #undef INHERIT_OPERATORS_
+#undef PASS
 #undef GENERIC_QUANTITY_ARRAY_TYPE
 #undef GENERIC_QUANTITY_TYPE
 #undef QUANTITY_ARRAY_TYPE
 #undef QUANTITY_TYPE
-#undef ADD_DEFAULT_OPERATOR
-#undef METHOD_FACTOR_PULL_
-#undef METHOD_FACTOR_APPLY_
-#undef INPLACE_OP_QUANTITY_BASE_
-#undef INPLACE_OP_SCALAR_
-#undef INPLACE_OP_QUANTITY_CONVERT_
-#undef INPLACE_OP_QUANTITY_COMBINE_
 #undef FRIEND_DEFAULT_
 #undef CREATE_DEFAULT_
 
