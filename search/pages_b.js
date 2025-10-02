@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['sax_0',['SAX',['../md_doc_2sax.html',1,'']]],
-  ['schema_1',['Schema',['../md_doc_2schema.html',1,'']]],
-  ['stream_2',['Stream',['../md_doc_2stream.html',1,'']]]
+  ['with_20yggdrasil_0',['An extension of the RapidJSON C++ header-only library for use with yggdrasil',['../index.html',1,'']]]
 ];
