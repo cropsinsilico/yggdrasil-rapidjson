@@ -87,7 +87,7 @@ $(document).ready(function(){initNavTree('md_doc_2yggdrasil.html',''); initResiz
   <div class="headertitle"><div class="title">Yggdrasil Types</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md40"></a> YggdrasilRapidJSON adds support for serializing/deserializing several additional types not supported by RapidJSON. For these types, the data is serialized as a JSON string by encoding the underlying data and a schema describing it in base64.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md42"></a> YggdrasilRapidJSON adds support for serializing/deserializing several additional types not supported by RapidJSON. For these types, the data is serialized as a JSON string by encoding the underlying data and a schema describing it in base64.</p>
 <p>In this section, we will use excerpts from <code>example/yggdrasil/yggdrasil.cpp</code>.</p>
 <h1><a class="anchor" id="Scalars"></a>
 Scalars</h1>
@@ -105,7 +105,7 @@ Scalars</h1>
 <li><code>kYggComplexSubType</code> Complex numbers (precisions, 8, 16; 32 if compiled with YGGDRASIL_LONG_DOUBLE_AVAILABLE)</li>
 <li><code>kYggStringSubType</code> Strings with specified encoding. Any precision.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md41"></a>
+<h2><a class="anchor" id="autotoc_md43"></a>
 Scalars with precisions not supported by RapidJSON</h2>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="document_8h.html">rapidjson/document.h</a>&quot;</span></div>
 <div class="line"> </div>
@@ -132,7 +132,7 @@ Scalars with precisions not supported by RapidJSON</h2>
 <div class="line">    assert(document[<span class="stringliteral">&quot;uint8&quot;</span>].GetPrecision() == 1);</div>
 <div class="line">    assert(document[<span class="stringliteral">&quot;uint8&quot;</span>].GetSubTypeCode() == kYggUintSubType);</div>
 <div class="line">}</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md42"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md44"></a>
 Complex numbers</h2>
 <p>The JSON standard does not support complex numbers as a type so YggdrasilRapidJSON adds support for complex numbers of varying precision.</p>
 <div class="fragment"><div class="line">{</div>
@@ -146,7 +146,7 @@ Complex numbers</h2>
 <div class="line">    assert(internal::values_eq(x.real(), 3.4F));</div>
 <div class="line">    assert(internal::values_eq(x.imag(), 6.2F));</div>
 <div class="line">}</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md43"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md45"></a>
 Strings with specific encoding</h2>
 <div class="fragment"><div class="line">{</div>
 <div class="line">    StringBuffer os;</div>
@@ -178,7 +178,7 @@ NDArrays</h1>
 <div class="line">    <a class="code hl_typedef" href="namespacerapidjson.html#aa65fc9fb381b2cbc54f98673eadd6505">Value</a> v(array2d, document.GetAllocator());</div>
 <div class="line">    document.AddMember(<span class="stringliteral">&quot;Array2D&quot;</span>, v, document.GetAllocator());</div>
 <div class="line">}</div>
-<div class="ttc" id="anamespacerapidjson_html_aa65fc9fb381b2cbc54f98673eadd6505"><div class="ttname"><a href="namespacerapidjson.html#aa65fc9fb381b2cbc54f98673eadd6505">rapidjson::Value</a></div><div class="ttdeci">GenericValue&lt; UTF8&lt;&gt; &gt; Value</div><div class="ttdoc">GenericValue with UTF8 encoding.</div><div class="ttdef"><b>Definition</b> document.h:7236</div></div>
+<div class="ttc" id="anamespacerapidjson_html_aa65fc9fb381b2cbc54f98673eadd6505"><div class="ttname"><a href="namespacerapidjson.html#aa65fc9fb381b2cbc54f98673eadd6505">rapidjson::Value</a></div><div class="ttdeci">GenericValue&lt; UTF8&lt;&gt; &gt; Value</div><div class="ttdoc">GenericValue with UTF8 encoding.</div><div class="ttdef"><b>Definition</b> document.h:7257</div></div>
 </div><!-- fragment --><p>or heap, with the shape and number of dimensions passed explicitly.</p>
 <div class="fragment"><div class="line">{</div>
 <div class="line">    Document::AllocatorType&amp; allocator = document.GetAllocator();</div>
@@ -271,19 +271,19 @@ Scalars/NDArrays with Units</h1>
 <div class="line">    units::QuantityArray&lt;float&gt; array = document[<span class="stringliteral">&quot;ArrayUnits&quot;</span>].GetArrayQuantity&lt;<span class="keywordtype">float</span>&gt;(document.GetAllocator());</div>
 <div class="line">    assert(internal::values_eq(array.value()[6 * 3 + 2], (<span class="keywordtype">float</span>)1.0));</div>
 <div class="line">}</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md44"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md46"></a>
 Python types</h1>
-<h2><a class="anchor" id="autotoc_md45"></a>
-Python classes</h2>
-<h2><a class="anchor" id="autotoc_md46"></a>
-Python functions</h2>
 <h2><a class="anchor" id="autotoc_md47"></a>
-Python instances</h2>
-<h1><a class="anchor" id="autotoc_md48"></a>
-3D Geometries</h1>
+Python classes</h2>
+<h2><a class="anchor" id="autotoc_md48"></a>
+Python functions</h2>
 <h2><a class="anchor" id="autotoc_md49"></a>
+Python instances</h2>
+<h1><a class="anchor" id="autotoc_md50"></a>
+3D Geometries</h1>
+<h2><a class="anchor" id="autotoc_md51"></a>
 ObjWavefront</h2>
-<h2><a class="anchor" id="autotoc_md50"></a>
+<h2><a class="anchor" id="autotoc_md52"></a>
 Ply</h2>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->

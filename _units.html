@@ -89,7 +89,7 @@ $(document).ready(function(){initNavTree('_units.html',''); initResizable(); });
 <div class="contents">
 <div class="textblock"><p>YggdrasilRapidJSON adds classes for adding physical units to scalars and arrays. Instances of these classes can be used to perform arithmetic operations that track the units or perform unit conversions.</p>
 <p>This section uses excerpts from <code>example/units/units.cpp</code>.</p>
-<h1><a class="anchor" id="autotoc_md58"></a>
+<h1><a class="anchor" id="autotoc_md110"></a>
 Scalars</h1>
 <p>The class for scalars with units is <code>units::Quantity</code> which can be constructed from a value and unit string. The value can be any number type (e.g. float, double, int, uint64_t) with the type passed to <code>units::Quantity</code> as a template parameter. Unit strings contain common unit abbreviations/names and SI prefixes (e.g. "meter", "kg", "°C"). Units can be combined in unit strings via operators (e.g. "cm/s", "kg/cm**3").</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;rapidjson/units.h&quot;</span>         <span class="comment">// Unit classes</span></div>
@@ -98,7 +98,7 @@ Scalars</h1>
 <div class="line">units::Quantity&lt;float&gt; x(5.0, <span class="stringliteral">&quot;cm&quot;</span>);</div>
 <div class="line">assert(internal::values_eq(x.value(), (<span class="keywordtype">float</span>)5.0));</div>
 <div class="line">assert(x.unitsStr() == <span class="stringliteral">&quot;cm&quot;</span>);</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md59"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md111"></a>
 Arrays</h1>
 <p>The class for arrays with units is <code>units::QuantityArray</code> which can be constructed from a C-style stack array and unit string</p>
 <div class="fragment"><div class="line"><span class="comment">// 1D stack array</span></div>
@@ -146,19 +146,19 @@ Arrays</h1>
 <div class="line">assert(y.ndim() == 2);</div>
 <div class="line">assert(y.shape()[1] == 4);</div>
 <div class="ttc" id="agroup___r_a_p_i_d_j_s_o_n___c_o_n_f_i_g_html_ga04a88f0b2db9091006eb7fc6deb6077b"><div class="ttname"><a href="group___r_a_p_i_d_j_s_o_n___c_o_n_f_i_g.html#ga04a88f0b2db9091006eb7fc6deb6077b">RAPIDJSON_DEFAULT_ALLOCATOR</a></div><div class="ttdeci">#define RAPIDJSON_DEFAULT_ALLOCATOR</div><div class="ttdoc">Allows to choose default allocator.</div><div class="ttdef"><b>Definition</b> document.h:91</div></div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md60"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md112"></a>
 Operations</h1>
 <p>Operation can be performed between scalars, Quantity, &amp; QuantityArray instances that keep track of the resulting units.</p>
-<h2><a class="anchor" id="autotoc_md61"></a>
+<h2><a class="anchor" id="autotoc_md113"></a>
 Quantity + Scalar</h2>
-<div class="fragment"></div><!-- fragment --><h2><a class="anchor" id="autotoc_md62"></a>
+<div class="fragment"></div><!-- fragment --><h2><a class="anchor" id="autotoc_md114"></a>
 Quantity + Quantity</h2>
-<div class="fragment"></div><!-- fragment --><h2><a class="anchor" id="autotoc_md63"></a>
+<div class="fragment"></div><!-- fragment --><h2><a class="anchor" id="autotoc_md115"></a>
 Quantity + QuantityArray</h2>
 <div class="fragment"></div><!-- fragment --><h1><a class="anchor" id="Supported"></a>
 Supported Units</h1>
 <p>All units are expressed in terms of their relationship to the base unit system which is the MKS (meter, kilogram, second) unit system.</p>
-<h2><a class="anchor" id="autotoc_md64"></a>
+<h2><a class="anchor" id="autotoc_md116"></a>
 Base Units</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -180,7 +180,7 @@ Base Units</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">radian   </td><td class="markdownTableBodyNone">rad   </td></tr>
 </table>
-<h2><a class="anchor" id="autotoc_md65"></a>
+<h2><a class="anchor" id="autotoc_md117"></a>
 Composite (SI Prefixable)</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -256,7 +256,7 @@ Composite (SI Prefixable)</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">molar   </td><td class="markdownTableBodyNone">M   </td></tr>
 </table>
-<h2><a class="anchor" id="autotoc_md66"></a>
+<h2><a class="anchor" id="autotoc_md118"></a>
 Composite (Not SI Prefixable)</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">

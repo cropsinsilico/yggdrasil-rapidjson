@@ -88,49 +88,113 @@ $(document).ready(function(){initNavTree('md_doc_2schema.html',''); initResizabl
 </div><!--header-->
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
-<ul><li class="level1"><a href="#autotoc_md52">Normalization</a><ul><li class="level2"><a href="#Basic">Basic Usage</a></li>
+<ul><li class="level1"><a href="#autotoc_md54">Validation</a></li>
+<li class="level1"><a href="#autotoc_md55">Normalization</a><ul><li class="level2"><a href="#Basic">Basic Usage</a></li>
 </ul>
 </li>
-<li class="level1"><a href="#Extension">Extension properties</a><ul><li class="level2"><a href="#AnyTypes">Validation keywords for any instance type</a><ul><li class="level3"><a href="#enum">enum</a></li>
-<li class="level3"><a href="#type">type</a></li>
-<li class="level3"><a href="#allOf-anyOf-oneOf">allOf, anyOf, and oneOf</a></li>
-<li class="level3"><a href="#not">not</a></li>
-<li class="level3"><a href="#subtype">subtype</a><ul><li class="level4"><a href="#autotoc_md53">Normalizable to float subtype</a></li>
-<li class="level4"><a href="#autotoc_md54">Normalizable to int subtype</a></li>
-<li class="level4"><a href="#autotoc_md55">Normalizable to uint subtype</a></li>
-<li class="level4"><a href="#autotoc_md56">Normalizable to string subtype</a></li>
+<li class="level1"><a href="#Extension">Extension properties</a><ul><li class="level2"><a href="#AnyTypes">Validation keywords for any instance type</a><ul><li class="level3"><a href="#type">type</a><ul><li class="level4"><a href="#autotoc_md56">Description</a></li>
+<li class="level4"><a href="#autotoc_md57">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md58">Role in normalization</a></li>
 </ul>
 </li>
-<li class="level3"><a href="#precision">precision</a></li>
-<li class="level3"><a href="#multipleof">multipleOf</a></li>
-<li class="level3"><a href="#maximum">maximum</a></li>
-<li class="level3"><a href="#minimum">minimum</a></li>
 </ul>
 </li>
-<li class="level2"><a href="#Strings">Validation keywords for strings</a><ul><li class="level3"><a href="#maxLength">maxLength</a></li>
-<li class="level3"><a href="#minLength">minLength</a></li>
-<li class="level3"><a href="#pattern">pattern</a></li>
+<li class="level2"><a href="#autotoc_md59">Schema keywords for collections (arrays &amp; objects)</a><ul><li class="level3"><a href="#allowSingular">allowSingular</a><ul><li class="level4"><a href="#autotoc_md60">Description</a></li>
+<li class="level4"><a href="#autotoc_md61">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md62">Role in normalization</a></li>
 </ul>
 </li>
-<li class="level2"><a href="#Arrays">Validation keywords for arrays</a><ul><li class="level3"><a href="#additionalItems">additionalItems</a></li>
-<li class="level3"><a href="#maxItems-minItems">maxItems and minItems</a></li>
-<li class="level3"><a href="#uniqueItems">uniqueItems</a></li>
+<li class="level3"><a href="#allowWrapped">allowWrapped</a><ul><li class="level4"><a href="#autotoc_md63">Description</a></li>
+<li class="level4"><a href="#autotoc_md64">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md65">Role in normalization</a></li>
 </ul>
 </li>
-<li class="level2"><a href="#autotoc_md57">Validation keywords for objects</a><ul><li class="level3"><a href="#maxProperties-minProperties">maxProperties and minProperties</a></li>
-<li class="level3"><a href="#required">required</a></li>
-<li class="level3"><a href="#additionalProperties">additionalProperties</a></li>
-<li class="level3"><a href="#dependencies">dependencies</a></li>
+</ul>
+</li>
+<li class="level2"><a href="#Objects">Schema keywords for objects</a><ul><li class="level3"><a href="#default">default</a><ul><li class="level4"><a href="#autotoc_md66">Description</a></li>
+<li class="level4"><a href="#autotoc_md67">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md68">Role in normalization</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#aliases">aliases</a><ul><li class="level4"><a href="#autotoc_md69">Description</a></li>
+<li class="level4"><a href="#autotoc_md70">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md71">Role in normalization</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#deprecated">deprecated</a><ul><li class="level4"><a href="#autotoc_md72">Description</a></li>
+<li class="level4"><a href="#autotoc_md73">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md74">Role in normalization</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#pushProperties">pushProperties</a><ul><li class="level4"><a href="#autotoc_md75">Description</a></li>
+<li class="level4"><a href="#autotoc_md76">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md77">Role in normalization</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#pullProperties">pullProperties</a><ul><li class="level4"><a href="#autotoc_md78">Description</a></li>
+<li class="level4"><a href="#autotoc_md79">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md80">Role in normalization</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#subtype">subtype</a><ul><li class="level4"><a href="#autotoc_md81">Description</a></li>
+<li class="level4"><a href="#autotoc_md82">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md83">Role in normalization</a></li>
+<li class="level4"><a href="#autotoc_md84">Normalizable to float subtype</a></li>
+<li class="level4"><a href="#autotoc_md85">Normalizable to int subtype</a></li>
+<li class="level4"><a href="#autotoc_md86">Normalizable to uint subtype</a></li>
+<li class="level4"><a href="#autotoc_md87">Normalizable to string subtype</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#precision">precision</a><ul><li class="level4"><a href="#autotoc_md88">Description</a></li>
+<li class="level4"><a href="#autotoc_md89">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md90">Role in normalization</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#units">units</a><ul><li class="level4"><a href="#autotoc_md91">Description</a></li>
+<li class="level4"><a href="#autotoc_md92">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md93">Role in normalization</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#shape">shape</a><ul><li class="level4"><a href="#autotoc_md94">Description</a></li>
+<li class="level4"><a href="#autotoc_md95">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md96">Role in normalization</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#ndim">ndim</a><ul><li class="level4"><a href="#autotoc_md97">Description</a></li>
+<li class="level4"><a href="#autotoc_md98">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md99">Role in normalization</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#length">length</a><ul><li class="level4"><a href="#autotoc_md100">Description</a></li>
+<li class="level4"><a href="#autotoc_md101">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md102">Role in normalization</a></li>
+</ul>
+</li>
+<li class="level3"><a href="#encoding">encoding</a><ul><li class="level4"><a href="#autotoc_md103">Description</a></li>
+<li class="level4"><a href="#autotoc_md104">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md105">Role in normalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="level2"><a href="#autotoc_md106">Keywords for Python classes, functions, &amp; instances</a><ul><li class="level3"><a href="#class">class</a><ul><li class="level4"><a href="#autotoc_md107">Description</a></li>
+<li class="level4"><a href="#autotoc_md108">Role in validation</a></li>
+<li class="level4"><a href="#autotoc_md109">Role in normalization</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 </li>
 </ul>
 </div>
-<div class="textblock"><p><a class="anchor" id="autotoc_md51"></a> JSON Schema is a draft standard for describing the format of JSON data. The schema itself is also JSON data. RapidJSON added support for <a href="https://rapidjson.org/md_doc_schema.html">validating JSON</a> structures against JSON schema in v1.1.0. YggdrasilRapidJSON extended this by adding support for additional properties that can be specified (mostly pertaining to the added data types), normalization of JSON structures using JSON schema, and some additional utilities for interactiving with the schema classes.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md53"></a> JSON Schema is a draft standard for describing the format of JSON data. The schema itself is also JSON data. RapidJSON added support for <a href="https://rapidjson.org/md_doc_schema.html">validating JSON</a> structures against JSON schema in v1.1.0. YggdrasilRapidJSON extended this by adding support for additional properties that can be specified (mostly pertaining to the added data types), normalization of JSON structures using JSON schema, and some additional utilities for interactiving with the schema classes.</p>
 <p>Because YggdrasilRapidJSON JSON schema features are built upon RapidJSON's JSON schema classes &amp; functions, refer to the <a href="https://rapidjson.org/md_doc_schema.html">RapidJSON JSON schema</a> documentation for additional information on the schema implementation and examples.</p>
 <p>Like RapidJSON's JSON schema features, YggdrasilRapidJSON's schema features implement <a href="http://json-schema.org/documentation.html">JSON Schema Draft v4</a>. If you are not familiar with JSON Schema, you may refer to <a href="http://spacetelescope.github.io/understanding-json-schema/">Understanding JSON Schema</a>.</p>
-<h1><a class="anchor" id="autotoc_md52"></a>
+<h1><a class="anchor" id="autotoc_md54"></a>
+Validation</h1>
+<p>Validation allows for JSON documents to be validated against JSON schema to determine if the JSON conforms to the expected format. For a description of validation, see <a href="https://rapidjson.org/md_doc_schema.html">RapidJSON's documentation</a>.</p>
+<h1><a class="anchor" id="autotoc_md55"></a>
 Normalization</h1>
 <p>JSON normalization modifies the JSON structure (when possible) to be compliant with a JSON schema. If the structure cannot be normalized, validation errors will be set.</p>
 <p>The normalizer can be used in all of the same ways as the RapidJSON validator (e.g. serialization, with remote schemas). Use of normalizer as in the examples from the RapidJSON documentation will be the same with the replacement of "Validator" with "Normalizer". The one exception of this is the lack of a normalization equivalent to the <code>SchemaValidatingReader</code> helper class which will be implemented in a future release.</p>
@@ -177,47 +241,424 @@ Basic Usage</h2>
 <div class="line">    printf(<span class="stringliteral">&quot;Invalid document: %s\n&quot;</span>, sb.GetString());</div>
 <div class="line">}</div>
 <div class="line"><span class="keyword">const</span> <a class="code hl_typedef" href="namespacerapidjson.html#aa65fc9fb381b2cbc54f98673eadd6505">Value</a>&amp; normalized = normalizer.GetNormalized();</div>
-<div class="ttc" id="anamespacerapidjson_html_aa65fc9fb381b2cbc54f98673eadd6505"><div class="ttname"><a href="namespacerapidjson.html#aa65fc9fb381b2cbc54f98673eadd6505">rapidjson::Value</a></div><div class="ttdeci">GenericValue&lt; UTF8&lt;&gt; &gt; Value</div><div class="ttdoc">GenericValue with UTF8 encoding.</div><div class="ttdef"><b>Definition</b> document.h:7236</div></div>
+<div class="ttc" id="anamespacerapidjson_html_aa65fc9fb381b2cbc54f98673eadd6505"><div class="ttname"><a href="namespacerapidjson.html#aa65fc9fb381b2cbc54f98673eadd6505">rapidjson::Value</a></div><div class="ttdeci">GenericValue&lt; UTF8&lt;&gt; &gt; Value</div><div class="ttdoc">GenericValue with UTF8 encoding.</div><div class="ttdef"><b>Definition</b> document.h:7257</div></div>
 <div class="ttc" id="anamespacerapidjson_html_ac0765ea91f41539645c4b78689d03f21"><div class="ttname"><a href="namespacerapidjson.html#ac0765ea91f41539645c4b78689d03f21">rapidjson::StringBuffer</a></div><div class="ttdeci">GenericStringBuffer&lt; UTF8&lt; char &gt;, CrtAllocator &gt; StringBuffer</div><div class="ttdoc">String buffer with UTF8 encoding.</div><div class="ttdef"><b>Definition</b> fwd.h:61</div></div>
-<div class="ttc" id="anamespacerapidjson_html_ace11b5b575baf1cccd5ba5f8586dcdc8"><div class="ttname"><a href="namespacerapidjson.html#ace11b5b575baf1cccd5ba5f8586dcdc8">rapidjson::Document</a></div><div class="ttdeci">GenericDocument&lt; UTF8&lt;&gt; &gt; Document</div><div class="ttdoc">GenericDocument with UTF8 encoding.</div><div class="ttdef"><b>Definition</b> document.h:7863</div></div>
+<div class="ttc" id="anamespacerapidjson_html_ace11b5b575baf1cccd5ba5f8586dcdc8"><div class="ttname"><a href="namespacerapidjson.html#ace11b5b575baf1cccd5ba5f8586dcdc8">rapidjson::Document</a></div><div class="ttdeci">GenericDocument&lt; UTF8&lt;&gt; &gt; Document</div><div class="ttdoc">GenericDocument with UTF8 encoding.</div><div class="ttdef"><b>Definition</b> document.h:7884</div></div>
 </div><!-- fragment --><h1><a class="anchor" id="Extension"></a>
 Extension properties</h1>
-<p>In addition to the JSON schema standard implemented by RapidJSON, YggdrasilRapidJSON supports several additional schema properties for validating YggdrasilRapidJSON documents.</p>
+<p>In addition to the JSON schema standard implemented by RapidJSON, YggdrasilRapidJSON supports several additional schema keywords &amp; keyword values for validating/normalizing YggdrasilRapidJSON documents.</p>
 <h2><a class="anchor" id="AnyTypes"></a>
 Validation keywords for any instance type</h2>
-<h3><a class="anchor" id="enum"></a>
-enum</h3>
-<p>This keyword has no additional properties beyond <code>instanceRef</code> and <code>schemaRef</code>.</p>
-<ul>
-<li>The allowed values are not listed because <code>SchemaDocument</code> does not store them in original form.</li>
-<li>The violating value is not reported because it might be unwieldy.</li>
-</ul>
-<p>If you need to report these details to your users, you can access the necessary information by following <code>instanceRef</code> and <code>schemaRef</code>.</p>
 <h3><a class="anchor" id="type"></a>
 type</h3>
+<h4><a class="anchor" id="autotoc_md56"></a>
+Description</h4>
+<p><code>[string, array]</code> Expected type or types. In addition to the types supported by RapidJSON from the JSON Schema Draft 04 Core specification, YggdrasilRapidJSON allows for several additional types to be specified:</p>
 <ul>
-<li><code>expected</code>: required array of one or more unique strings, each of which is one of the seven primitive types defined by the JSON Schema Draft 04 Core specification. Lists the types allowed by the <code>type</code> schema keyword.</li>
-<li><code>actual</code>: required string, also one of seven primitive types. The primitive type of the instance.</li>
+<li><code>scalar</code>: Single numeric or string value with defined <code>subtype</code>, <code>precision</code>, and optional <code>units</code>. Schemas for scalars with <code>string</code> subtype can also optionally have an <code>encoding</code> keyword.</li>
+<li><code>ndarray</code>: Uniform N-dimensional array of numeric or string values with defined <code>subtype</code>, <code>precision</code>, <code>ndim</code>, <code>shape</code>, and optional <code>units</code>. Schemas for ND arrays with <code>string</code> subtype can also optionally have an <code>encoding</code> keyword.</li>
+<li><code>1darray</code>: Uniform 1-dimensional array of numeric or string values with defined <code>subtype</code>, <code>precision</code>, <code>length</code>, and optional <code>units</code>. Schemas for 1D arrays with <code>string</code> subtype can also optionally have an <code>encoding</code> keyword. Internally 1D arrays are stored as ND arrays and not a unique type, but this type is supported for convenience.</li>
+<li><code>python_class</code>: Python class on the current path.</li>
+<li><code>python_function</code>: Python function on the current path.</li>
+<li><code>python_instance</code>: Python instance that can be constructed from a <code>python_class</code> on the current path.</li>
+<li><code>obj</code>: ObjWavefront 3D mesh.</li>
+<li><code>ply</code>: Ply 3D mesh.</li>
+<li><code>schema</code>: JSON schema.</li>
+<li><code>any</code>: Explicitly allow any type (from JSON core or YggdrasilRapidJSON extension types).</li>
 </ul>
-<h3><a class="anchor" id="allOf-anyOf-oneOf"></a>
-allOf, anyOf, and oneOf</h3>
+<h4><a class="anchor" id="autotoc_md57"></a>
+Role in validation</h4>
+<p>If the type of the JSON document does not match the type(s) specified, the following error will be set:</p>
+<p>&lsquo;Property has a type &rsquo;actual' that is not in the following list: 'expected'.`</p>
 <ul>
-<li><code>errors</code>: required array of at least one object. There will be as many items as there are subschemas in the <code>allOf</code>, <code>anyOf</code> or <code>oneOf</code> schema keyword, respectively. Each item will be the error value produced by validating the instance against the corresponding subschema.</li>
+<li><code>expected</code>: The types allowed by the <code>type</code> schema keyword.</li>
+<li><code>actual</code>: The primitive type of the instance.</li>
 </ul>
-<p>For <code>allOf</code>, at least one error value will be non-empty. For <code>anyOf</code>, all error values will be non-empty. For <code>oneOf</code>, either all error values will be non-empty, or more than one will be empty.</p>
-<h3><a class="anchor" id="not"></a>
-not</h3>
-<p>This keyword has no additional properties apart from <code>instanceRef</code> and <code>schemaRef</code>.</p>
-<h2><a class="anchor" id="Scalars"></a>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(<span class="stringliteral">&quot;{ \&quot;type\&quot;: \&quot;integer\&quot; }&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line">Document d;</div>
+<div class="line">d.Parse(<span class="stringliteral">&quot;42&quot;</span>);</div>
+<div class="line">assert(!d.HasParseError());</div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md58"></a>
+Role in normalization</h4>
+<p>Some transformation between JSON primitive types and scalar/ndarray types are allowed during normalization. See the <a class="el" href="md_doc_2schema.html#subtype">subtype section</a> below for details on those transformations.</p>
+<h2><a class="anchor" id="autotoc_md59"></a>
+Schema keywords for collections (arrays &amp; objects)</h2>
+<h3><a class="anchor" id="allowSingular"></a>
+allowSingular</h3>
+<h4><a class="anchor" id="autotoc_md60"></a>
+Description</h4>
+<p><code>[boolean, string]</code> If <code>true</code>, JSON that is valid for the first <code>item</code> schema (for array schemas) or <code>property</code> schema will also be considered valid. For objects, this can also be a property name, in which case the schema for that property will be used.</p>
+<h4><a class="anchor" id="autotoc_md61"></a>
+Role in validation</h4>
+<p>JSON documents validated against schemas with <code>allowSingular</code> set will be valid if they match either the wrapped or unwrapped schemas.</p>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;array\&quot;, &quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;allowSingular\&quot;: true, &quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;items\&quot;: {\&quot;type\&quot;: \&quot;string\&quot;}&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.Parse(<span class="stringliteral">&quot;\&quot;hello\&quot;&quot;</span>);</div>
+<div class="line">assert(!d.HasParseError());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md62"></a>
+Role in normalization</h4>
+<p>If the normalized JSON validates against the "unwrapped" version of the schema (outside an array/object), the normalized document will consist of the "wrapped" version with the wrapping array/object added.</p>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line">std::cout &lt;&lt; normalizer.GetNormalized() &lt;&lt; std::endl;</div>
+<div class="line"><span class="comment">// [&quot;hello&quot;]</span></div>
+</div><!-- fragment --><h3><a class="anchor" id="allowWrapped"></a>
+allowWrapped</h3>
+<h4><a class="anchor" id="autotoc_md63"></a>
+Description</h4>
+<p><code>[boolean, string]</code> If <code>true</code>, JSON that is valid for an array or object containing the JSON (as a single item/property) will also be considered valid. For objects, this should be a string specifying the property name that will be considered valid.</p>
+<h4><a class="anchor" id="autotoc_md64"></a>
+Role in validation</h4>
+<p>JSON documents validated against schemas with <code>allowWrapped</code> set will be valid if they match either the wrapped or unwrapped schemas.</p>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(<span class="stringliteral">&quot;{\&quot;type\&quot;: \&quot;string\&quot;, \&quot;allowWrapped\&quot;: true}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.Parse(<span class="stringliteral">&quot;[\&quot;hello\&quot;]&quot;</span>);</div>
+<div class="line">assert(!d.HasParseError());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md65"></a>
+Role in normalization</h4>
+<p>If the normalized JSON validates against the "wrapped" version of the schema (inside an array/object), the normalized document will consist of the "unwrapped" version with the wrapping array/object removed.</p>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line">std::cout &lt;&lt; normalizer.GetNormalized() &lt;&lt; std::endl;</div>
+<div class="line"><span class="comment">// &quot;hello&quot;</span></div>
+</div><!-- fragment --><h2><a class="anchor" id="Objects"></a>
+Schema keywords for objects</h2>
+<h3><a class="anchor" id="default"></a>
+default</h3>
+<h4><a class="anchor" id="autotoc_md66"></a>
+Description</h4>
+<p><code>[any]</code> Default value for a property. While RapidJSON allowed for this to be specified for <code>string</code> properties and validated JSON objects missing required properties if a <code>default</code> was specified, YggdrasilRapidJSON allows the default to be of any type and uses this keyword in normalization.</p>
+<h4><a class="anchor" id="autotoc_md67"></a>
+Role in validation</h4>
+<p>If a required property is missing from a validated JSON object, but a default is provided, the document will be considered valid.</p>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;object\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;required\&quot;: [\&quot;size\&quot;],&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;properties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;size\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;type\&quot;: \&quot;number\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;default\&quot;: 5&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.Parse(<span class="stringliteral">&quot;{}&quot;</span>);</div>
+<div class="line">assert(!d.HasParseError());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md68"></a>
+Role in normalization</h4>
+<p>If a required property is missing from a normalized JSON object, the default will be added.</p>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line">std::cout &lt;&lt; normalizer.GetNormalized() &lt;&lt; std::endl;</div>
+<div class="line"><span class="comment">// {&quot;size&quot;: 5}</span></div>
+</div><!-- fragment --><h3><a class="anchor" id="aliases"></a>
+aliases</h3>
+<h4><a class="anchor" id="autotoc_md69"></a>
+Description</h4>
+<p><code>[array]</code> List of alternate property names that should also validate against the schema that contains the <code>aliases</code> keyword.</p>
+<h4><a class="anchor" id="autotoc_md70"></a>
+Role in validation</h4>
+<p>Aliased properties will validate against JSON schema containing the <code>aliases</code> property if the aliased properties validate against the unaliased property schema.</p>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;object\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;properties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;     \&quot;street_address\&quot;: { \&quot;type\&quot;: \&quot;string\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;                           \&quot;aliases\&quot;: [\&quot;street\&quot;] }},&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;required\&quot;: [\&quot;street_address\&quot;]&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.Parse(<span class="stringliteral">&quot;{ \&quot;street\&quot;: \&quot;1600 Pennsylvania Ave.\&quot; }&quot;</span>);</div>
+<div class="line">assert(!d.HasParseError());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md71"></a>
+Role in normalization</h4>
+<p>Aliased properties will be migrated to the unaliased property name.</p>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line">std::cout &lt;&lt; normalizer.GetNormalized() &lt;&lt; std::endl;</div>
+<div class="line"><span class="comment">// {&quot;street_address&quot;: &quot;1600 Pennsylvania Ave.&quot;}</span></div>
+</div><!-- fragment --><h3><a class="anchor" id="deprecated"></a>
+deprecated</h3>
+<h4><a class="anchor" id="autotoc_md72"></a>
+Description</h4>
+<p><code>[boolean, string]</code> Mark a property as deprecated so that a warning is emitted when a deprecated property is present during validation. The value of the <code>deprecated</code> keyword can contain the warning message that should be emitted as a string.</p>
+<h4><a class="anchor" id="autotoc_md73"></a>
+Role in validation</h4>
+<p>A warning will be issued if a deprecated property is present.</p>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;object\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;properties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;     \&quot;old_valid\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;type\&quot;: \&quot;string\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;deprecated\&quot;: \&quot;Deprecation message\&quot;},&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;     \&quot;valid\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;type\&quot;: \&quot;integer\&quot;}&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.Parse(<span class="stringliteral">&quot;{\&quot;old_valid\&quot;: \&quot;string\&quot;, \&quot;valid\&quot;: 0}&quot;</span>);</div>
+<div class="line">assert(!d.HasParseError());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+<div class="line">assert(validator.HasWarning());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md74"></a>
+Role in normalization</h4>
+<p>Same as validation.</p>
+<h3><a class="anchor" id="pushProperties"></a>
+pushProperties</h3>
+<h4><a class="anchor" id="autotoc_md75"></a>
+Description</h4>
+<p><code>[object]</code> Allow properties from JSON objects to be pushed to other location in the document to satisfy missing required properties. Keys in the <code>pushProperties</code> object should be the location that properties specified in the value should be pushed to. These can be absolute schema addresses or relative to the address of the schema containing the <code>pushProperties</code> keyword. Values can be boolean to specify all (<code>true</code>) or none (<code>false</code>) of the properties in the current schema, or an array of names of properties that should be pushed.</p>
+<h4><a class="anchor" id="autotoc_md76"></a>
+Role in validation</h4>
+<p>If missing required properties can be satified by pushing the properties as specified, the document will be considered valid.</p>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;object\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;properties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;billing_address\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;type\&quot;: \&quot;object\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;properties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;street_address\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;          \&quot;type\&quot;: \&quot;string\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;city\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;          \&quot;type\&quot;: \&quot;string\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;required\&quot;: [\&quot;street_address\&quot;, \&quot;city\&quot;],&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;default\&quot;: {}&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;shipping_address\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;type\&quot;: \&quot;object\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;properties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;street_address\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;          \&quot;type\&quot;: \&quot;string\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;city\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;          \&quot;type\&quot;: \&quot;string\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;required\&quot;: [\&quot;street_address\&quot;, \&quot;city\&quot;],&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;pushProperties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;../billing_address\&quot;: true&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;required\&quot;: [\&quot;shipping_address\&quot;, \&quot;billing_address\&quot;]&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;shipping_address\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;street_address\&quot;: \&quot;1600 Pennsylvania Avenue NW\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;city\&quot;: \&quot;Washington\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!d.HasParseError());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md77"></a>
+Role in normalization</h4>
+<p>The pushed properties will be copied to the specified locations in the normalized document to satisfy missing required properties.</p>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line">std::cout &lt;&lt; normalizer.GetNormalized() &lt;&lt; std::endl;</div>
+<div class="line"><span class="comment">// {</span></div>
+<div class="line"><span class="comment">//   &quot;shipping_address&quot;: {</span></div>
+<div class="line"><span class="comment">//     &quot;street_address&quot;: &quot;1600 Pennsylvania Ave.&quot;,</span></div>
+<div class="line"><span class="comment">//     &quot;city&quot;: &quot;Washington&quot;</span></div>
+<div class="line"><span class="comment">//   },</span></div>
+<div class="line"><span class="comment">//   &quot;billing_address&quot;: {</span></div>
+<div class="line"><span class="comment">//     &quot;street_address&quot;: &quot;1600 Pennsylvania Ave.&quot;,</span></div>
+<div class="line"><span class="comment">//     &quot;city&quot;: &quot;Washington&quot;</span></div>
+<div class="line"><span class="comment">//   },</span></div>
+<div class="line"><span class="comment">// }</span></div>
+</div><!-- fragment --><h3><a class="anchor" id="pullProperties"></a>
+pullProperties</h3>
+<h4><a class="anchor" id="autotoc_md78"></a>
+Description</h4>
+<p><code>[object]</code> Allow properties from JSON objects to be pulled from other location in the document to satisfy missing required properties. Keys in the <code>pullProperties</code> object should be the location that properties specified in the value should be pulled from. These can be absolute schema addresses or relative to the address of the schema containing the <code>pullProperties</code> keyword. Values can be boolean to specify all (<code>true</code>) or none (<code>false</code>) of the properties in the current schema, or an array of names of properties that should be pulled.</p>
+<h4><a class="anchor" id="autotoc_md79"></a>
+Role in validation</h4>
+<p>If missing required properties can be satified by pulling the properties as specified, the document will be considered valid.</p>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;object\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;properties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;billing_address\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;type\&quot;: \&quot;object\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;properties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;street_address\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;          \&quot;type\&quot;: \&quot;string\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;city\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;          \&quot;type\&quot;: \&quot;string\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;required\&quot;: [\&quot;street_address\&quot;, \&quot;city\&quot;],&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;default\&quot;: {},&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;pullProperties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;../shipping_address\&quot;: true&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;shipping_address\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;type\&quot;: \&quot;object\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;properties\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;street_address\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;          \&quot;type\&quot;: \&quot;string\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        \&quot;city\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;          \&quot;type\&quot;: \&quot;string\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;        }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;      \&quot;required\&quot;: [\&quot;street_address\&quot;, \&quot;city\&quot;]&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  },&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;required\&quot;: [\&quot;shipping_address\&quot;, \&quot;billing_address\&quot;]&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;shipping_address\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;street_address\&quot;: \&quot;1600 Pennsylvania Avenue NW\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;city\&quot;: \&quot;Washington\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!d.HasParseError());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md80"></a>
+Role in normalization</h4>
+<p>The pulled properties will be copied from the specified locations in the normalized document to satisfy missing required properties.</p>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line">std::cout &lt;&lt; normalizer.GetNormalized() &lt;&lt; std::endl;</div>
+<div class="line"><span class="comment">// {</span></div>
+<div class="line"><span class="comment">//   &quot;shipping_address&quot;: {</span></div>
+<div class="line"><span class="comment">//     &quot;street_address&quot;: &quot;1600 Pennsylvania Ave.&quot;,</span></div>
+<div class="line"><span class="comment">//     &quot;city&quot;: &quot;Washington&quot;</span></div>
+<div class="line"><span class="comment">//   },</span></div>
+<div class="line"><span class="comment">//   &quot;billing_address&quot;: {</span></div>
+<div class="line"><span class="comment">//     &quot;street_address&quot;: &quot;1600 Pennsylvania Ave.&quot;,</span></div>
+<div class="line"><span class="comment">//     &quot;city&quot;: &quot;Washington&quot;</span></div>
+<div class="line"><span class="comment">//   },</span></div>
+<div class="line"><span class="comment">// }</span></div>
+</div><!-- fragment --><h2><a class="anchor" id="Scalars"></a>
 Scalars</h2>
 <h3><a class="anchor" id="subtype"></a>
 subtype</h3>
+<h4><a class="anchor" id="autotoc_md81"></a>
+Description</h4>
+<p><code>[string, array]</code> The base type for <code>scalar</code> JSON values or elements in <code>ndarray</code> JSON values. Valid values include:</p>
 <ul>
-<li><code>expected</code>: required array of one or more unique strings, each of which is one of the five yggdrasil subtypes for scalars and ndarrays (TODO: REFERENCE TO DOCS ON NEW TYPES) Lists the types allowed by the <code>subtype</code> schema keyword.</li>
-<li><code>actual</code>: required string, also one of five yggdrasil subtypes. The scalar/ndarray subtype of the instance.</li>
+<li><code>float</code>: Floating point number</li>
+<li><code>int</code>: Signed integer</li>
+<li><code>uint</code>: Unsigned integer</li>
+<li><code>complex</code>: Complex number</li>
+<li><code>string</code>: String</li>
+<li><code>bytes</code>: Special case of <code>string</code> with <code>encoding="ASCII"</code></li>
+<li><code>unicode</code>: Special case of <code>string</code> with <code>encoding="UCS4"</code></li>
+<li><code>any</code>: Any subtype is allowed</li>
 </ul>
+<h4><a class="anchor" id="autotoc_md82"></a>
+Role in validation</h4>
+<p>If the subtype of the JSON document does not match the subtype(s) specified, the following error will be set:</p>
+<p>&lsquo;Property has a subtype &rsquo;actual' that is not in the following list 'expected'.`</p>
+<ul>
+<li><code>expected</code>: The subtypes allowed by the <code>subtype</code> schema keyword.</li>
+<li><code>actual</code>: The scalar/ndarray subtype of the instance.</li>
+</ul>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;scalar\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;subtype\&quot;: \&quot;float\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;precision\&quot;: 8&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.SetInt(5);</div>
+<div class="line">assert(d.IsInt());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(!validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md83"></a>
+Role in normalization</h4>
 <p>The following type transformation are allowed to normalize a document to the subtype(s) specified by a schema if the precision schema property can also be normalized. When the instance satisfies multiple specified by the schema under normalization, the first one will be used in the normalized document.</p>
-<h4><a class="anchor" id="autotoc_md53"></a>
+<h4><a class="anchor" id="autotoc_md84"></a>
 Normalizable to float subtype</h4>
 <ul>
 <li><code>{"type": "scalar", "subtype": "int"}</code></li>
@@ -225,7 +666,7 @@ Normalizable to float subtype</h4>
 <li><code>{"type": "number"}</code></li>
 <li><code>{"type": "integer"}</code></li>
 </ul>
-<h4><a class="anchor" id="autotoc_md54"></a>
+<h4><a class="anchor" id="autotoc_md85"></a>
 Normalizable to int subtype</h4>
 <ul>
 <li><code>{"type": "scalar", "subtype": "uint"}</code></li>
@@ -233,7 +674,7 @@ Normalizable to int subtype</h4>
 <li><code>{"type": "scalar", "subtype": "float"}</code> if the instance is a whole number</li>
 <li><code>{"type": "number"}</code> if the instance is a whole number</li>
 </ul>
-<h4><a class="anchor" id="autotoc_md55"></a>
+<h4><a class="anchor" id="autotoc_md86"></a>
 Normalizable to uint subtype</h4>
 <ul>
 <li><code>{"type": "scalar", "subtype": "int"}</code> if the instance is &gt;=0</li>
@@ -241,107 +682,274 @@ Normalizable to uint subtype</h4>
 <li><code>{"type": "scalar", "subtype": "float"}</code> if the instance is a positive whole number</li>
 <li><code>{"type": "number"}</code> if the instance is a positive whole number</li>
 </ul>
-<h4><a class="anchor" id="autotoc_md56"></a>
+<h4><a class="anchor" id="autotoc_md87"></a>
 Normalizable to string subtype</h4>
 <ul>
 <li><code>{"type": "string"}</code></li>
 </ul>
-<h3><a class="anchor" id="precision"></a>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line"><span class="keyword">const</span> SchemaNormalizer::ValueType&amp; n = normalizer.GetNormalized();</div>
+<div class="line">assert(n.IsScalar&lt;<span class="keywordtype">double</span>&gt;());</div>
+<div class="line">assert(!n.IsInt64());</div>
+</div><!-- fragment --><h3><a class="anchor" id="precision"></a>
 precision</h3>
+<h4><a class="anchor" id="autotoc_md88"></a>
+Description</h4>
+<p><code>[number]</code> The maximum size of the <code>scalar</code> or <code>ndarray</code> elements in bytes. For string subtypes, this is the length of the string.</p>
+<h4><a class="anchor" id="autotoc_md89"></a>
+Role in validation</h4>
+<p>If a JSON document has a larger precision that the one specified by the schema, the following error will be produced:</p>
+<p><code>Property has a precision of actual that is incompatible with the schema precision expected.</code></p>
 <ul>
-<li><code>expected</code>: required integer strictly greater than 0. The value of the <code>precision</code> keyword specified in the schema defining the minimum allowed precision (in bytes) for scalars or ndarray elements.</li>
-<li><code>actual</code>: required integer. The instance precision.</li>
+<li><code>expected</code>: Maximum precision (in bytes) allowed by the <code>precision</code> schema keyword.</li>
+<li><code>actual</code>: The precision (in bytes) of the instance.</li>
 </ul>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;scalar\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;subtype\&quot;: \&quot;float\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;precision\&quot;: 8&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.SetScalar((float16_t)1.6, d.GetAllocator());</div>
+<div class="line">assert(d.IsScalar&lt;float16_t&gt;());</div>
+<div class="line">assert(d.GetPrecision() == 2);</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md90"></a>
+Role in normalization</h4>
 <p>For numbers, instances can be cast to precision/subtype if they are within the range allowable for the equivalent type in C++. For strings (both primative and scalars/arrays), an instance can only be normalized to a larger precision (it is padded with spaces).</p>
-<h3><a class="anchor" id="multipleof"></a>
-multipleOf</h3>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line"><span class="keyword">const</span> SchemaNormalizer::ValueType&amp; n = normalizer.GetNormalized();</div>
+<div class="line">assert(n.IsScalar&lt;<span class="keywordtype">double</span>&gt;());</div>
+<div class="line">assert(n.GetPrecision() == 8);</div>
+</div><!-- fragment --><h3><a class="anchor" id="units"></a>
+units</h3>
+<h4><a class="anchor" id="autotoc_md91"></a>
+Description</h4>
+<p><code>[string]</code> The physical units that <code>scalar</code> or <code>ndarray</code> elements should have. A description of how units can be specified can be found in the <a class="el" href="_units.html">units documentation</a>.</p>
+<h4><a class="anchor" id="autotoc_md92"></a>
+Role in validation</h4>
+<p>If a JSON document has units that are incompatible (not having the same dimensionality) with those specified by the validation schema, the following error will be set:</p>
+<p>&lsquo;Property has units &rsquo;actual' that are not compatible with the schema 'expected'.`</p>
 <ul>
-<li><code>expected</code>: required number strictly greater than 0. The value of the <code>multipleOf</code> keyword specified in the schema.</li>
-<li><code>actual</code>: required number. The instance value.</li>
+<li><code>expected</code>: Units allowed by the <code>units</code> schema keyword.</li>
+<li><code>actual</code>: The units of the instance.</li>
 </ul>
-<h3><a class="anchor" id="maximum"></a>
-maximum</h3>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;scalar\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;subtype\&quot;: \&quot;float\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;precision\&quot;: 8,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;units\&quot;: \&quot;g\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.SetScalar(1.6, <span class="stringliteral">&quot;kg&quot;</span>, d.GetAllocator());</div>
+<div class="line">assert(d.IsScalar&lt;<span class="keywordtype">double</span>&gt;());</div>
+<div class="line">assert(d.HasUnits());</div>
+<div class="line">assert(d.GetUnits() == <span class="stringliteral">&quot;kg&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md93"></a>
+Role in normalization</h4>
+<p>If the units of the JSON instance are compatible with the schema units, the scalar/ndarray will be converted to the schema units in the normalized document.</p>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line"><span class="keyword">const</span> SchemaNormalizer::ValueType&amp; n = normalizer.GetNormalized();</div>
+<div class="line">assert(n.IsScalar&lt;<span class="keywordtype">double</span>&gt;());</div>
+<div class="line">assert(n.HasUnits());</div>
+<div class="line">assert(n.GetUnits() == <span class="stringliteral">&quot;g&quot;</span>);</div>
+</div><!-- fragment --><h3><a class="anchor" id="shape"></a>
+shape</h3>
+<h4><a class="anchor" id="autotoc_md94"></a>
+Description</h4>
+<p><code>[array]</code> The size in each dimension that <code>ndarray</code> instance should have.</p>
+<h4><a class="anchor" id="autotoc_md95"></a>
+Role in validation</h4>
+<p>If the instance does not have the same shape as specified in the schema, the following error will be set:</p>
+<p><code>Property has a shape actual that does not match the schema expected.</code></p>
 <ul>
-<li><code>expected</code>: required number. The value of the <code>maximum</code> keyword specified in the schema.</li>
-<li><code>exclusiveMaximum</code>: optional boolean. This will be true if the schema specified <code>"exclusiveMaximum": true</code>, and will be omitted otherwise.</li>
-<li><code>actual</code>: required number. The instance value.</li>
+<li><code>expected</code>: Shape allowed by the <code>shape</code> schema keyword.</li>
+<li><code>actual</code>: The shape of the instance.</li>
 </ul>
-<h3><a class="anchor" id="minimum"></a>
-minimum</h3>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;ndarray\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;subtype\&quot;: \&quot;float\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;precision\&quot;: 8,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;shape\&quot;: [2, 3]&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.SetNDArray({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}}, d.GetAllocator());</div>
+<div class="line">assert(d.IsNDArray&lt;<span class="keywordtype">double</span>&gt;());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md96"></a>
+Role in normalization</h4>
+<p>This keyword does not apply to normalization.</p>
+<h3><a class="anchor" id="ndim"></a>
+ndim</h3>
+<h4><a class="anchor" id="autotoc_md97"></a>
+Description</h4>
+<p><code>[integer]</code> The number of dimensions that <code>ndarray</code> instances should have.</p>
+<h4><a class="anchor" id="autotoc_md98"></a>
+Role in validation</h4>
+<p>If the instance does not have the name number of dimensions as specified in the schema, the shape error will be set (see above), but the <code>expected</code> shape will be set to an array of <code>null</code> with <code>ndim</code> items.</p>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;ndarray\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;subtype\&quot;: \&quot;float\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;precision\&quot;: 8,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;ndim\&quot;: 2&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.SetNDArray({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}}, d.GetAllocator());</div>
+<div class="line">assert(d.IsNDArray&lt;<span class="keywordtype">double</span>&gt;());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md99"></a>
+Role in normalization</h4>
+<p>This keyword does not apply to normalization.</p>
+<h3><a class="anchor" id="length"></a>
+length</h3>
+<h4><a class="anchor" id="autotoc_md100"></a>
+Description</h4>
+<p><code>[integer]</code> The number of elements that 1-dimensional <code>ndarray</code> instance should have.</p>
+<h4><a class="anchor" id="autotoc_md101"></a>
+Role in validation</h4>
+<p>If the instance does not have a shape of <code>[length]</code>, the shape error will be set (see above), but the <code>expected</code> shape will be set to <code>[length]</code>.</p>
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;ndarray\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;subtype\&quot;: \&quot;float\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;precision\&quot;: 8,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;length\&quot;: 3&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.SetNDArray({1.0, 2.0, 3.0}, d.GetAllocator());</div>
+<div class="line">assert(d.IsNDArray&lt;<span class="keywordtype">double</span>&gt;());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md102"></a>
+Role in normalization</h4>
+<p>This keyword does not apply to normalization.</p>
+<h3><a class="anchor" id="encoding"></a>
+encoding</h3>
+<h4><a class="anchor" id="autotoc_md103"></a>
+Description</h4>
+<p><code>[string]</code> Encoding that string <code>scalar</code> or <code>ndarray</code> instance elements should have. Available values include:</p>
 <ul>
-<li><code>expected</code>: required number. The value of the <code>minimum</code> keyword specified in the schema.</li>
-<li><code>exclusiveMinimum</code>: optional boolean. This will be true if the schema specified <code>"exclusiveMinimum": true</code>, and will be omitted otherwise.</li>
-<li><code>actual</code>: required number. The instance value.</li>
+<li><code>ASCII</code></li>
+<li><code>UCS4</code></li>
+<li><code>UTF8</code></li>
+<li><code>UTF16</code></li>
+<li><code>UTF32</code></li>
 </ul>
-<h2><a class="anchor" id="Strings"></a>
-Validation keywords for strings</h2>
-<h3><a class="anchor" id="maxLength"></a>
-maxLength</h3>
+<h4><a class="anchor" id="autotoc_md104"></a>
+Role in validation</h4>
+<p>If the instance encoding does not match the encoding specified by the schema, the following error will be set:</p>
+<p>&lsquo;Property has an encoding &rsquo;actual' that does not match the schema 'expected'.`</p>
 <ul>
-<li><code>expected</code>: required number greater than or equal to 0. The value of the <code>maxLength</code> keyword specified in the schema.</li>
-<li><code>actual</code>: required string. The instance value.</li>
+<li><code>expected</code>: Encoding allowed by the <code>encoding</code> schema keyword.</li>
+<li><code>actual</code>: The encoding of the instance.</li>
 </ul>
-<h3><a class="anchor" id="minLength"></a>
-minLength</h3>
+<div class="fragment"><div class="line">TODO</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md105"></a>
+Role in normalization</h4>
+<p>If the instance has a different encoding that the schema, it will be transcoded into the schema encoding.</p>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line"><span class="keyword">const</span> SchemaNormalizer::ValueType&amp; n = normalizer.GetNormalized();</div>
+<div class="line">assert(n.HasEncoding());</div>
+<div class="line">assert(n.GetEncoding() == <span class="stringliteral">&quot;UCS4&quot;</span>);</div>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md106"></a>
+Keywords for Python classes, functions, &amp; instances</h2>
+<h3><a class="anchor" id="class"></a>
+class</h3>
+<h4><a class="anchor" id="autotoc_md107"></a>
+Description</h4>
+<p><code>[class]</code> Python class that Python instances should be a subclass of.</p>
+<h4><a class="anchor" id="autotoc_md108"></a>
+Role in validation</h4>
+<p>If an instance is not a Python instance of the specified class, the following error will be set:</p>
+<p>&lsquo;Property is not a Python instance of the class &rsquo;expected' specified in the schema (actual = 'actual').`</p>
 <ul>
-<li><code>expected</code>: required number greater than or equal to 0. The value of the <code>minLength</code> keyword specified in the schema.</li>
-<li><code>actual</code>: required string. The instance value.</li>
+<li><code>expected</code>: Python class allowed by the <code>class</code> schema keyword.</li>
+<li><code>actual</code>: The class of the instance.</li>
 </ul>
-<h3><a class="anchor" id="pattern"></a>
-pattern</h3>
-<ul>
-<li><code>actual</code>: required string. The instance value.</li>
-</ul>
-<p>(The expected pattern is not reported because the internal representation in <code>SchemaDocument</code> does not store the pattern in original string form.)</p>
-<h2><a class="anchor" id="Arrays"></a>
-Validation keywords for arrays</h2>
-<h3><a class="anchor" id="additionalItems"></a>
-additionalItems</h3>
-<p>This keyword is reported when the value of <code>items</code> schema keyword is an array, the value of <code>additionalItems</code> is <code>false</code>, and the instance is an array with more items than specified in the <code>items</code> array.</p>
-<ul>
-<li><code>disallowed</code>: required integer greater than or equal to 0. The index of the first item that has no corresponding schema.</li>
-</ul>
-<h3><a class="anchor" id="maxItems-minItems"></a>
-maxItems and minItems</h3>
-<ul>
-<li><code>expected</code>: required integer greater than or equal to 0. The value of <code>maxItems</code> (respectively, <code>minItems</code>) specified in the schema.</li>
-<li><code>actual</code>: required integer greater than or equal to 0. Number of items in the instance array.</li>
-</ul>
-<h3><a class="anchor" id="uniqueItems"></a>
-uniqueItems</h3>
-<ul>
-<li><code>duplicates</code>: required array whose items are integers greater than or equal to 0. Indices of items of the instance that are equal.</li>
-</ul>
-<p>(RapidJSON only reports the first two equal items, for performance reasons.)</p>
-<h2><a class="anchor" id="autotoc_md57"></a>
-Validation keywords for objects</h2>
-<h3><a class="anchor" id="maxProperties-minProperties"></a>
-maxProperties and minProperties</h3>
-<ul>
-<li><code>expected</code>: required integer greater than or equal to 0. The value of <code>maxProperties</code> (respectively, <code>minProperties</code>) specified in the schema.</li>
-<li><code>actual</code>: required integer greater than or equal to 0. Number of properties in the instance object.</li>
-</ul>
-<h3><a class="anchor" id="required"></a>
-required</h3>
-<ul>
-<li><code>missing</code>: required array of one or more unique strings. The names of properties that are listed in the value of the <code>required</code> schema keyword but not present in the instance object.</li>
-</ul>
-<h3><a class="anchor" id="additionalProperties"></a>
-additionalProperties</h3>
-<p>This keyword is reported when the schema specifies <code>additionalProperties: false</code> and the name of a property of the instance is neither listed in the <code>properties</code> keyword nor matches any regular expression in the <code>patternProperties</code> keyword.</p>
-<ul>
-<li><code>disallowed</code>: required string. Name of the offending property of the instance.</li>
-</ul>
-<p>(For performance reasons, RapidJSON only reports the first such property encountered.)</p>
-<h3><a class="anchor" id="dependencies"></a>
-dependencies</h3>
-<ul>
-<li><code>errors</code>: required object with one or more properties. Names and values of its properties are described below.</li>
-</ul>
-<p>Recall that JSON Schema Draft 04 supports <em>schema dependencies</em>, where presence of a named <em>controlling</em> property requires the instance object to be valid against a subschema, and <em>property dependencies</em>, where presence of a controlling property requires other <em>dependent</em> properties to be also present.</p>
-<p>For a violated schema dependency, <code>errors</code> will contain a property with the name of the controlling property and its value will be the error object produced by validating the instance object against the dependent schema.</p>
-<p>For a violated property dependency, <code>errors</code> will contain a property with the name of the controlling property and its value will be an array of one or more unique strings listing the missing dependent properties. </p>
-</div></div><!-- contents -->
+<div class="fragment"><div class="line">Document sd;</div>
+<div class="line">sd.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;type\&quot;: \&quot;instance\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;class\&quot;: \&quot;example_python:ExampleSubClass\&quot;&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!sd.HasParseError());</div>
+<div class="line">SchemaDocument s(sd);</div>
+<div class="line">SchemaValidator validator(s);</div>
+<div class="line"> </div>
+<div class="line">Document d;</div>
+<div class="line">d.Parse(</div>
+<div class="line">    <span class="stringliteral">&quot;{&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;class\&quot;: \&quot;example_python:ExampleSubClass\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;args\&quot;: [&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;hello\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    0.5&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  ],&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  \&quot;kwargs\&quot;: {&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;a\&quot;: \&quot;world\&quot;,&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;    \&quot;b\&quot;: 1&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;  }&quot;</span></div>
+<div class="line">    <span class="stringliteral">&quot;}&quot;</span>);</div>
+<div class="line">assert(!d.HasParseError());</div>
+<div class="line">assert(d.IsObject());</div>
+<div class="line"> </div>
+<div class="line">d.Accept(validator);</div>
+<div class="line">assert(validator.IsValid());</div>
+</div><!-- fragment --><h4><a class="anchor" id="autotoc_md109"></a>
+Role in normalization</h4>
+<p>If a JSON object contains the required information to reconstruct a Python instance, the normalized document will be a Python instance.</p>
+<div class="fragment"><div class="line">SchemaNormalizer normalizer(s);</div>
+<div class="line">d.Accept(normalizer);</div>
+<div class="line">assert(normalizer.IsValid());</div>
+<div class="line"><span class="keyword">const</span> SchemaNormalizer::ValueType&amp; n = normalizer.GetNormalized();</div>
+<div class="line">assert(n.IsPythonInstance());</div>
+</div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->
 <!-- HTML footer for doxygen 1.8.7-->
