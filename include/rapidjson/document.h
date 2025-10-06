@@ -1972,27 +1972,84 @@ public:
       GenericValue v(value, shape, ndim, allocator);
       return AddMember(name, v, allocator);
     }
-  
+
+    /*!
+      \brief Add a scalar with units as member (name-value pair) to the object.
+      \tparam T Type of the scalar value.
+      \param name A string value as name of member.
+      \param value Scalar value for member.
+      \param units_str Units for member.
+      \param units_len Length of \c units_str.
+      \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
+      \return The value itself for fluent API.
+      \pre  IsObject()
+    */
     template <typename T>
     GenericValue& AddMember(GenericValue& name, T value, const Ch* units_str, SizeType units_len, Allocator& allocator) {
       GenericValue v(value, units_str, units_len, allocator);
       return AddMember(name, v, allocator);
     }
+    /*!
+      \brief Add a 1D array with units as member (name-value pair) to the object.
+      \tparam T Type of the scalar value.
+      \param name A string value as name of member.
+      \param value Pointer to 1D array for member.
+      \param nelements Number of elements in \c value.
+      \param units_str Units for member.
+      \param units_len Length of \c units_str.
+      \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
+      \return The value itself for fluent API.
+      \pre  IsObject()
+    */
     template <typename T>
     GenericValue& AddMember(GenericValue& name, T* value, SizeType nelements, const Ch* units_str, SizeType units_len, Allocator& allocator) {
       GenericValue v(value, nelements, units_str, units_len, allocator);
       return AddMember(name, v, allocator);
     }
+    /*!
+      \brief Add a 1D array as member (name-value pair) to the object.
+      \tparam T Type of the scalar value.
+      \param name A string value as name of member.
+      \param value Pointer to 1D array for member.
+      \param nelements Number of elements in \c value.
+      \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
+      \return The value itself for fluent API.
+      \pre  IsObject()
+    */
     template <typename T>
     GenericValue& AddMember(GenericValue& name, T* value, SizeType nelements, Allocator& allocator) {
       GenericValue v(value, nelements, allocator);
       return AddMember(name, v, allocator);
     }
+    /*!
+      \brief Add a ND array with units as member (name-value pair) to the object.
+      \tparam T Type of the scalar value.
+      \param name A string value as name of member.
+      \param value Pointer to ND array for member.
+      \param shape Array of length \c ndim containing the size of the array in each dimension.
+      \param ndim Number of dimensions in \c value.
+      \param units_str Units for member.
+      \param units_len Length of \c units_str.
+      \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
+      \return The value itself for fluent API.
+      \pre  IsObject()
+    */
     template <typename T>
     GenericValue& AddMember(GenericValue& name, T* value, SizeType shape[], SizeType ndim, const Ch* units_str, SizeType units_len, Allocator& allocator) {
       GenericValue v(value, shape, ndim, units_str, units_len, allocator);
       return AddMember(name, v, allocator);
     }
+    /*!
+      \brief Add a ND array as member (name-value pair) to the object.
+      \tparam T Type of the scalar value.
+      \param name A string value as name of member.
+      \param value Pointer to ND array for member.
+      \param shape Array of length \c ndim containing the size of the array in each dimension.
+      \param ndim Number of dimensions in \c value.
+      \param allocator Allocator for reallocating memory. Commonly use GenericDocument::GetAllocator().
+      \return The value itself for fluent API.
+      \pre  IsObject()
+    */
     template <typename T>
     GenericValue& AddMember(GenericValue& name, T* value, SizeType shape[], SizeType ndim, Allocator& allocator) {
       GenericValue v(value, shape, ndim, allocator);

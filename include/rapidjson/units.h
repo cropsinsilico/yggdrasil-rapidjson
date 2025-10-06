@@ -3695,7 +3695,6 @@ private:
   template<typename Tout, typename T2, typename Encoding2>
   GenericQuantityArray<Tout, Encoding>
   _copy_for_op(const GenericQuantityArray<T2, Encoding2>& rhs) const {
-    GenericQuantityArray<Tout, Encoding> out;
     if (this->nelements() == 1) {
       GenericQuantityArray<Tout, Encoding> out(
         value_[0], rhs.ndim(), rhs.shape(), units_);
