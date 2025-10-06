@@ -1310,6 +1310,10 @@ TEST(SchemaValidator, Object_Required_PassWithDefault) {
     SchemaDocument s(sd);
 
     VALIDATE(s, "{ \"email\" : \"bill@stratford-upon-avon.co.uk\", \"address\" : \"Henley Street, Stratford-upon-Avon, Warwickshire, England\", \"authorship\" : \"in question\"}", true);
+#ifdef RAPIDJSON_YGGDRASIL
+    VALIDATE(s, "{ \"name\": \"William Shakespeare\", \"address\" : \"Henley Street, Stratford-upon-Avon, Warwickshire, England\" }", true);
+    VALIDATE(s, "{}", true);
+#else // RAPIDJSON_YGGDRASIL    
     INVALIDATE(s, "{ \"name\": \"William Shakespeare\", \"address\" : \"Henley Street, Stratford-upon-Avon, Warwickshire, England\" }", "", "required", "",
         "{ \"required\": {"
         "    \"errorCode\": 15,"
@@ -1322,6 +1326,7 @@ TEST(SchemaValidator, Object_Required_PassWithDefault) {
         "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
         "    \"missing\": [\"email\"]"
         "}}");
+#endif // RAPIDJSON_YGGDRASIL
 }
 
 TEST(SchemaValidator, Object_PropertiesRange) {

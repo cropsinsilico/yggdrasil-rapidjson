@@ -6352,7 +6352,7 @@ public:
 	} else {							\
 	  memcpy(value, letters_char, prec);				\
 	}								\
-	data.SetScalar(value, static_cast<SizeType>(prec * prec_encoding / sizeof(Ch)), allocator, encoding_str, encoding_len); \
+	data.SetScalar(value, static_cast<SizeType>(prec * prec_encoding / sizeof(Ch)), encoding_str, encoding_len, allocator); \
 	allocator.Free(value)
 	SWITCH_SUBTYPE_(GET_SCALAR_, SET_SCALAR_, STRING_SCALAR_)
 #undef GET_SCALAR_
@@ -7415,8 +7415,13 @@ public:
             context.error_handler.StartMissingProperties();
             for (SizeType index = 0; index < propertyCount_; index++)
                 if (properties_[index].required && !context.propertyExist[index])
+#ifdef RAPIDJSON_YGGDRASIL
+                    if (!properties_[index].schema->defaultSet_)
+                        context.error_handler.AddMissingProperty(properties_[index].name);
+#else // RAPIDJSON_YGGDRASIL
                     if (properties_[index].schema->defaultValueLength_ == 0 )
                         context.error_handler.AddMissingProperty(properties_[index].name);
+#endif // RAPIDJSON_YGGDRASIL
             if (context.error_handler.EndMissingProperties())
                 RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
         }
@@ -12903,6 +12908,11 @@ public:
     void ResetWarning() {
         warning_.SetObject();
         currentWarning_.SetNull();
+    }
+
+    //! Check if a warning has been set
+    bool HasWarning() const {
+      return (warning_.MemberCount() > 0);
     }
   
     //! Gets the warning object.

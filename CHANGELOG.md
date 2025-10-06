@@ -5,14 +5,19 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ## 1.1.0.1 - XXXX-XX-XX
 
-### Maintenance
-
-* Updates to docs to document YggdrasilRapidJSON specific features and remove RapidJSON specific information
-* Workflow to deploy docs on tags (or docs branch)
-* Added to example/yggdrasil/yggdrasil.cpp (complex numbers)
+### Features
+* Fixed support for non-string default in validation
 * Fixed corner cases for units operations include type promotion
+
+### Improvements
+* Updates to docs to document YggdrasilRapidJSON specific features and remove RapidJSON specific information
+* Added to example/yggdrasil/yggdrasil.cpp (complex numbers)
 * Added additional units tests
 * Added to example/yggdrasil/units.cpp for missing operators
+* Added missing SetScalar methods for string scalars w/ encoding
+
+### Maintenance
+* Workflow to deploy docs on tags (or docs branch)
 
 ## 1.1.0.0 - 2025-09-24
 

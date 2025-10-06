@@ -9,6 +9,10 @@ Like RapidJSON's JSON schema features, YggdrasilRapidJSON's schema features impl
 
 [TOC]
 
+# Validation
+
+Validation allows for JSON documents to be validated against JSON schema to determine if the JSON conforms to the expected format. For a description of validation, see [RapidJSON's documentation](https://rapidjson.org/md_doc_schema.html).
+
 # Normalization
 
 JSON normalization modifies the JSON structure (when possible) to be compliant with a JSON schema. If the structure cannot be normalized, validation errors will be set.
@@ -67,63 +71,486 @@ const Value& normalized = normalizer.GetNormalized();
 
 # Extension properties {#Extension}
 
-In addition to the JSON schema standard implemented by RapidJSON, YggdrasilRapidJSON supports several additional schema properties for validating YggdrasilRapidJSON documents.
+In addition to the JSON schema standard implemented by RapidJSON, YggdrasilRapidJSON supports several additional schema keywords & keyword values for validating/normalizing YggdrasilRapidJSON documents.
 
 ## Validation keywords for any instance type {#AnyTypes}
 
-### enum {#enum}
-
-This keyword has no additional properties
-beyond `instanceRef` and `schemaRef`.
-
-* The allowed values are not listed
-  because `SchemaDocument` does not store them in original form.
-* The violating value is not reported
-  because it might be unwieldy.
-
-If you need to report these details to your users,
-you can access the necessary information
-by following `instanceRef` and `schemaRef`.
-
 ### type {#type}
 
-* `expected`: required array of one or more unique strings,
-  each of which is one of the seven primitive types
-  defined by the JSON Schema Draft 04 Core specification.
-  Lists the types allowed by the `type` schema keyword.
-* `actual`: required string, also one of seven primitive types.
-  The primitive type of the instance.
+#### Description
 
-### allOf, anyOf, and oneOf {#allOf-anyOf-oneOf}
+`[string, array]` Expected type or types. In addition to the types supported by RapidJSON from the JSON Schema Draft 04 Core specification, YggdrasilRapidJSON allows for several additional types to be specified:
 
-* `errors`: required array of at least one object.
-  There will be as many items as there are subschemas
-  in the `allOf`, `anyOf` or `oneOf` schema keyword, respectively.
-  Each item will be the error value
-  produced by validating the instance
-  against the corresponding subschema.
+* `scalar`: Single numeric or string value with defined `subtype`, `precision`, and optional `units`. Schemas for scalars with `string` subtype can also optionally have an `encoding` keyword.
+* `ndarray`: Uniform N-dimensional array of numeric or string values with defined `subtype`, `precision`, `ndim`, `shape`, and optional `units`. Schemas for ND arrays with `string` subtype can also optionally have an `encoding` keyword.
+* `1darray`: Uniform 1-dimensional array of numeric or string values with defined `subtype`, `precision`, `length`, and optional `units`. Schemas for 1D arrays with `string` subtype can also optionally have an `encoding` keyword. Internally 1D arrays are stored as ND arrays and not a unique type, but this type is supported for convenience.
+* `python_class`: Python class on the current path.
+* `python_function`: Python function on the current path.
+* `python_instance`: Python instance that can be constructed from a `python_class` on the current path.
+* `obj`: ObjWavefront 3D mesh.
+* `ply`: Ply 3D mesh.
+* `schema`: JSON schema.
+* `any`: Explicitly allow any type (from JSON core or YggdrasilRapidJSON extension types).
 
-For `allOf`, at least one error value will be non-empty.
-For `anyOf`, all error values will be non-empty.
-For `oneOf`, either all error values will be non-empty,
-or more than one will be empty.
+#### Role in validation
 
-### not {#not}
+If the type of the JSON document does not match the type(s) specified, the following error will be set:
 
-This keyword has no additional properties
-apart from `instanceRef` and `schemaRef`.
+`Property has a type '%actual' that is not in the following list: '%expected'.`
 
+* `expected`: The types allowed by the `type` schema keyword.
+* `actual`: The primitive type of the instance.
 
-## Keywords for numeric scalars (and ndarrays) {#Scalars}
+~~~cpp
+Document sd;
+sd.Parse("{ \"type\": \"integer\" }");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+Document d;
+d.Parse("42");
+assert(!d.HasParseError());
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
+
+#### Role in normalization
+
+Some transformation between JSON primitive types and scalar/ndarray types are allowed during normalization. See the [subtype section](@ref subtype) below for details on those transformations.
+
+## Schema keywords for collections (arrays & objects)
+
+### allowSingular {#allowSingular}
+
+#### Description
+
+`[boolean, string]` If `true`, JSON that is valid for the first `item` schema (for array schemas) or `property` schema will also be considered valid. For objects, this can also be a property name, in which case the schema for that property will be used.
+
+#### Role in validation
+
+JSON documents validated against schemas with `allowSingular` set will be valid if they match either the wrapped or unwrapped schemas.
+
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"array\", "
+    "  \"allowSingular\": true, "
+    "  \"items\": {\"type\": \"string\"}"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.Parse("\"hello\"");
+assert(!d.HasParseError());
+
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
+
+#### Role in normalization
+
+If the normalized JSON validates against the "unwrapped" version of the schema (outside an array/object), the normalized document will consist of the "wrapped" version with the wrapping array/object added.
+
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+std::cout << normalizer.GetNormalized() << std::endl;
+// ["hello"]
+~~~
+
+### allowWrapped {#allowWrapped}
+
+#### Description
+
+`[boolean, string]` If `true`, JSON that is valid for an array or object containing the JSON (as a single item/property) will also be considered valid. For objects, this should be a string specifying the property name that will be considered valid.
+
+#### Role in validation
+
+JSON documents validated against schemas with `allowWrapped` set will be valid if they match either the wrapped or unwrapped schemas.
+
+~~~cpp
+Document sd;
+sd.Parse("{\"type\": \"string\", \"allowWrapped\": true}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.Parse("[\"hello\"]");
+assert(!d.HasParseError());
+
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
+
+#### Role in normalization
+
+If the normalized JSON validates against the "wrapped" version of the schema (inside an array/object), the normalized document will consist of the "unwrapped" version with the wrapping array/object removed.
+
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+std::cout << normalizer.GetNormalized() << std::endl;
+// "hello"
+~~~
+
+## Schema keywords for objects {#Objects}
+
+### default {#default}
+
+#### Description
+
+`[any]` Default value for a property. While RapidJSON allowed for this to be specified for `string` properties and validated JSON objects missing required properties if a `default` was specified, YggdrasilRapidJSON allows the default to be of any type and uses this keyword in normalization.
+
+#### Role in validation
+
+If a required property is missing from a validated JSON object, but a default is provided, the document will be considered valid.
+
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"object\","
+    "  \"required\": [\"size\"],"
+    "  \"properties\": {"
+    "    \"size\": {"
+    "      \"type\": \"number\","
+    "      \"default\": 5"
+    "    }"
+    "  }"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.Parse("{}");
+assert(!d.HasParseError());
+
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
+
+#### Role in normalization
+
+If a required property is missing from a normalized JSON object, the default will be added.
+
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+std::cout << normalizer.GetNormalized() << std::endl;
+// {"size": 5}
+~~~
+
+### aliases {#aliases}
+
+#### Description
+
+`[array]` List of alternate property names that should also validate against the schema that contains the `aliases` keyword.
+
+#### Role in validation
+
+Aliased properties will validate against JSON schema containing the `aliases` property if the aliased properties validate against the unaliased property schema.
+
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"object\","
+    "  \"properties\": {"
+    "     \"street_address\": { \"type\": \"string\","
+    "                           \"aliases\": [\"street\"] }},"
+    "  \"required\": [\"street_address\"]"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.Parse("{ \"street\": \"1600 Pennsylvania Ave.\" }");
+assert(!d.HasParseError());
+
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
+
+#### Role in normalization
+
+Aliased properties will be migrated to the unaliased property name.
+
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+std::cout << normalizer.GetNormalized() << std::endl;
+// {"street_address": "1600 Pennsylvania Ave."}
+~~~
+
+### deprecated {#deprecated}
+
+#### Description
+
+`[boolean, string]` Mark a property as deprecated so that a warning is emitted when a deprecated property is present during validation. The value of the `deprecated` keyword can contain the warning message that should be emitted as a string.
+
+#### Role in validation
+
+A warning will be issued if a deprecated property is present.
+
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"object\","
+    "  \"properties\": {"
+    "     \"old_valid\": {"
+    "        \"type\": \"string\","
+    "        \"deprecated\": \"Deprecation message\"},"
+    "     \"valid\": {"
+    "        \"type\": \"integer\"}"
+    "  }"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.Parse("{\"old_valid\": \"string\", \"valid\": 0}");
+assert(!d.HasParseError());
+
+d.Accept(validator);
+assert(validator.IsValid());
+assert(validator.HasWarning());
+~~~
+
+#### Role in normalization
+
+Same as validation.
+
+### pushProperties {#pushProperties}
+
+#### Description
+
+`[object]` Allow properties from JSON objects to be pushed to other location in the document to satisfy missing required properties. Keys in the `pushProperties` object should be the location that properties specified in the value should be pushed to. These can be absolute schema addresses or relative to the address of the schema containing the `pushProperties` keyword. Values can be boolean to specify all (`true`) or none (`false`) of the properties in the current schema, or an array of names of properties that should be pushed.
+
+#### Role in validation
+
+If missing required properties can be satified by pushing the properties as specified, the document will be considered valid.
+
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"object\","
+    "  \"properties\": {"
+    "    \"billing_address\": {"
+    "      \"type\": \"object\","
+    "      \"properties\": {"
+    "        \"street_address\": {"
+    "          \"type\": \"string\""
+    "        },"
+    "        \"city\": {"
+    "          \"type\": \"string\""
+    "        }"
+    "      },"
+    "      \"required\": [\"street_address\", \"city\"],"
+    "      \"default\": {}"
+    "    },"
+    "    \"shipping_address\": {"
+    "      \"type\": \"object\","
+    "      \"properties\": {"
+    "        \"street_address\": {"
+    "          \"type\": \"string\""
+    "        },"
+    "        \"city\": {"
+    "          \"type\": \"string\""
+    "        }"
+    "      },"
+    "      \"required\": [\"street_address\", \"city\"],"
+    "      \"pushProperties\": {"
+    "        \"../billing_address\": true"
+    "      }"
+    "    }"
+    "  },"
+    "  \"required\": [\"shipping_address\", \"billing_address\"]"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.Parse(
+    "{"
+    "  \"shipping_address\": {"
+    "    \"street_address\": \"1600 Pennsylvania Avenue NW\","
+    "    \"city\": \"Washington\""
+    "  }"
+    "}");
+assert(!d.HasParseError());
+
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
+
+#### Role in normalization
+
+The pushed properties will be copied to the specified locations in the normalized document to satisfy missing required properties.
+
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+std::cout << normalizer.GetNormalized() << std::endl;
+// {
+//   "shipping_address": {
+//     "street_address": "1600 Pennsylvania Ave.",
+//     "city": "Washington"
+//   },
+//   "billing_address": {
+//     "street_address": "1600 Pennsylvania Ave.",
+//     "city": "Washington"
+//   },
+// }
+~~~
+
+### pullProperties {#pullProperties}
+
+#### Description
+
+`[object]` Allow properties from JSON objects to be pulled from other location in the document to satisfy missing required properties. Keys in the `pullProperties` object should be the location that properties specified in the value should be pulled from. These can be absolute schema addresses or relative to the address of the schema containing the `pullProperties` keyword. Values can be boolean to specify all (`true`) or none (`false`) of the properties in the current schema, or an array of names of properties that should be pulled.
+
+#### Role in validation
+
+If missing required properties can be satified by pulling the properties as specified, the document will be considered valid.
+
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"object\","
+    "  \"properties\": {"
+    "    \"billing_address\": {"
+    "      \"type\": \"object\","
+    "      \"properties\": {"
+    "        \"street_address\": {"
+    "          \"type\": \"string\""
+    "        },"
+    "        \"city\": {"
+    "          \"type\": \"string\""
+    "        }"
+    "      },"
+    "      \"required\": [\"street_address\", \"city\"],"
+    "      \"default\": {},"
+    "      \"pullProperties\": {"
+    "        \"../shipping_address\": true"
+    "      }"
+    "    },"
+    "    \"shipping_address\": {"
+    "      \"type\": \"object\","
+    "      \"properties\": {"
+    "        \"street_address\": {"
+    "          \"type\": \"string\""
+    "        },"
+    "        \"city\": {"
+    "          \"type\": \"string\""
+    "        }"
+    "      },"
+    "      \"required\": [\"street_address\", \"city\"]"
+    "    }"
+    "  },"
+    "  \"required\": [\"shipping_address\", \"billing_address\"]"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.Parse(
+    "{"
+    "  \"shipping_address\": {"
+    "    \"street_address\": \"1600 Pennsylvania Avenue NW\","
+    "    \"city\": \"Washington\""
+    "  }"
+    "}");
+assert(!d.HasParseError());
+
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
+
+#### Role in normalization
+
+The pulled properties will be copied from the specified locations in the normalized document to satisfy missing required properties.
+
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+std::cout << normalizer.GetNormalized() << std::endl;
+// {
+//   "shipping_address": {
+//     "street_address": "1600 Pennsylvania Ave.",
+//     "city": "Washington"
+//   },
+//   "billing_address": {
+//     "street_address": "1600 Pennsylvania Ave.",
+//     "city": "Washington"
+//   },
+// }
+~~~
+
+## Keywords for scalars (and ndarrays) {#Scalars}
 
 ### subtype {#subtype}
 
-* `expected`: required array of one or more unique strings,
-  each of which is one of the five yggdrasil subtypes for scalars and
-  ndarrays (TODO: REFERENCE TO DOCS ON NEW TYPES)
-  Lists the types allowed by the `subtype` schema keyword.
-* `actual`: required string, also one of five yggdrasil subtypes.
-  The scalar/ndarray subtype of the instance.
+#### Description
+
+`[string, array]` The base type for `scalar` JSON values or elements in `ndarray` JSON values. Valid values include:
+
+* `float`: Floating point number
+* `int`: Signed integer
+* `uint`: Unsigned integer
+* `complex`: Complex number
+* `string`: String
+* `bytes`: Special case of `string` with `encoding="ASCII"`
+* `unicode`: Special case of `string` with `encoding="UCS4"`
+* `any`: Any subtype is allowed
+
+#### Role in validation
+
+If the subtype of the JSON document does not match the subtype(s) specified, the following error will be set:
+
+`Property has a subtype '%actual' that is not in the following list '%expected'.`
+
+* `expected`: The subtypes allowed by the `subtype` schema keyword.
+* `actual`: The scalar/ndarray subtype of the instance.
+
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"scalar\","
+    "  \"subtype\": \"float\","
+    "  \"precision\": 8"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.SetInt(5);
+assert(d.IsInt());
+
+d.Accept(validator);
+assert(!validator.IsValid());
+~~~
+
+#### Role in normalization
 
 The following type transformation are allowed to normalize a document to the subtype(s) specified by a schema if the precision schema property can also be normalized. When the instance satisfies multiple specified by the schema under normalization, the first one will be used in the normalized document.
 
@@ -150,155 +577,321 @@ The following type transformation are allowed to normalize a document to the sub
 #### Normalizable to string subtype
 * `{"type": "string"}`
 
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+const SchemaNormalizer::ValueType& n = normalizer.GetNormalized();
+assert(n.IsScalar<double>());
+assert(!n.IsInt64());
+~~~
 
 ### precision {#precision}
 
-* `expected`: required integer strictly greater than 0.
-  The value of the `precision` keyword specified in the schema
-  defining the minimum allowed precision (in bytes) for scalars or
-  ndarray elements.
-* `actual`: required integer.
-  The instance precision.
+#### Description
+
+`[number]` The maximum size of the `scalar` or `ndarray` elements in bytes. For string subtypes, this is the length of the string.
+
+#### Role in validation
+
+If a JSON document has a larger precision that the one specified by the schema, the following error will be produced:
+
+`Property has a precision of %actual that is incompatible with the schema precision %expected.`
+
+* `expected`: Maximum precision (in bytes) allowed by the `precision` schema keyword.
+* `actual`: The precision (in bytes) of the instance.
+
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"scalar\","
+    "  \"subtype\": \"float\","
+    "  \"precision\": 8"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.SetScalar((float16_t)1.6, d.GetAllocator());
+assert(d.IsScalar<float16_t>());
+assert(d.GetPrecision() == 2);
+
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
+
+#### Role in normalization
 
 For numbers, instances can be cast to precision/subtype if they are within the range allowable for the equivalent type in C++. For strings (both primative and scalars/arrays), an instance can only be normalized to a larger precision (it is padded with spaces).
 
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+const SchemaNormalizer::ValueType& n = normalizer.GetNormalized();
+assert(n.IsScalar<double>());
+assert(n.GetPrecision() == 8);
+~~~
 
-### multipleOf {#multipleof}
+### units {#units}
 
-* `expected`: required number strictly greater than 0.
-  The value of the `multipleOf` keyword specified in the schema.
-* `actual`: required number.
-  The instance value.
+#### Description
 
-### maximum {#maximum}
+`[string]` The physical units that `scalar` or `ndarray` elements should have. A description of how units can be specified can be found in the [units documentation](@ref Units).
 
-* `expected`: required number.
-  The value of the `maximum` keyword specified in the schema.
-* `exclusiveMaximum`: optional boolean.
-  This will be true if the schema specified `"exclusiveMaximum": true`,
-  and will be omitted otherwise.
-* `actual`: required number.
-  The instance value.
+#### Role in validation
 
-### minimum {#minimum}
+If a JSON document has units that are incompatible (not having the same dimensionality) with those specified by the validation schema, the following error will be set:
 
-* `expected`: required number.
-  The value of the `minimum` keyword specified in the schema.
-* `exclusiveMinimum`: optional boolean.
-  This will be true if the schema specified `"exclusiveMinimum": true`,
-  and will be omitted otherwise.
-* `actual`: required number.
-  The instance value.
+`Property has units '%actual' that are not compatible with the schema '%expected'.`
 
-## Validation keywords for strings {#Strings}
+* `expected`: Units allowed by the `units` schema keyword.
+* `actual`: The units of the instance.
 
-### maxLength {#maxLength}
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"scalar\","
+    "  \"subtype\": \"float\","
+    "  \"precision\": 8,"
+    "  \"units\": \"g\""
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
 
-* `expected`: required number greater than or equal to 0.
-  The value of the `maxLength` keyword specified in the schema.
-* `actual`: required string.
-  The instance value.
+Document d;
+d.SetScalar(1.6, "kg", d.GetAllocator());
+assert(d.IsScalar<double>());
+assert(d.HasUnits());
+assert(d.GetUnits() == "kg");
 
-### minLength {#minLength}
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
 
-* `expected`: required number greater than or equal to 0.
-  The value of the `minLength` keyword specified in the schema.
-* `actual`: required string.
-  The instance value.
+#### Role in normalization
 
-### pattern {#pattern}
+If the units of the JSON instance are compatible with the schema units, the scalar/ndarray will be converted to the schema units in the normalized document.
 
-* `actual`: required string.
-  The instance value.
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+const SchemaNormalizer::ValueType& n = normalizer.GetNormalized();
+assert(n.IsScalar<double>());
+assert(n.HasUnits());
+assert(n.GetUnits() == "g");
+~~~
 
-(The expected pattern is not reported
-because the internal representation in `SchemaDocument`
-does not store the pattern in original string form.)
+### shape {#shape}
 
-## Validation keywords for arrays {#Arrays}
+#### Description
 
-### additionalItems {#additionalItems}
+`[array]` The size in each dimension that `ndarray` instance should have.
 
-This keyword is reported
-when the value of `items` schema keyword is an array,
-the value of `additionalItems` is `false`,
-and the instance is an array
-with more items than specified in the `items` array.
+#### Role in validation
 
-* `disallowed`: required integer greater than or equal to 0.
-  The index of the first item that has no corresponding schema.
+If the instance does not have the same shape as specified in the schema, the following error will be set:
 
-### maxItems and minItems {#maxItems-minItems}
+`Property has a shape %actual that does not match the schema %expected.`
 
-* `expected`: required integer greater than or equal to 0.
-  The value of `maxItems` (respectively, `minItems`)
-  specified in the schema.
-* `actual`: required integer greater than or equal to 0.
-  Number of items in the instance array.
+* `expected`: Shape allowed by the `shape` schema keyword.
+* `actual`: The shape of the instance.
 
-### uniqueItems {#uniqueItems}
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"ndarray\","
+    "  \"subtype\": \"float\","
+    "  \"precision\": 8,"
+    "  \"shape\": [2, 3]"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
 
-* `duplicates`: required array
-  whose items are integers greater than or equal to 0.
-  Indices of items of the instance that are equal.
+Document d;
+d.SetNDArray({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}}, d.GetAllocator());
+assert(d.IsNDArray<double>());
 
-(RapidJSON only reports the first two equal items,
-for performance reasons.)
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
 
-## Validation keywords for objects
+#### Role in normalization
 
-### maxProperties and minProperties {#maxProperties-minProperties}
+This keyword does not apply to normalization.
 
-* `expected`: required integer greater than or equal to 0.
-  The value of `maxProperties` (respectively, `minProperties`)
-  specified in the schema.
-* `actual`: required integer greater than or equal to 0.
-  Number of properties in the instance object.
+### ndim {#ndim}
 
-### required {#required}
+#### Description
 
-* `missing`: required array of one or more unique strings.
-  The names of properties
-  that are listed in the value of the `required` schema keyword
-  but not present in the instance object.
+`[integer]` The number of dimensions that `ndarray` instances should have.
 
-### additionalProperties {#additionalProperties}
+#### Role in validation
 
-This keyword is reported
-when the schema specifies `additionalProperties: false`
-and the name of a property of the instance is
-neither listed in the `properties` keyword
-nor matches any regular expression in the `patternProperties` keyword.
+If the instance does not have the name number of dimensions as specified in the schema, the shape error will be set (see above), but the `expected` shape will be set to an array of `null` with `ndim` items.
 
-* `disallowed`: required string.
-  Name of the offending property of the instance.
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"ndarray\","
+    "  \"subtype\": \"float\","
+    "  \"precision\": 8,"
+    "  \"ndim\": 2"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
 
-(For performance reasons,
-RapidJSON only reports the first such property encountered.)
+Document d;
+d.SetNDArray({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}}, d.GetAllocator());
+assert(d.IsNDArray<double>());
 
-### dependencies {#dependencies}
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
 
-* `errors`: required object with one or more properties.
-  Names and values of its properties are described below.
+#### Role in normalization
 
-Recall that JSON Schema Draft 04 supports
-*schema dependencies*,
-where presence of a named *controlling* property
-requires the instance object to be valid against a subschema,
-and *property dependencies*,
-where presence of a controlling property
-requires other *dependent* properties to be also present.
+This keyword does not apply to normalization.
 
-For a violated schema dependency,
-`errors` will contain a property
-with the name of the controlling property
-and its value will be the error object
-produced by validating the instance object
-against the dependent schema.
+### length {#length}
 
-For a violated property dependency,
-`errors` will contain a property
-with the name of the controlling property
-and its value will be an array of one or more unique strings
-listing the missing dependent properties.
+#### Description
+
+`[integer]` The number of elements that 1-dimensional `ndarray` instance should have.
+
+#### Role in validation
+
+If the instance does not have a shape of `[length]`, the shape error will be set (see above), but the `expected` shape will be set to `[length]`.
+
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"ndarray\","
+    "  \"subtype\": \"float\","
+    "  \"precision\": 8,"
+    "  \"length\": 3"
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.SetNDArray({1.0, 2.0, 3.0}, d.GetAllocator());
+assert(d.IsNDArray<double>());
+
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
+
+#### Role in normalization
+
+This keyword does not apply to normalization.
+
+### encoding {#encoding}
+
+#### Description
+
+`[string]` Encoding that string `scalar` or `ndarray` instance elements should have. Available values include:
+
+* `ASCII`
+* `UCS4`
+* `UTF8`
+* `UTF16`
+* `UTF32`
+
+#### Role in validation
+
+If the instance encoding does not match the encoding specified by the schema, the following error will be set:
+
+`Property has an encoding '%actual' that does not match the schema '%expected'.`
+
+* `expected`: Encoding allowed by the `encoding` schema keyword.
+* `actual`: The encoding of the instance.
+
+~~~cpp
+TODO
+~~~
+
+#### Role in normalization
+
+If the instance has a different encoding that the schema, it will be transcoded into the schema encoding.
+
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+const SchemaNormalizer::ValueType& n = normalizer.GetNormalized();
+assert(n.HasEncoding());
+assert(n.GetEncoding() == "UCS4");
+~~~
+
+## Keywords for Python classes, functions, & instances
+
+### class {#class}
+
+#### Description
+
+`[class]` Python class that Python instances should be a subclass of.
+
+#### Role in validation
+
+If an instance is not a Python instance of the specified class, the following error will be set:
+
+`Property is not a Python instance of the class '%expected' specified in the schema (actual = '%actual').`
+
+* `expected`: Python class allowed by the `class` schema keyword.
+* `actual`: The class of the instance.
+
+~~~cpp
+Document sd;
+sd.Parse(
+    "{"
+    "  \"type\": \"instance\","
+    "  \"class\": \"example_python:ExampleSubClass\""
+    "}");
+assert(!sd.HasParseError());
+SchemaDocument s(sd);
+SchemaValidator validator(s);
+
+Document d;
+d.Parse(
+    "{"
+    "  \"class\": \"example_python:ExampleSubClass\","
+    "  \"args\": ["
+    "    \"hello\","
+    "    0.5"
+    "  ],"
+    "  \"kwargs\": {"
+    "    \"a\": \"world\","
+    "    \"b\": 1"
+    "  }"
+    "}");
+assert(!d.HasParseError());
+assert(d.IsObject());
+
+d.Accept(validator);
+assert(validator.IsValid());
+~~~
+
+#### Role in normalization
+
+If a JSON object contains the required information to reconstruct a Python instance, the normalized document will be a Python instance.
+
+~~~cpp
+SchemaNormalizer normalizer(s);
+d.Accept(normalizer);
+assert(normalizer.IsValid());
+const SchemaNormalizer::ValueType& n = normalizer.GetNormalized();
+assert(n.IsPythonInstance());
+~~~
 

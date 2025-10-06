@@ -31,7 +31,8 @@ set(UNITTEST_SOURCES
     valuetest.cpp
     writertest.cpp
     unitstest.cpp
-    normalizetest.cpp)
+    normalizetest.cpp
+    docsschematest.cpp)
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)

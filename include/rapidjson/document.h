@@ -5594,6 +5594,12 @@ public:
       return false;
     return (YggSubTypeString<T>() == GetSubType());
   }
+  template<typename T>
+  bool IsScalar(RAPIDJSON_ENABLEIF((internal::IsSame<T, Ch>))) const {
+    if (!IsScalar())
+      return false;
+    return (GetStringSubTypeString() == GetSubType());
+  }
 #define IS_BUILTIN_SCALAR_(type, check)					\
   template <typename T>							\
   bool IsScalar(RAPIDJSON_ENABLEIF((internal::IsSame<T, type>))) const { \
@@ -7102,11 +7108,26 @@ public:
     this->~GenericValue();
     new (this) GenericValue(x, units_str, units_len, allocator);
     return *this; }
-  GenericValue& SetScalar(const Ch* x, SizeType precision, Allocator& allocator,
-			  const Ch* encoding=NULL, SizeType encoding_len=0) {
+  GenericValue& SetScalar(const Ch* x, Allocator& allocator) {
+    return SetScalar(x, 0, nullptr, 0, allocator);
+  }
+  GenericValue& SetScalar(const Ch* x, const Ch* encoding, Allocator& allocator) {
+    return SetScalar(x, 0, encoding, 0, allocator);
+  }
+  GenericValue& SetScalar(const Ch* x, SizeType precision, Allocator& allocator) {
+    return SetScalar(x, precision, nullptr, 0, allocator);
+  }
+  GenericValue& SetScalar(const Ch* x, SizeType precision,
+                          const Ch* encoding, SizeType encoding_len,
+                          Allocator& allocator) {
+    if (x && precision == 0)
+      precision = internal::StrLen(x);
+    if (encoding && encoding_len == 0)
+      encoding_len = internal::StrLen(encoding);
     this->~GenericValue();
     new (this) GenericValue(x, precision, encoding, encoding_len, allocator);
-    return *this; }
+    return *this;
+  }
   template<typename T>
   GenericValue& SetScalar(const units::GenericQuantity<T, EncodingType> &x,
 			  Allocator& allocator,
