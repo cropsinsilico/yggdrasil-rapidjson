@@ -38,6 +38,12 @@ extern "C" {
 #ifndef NPY_NO_DEPRECATED_API
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #endif
+// Force default visibility for Numpy symbols (changed to hidden in
+//   numpy > 2.0.2) so they can be used by executables linking against
+//   the shared library.
+#ifndef NPY_API_SYMBOL_ATTRIBUTE
+#define NPY_API_SYMBOL_ATTRIBUTE 
+#endif
 
 #ifndef CHECK_UNICODE_NO_NUMPY
 #ifdef RAPIDJSON_DONT_IMPORT_NUMPY
