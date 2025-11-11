@@ -69,20 +69,20 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     endif()
 endif()
 
-option(RAPIDJSON_SKIP_VALGRIND_TESTS "Disable valgrind tests" OFF)
-if((NOT MSVC) AND (NOT RAPIDJSON_SKIP_VALGRIND_TESTS))
+option(YGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS "Disable valgrind tests" OFF)
+if((NOT MSVC) AND (NOT YGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS))
     find_program(VALGRIND_FOUND valgrind)
     if (VALGRIND_FOUND)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRAPIDJSON_DONT_IMPORT_NUMPY -O0")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DYGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY -O0")
     else()
-	set(RAPIDJSON_SKIP_VALGRIND_TESTS ON)
+	set(YGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS ON)
     endif()
 else()
-    set(RAPIDJSON_SKIP_VALGRIND_TESTS ON)
+    set(YGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS ON)
 endif()
 
-if (RAPIDJSON_SKIP_VALGRIND_TESTS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRAPIDJSON_HAS_STDSTRING=1")
+if (YGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DYGGDRASIL_RAPIDJSON_HAS_STDSTRING=1")
 endif()
 
 add_library(namespacetest STATIC namespacetest.cpp)
@@ -99,28 +99,28 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|ARMClang")
         COMMENT "Creating debug symbols...")
 endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|ARMClang")
 
-message(STATUS "RAPIDJSON_PYTHON_ENV = ${RAPIDJSON_PYTHON_ENV}")
+message(STATUS "YGGDRASIL_RAPIDJSON_PYTHON_ENV = ${YGGDRASIL_RAPIDJSON_PYTHON_ENV}")
 add_test(NAME unittest
     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set_tests_properties(unittest PROPERTIES
                      ENVIRONMENT
-		     "${RAPIDJSON_PYTHON_ENV}")
+		     "${YGGDRASIL_RAPIDJSON_PYTHON_ENV}")
 
-if(NOT RAPIDJSON_SKIP_VALGRIND_TESTS)
+if(NOT YGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS)
     # Not running SIMD.* unit test cases for Valgrind
     add_test(NAME valgrind_unittest
              COMMAND valgrind --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind.supp --suppressions=${CMAKE_SOURCE_DIR}/test/valgrind-python.supp --leak-check=full --show-leak-kinds=all -s --error-exitcode=1 --track-origins=yes --dsymutil=no --keep-debuginfo=yes --read-var-info=yes ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittest --gtest_filter=-SIMD.*
 	     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
     set_tests_properties(valgrind_unittest PROPERTIES
                          ENVIRONMENT
-                         "${RAPIDJSON_PYTHON_ENV}")
-endif(NOT RAPIDJSON_SKIP_VALGRIND_TESTS)
+                         "${YGGDRASIL_RAPIDJSON_PYTHON_ENV}")
+endif(NOT YGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS)
 
 if(NOT MSVC)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         add_test(NAME symbol_check
-                 COMMAND sh -c "objdump -t -C libnamespacetest.a | grep rapidjson ; test $? -ne 0"
+                 COMMAND sh -c "objdump -t -C libnamespacetest.a | grep yggdrasil_rapidjson ; test $? -ne 0"
                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif(NOT MSVC)

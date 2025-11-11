@@ -70,19 +70,19 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_YGGDRASIL=OFF
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DDISABLE_YGGDRASIL_RAPIDJSON=ON
       - name: (WINDOWS) Configure w/ yggdrasil
         if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=$env:pythonLocation -DRAPIDJSON_YGGDRASIL_TESTS=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=$env:pythonLocation -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON
       - name: (UNIX) Configure w/ yggdrasil
         if: matrix.os != 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=${pythonLocation} -DRAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF -DRAPIDJSON_YGGDRASIL_TESTS=ON -DRAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=${pythonLocation} -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
       - name: Build
         run: |
           cd build
@@ -146,19 +146,19 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_YGGDRASIL=OFF
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DDISABLE_YGGDRASIL_RAPIDJSON=ON
       - name: (WINDOWS) Configure w/ yggdrasil
         if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON
       - name: (UNIX) Configure w/ yggdrasil
         if: matrix.os != 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON -DRAPIDJSON_YGGDRASIL_TESTS=ON -DRAPIDJSON_CREATE_METASCHEMA=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA=ON
       - name: Build
         run: |
           cd build
