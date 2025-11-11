@@ -5,7 +5,7 @@
 #include "rapidjson/prettywriter.h"
 #include "rapidjson/stringbuffer.h"
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 struct JsonReaderStackItem {
     enum State {

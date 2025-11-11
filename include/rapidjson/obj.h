@@ -1,5 +1,5 @@
-#ifndef RAPIDJSON_OBJ_H_
-#define RAPIDJSON_OBJ_H_
+#ifndef YGGDRASIL_RAPIDJSON_OBJ_H_
+#define YGGDRASIL_RAPIDJSON_OBJ_H_
 
 #include "internal/meta.h"
 #include <iostream>
@@ -11,13 +11,13 @@
 #include <cstdlib>
 #include <typeinfo>
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11 override
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define SINGLE_ARG(...) (__VA_ARGS__)
 
 //! \brief Convert from an alias for a geometry element to the base.
@@ -101,7 +101,7 @@ class ObjRefSurface;
 			   COMPATIBLE_WITH_TYPE(T, std::string)> > > > >
 #define ASSERT_COMPATIBLE(T1, T2)					\
   std::cerr << typeid(T1).name() << " and " << typeid(T2).name() << " types are not compatible." << std::endl; \
-  RAPIDJSON_ASSERT(!sizeof("T1 and T2 types are not compatible."))
+  YGGDRASIL_RAPIDJSON_ASSERT(!sizeof("T1 and T2 types are not compatible."))
 
 //! Object reference index.
 typedef int64_t ObjRef;
@@ -153,11 +153,11 @@ void _type_inc(std::string&) {}
 static inline
 void _type_dec(std::string&) {}
 template <typename T>
-inline void _type_inc(T& x, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) {
+inline void _type_inc(T& x, YGGDRASIL_RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) {
   x++;
 }
 template <typename T>
-inline void _type_dec(T& x, RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) {
+inline void _type_dec(T& x, YGGDRASIL_RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) {
   x--;
 }
 
@@ -172,7 +172,7 @@ inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
 }
 
 
-#define RAPIDJSON_HANDLE_PROPERTY_TYPES_(method)	\
+#define YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(method)	\
   if (second & ObjTypeVertex) {				\
     method(T, ObjRefVertex);				\
   } else if (second & ObjTypeRef) {			\
@@ -186,7 +186,7 @@ inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
   } else if (second & ObjTypeFloat) {			\
     method(T, double);					\
   }
-#define RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(method)	\
+#define YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(method)	\
   if (second & ObjTypeCurve) {					\
     method(T, ObjRefCurve);					\
   } else if (second & ObjTypeSurface) {				\
@@ -194,13 +194,13 @@ inline bool is_equal_vectors(const std::vector<T>& a, const std::vector<T>& b) {
   } else if (second & ObjTypeString) {				\
     method(T, std::string);					\
   }
-#define RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_(sMethod, vMethod)	\
+#define YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_(sMethod, vMethod)	\
   if (second & ObjTypeList) {					\
-    RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(vMethod)		\
-    else RAPIDJSON_HANDLE_PROPERTY_TYPES_(vMethod)		\
+    YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(vMethod)		\
+    else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(vMethod)		\
   }								\
-  else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(sMethod)	\
-  else RAPIDJSON_HANDLE_PROPERTY_TYPES_(sMethod)
+  else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(sMethod)	\
+  else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(sMethod)
 
 struct ObjPropertyType {
 public:
@@ -302,7 +302,7 @@ public:
   //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  RAPIDJSON_DISABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
     setColor(const T& val, bool inc);
   //! \brief Set an integer color
   //! \tparam T Type of source value.
@@ -310,7 +310,7 @@ public:
   //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  RAPIDJSON_ENABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
+  YGGDRASIL_RAPIDJSON_ENABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
     setColor(const T& val, bool inc);
   //! \brief Set the property values by copying from a vector.
   //! \tparam T Type in source vector.
@@ -318,7 +318,7 @@ public:
   //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     set(const std::vector<T>& val, bool inc=false);
@@ -328,7 +328,7 @@ public:
   //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     set(const T& val, bool inc=false);
@@ -338,7 +338,7 @@ public:
   //! \param dec If true and the property is an index, it will be decremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     get(std::vector<T>& out, bool dec=false) const;
@@ -348,7 +348,7 @@ public:
   //! \param dec If true and the property is an index, it will be decremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     get(T& out, bool dec=false) const;
@@ -358,7 +358,7 @@ public:
   //! \param inc If true and the property is an index, it will be incremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     append(const T& val, int index, bool inc=false);
@@ -368,7 +368,7 @@ public:
   //! \param dec If true and the property is an index, it will be decremented.
   //! \return true if successful, false otherwise.
   template<typename T>
-  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			      internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			      COMPATIBLE_WITH_SURF(T)> >), (bool))
     index(const size_t index, T& out, bool dec=false) const;
@@ -618,14 +618,14 @@ public:
   ObjPropertyElement() : ObjBase() {}
   template<typename T>
   ObjPropertyElement(T* mem, const std::string name, uint16_t flag) : ObjBase() {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     const ObjPropertiesMap pairs = {
       ObjPropertyType(mem, name, flag)
     };
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     ObjPropertiesMap pairs;
     pairs.push_back(ObjPropertyType(mem, name, flag));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     this->properties = pairs;
   }
 };
@@ -670,7 +670,7 @@ public:
   //! \param v0 Index of the vertex's coordinates
   template <typename T>
   ObjRefVertex(const T& v0,
-	       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
+	       YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjPropertyElement(), v(v0), vt(0), vn(0), Nparam(1) {
     this->_init_properties();
   }
@@ -681,17 +681,17 @@ public:
     this->_init_properties();
   }
   void _init_properties() OVERRIDE_CXX11 {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     this->properties = {
       ObjPropertyType(&v, "vertex_index", ObjTypeRef),
       ObjPropertyType(&vt, "texture_index", (ObjTypeRef | ObjTypeOpt)),
       ObjPropertyType(&vn, "normal_index", (ObjTypeRef | ObjTypeOpt))
     };
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     this->properties.push_back(ObjPropertyType(&v, "vertex_index", ObjTypeRef));
     this->properties.push_back(ObjPropertyType(&vt, "texture_index", (ObjTypeRef | ObjTypeOpt)));
     this->properties.push_back(ObjPropertyType(&vn, "normal_index", (ObjTypeRef | ObjTypeOpt)));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   }
   int8_t get_Nparam() const {
     int8_t Nparam0 = Nparam;
@@ -859,17 +859,17 @@ public:
     this->_init_properties();
   }
   void _init_properties() OVERRIDE_CXX11 {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     this->properties = {
       ObjPropertyType(&u0, "u0", ObjTypeFloat),
       ObjPropertyType(&u1, "u1", ObjTypeFloat),
       ObjPropertyType(&curv2d, "curve_index", ObjTypeRef)
     };
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     this->properties.push_back(ObjPropertyType(&u0, "u0", ObjTypeFloat));
     this->properties.push_back(ObjPropertyType(&u1, "u1", ObjTypeFloat));
     this->properties.push_back(ObjPropertyType(&curv2d, "curve_index", ObjTypeRef));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   }
   //! \brief Write the curve to an output stream.
   //! \param out Output stream.
@@ -967,7 +967,7 @@ public:
   //! \brief surf0 Index of surface definition.
   template <typename T>
   ObjRefSurface(const T& surf0,
-		RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
+		YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjPropertyElement(), surf(surf0), q0(0), q1(0), curv2d(-1) {
     this->_init_properties();
   }
@@ -978,19 +978,19 @@ public:
     this->_init_properties();
   }
   void _init_properties() OVERRIDE_CXX11 {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     this->properties = {
       ObjPropertyType(&surf, "surface_index", ObjTypeFloat),
       ObjPropertyType(&q0, "q0", ObjTypeFloat),
       ObjPropertyType(&q1, "q1", ObjTypeFloat),
       ObjPropertyType(&curv2d, "curve_index", ObjTypeRef)
     };
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     this->properties.push_back(ObjPropertyType(&surf, "surface_index", ObjTypeFloat));
     this->properties.push_back(ObjPropertyType(&q0, "q0", ObjTypeFloat));
     this->properties.push_back(ObjPropertyType(&q1, "q1", ObjTypeFloat));
     this->properties.push_back(ObjPropertyType(&curv2d, "curve_index", ObjTypeRef));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   }
   //! \brief Write the surface to an output stream.
   //! \param out Output stream.
@@ -1202,29 +1202,29 @@ std::istream & operator >> (std::istream &in, ObjRefSurface &p)
     return false;							\
   }
 template<typename T>
-RAPIDJSON_DISABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
+YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
 ObjPropertyType::setColor(const T& val, bool inc) {
   if ((!mem) || second & ObjTypeList) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_SET_)
+  YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_SET_)
   return true;
 }
 template<typename T>
-RAPIDJSON_ENABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
+YGGDRASIL_RAPIDJSON_ENABLEIF_RETURN((COMPATIBLE_WITH_INT(T)), (bool))
 ObjPropertyType::setColor(const T& val, bool inc) {
   double valF = static_cast<double>(val) / 255.0;
   return setColor(valF, inc);
 }
 template<typename T>
-RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::set(const std::vector<T>& val, bool inc) {
   if ((!mem) || !(second & ObjTypeList)) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_SET_TEMPLATE_)
+  YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_SET_TEMPLATE_)
     return true;
 }
 template<typename T>
-RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::set(const T& val, bool inc) {
@@ -1232,43 +1232,43 @@ ObjPropertyType::set(const T& val, bool inc) {
     return setColor(val, inc);
   }
   if ((!mem) || second & ObjTypeList) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_SET_)
+  YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_SET_)
   return true;
 }
 template<typename T>
-RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::get(std::vector<T>& out, bool dec) const {
   if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_GET_)
+  YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_GET_)
   return false;
 }
 template<typename T>
-RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::get(T& out, bool dec) const {
   if ((!mem) || second & ObjTypeList) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_GET_)
+  YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_GET_)
   return true;
 }
 template<typename T>
-RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::append(const T& val, int index, bool inc) {
   if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_APPEND_)
+  YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_APPEND_)
   return false;
 }
 template<typename T>
-RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
+YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<COMPATIBLE_WITH_STRING(T),
 			    internal::OrExpr<COMPATIBLE_WITH_CURV(T),
 			    COMPATIBLE_WITH_SURF(T)> >), (bool))
 ObjPropertyType::index(const size_t index, T& out, bool dec) const {
   if ((!mem) || !(second & ObjTypeList) || (second & ObjTypeIdx)) return false;
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_INDEX_)
+  YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_INDEX_)
   return false;
 }
 PROPERTY_TYPE_(std::string, ObjTypeString)
@@ -1293,9 +1293,9 @@ bool ObjPropertyType::inc() {
     if (!set(v, true)) return false;				\
   }
   if (second & ObjTypeList) {
-    RAPIDJSON_HANDLE_PROPERTY_TYPES_(INC_VECTOR_);
+    YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(INC_VECTOR_);
   } else {
-    RAPIDJSON_HANDLE_PROPERTY_TYPES_(INC_SCALAR_);
+    YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(INC_SCALAR_);
   }
 #undef INC_SCALAR_
 #undef INC_VECTOR_
@@ -1321,7 +1321,7 @@ bool ObjPropertyType::copy(const ObjPropertyType& rhs) {
   std::vector<T> val;				\
   if (!rhs.get(val)) return false;		\
   return set(val)
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_(HANDLE_SCALAR_CPY_, HANDLE_VECTOR_CPY_)
+  YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_(HANDLE_SCALAR_CPY_, HANDLE_VECTOR_CPY_)
 #undef HANDLE_SCALAR_CPY_
 #undef HANDLE_VECTOR_CPY_
     return false;
@@ -1369,7 +1369,7 @@ bool ObjPropertyType::read(std::istream& in) {
       return true;
     }
     // Do this explicitly because string can't be initialized with 0
-    // else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_READ_)
+    // else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_READ_)
     else if (second & ObjTypeCurve) {
       HANDLE_VECTOR_READ_(T, ObjRefCurve);
     } else if (second & ObjTypeSurface) {
@@ -1381,10 +1381,10 @@ bool ObjPropertyType::read(std::istream& in) {
 	val->push_back(x);
       return true;
     }
-    else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_READ_)
+    else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_READ_)
   }
-  else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_SCALAR_READ_)
-  else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_READ_)
+  else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_SCALAR_READ_)
+  else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_READ_)
 #undef HANDLE_SCALAR_READ_
 #undef HANDLE_VECTOR_READ_
   return false;
@@ -1447,14 +1447,14 @@ bool ObjPropertyType::write(std::ostream& out, bool pad) const {
       }
       HANDLE_VECTOR_WRITE_(double, double);
     }
-    else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_WRITE_)
-    else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_WRITE_)
+    else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_VECTOR_WRITE_)
+    else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_VECTOR_WRITE_)
   } else if (second & ObjTypeFloat) {
     prec = (std::max)(1, count_decimals(*((double*)mem)));
     HANDLE_SCALAR_WRITE_(double, double);
   }
-  else RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_SCALAR_WRITE_)
-  else RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_WRITE_)
+  else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_(HANDLE_SCALAR_WRITE_)
+  else YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_(HANDLE_SCALAR_WRITE_)
 #undef HANDLE_SCALAR_WRITE_
 #undef HANDLE_VECTOR_WRITE_
 #undef RECORD_FORMAT_
@@ -1477,20 +1477,20 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   const std::vector<T>* val_lhs = (std::vector<T>*)mem;			\
   const std::vector<T>* val_rhs = (std::vector<T>*)(rhs.mem);		\
   return is_equal_vectors(*val_lhs, *val_rhs)
-  RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_(HANDLE_SCALAR_, HANDLE_VECTOR_ISEQ_)
+  YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_(HANDLE_SCALAR_, HANDLE_VECTOR_ISEQ_)
 #undef HANDLE_SCALAR_
 #undef HANDLE_VECTOR_ISEQ_
   return false;
 }
-#undef RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_
-#undef RAPIDJSON_HANDLE_PROPERTY_TYPES_
-#undef RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_
+#undef YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_ALL_
+#undef YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_
+#undef YGGDRASIL_RAPIDJSON_HANDLE_PROPERTY_TYPES_SPECIAL_
 
 
 #define REPORT_UNSUPPORTED_ELEMENT(src, name)	\
   {									\
     std::cerr << "Unsupported element signifier for " #src ": " << name << std::endl; \
-    RAPIDJSON_ASSERT(!sizeof("Unsupported element signifier"));		\
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof("Unsupported element signifier"));		\
   }
 #define OBJ_ELEMENT_INIT(word, lhs, args) {				\
     bool first = true;							\
@@ -1565,7 +1565,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   }									\
   /*! \copydoc ObjElement::copy() */					\
   cls* copy() const OVERRIDE_CXX11 { return new cls(*this); }
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, init, props)	\
   /*! \brief Empty constructor. */					\
   /*! \param parent0 The element's parent group. */			\
@@ -1579,7 +1579,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
       UNPACK_MACRO props						\
     };									\
   }
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define GENERIC_ELEMENT_CONSTRUCTOR(cls, base, codeS, init, props)	\
   /*! \brief Empty constructor. */					\
   /*! \param parent0 The element's parent group. */			\
@@ -1594,7 +1594,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
     };									\
     this->properties.assign(&tmp[0], &tmp[(sizeof(tmp) / sizeof(ObjPropertyType)) - 1] + 1); \
   }
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
 
 #define GENERIC_COPY_MEMBERS(cls)					\
   /*! \brief Copy element specific members from another instance. */	\
@@ -1617,14 +1617,14 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   cls(const std::vector<T> &,						\
       const ObjGroupBase* parent0 = NULL,				\
       bool = false) : base(#code, parent0) UNPACK_MACRO init {		\
-    RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from a vector")); \
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from a vector")); \
   }									\
   /*! \brief Raise an error. */						\
   template <typename T, size_t N>					\
   cls(const T (&)[N],							\
       const ObjGroupBase* parent0 = NULL,				\
       bool = false) : base(#code, parent0) UNPACK_MACRO init {		\
-    RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from an array")); \
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof(#cls " elements cannot be initialized from an array")); \
   }
 
 #define GENERIC_SCALAR_CONSTRUCTOR(cls, base, code, type, def, props)	\
@@ -1636,7 +1636,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   template <typename T>							\
   cls(const T& value0,							\
       const ObjGroupBase* parent0 = NULL,				\
-      RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, type)))) :		\
+      YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, type)))) :		\
   base(#code, parent0), value(value0) {					\
     this->_init_properties();						\
   }									\
@@ -1646,10 +1646,10 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   template <typename T>							\
   cls(const T&,								\
       const ObjGroupBase* parent0 = NULL,				\
-      RAPIDJSON_DISABLEIF((internal::OrExpr<COMPATIBLE_WITH_TYPE(T, type),\
+      YGGDRASIL_RAPIDJSON_DISABLEIF((internal::OrExpr<COMPATIBLE_WITH_TYPE(T, type),\
 			   internal::IsPointer<T> >))) :			\
     base(#code, parent0), value(def) {					\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from" #type ".")); \
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from" #type ".")); \
   }
 
 #define GENERIC_SCALAR_BODY_BASE(cls, type)				\
@@ -1668,7 +1668,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   template <typename T>							\
   cls(const std::vector<T> &values0,					\
       const ObjGroupBase* parent0 = NULL,				\
-      RAPIDJSON_ENABLEIF((compat))) :					\
+      YGGDRASIL_RAPIDJSON_ENABLEIF((compat))) :					\
   base(#code, parent0) UNPACK_MACRO init {				\
     this->_init_properties();						\
     assign_values(values, values0);					\
@@ -1679,9 +1679,9 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   template <typename T>							\
   cls(const std::vector<T>&,						\
       const ObjGroupBase* parent0 = NULL,				\
-      RAPIDJSON_DISABLEIF((compat))) :					\
+      YGGDRASIL_RAPIDJSON_DISABLEIF((compat))) :					\
     base(#code, parent0) UNPACK_MACRO init {				\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
   }									\
   /*! \brief Initialize an element from a C array of values. */		\
   /*! \tparam T Array element type. */					\
@@ -1690,7 +1690,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   template <typename T, size_t N>					\
   cls(const T (&values0)[N],						\
       const ObjGroupBase* parent0 = NULL,				\
-      RAPIDJSON_ENABLEIF((compat))) :					\
+      YGGDRASIL_RAPIDJSON_ENABLEIF((compat))) :					\
     base(#code, parent0) UNPACK_MACRO init {				\
     this->_init_properties();						\
     assign_values(values, std::vector<T>(values0, values0+N));		\
@@ -1702,9 +1702,9 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   template <typename T, size_t N>					\
   cls(const T (&)[N],							\
       const ObjGroupBase* parent0 = NULL,				\
-      RAPIDJSON_DISABLEIF((compat))) :					\
+      YGGDRASIL_RAPIDJSON_DISABLEIF((compat))) :					\
     base(#code, parent0) UNPACK_MACRO init {				\
-    RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof(#cls " must be initialized from " #T2 "s.")); \
   }
 #define GENERIC_VECTOR_BODY_BASE(cls, type)				\
   GENERIC_COPY_MEMBERS(cls)						\
@@ -1729,7 +1729,7 @@ bool ObjPropertyType::is_equal(const ObjPropertyType& rhs) const {
   bool from_values() OVERRIDE_CXX11 {					\
     int min = min_values(true);						\
     int max = max_values(true);						\
-    RAPIDJSON_ASSERT((min < 0 || values.size() >= (size_t)min) &&	\
+    YGGDRASIL_RAPIDJSON_ASSERT((min < 0 || values.size() >= (size_t)min) &&	\
 		     (max < 0 || values.size() <= (size_t)max));	\
     return ((min < 0 || values.size() >= (size_t)min) &&		\
 	    (max < 0 || values.size() <= (size_t)max));			\
@@ -2076,7 +2076,7 @@ public:
   ObjElement(const std::string& code0, const T (&)[N],
 	     const ObjGroupBase* parent0 = NULL) :
     ObjBase(), code(code0), parent(parent0) {
-    RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
   }
   //! \brief Initialize and element from a C++ vector of values.
   //! \tparam T Vector element type. Must be an integer or floating point.
@@ -2085,15 +2085,15 @@ public:
   ObjElement(const std::string& code0, const std::vector<T> &,
 	     const ObjGroupBase* parent0 = NULL) :
     ObjBase(), code(code0), parent(parent0) {
-    RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof(code + " element cannot be constructed from a vector of the provided type."));
   }
   
   //! \brief Copy element specific members from another instance.
   //! \param[in] rhs Element to copy members from.
   //! \return true if successful, false otherwise.
   bool copy_members(const ObjElement* rhs) {
-    RAPIDJSON_ASSERT(code == rhs->code);
-    RAPIDJSON_ASSERT(parent == rhs->parent);
+    YGGDRASIL_RAPIDJSON_ASSERT(code == rhs->code);
+    YGGDRASIL_RAPIDJSON_ASSERT(parent == rhs->parent);
     return (code == rhs->code && parent == rhs->parent);
   }
   //! \brief Create a copy of the element.
@@ -2126,7 +2126,7 @@ public:
   //! \param src Source vector.
   template <typename T1, typename T2>
   void assign_values(std::vector<T1>& dst, const std::vector<T2> &src,
-		     RAPIDJSON_ENABLEIF((
+		     YGGDRASIL_RAPIDJSON_ENABLEIF((
        internal::OrExpr<internal::AndExpr<internal::IsSame<T1,ObjRef>,
        COMPATIBLE_WITH_INT(T2)>,
        internal::OrExpr<internal::AndExpr<internal::IsSame<T1,double>,
@@ -2138,18 +2138,18 @@ public:
        internal::OrExpr<internal::AndExpr<internal::IsSame<T1,uint16_t>,
        COMPATIBLE_WITH_UINT(T2)>,
        COMPATIBLE_WITH_TYPE(T1, T2)> > > > >))) {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     for (auto it = src.begin(); it != src.end(); it++)
       dst.emplace_back((T1)(*it));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     for (typename std::vector<T2>::const_iterator it = src.begin(); it != src.end(); it++)
       dst.push_back((T1)(*it));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   }
   //! \brief Raise an error if the types are not compatible.
   template <typename T1, typename T2>
   void assign_values(std::vector<T1>&, const std::vector<T2> &,
-		     RAPIDJSON_DISABLEIF((
+		     YGGDRASIL_RAPIDJSON_DISABLEIF((
        internal::OrExpr<internal::AndExpr<internal::IsSame<T1,ObjRef>,
        COMPATIBLE_WITH_INT(T2)>,
        internal::OrExpr<internal::AndExpr<internal::IsSame<T1,double>,
@@ -2343,7 +2343,7 @@ public:
   //! \brief Get element values as an array of strings.
   //! \param[out] out Array to put values in.
   void get_string_array(std::vector<std::string>& out, bool=false) const {
-    RAPIDJSON_ASSERT(!requires_double());
+    YGGDRASIL_RAPIDJSON_ASSERT(!requires_double());
     if (requires_double()) return;
     get_properties(out);
   }
@@ -2364,7 +2364,7 @@ public:
   //! \param[out] out Array to put values in.
   void get_int_array(std::vector<int>& out,
 		     const size_t nvert=0, bool dec=false) const {
-    RAPIDJSON_ASSERT(!requires_double());
+    YGGDRASIL_RAPIDJSON_ASSERT(!requires_double());
     if (requires_double()) return;
     get_properties(out, dec);
     if (nvert > 0) {
@@ -2390,7 +2390,7 @@ public:
   //! \param[out] out Array to put values in.
   void get_double_array(std::vector<double>& out,
 			bool skipColors=false, bool dec=false) const {
-    RAPIDJSON_ASSERT(requires_double());
+    YGGDRASIL_RAPIDJSON_ASSERT(requires_double());
     get_properties(out, skipColors, dec);
   }
   //! \brief Add a property sub-element to this element. This is only valid
@@ -2503,7 +2503,7 @@ public:
   //! \return true if successful, false otherwise.
   template <typename T>
   bool read_values(std::istream &in, std::vector<T> &values,
-		   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) {
+		   YGGDRASIL_RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) {
     T x = 0;
     while ((in.peek() != '\n') && (in >> x))
       values.push_back(x);
@@ -2924,7 +2924,7 @@ public:
   //! \param inc If true and a property is an index, it will be incremented.
   //! \return New element.
   ObjElement* add_element(ObjElement* x, bool inc = false) {
-    RAPIDJSON_ASSERT(!finalized);
+    YGGDRASIL_RAPIDJSON_ASSERT(!finalized);
     if (elements.size() > 0) {
       ObjElement* last = elements.back();
       if (last->is_group()) {
@@ -2981,7 +2981,7 @@ public:
   template <typename T, size_t N>
   ObjElement* add_element(std::string name, const T (&values)[N],
 			  const T* ignore = 0, bool inc = false,
-			  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_ANY(T)))) {
+			  YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_ANY(T)))) {
     return add_element(name, std::vector<T>(values, values+N), ignore, inc);
   }
   //! \brief Add an element to the geometry from a C array of values.
@@ -2996,7 +2996,7 @@ public:
   template <typename T>
   ObjElement* add_element(std::string name, const T* values, size_t N,
 			  const T* ignore = 0, bool inc = false,
-			  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_ANY(T)))) {
+			  YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_ANY(T)))) {
     return add_element(name, std::vector<T>(values, values+N), ignore, inc);
   }
   // template <size_t N>
@@ -3107,7 +3107,7 @@ public:
   //! \param value Scalar value.
   //! \return New element.
   template<typename T>
-  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
 			      internal::IsSame<T,std::string> >), (ObjElement*))
     add_element(std::string name, const T& value);
   
@@ -3369,13 +3369,13 @@ public:
   //! \brief Empty constructor.
   //! \param parent0 The element's parent group.
   ObjFreeFormElement(const ObjGroupBase* parent0 = NULL) :
-    ObjGroupBase(parent0) { RAPIDJSON_ASSERT(parent0); }
+    ObjGroupBase(parent0) { YGGDRASIL_RAPIDJSON_ASSERT(parent0); }
   //! \brief Initialize an element from an element code.
   //! \param code0 Element code.
   //! \param parent0 The element's parent group.
   ObjFreeFormElement(const std::string& code0,
 		     const ObjGroupBase* parent0 = NULL) :
-    ObjGroupBase(code0, parent0) { RAPIDJSON_ASSERT(parent0); }
+    ObjGroupBase(code0, parent0) { YGGDRASIL_RAPIDJSON_ASSERT(parent0); }
   //! \copydoc ObjElement::ObjElement(const ObjElement&)
   ObjFreeFormElement(const ObjFreeFormElement& rhs) : ObjGroupBase(rhs) {}
   //! \copydoc ObjGroupBase::read_group_header
@@ -3431,7 +3431,7 @@ public:
   ObjCurve(const double& u00, const double& u10,
 	   const std::vector<T> &values0,
 	   const ObjGroupBase* parent0 = NULL,
-	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
+	   YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjFreeFormElement("curv", parent0), values(), u0(u00), u1(u10) {
     this->_init_properties();
     assign_values(values, values0);
@@ -3483,7 +3483,7 @@ public:
 	     const double& t00, const double& t10,
 	     const std::vector<T> &values0,
 	     const ObjGroupBase* parent0 = NULL,
-	     RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_VERT(T)))) :
+	     YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_VERT(T)))) :
     ObjFreeFormElement("surf", parent0), values(), s0(s00), s1(s10), t0(t00), t1(t10) {
     this->_init_properties();
     assign_values(values, values0);
@@ -3612,7 +3612,7 @@ public:
   template<typename T>
   ObjParameter(const std::string& direction0, const std::vector<T> &values0,
 	       const ObjGroupBase* parent0 = NULL,
-	       RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
+	       YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("parm", parent0), values(), direction(direction0) {
     this->_init_properties();
     assign_values(values, values0);
@@ -3625,9 +3625,9 @@ public:
   template <typename T>
   ObjParameter(const std::string&, const std::vector<T> &,
 	       const ObjGroupBase* parent0 = NULL,
-	       RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
+	       YGGDRASIL_RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("parm", parent0), values(), direction("") {
-    RAPIDJSON_ASSERT(sizeof("ObjParameter type is double"));
+    YGGDRASIL_RAPIDJSON_ASSERT(sizeof("ObjParameter type is double"));
   }
   //! \copydoc ObjElement::is_valid
   bool is_valid() const OVERRIDE_CXX11 {
@@ -3674,7 +3674,7 @@ public:
   template<typename T>
   ObjGroup(const T &value,
 	   const ObjGroupBase* parent0 = NULL,
-	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
+	   YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
     ObjGroupBase("g", parent0), values() {
     this->_init_properties();
     std::vector<T> values0;
@@ -3688,7 +3688,7 @@ public:
   template<typename T>
   ObjGroup(const T &,
 	   const ObjGroupBase* parent0 = NULL,
-	   RAPIDJSON_DISABLEIF((internal::OrExpr<COMPATIBLE_WITH_TYPE(T, std::string),
+	   YGGDRASIL_RAPIDJSON_DISABLEIF((internal::OrExpr<COMPATIBLE_WITH_TYPE(T, std::string),
 				internal::IsPointer<T> >))) :
     ObjGroupBase("g", parent0), values() {
     ASSERT_COMPATIBLE(T, std::string);
@@ -3762,7 +3762,7 @@ public:
   template <typename T>
   ObjMergingGroup(const T& value0, const double& resolution0,
 		  const ObjGroupBase* parent0 = NULL,
-		  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
+		  YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_TYPE(T, std::string)))) :
     ObjElement("mg", parent0), value((value0 == "off") ? 0 : std::atoi(value0.c_str())), resolution(resolution0) {
     this->_init_properties();
   }
@@ -3772,7 +3772,7 @@ public:
   template <typename T>
   ObjMergingGroup(const T& value0, const double& resolution0,
 		  const ObjGroupBase* parent0 = NULL,
-		  RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
+		  YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_INT(T)))) :
     ObjElement("mg", parent0), value(value0), resolution(resolution0) {
     this->_init_properties();
   }
@@ -3780,11 +3780,11 @@ public:
   template <typename T>
   ObjMergingGroup(const T&, const double&,
 		  const ObjGroupBase* parent0 = NULL,
-		  RAPIDJSON_DISABLEIF((internal::OrExpr<
+		  YGGDRASIL_RAPIDJSON_DISABLEIF((internal::OrExpr<
 				       COMPATIBLE_WITH_INT(T),
 				       COMPATIBLE_WITH_TYPE(T, std::string)>))) :
     ObjElement("mg", parent0), value(0), resolution(0) {
-    RAPIDJSON_ASSERT(!sizeof("ObjMergingGroup must be initialized from a string or integer."));
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof("ObjMergingGroup must be initialized from a string or integer."));
   }
   //! \copydoc ObjElement::is_valid
   bool is_valid() const OVERRIDE_CXX11 {
@@ -3860,7 +3860,7 @@ public:
   ObjCTech(const std::string& technique0,
 	   const std::vector<T> &values0,
 	   const ObjGroupBase* parent0 = NULL,
-	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
+	   YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("ctech", parent0), values(), technique(technique0) {
     this->_init_properties();
     assign_values(values, values0);
@@ -3870,9 +3870,9 @@ public:
   ObjCTech(const std::string& technique0,
 	   const std::vector<T> &,
 	   const ObjGroupBase* parent0 = NULL,
-	   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
+	   YGGDRASIL_RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("ctech", parent0), values(), technique(technique0) {
-    RAPIDJSON_ASSERT(sizeof("ObjCTech type is double"));
+    YGGDRASIL_RAPIDJSON_ASSERT(sizeof("ObjCTech type is double"));
   }
   //! \copydoc ObjElement::has_property
   bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=NULL) const  OVERRIDE_CXX11 {
@@ -3911,7 +3911,7 @@ public:
   ObjSTech(const std::string& technique0,
 	   const std::vector<T> &values0,
 	   const ObjGroupBase* parent0 = NULL,
-	   RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
+	   YGGDRASIL_RAPIDJSON_ENABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("stech", parent0), values(), technique(technique0) {
     this->_init_properties();
     assign_values(values, values0);
@@ -3921,9 +3921,9 @@ public:
   ObjSTech(const std::string& technique0,
 	   const std::vector<T> &,
 	   const ObjGroupBase* parent0 = NULL,
-	   RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
+	   YGGDRASIL_RAPIDJSON_DISABLEIF((COMPATIBLE_WITH_FLOAT(T)))) :
     ObjElement("stech", parent0), values(), technique(technique0) {
-    RAPIDJSON_ASSERT(!sizeof("ObjSTech type is double"));
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof("ObjSTech type is double"));
   }
   //! \copydoc ObjElement::has_property
   bool has_property(const std::string name, bool dontCheckOrder=false, bool skipColors=false, size_t* idx=NULL) const  OVERRIDE_CXX11 {
@@ -4113,13 +4113,13 @@ public:
   //! \brief Get the minimum bounds of the structure in 3D.
   //! \return Minimum extend of structure in x, y, z.
   std::vector<double> minimums() const {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     std::vector<double> out = {NAN, NAN, NAN};
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     std::vector<double> out(3);
     for (size_t i = 0; i < 3; i++)
       out[i] = NAN;
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     bool first = true;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
       if ((*it)->code == "v") {
@@ -4139,13 +4139,13 @@ public:
   //! \brief Get the maximum bounds of the structure in 3D.
   //! \return Maximum extend of structure in x, y, z.
   std::vector<double> maximums() const {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     std::vector<double> out = {NAN, NAN, NAN};
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     std::vector<double> out(3);
     for (size_t i = 0; i < 3; i++)
       out[i] = NAN;
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     bool first = true;
     for (std::vector<ObjElement*>::const_iterator it = elements.begin(); it != elements.end(); it++) {
       if ((*it)->code == "v") {
@@ -4231,7 +4231,7 @@ public:
 	    iv = *f - 1;
 	  else
 	    iv = (int)(vert_idx.size()) + *f;
-	  RAPIDJSON_ASSERT(iv >= 0 && iv < (int)(vert_idx.size()));
+	  YGGDRASIL_RAPIDJSON_ASSERT(iv >= 0 && iv < (int)(vert_idx.size()));
 	  if (iv < 0 || iv >= (int)(vert_idx.size())) {
 	    out.clear();
 	    return out;
@@ -4345,7 +4345,7 @@ public:
       N++;
     }
     M = out.size() / N;
-    RAPIDJSON_ASSERT(M == 3);
+    YGGDRASIL_RAPIDJSON_ASSERT(M == 3);
     return out;
   }
   //! \brief Add element colors to a set.
@@ -4474,7 +4474,7 @@ ObjElement* ObjGroupBase::add_element(std::string name, std::string direction,
   return ObjGroupBase::add_element(x);
 }
 template<typename T>
-RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
+YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
 			    internal::IsSame<T,std::string> >), (ObjElement*))
   ObjGroupBase::add_element(std::string name, const T& value) {
   ObjElement* x = NULL;
@@ -4592,6 +4592,6 @@ ObjElement* ObjGroupBase::add_element(std::string name,
 #undef OBJ_ELEMENT_INIT
 #undef REPORT_UNSUPPORTED_ELEMENT
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_OBJ_H_
+#endif // YGGDRASIL_RAPIDJSON_OBJ_H_

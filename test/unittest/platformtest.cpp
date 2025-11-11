@@ -24,7 +24,7 @@
 #include "rapidjson/document.h"
 #undef GetObject
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 TEST(Platform, GetObject) {
     Document doc;

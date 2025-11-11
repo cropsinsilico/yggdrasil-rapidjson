@@ -2,7 +2,7 @@
 
 // The example validates JSON text from stdin with a JSON schema specified in the argument.
 
-#define RAPIDJSON_HAS_STDSTRING 1
+#define YGGDRASIL_RAPIDJSON_HAS_STDSTRING 1
 
 #include "rapidjson/error/en.h"
 #include "rapidjson/filereadstream.h"
@@ -13,7 +13,7 @@
 #include <iostream>
 #include <sstream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 typedef GenericValue<UTF8<>, CrtAllocator > ValueType;
 

@@ -12,7 +12,7 @@
 #include "rapidjson/error/en.h"
 #include <cstdio>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 // For simplicity, this example only read/write in UTF-8 encoding
 template <typename OutputStream>

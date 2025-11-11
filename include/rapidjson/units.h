@@ -1,19 +1,5 @@
-// Tencent is pleased to support the open source community by making RapidJSON available->
-// 
-// Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip-> All rights reserved->
-//
-// Licensed under the MIT License (the "License"); you may not use this file except
-// in compliance with the License-> You may obtain a copy of the License at
-//
-// http://opensource->org/licenses/MIT
-//
-// Unless required by applicable law or agreed to in writing, software distributed 
-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
-// CONDITIONS OF ANY KIND, either express or implied-> See the License for the 
-// specific language governing permissions and limitations under the License->
-
-#ifndef RAPIDJSON_UNITS_H_
-#define RAPIDJSON_UNITS_H_
+#ifndef YGGDRASIL_RAPIDJSON_UNITS_H_
+#define YGGDRASIL_RAPIDJSON_UNITS_H_
 
 #include "encodings.h"
 #include "stream.h"
@@ -41,15 +27,15 @@
   static double
 #endif
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11 override
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
 
 namespace units {
 
@@ -287,15 +273,15 @@ namespace units {
     }
   public:
     template<typename T2>
-    const std::vector<T2>* get(RAPIDJSON_ENABLEIF((internal::IsSame<T, T2>)))
+    const std::vector<T2>* get(YGGDRASIL_RAPIDJSON_ENABLEIF((internal::IsSame<T, T2>)))
     { return &base_; }
     template<typename T2>
-    const std::vector<T2>* get(RAPIDJSON_DISABLEIF((internal::IsSame<T, T2>))) {
+    const std::vector<T2>* get(YGGDRASIL_RAPIDJSON_DISABLEIF((internal::IsSame<T, T2>))) {
       int32_t idx = T2::EncodingType::HashCode();
       std::map<int32_t, void*>::iterator match = cache_.find(idx);
       if (match == cache_.end()) {
         std::vector<T2>* new_entry = (std::vector<T2>*)malloc(sizeof(std::vector<T2*>));
-	RAPIDJSON_ASSERT(new_entry);
+	YGGDRASIL_RAPIDJSON_ASSERT(new_entry);
 	new_entry[0] = std::vector<T2>();
         for (typename std::vector<T>::const_iterator it = base_.begin(); it != base_.end(); it++)
           new_entry->push_back(it->template transcode<typename T2::EncodingType>());
@@ -472,31 +458,31 @@ namespace dimensions {
 
 template<typename T1>
 double char_to_double(const std::basic_string<T1>& x,
-		      RAPIDJSON_ENABLEIF((internal::IsSame<T1,char>))) {
+		      YGGDRASIL_RAPIDJSON_ENABLEIF((internal::IsSame<T1,char>))) {
   return atof(x.c_str());
 }
 template<typename T1>
 double char_to_double(const std::basic_string<T1>& x,
-		      RAPIDJSON_ENABLEIF((internal::IsSame<T1,wchar_t>))) {
+		      YGGDRASIL_RAPIDJSON_ENABLEIF((internal::IsSame<T1,wchar_t>))) {
   return wcstod(x.c_str(), NULL);
 }
 template<typename SourceEncoding, typename DestEncoding>
 const std::basic_string<typename DestEncoding::Ch> convert_chars(const std::basic_string<typename SourceEncoding::Ch>& x,
-								 RAPIDJSON_ENABLEIF((internal::IsSame<SourceEncoding, DestEncoding>))) {
+								 YGGDRASIL_RAPIDJSON_ENABLEIF((internal::IsSame<SourceEncoding, DestEncoding>))) {
   return x;
 }
   
 template<typename SourceEncoding, typename DestEncoding>
 const std::basic_string<typename DestEncoding::Ch> convert_chars(const std::basic_string<typename SourceEncoding::Ch>& x,
-								 RAPIDJSON_DISABLEIF((internal::IsSame<SourceEncoding, DestEncoding>))) {
+								 YGGDRASIL_RAPIDJSON_DISABLEIF((internal::IsSame<SourceEncoding, DestEncoding>))) {
   GenericStringStream<SourceEncoding> src(x.c_str());
   GenericStringBuffer<DestEncoding> dst;
   if (DestEncoding::supportUnicode)
     PutReserve(dst, x.size() * 6);
   else
     PutReserve(dst, x.size() * 12);
-  while (RAPIDJSON_LIKELY(src.Tell() < x.size())) {
-    RAPIDJSON_ASSERT(src.Peek() != '\0');
+  while (YGGDRASIL_RAPIDJSON_LIKELY(src.Tell() < x.size())) {
+    YGGDRASIL_RAPIDJSON_ASSERT(src.Peek() != '\0');
     Transcoder<SourceEncoding, DestEncoding>::Transcode(src, dst);
   }
   std::basic_string<typename DestEncoding::Ch> out(dst.GetString(), dst.GetLength());
@@ -515,11 +501,11 @@ public:
   GenericUnitPrefix(const std::basic_string<Ch> abbr0, const double& factor0,
 		    const std::basic_string<Ch> name0) :
     abbr(abbr0), factor(factor0), name(name0) {}
-#if RAPIDJSON_HAS_CXX20
+#if YGGDRASIL_RAPIDJSON_HAS_CXX20
   GenericUnitPrefix(const char8_t* abbr0, const double& factor0, const Ch* name0) :
     abbr(reinterpret_cast<const char*>(abbr0)),
     factor(factor0), name(name0) {}
-#endif // RAPIDJSON_HAS_CXX20
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX20
   //! Abbreviation associated with the prefix.
   std::basic_string<Ch> abbr;
   //! Factor that the prefix implies.
@@ -592,13 +578,13 @@ inline std::basic_ostream<Ch> & operator << (std::basic_ostream<Ch>& os, const G
       PACK_PREFIX("c", 1e-2, "centi"),
       PACK_PREFIX("m", 1e-3, "mili"),
       PACK_PREFIX("u", 1e-6, "micro"),
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
       PACK_PREFIX(u8"\u00b5", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
       PACK_PREFIX(u8"\u03bc", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
       PACK_PREFIX("\u00b5", 1e-6, "micro"),  // ('MICRO SIGN' U+00B5)
       PACK_PREFIX("\u03bc", 1e-6, "micro"),  // ('GREEK SMALL LETTER MU' U+03BC)
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
       PACK_PREFIX("n", 1e-9, "nano"),
       PACK_PREFIX("p", 1e-12, "pico"),
       PACK_PREFIX("f", 1e-15, "femto"),
@@ -630,7 +616,7 @@ public:
       power_ = 1.0;
     }
     _check_valid();
-    RAPIDJSON_ASSERT(_check_valid());
+    YGGDRASIL_RAPIDJSON_ASSERT(_check_valid());
   }
   //! \brief Construct from a single name/abbreviation.
   //! \param name Name.
@@ -651,7 +637,7 @@ public:
     abbrs_.push_back(std::basic_string<Ch>(abbr));
     _add_plural();
     _check_valid();
-    RAPIDJSON_ASSERT(_check_valid());
+    YGGDRASIL_RAPIDJSON_ASSERT(_check_valid());
   }
   //! \brief Construct from a single name/abbreviation.
   //! \param names Names.
@@ -678,7 +664,7 @@ public:
       power_ = 1.0;
     }
     _check_valid();
-    RAPIDJSON_ASSERT(_check_valid());
+    YGGDRASIL_RAPIDJSON_ASSERT(_check_valid());
   }
   //! \brief Construct a unit by looking up a string in the tables of
   //!   recognized units.
@@ -696,7 +682,7 @@ public:
       power_ = 1.0;
     }
     _check_valid();
-    RAPIDJSON_ASSERT(_check_valid());
+    YGGDRASIL_RAPIDJSON_ASSERT(_check_valid());
   }
   //! \brief Set instance attributes based on an entry from one of the lookup
   //!   tables.
@@ -706,10 +692,10 @@ public:
   //! \return true if the unit could be initialized, false otherwise.
   bool from_table(const GenericUnit<Encoding>& found, bool delta,
 		  const GenericUnitPrefix<Encoding>& prefix=GenericUnitPrefix<Encoding>()) {
-    RAPIDJSON_ASSERT((found.names_.size() > 0) && (found.abbrs_.size() > 0));
+    YGGDRASIL_RAPIDJSON_ASSERT((found.names_.size() > 0) && (found.abbrs_.size() > 0));
     names_.insert(names_.begin(), found.names_.begin(), found.names_.end());
     abbrs_.insert(abbrs_.begin(), found.abbrs_.begin(), found.abbrs_.end());
-    RAPIDJSON_ASSERT((names_.size() > 0) && (abbrs_.size() > 0));
+    YGGDRASIL_RAPIDJSON_ASSERT((names_.size() > 0) && (abbrs_.size() > 0));
     dim_ = found.dim_;
     factor_ = found.factor_;
     offset_ = found.offset_;
@@ -723,7 +709,7 @@ public:
   //! \param os Output stream.
   template<typename Ch2>
   void display(std::basic_ostream<Ch2>& os) const {
-    RAPIDJSON_ASSERT(names_.size() > 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(names_.size() > 0);
     os << 'G' << 'e' << 'n' << 'e' << 'r' << 'i' << 'c' << 'U' <<
       'n' << 'i' << 't' << '(' << '\"';
     if (delta_ == kActiveDelta)
@@ -780,7 +766,7 @@ public:
     else
       power_ = power_ * x;
     _check_valid();
-    RAPIDJSON_ASSERT(_check_valid());
+    YGGDRASIL_RAPIDJSON_ASSERT(_check_valid());
   }
   //! \brief Raise this unit to a power.
   //! \param x Power to raise this unit to.
@@ -795,8 +781,8 @@ public:
   //! \param x Unit to compare this unit to.
   //! \return true if this unit and x have the same base unit.
   bool is_same_base(const GenericUnit& x) const {
-    RAPIDJSON_ASSERT(x.names_.size() > 0);
-    RAPIDJSON_ASSERT(names_.size() > 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(x.names_.size() > 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(names_.size() > 0);
     return (x.names_[0] == names_[0]);
   }
   //! \brief Check if a string matches any of the names or abbreviations
@@ -885,7 +871,7 @@ public:
   //!   and the second element is the offset.
   std::vector<double> conversion_factor(const GenericUnit& x) const {
     std::vector<double> out;
-    RAPIDJSON_ASSERT(dimension() == x.dimension() &&
+    YGGDRASIL_RAPIDJSON_ASSERT(dimension() == x.dimension() &&
 		     _check_valid() && x._check_valid());
     if (dimension() != x.dimension() || !_check_valid() || !x._check_valid()) {
       out.push_back(1);
@@ -967,7 +953,7 @@ inline std::basic_ostream<Ch2> & operator << (std::basic_ostream<Ch2>& os, const
   bool has_factor = x.has_factor();
   bool has_power = x.has_power();
   bool has_delta = x.is_difference();
-  RAPIDJSON_ASSERT(x.abbrs_.size() > 0);
+  YGGDRASIL_RAPIDJSON_ASSERT(x.abbrs_.size() > 0);
   if (has_factor && (x.abbrs_.size() > 0) && (x.abbrs_[0].size() == 0))
     os << x.factor_;
   if (has_delta)
@@ -1056,11 +1042,11 @@ public:
   //! \param str Unit string.
   //! \returns true if the unit was added successfully, false otherwise.
   bool add_unit(const std::basic_string<Ch> str) {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     units_.emplace_back(str);
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     units_.push_back(GenericUnit<Encoding>(str));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     if ((units_.end() - 1)->is_empty()) {
       units_.clear();
       return false;
@@ -1189,11 +1175,11 @@ public:
 	  units_[i].power_ = new_power;
 	}
       } else {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 	units_.emplace_back(*it2);
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 	units_.push_back(GenericUnit<Encoding>(*it2));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
       }
     }
     for (typename std::set<size_t>::reverse_iterator it = idx_remove.rbegin(); it != idx_remove.rend(); it++)
@@ -1207,18 +1193,18 @@ public:
     }
     if (nodim == units_.end()) {
       std::basic_string<Ch> empty;
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
       units_.emplace_back(empty);
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
       units_.push_back(GenericUnit<Encoding>(empty));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
       nodim = (units_.end() - 1);
     }
-    RAPIDJSON_ASSERT(internal::values_eq(nodim->power_, 1.0));
+    YGGDRASIL_RAPIDJSON_ASSERT(internal::values_eq(nodim->power_, 1.0));
     nodim->factor_ *= factor;
     if (!nodim->has_factor() && (units_.size() > 1))
       units_.erase(nodim);
-    RAPIDJSON_ASSERT(_check_valid());
+    YGGDRASIL_RAPIDJSON_ASSERT(_check_valid());
     return *this;
   }
   bool has_factor() const {
@@ -1246,11 +1232,11 @@ public:
   }
   void add_factor(double factor) {
     std::basic_string<Ch> empty;
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     units_.emplace_back(empty);
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     units_.push_back(GenericUnit<Encoding>(empty));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     units_[units_.size() - 1].factor_ = factor;
   }
   //! \brief Perform multiplication with another set of units.
@@ -1333,7 +1319,7 @@ public:
   //! \brief Set the difference flag.
   //! \param delta New difference flag.
   void set_delta(int delta) {
-    RAPIDJSON_ASSERT(has_difference() || is_difference());
+    YGGDRASIL_RAPIDJSON_ASSERT(has_difference() || is_difference());
     if ((has_difference() || is_difference()) && delta > 0)
       units_[0].delta_ = delta;
   }
@@ -1348,7 +1334,7 @@ public:
       return units_[0].conversion_factor(x.units_[0]);
     std::vector<double> out;
     bool singular = (x.size() == 1 && size() == 1);
-    RAPIDJSON_ASSERT(dimension() == x.dimension() &&
+    YGGDRASIL_RAPIDJSON_ASSERT(dimension() == x.dimension() &&
 		     (is_difference() || !has_offset() || singular));
     if (!(dimension() == x.dimension() &&
 	  (is_difference() || !has_offset() || singular))) {
@@ -1509,11 +1495,11 @@ typedef GenericUnits<UTF8<char> > Units;
     );
   
   static CachedLUT<Unit> _prefixable_units (
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
       _base_units.template get<Unit>(),
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
       _base_units.get<Unit>(),
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
       // cgs
       PACK_UNIT("dyne", "dyn", dimensions::force, 1.0e-5),
       PACK_UNIT("erg", "erg", dimensions::energy, 1.0e-7),
@@ -1719,7 +1705,7 @@ public:
     value_ = 0.0;
   }
   double value() {
-    RAPIDJSON_ASSERT(is_numeric());
+    YGGDRASIL_RAPIDJSON_ASSERT(is_numeric());
     finalize(kTokenFinalizeValue);
     return value_;
   }
@@ -1751,7 +1737,7 @@ class OperatorToken : public TokenBase<Encoding> {
   typedef typename Encoding::Ch Ch; //!< Character type from encoding.
 public:
   OperatorToken(const Ch op0, TokenBase<Encoding> *parent0=NULL) : TokenBase<Encoding>(kOperatorToken, parent0), op(op0) { this->finalize(kTokenFinalizeAlways); }
-  void append(const Ch c) OVERRIDE_CXX11 { RAPIDJSON_ASSERT(!c); (void)c; } // GCOVR_EXCL_LINE
+  void append(const Ch c) OVERRIDE_CXX11 { YGGDRASIL_RAPIDJSON_ASSERT(!c); (void)c; } // GCOVR_EXCL_LINE
   GenericUnits<Encoding> operate(const GenericUnits<Encoding>& a, const GenericUnits<Encoding>& b) {
     switch (op) {
     case '*':
@@ -1759,12 +1745,12 @@ public:
     case '/':
       return a / b;
     default:
-      RAPIDJSON_ASSERT((op == '*') || (op == '/')); // GCOVR_EXCL_LINE
+      YGGDRASIL_RAPIDJSON_ASSERT((op == '*') || (op == '/')); // GCOVR_EXCL_LINE
     }
     return this->units; // GCOVR_EXCL_LINE
   }
   GenericUnits<Encoding> operate(const GenericUnits<Encoding>& a, const double& b) {
-    RAPIDJSON_ASSERT(op == '^');
+    YGGDRASIL_RAPIDJSON_ASSERT(op == '^');
     return a.pow(b);
   }
   double operate(const double& a, const double& b) {
@@ -1780,7 +1766,7 @@ public:
     case '-':
       return a - b;
     default:
-      RAPIDJSON_ASSERT((op == '*') || (op == '/') || (op == '^') // GCOVR_EXCL_LINE
+      YGGDRASIL_RAPIDJSON_ASSERT((op == '*') || (op == '/') || (op == '^') // GCOVR_EXCL_LINE
 		       || (op == '+') || (op == '-'));
     }
     return 0.0; // GCOVR_EXCL_LINE
@@ -1814,7 +1800,7 @@ public:
     word.push_back(c);
   }
   GenericUnits<Encoding> finalize(TokenFinalization x) OVERRIDE_CXX11 {
-    RAPIDJSON_ASSERT(word.size());
+    YGGDRASIL_RAPIDJSON_ASSERT(word.size());
     if (!(this->finalized))
       if (!this->units.add_unit(word))
 	this->set_error();
@@ -1903,7 +1889,7 @@ public:
       append_op(c);
       return;
     }
-    RAPIDJSON_ASSERT(curr->t == kWordToken);
+    YGGDRASIL_RAPIDJSON_ASSERT(curr->t == kWordToken);
     if ((!curr->is_numeric()) &&
 	(c == '0' || c == '1' || c == '2' || c == '3' || c == '4' ||
 	 c == '5' || c == '6' || c == '7' || c == '8' || c == '9')) {
@@ -1911,7 +1897,7 @@ public:
       append(c);
       return;
     }
-    RAPIDJSON_ASSERT(curr->t == kWordToken);
+    YGGDRASIL_RAPIDJSON_ASSERT(curr->t == kWordToken);
     WordToken<Encoding>* word = static_cast<WordToken<Encoding>*>(curr);
     word->append(c);
   }
@@ -1948,7 +1934,7 @@ public:
 	  curr->append_op('*', true);
       }
     }
-    RAPIDJSON_ASSERT(!(curr->finalized));
+    YGGDRASIL_RAPIDJSON_ASSERT(!(curr->finalized));
     curr->tokens.push_back(x);
     x->parent = curr;
     return x;
@@ -1972,7 +1958,7 @@ public:
       if (tokens[i]->t == kOperatorToken) {
 	OperatorToken<Encoding> *op = static_cast<OperatorToken<Encoding>*>(tokens[i]);
 	if (op->matches(ops)) {
-	  RAPIDJSON_ASSERT((i + 1) < tokens.size());
+	  YGGDRASIL_RAPIDJSON_ASSERT((i + 1) < tokens.size());
 	  GroupToken<Encoding>* new_group = new GroupToken<Encoding>(this);
 	  for (size_t ii = i - 1; ii <= (i + 1); ii++) {
 	    tokens[ii]->parent = new_group;
@@ -2004,15 +1990,15 @@ public:
     if (is_numeric()) {
       this->value_ = tokens[0]->value();
       for (size_t i = 1; i < tokens.size(); i = i+2) {
-	RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
-	RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
+	YGGDRASIL_RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
+	YGGDRASIL_RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
 	OperatorToken<Encoding> *op = static_cast<OperatorToken<Encoding>*>(tokens[i]);
 	this->value_ = op->operate(this->value_, tokens[i + 1]->value());
       }
     } else {
       for (size_t i = 1; i < tokens.size(); i = i+2) {
-	RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
-	RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
+	YGGDRASIL_RAPIDJSON_ASSERT(tokens[i]->t == kOperatorToken);
+	YGGDRASIL_RAPIDJSON_ASSERT(tokens[i + 1]->t != kOperatorToken);
 	OperatorToken<Encoding> *op = static_cast<OperatorToken<Encoding>*>(tokens[i]);
 	if (tokens[i + 1]->is_numeric()) {
 	  out = op->operate(out, tokens[i + 1]->value());
@@ -2113,7 +2099,7 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
 	}
       }
       // fall through to default
-      RAPIDJSON_DELIBERATE_FALLTHROUGH;
+      YGGDRASIL_RAPIDJSON_DELIBERATE_FALLTHROUGH;
     }
     case 'n': {
       // Special case of n/a
@@ -2127,7 +2113,7 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
 	}
       }
       // fall through to default
-      RAPIDJSON_DELIBERATE_FALLTHROUGH;
+      YGGDRASIL_RAPIDJSON_DELIBERATE_FALLTHROUGH;
     }
     case '%': {
       parser::TokenBase<Encoding>* curr = token.current_token();
@@ -2150,7 +2136,7 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
 	}
       }
       // fall through to default
-      RAPIDJSON_DELIBERATE_FALLTHROUGH;
+      YGGDRASIL_RAPIDJSON_DELIBERATE_FALLTHROUGH;
     }
     default:
       token.append(c);
@@ -2165,7 +2151,7 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
   }
   GenericUnits<Encoding> out = token.finalize(parser::kTokenFinalizeFinal);
   if (len == 0) {
-    RAPIDJSON_ASSERT(!token.errorFlag);
+    YGGDRASIL_RAPIDJSON_ASSERT(!token.errorFlag);
     token.errorFlag = (!out.add_unit(std::basic_string<Ch>()));
   }
   if (token.errorFlag)
@@ -2277,7 +2263,7 @@ GenericUnits<Encoding> GenericUnits<Encoding>::parse_units(const typename Encodi
 #define QUANTITY_ARRAY_TYPE(TT) QuantityArray<TT>
 #define QUANTITY_TYPE(TT) Quantity<TT>
 
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define ADD_DEFAULT_OPERATOR(DEF, TYP, OP)
 #else
 template<typename T>
@@ -2304,7 +2290,7 @@ class QuantityArray;
     value_[i] *= castPrecision<double,T>(factor);			\
   }
 #define INPLACE_OP_QUANTITY_BASE_(OP)					\
-  RAPIDJSON_ASSERT(is_same_shape(x) || (nelements() == 1) || (x.nelements() == 1)); \
+  YGGDRASIL_RAPIDJSON_ASSERT(is_same_shape(x) || (nelements() == 1) || (x.nelements() == 1)); \
   SizeType N = nelements();						\
   if (is_same_shape(x)) {						\
     for (SizeType i = 0; i < N; i++) {					\
@@ -2376,12 +2362,12 @@ class QuantityArray;
   ADD_DEFAULT_OPERATOR(QuantityArray, GENERIC_QUANTITY_ARRAY_TYPE, IOP)	\
   ADD_DEFAULT_OPERATOR(Quantity, GENERIC_QUANTITY_ARRAY_TYPE, IOP)
 
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define FRIEND_DEFAULT_(CLS)
 #define CREATE_DEFAULT_(CLS, TYP, BASE, BASETYP, ENCODING, CTORS)	\
   template<typename T>							\
   using CLS = BASE<T, ENCODING>
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define FRIEND_DEFAULT_(CLS)						\
   friend class CLS<T>;
 #define CREATE_DEFAULT_(CLS, TYP, BASE, BASETYP, ENCODING, CTORS)	\
@@ -2402,7 +2388,7 @@ class QuantityArray;
       return BASETYP(T)(*static_cast<const BASETYP(T)*>(this));		\
     }									\
   }
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
 
 //! Array quantity with units.
 //! \tparam T Type of the underlying scalar.
@@ -2537,7 +2523,7 @@ public:
 private:
   std::vector<SizeType> _index(const SizeType idx) const {
     SizeType ndim_ = ndim();
-    RAPIDJSON_ASSERT(ndim_ > 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(ndim_ > 0);
     std::vector<SizeType> out;
     SizeType prev = 0;
     for (SizeType i = 0; i < (ndim_ - 1); i++) {
@@ -2549,13 +2535,13 @@ private:
   }
   template<typename T2>
   void _init(const T2*, const SizeType, const SizeType*,
-	     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
-    RAPIDJSON_ASSERT(((YGGDRASIL_IS_CASTABLE(T2, ScalarType)::Value)));
+	     YGGDRASIL_RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
+    YGGDRASIL_RAPIDJSON_ASSERT(((YGGDRASIL_IS_CASTABLE(T2, ScalarType)::Value)));
   }
   template<typename T2>
   void _init(const T2* value, const SizeType ndim, const SizeType* shape,
-	     RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
-    RAPIDJSON_ASSERT(ndim > 0);
+	     YGGDRASIL_RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType)))) {
+    YGGDRASIL_RAPIDJSON_ASSERT(ndim > 0);
     // Shape
     shape_.resize(ndim);
     for (SizeType i = 0; i < ndim; i++)
@@ -2594,12 +2580,12 @@ private:
   }
   template<typename T2>
   static T2 do_conv(const T2& value, const double& factor, const double& offset,
-		    RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
+		    YGGDRASIL_RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
     return static_cast<T2>((static_cast<double>(value) - offset) * factor);
   }
   template<typename T2>
   static T2 do_conv(const T2& value, const double& factor, const double& offset,
-		    RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
+		    YGGDRASIL_RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
     T2 offset2(static_cast<typename T2::value_type>(offset), 0);
     typename T2::value_type factor2 = static_cast<typename T2::value_type>(factor);
     return (value - offset2) * factor2;
@@ -2778,7 +2764,7 @@ public:
   //! \param x Power to raise this quantity to.
   template<typename T2>
   GenericQuantityArray& pow_inplace(const T2& x,
-				    RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
+				    YGGDRASIL_RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))) {
     METHOD_FACTOR_PULL_(pow_inplace, (x));
     SizeType N = nelements();
     for (SizeType i = 0; i < N; i++) {
@@ -2793,7 +2779,7 @@ public:
   DELEGATE_TO_INPLACE_(template<typename T2>,
 		       GenericQuantityArray, GENERIC_QUANTITY_ARRAY_TYPE,
 		       pow, pow_inplace,
-		       (const T2& x, RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))),
+		       (const T2& x, YGGDRASIL_RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T2)))),
 		       (x))
   //! \brief Explicity copy.
   //! \return Copy.
@@ -2950,7 +2936,7 @@ public:
   //! \param new_value New quantity value.
   template<typename T2>
   void set_value(const T2& new_value,
-		 RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType))))
+		 YGGDRASIL_RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T2, ScalarType))))
   {
     SizeType N = 1;
     Base::set_value(&new_value, 1, &N);
@@ -2960,10 +2946,10 @@ public:
   
 private:
   template<typename T1>
-  static T1 _initialize_value(RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
+  static T1 _initialize_value(YGGDRASIL_RAPIDJSON_DISABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
   { return (T1)(0); }
   template<typename T1>
-  static T1 _initialize_value(RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
+  static T1 _initialize_value(YGGDRASIL_RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T1))))
   { return T1(0.0, 0.0); }
   
   template<typename Ch2, typename U, typename Encoding2>
@@ -2992,8 +2978,8 @@ CREATE_DEFAULT_(Quantity, QUANTITY_TYPE,
     if (nelements == 0)
       nelements = nbytes / (SizeType)sizeof(T);
     else
-      RAPIDJSON_ASSERT(nelements == (nbytes / (SizeType)sizeof(T)));
-    RAPIDJSON_ASSERT(!(nbytes % (SizeType)sizeof(T)));
+      YGGDRASIL_RAPIDJSON_ASSERT(nelements == (nbytes / (SizeType)sizeof(T)));
+    YGGDRASIL_RAPIDJSON_ASSERT(!(nbytes % (SizeType)sizeof(T)));
     GenericQuantityArray<T, Encoding> qa((T*)src_bytes, nelements, src_units);
     qa.convert_to(dst_units);
     memcpy(dst_bytes, qa.value(), (size_t)nelements * sizeof(T));
@@ -3010,7 +2996,7 @@ CREATE_DEFAULT_(Quantity, QUANTITY_TYPE,
 		   const SizeType nelements=0) {
     SWITCH_SUBTYPE(subtype, precision, changeUnits, PACK_MACRO(Encoding),
 		   (src_bytes, src_units, dst_bytes, dst_units, nbytes, nelements),
-		   RAPIDJSON_ASSERT(false));
+		   YGGDRASIL_RAPIDJSON_ASSERT(false));
   }
   
 #undef ARRAY_ARRAY_OP
@@ -3047,8 +3033,8 @@ CREATE_DEFAULT_(Quantity, QUANTITY_TYPE,
 
 #undef OVERRIDE_CXX11
   
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_UNITS_H_
+#endif // YGGDRASIL_RAPIDJSON_UNITS_H_

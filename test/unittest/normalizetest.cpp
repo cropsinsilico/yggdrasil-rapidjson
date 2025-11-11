@@ -12,10 +12,10 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
-#define RAPIDJSON_SCHEMA_VERBOSE 0
-#define RAPIDJSON_HAS_STDSTRING 1
+#define YGGDRASIL_RAPIDJSON_SCHEMA_VERBOSE 0
+#define YGGDRASIL_RAPIDJSON_HAS_STDSTRING 1
 
 #include "unittest.h"
 #include "rapidjson/schema.h"
@@ -26,14 +26,14 @@
 #include "rapidjson/error/en.h"
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(variadic-macros)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(variadic-macros)
 #elif defined(_MSC_VER)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(4822) // local class member function does not have a body
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(4822) // local class member function does not have a body
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 #define NORMALIZE(schema, json, expected, normalized)	\
 {\
@@ -164,7 +164,7 @@ using namespace rapidjson;
     }\
     Document e;							\
     e.Parse(error);						\
-    RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;		\
+    YGGDRASIL_RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;		\
     Value e_msg;						\
     if (!normalizer.GetErrorMsg(e_msg, error_msg_allocator)) {	\
       StringBuffer sb_t;					\
@@ -2368,7 +2368,7 @@ TEST(SchemaNormalizer, YggSchema) {
 #endif // METASCHEMA_YGG_TESTS
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #if defined(_MSC_VER) || defined(__clang__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON

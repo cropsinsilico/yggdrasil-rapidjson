@@ -12,23 +12,23 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_CURSORSTREAMWRAPPER_H_
-#define RAPIDJSON_CURSORSTREAMWRAPPER_H_
+#ifndef YGGDRASIL_RAPIDJSON_CURSORSTREAMWRAPPER_H_
+#define YGGDRASIL_RAPIDJSON_CURSORSTREAMWRAPPER_H_
 
 #include "stream.h"
 
 #if defined(__GNUC__)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(4702)  // unreachable code
-RAPIDJSON_DIAG_OFF(4512)  // assignment operator could not be generated
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(4702)  // unreachable code
+YGGDRASIL_RAPIDJSON_DIAG_OFF(4512)  // assignment operator could not be generated
 #endif
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 
 //! Cursor stream wrapper for counting line and column number if error exists.
@@ -66,13 +66,13 @@ private:
 };
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
 #if defined(__GNUC__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_CURSORSTREAMWRAPPER_H_
+#endif // YGGDRASIL_RAPIDJSON_CURSORSTREAMWRAPPER_H_

@@ -12,13 +12,13 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_INTERNAL_STRFUNC_H_
-#define RAPIDJSON_INTERNAL_STRFUNC_H_
+#ifndef YGGDRASIL_RAPIDJSON_INTERNAL_STRFUNC_H_
+#define YGGDRASIL_RAPIDJSON_INTERNAL_STRFUNC_H_
 
 #include "../stream.h"
 #include <cwchar>
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 namespace internal {
 
 //! Custom strlen() which works on different character types.
@@ -29,7 +29,7 @@ namespace internal {
 */
 template <typename Ch>
 inline SizeType StrLen(const Ch* s) {
-    RAPIDJSON_ASSERT(s != 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(s != 0);
     const Ch* p = s;
     while (*p) ++p;
     return SizeType(p - s);
@@ -53,29 +53,29 @@ inline SizeType StrLen(const wchar_t* s) {
 */
 template<typename Ch>
 inline int StrCmp(const Ch* s1, const Ch* s2) {
-    RAPIDJSON_ASSERT(s1 != 0);
-    RAPIDJSON_ASSERT(s2 != 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(s1 != 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(s2 != 0);
     while(*s1 && (*s1 == *s2)) { s1++; s2++; }
     return static_cast<unsigned>(*s1) < static_cast<unsigned>(*s2) ? -1 : static_cast<unsigned>(*s1) > static_cast<unsigned>(*s2);
 }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 template<typename Ch>
 inline int StrNCmp(const Ch* s1, const Ch* s2, SizeType N) {
-    RAPIDJSON_ASSERT(s1 != 0);
-    RAPIDJSON_ASSERT(s2 != 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(s1 != 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(s2 != 0);
     SizeType i = 1;
     while(*s1 && (*s1 == *s2) && (i < N)) { s1++; s2++; i++; }
     return static_cast<unsigned>(*s1) < static_cast<unsigned>(*s2) ? -1 : static_cast<unsigned>(*s1) > static_cast<unsigned>(*s2);
 }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
   
 //! Returns number of code points in a encoded string.
 template<typename Encoding>
 bool CountStringCodePoint(const typename Encoding::Ch* s, SizeType length, SizeType* outCount) {
-    RAPIDJSON_ASSERT(s != 0);
-    RAPIDJSON_ASSERT(outCount != 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(s != 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(outCount != 0);
     GenericStringStream<Encoding> is(s);
     const typename Encoding::Ch* end = s + length;
     SizeType count = 0;
@@ -90,6 +90,6 @@ bool CountStringCodePoint(const typename Encoding::Ch* s, SizeType length, SizeT
 }
 
 } // namespace internal
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_INTERNAL_STRFUNC_H_
+#endif // YGGDRASIL_RAPIDJSON_INTERNAL_STRFUNC_H_

@@ -17,11 +17,11 @@
 #include "rapidjson/writer.h"
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(c++98-compat)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(c++98-compat)
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 TEST(StringBuffer, InitialSize) {
     StringBuffer buffer;
@@ -43,7 +43,7 @@ TEST(StringBuffer, PutN_Issue672) {
     GenericStringBuffer<UTF8<>, MemoryPoolAllocator<> > buffer;
     EXPECT_EQ(0u, buffer.GetSize());
     EXPECT_EQ(0u, buffer.GetLength());
-    rapidjson::PutN(buffer, ' ', 1);
+    yggdrasil_rapidjson::PutN(buffer, ' ', 1);
     EXPECT_EQ(1u, buffer.GetSize());
     EXPECT_EQ(1u, buffer.GetLength());
 }
@@ -95,7 +95,7 @@ TEST(StringBuffer, GetLength_Issue744) {
     EXPECT_EQ(3u, buffer.GetLength());
 }
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
 #if 0 // Many old compiler does not support these. Turn it off temporaily.
 
@@ -185,8 +185,8 @@ TEST(StringBuffer, MoveAssignment) {
     EXPECT_STREQ("ABCD", y.GetString());
 }
 
-#endif // RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

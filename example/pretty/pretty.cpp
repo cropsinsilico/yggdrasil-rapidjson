@@ -7,7 +7,7 @@
 #include "rapidjson/filewritestream.h"
 #include "rapidjson/error/en.h"
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 int main(int, char*[]) {
     // Prepare reader and input stream.

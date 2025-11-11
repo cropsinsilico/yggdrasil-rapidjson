@@ -12,14 +12,14 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#ifdef RAPIDJSON_YGGDRASIL
-#define RAPIDJSON_FORCE_IMPORT_ARRAY
-#endif // RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#define YGGDRASIL_RAPIDJSON_FORCE_IMPORT_ARRAY
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 #include "unittest.h"
 #include "rapidjson/rapidjson.h"
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #include "rapidjson/pyrj.h"
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 #ifdef __clang__
 #pragma GCC diagnostic push
@@ -37,13 +37,13 @@ AssertException::~AssertException() throw() {}
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
 
-    std::cout << "RapidJSON v" << RAPIDJSON_VERSION_STRING << std::endl;
+    std::cout << "RapidJSON v" << YGGDRASIL_RAPIDJSON_VERSION_STRING << std::endl;
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
     INIT_PYTHON();
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     
 #ifdef _MSC_VER
     _CrtMemState memoryState = { 0 };
@@ -60,11 +60,11 @@ int main(int argc, char **argv) {
     _CrtMemDumpAllObjectsSince(&memoryState);
 #endif
     
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
     FINALIZE_PYTHON();
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     
     return ret;
 }

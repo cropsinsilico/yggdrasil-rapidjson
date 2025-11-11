@@ -151,6 +151,8 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 option(YGGDRASIL_RAPIDJSON_BUILD_DOC "Build yggdrasil_rapidjson documentation." ON)
 option(YGGDRASIL_RAPIDJSON_BUILD_EXAMPLES "Build yggdrasil_rapidjson examples." ON)
 option(YGGDRASIL_RAPIDJSON_BUILD_TESTS "Build yggdrasil_rapidjson perftests and unittests." ON)
+option(YGGDRASIL_RAPIDJSON_BUILD_UNITTESTS "Build yggdrasil_rapidjson unittests." ON)
+option(YGGDRASIL_RAPIDJSON_BUILD_PERFTESTS "Build yggdrasil_rapidjson perftests." ON)
 option(YGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST
     "Use gtest installation in `thirdparty/gtest` by default if available" OFF)
 

@@ -1,11 +1,11 @@
-#ifndef RAPIDJSON_DOC_HELPERS_H_
-#define RAPIDJSON_DOC_HELPERS_H_
+#ifndef YGGDRASIL_RAPIDJSON_DOC_HELPERS_H_
+#define YGGDRASIL_RAPIDJSON_DOC_HELPERS_H_
 
 #include "ply.h"
 #include "obj.h"
 #include "va_list.h"
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 // Forward declaration.
 template <typename Encoding, typename Allocator>
@@ -14,8 +14,8 @@ class GenericValue;
 template <typename Encoding, typename Allocator, typename StackAllocator>
 class GenericDocument;
 
-#ifndef RAPIDJSON_DEFAULT_STACK_ALLOCATOR
-#define RAPIDJSON_DEFAULT_STACK_ALLOCATOR ::RAPIDJSON_NAMESPACE::CrtAllocator
+#ifndef YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR
+#define YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR ::YGGDRASIL_RAPIDJSON_NAMESPACE::CrtAllocator
 #endif
 
 // Geometry helpers
@@ -54,7 +54,7 @@ void ObjWavefront::fromPly(const Ply& p) {
 	// }
       }
     } else
-      RAPIDJSON_ASSERT(((*name) == "vertex") ||
+      YGGDRASIL_RAPIDJSON_ASSERT(((*name) == "vertex") ||
 		       ((*name) == "face") ||
 		       ((*name) == "edge"));
   }
@@ -72,7 +72,7 @@ void Ply::fromObjWavefront(const ObjWavefront& o) {
       this->add_element("edge", (*it)->get_int_array(nvert));
     }
     else
-      RAPIDJSON_ASSERT(((*it)->code == "v") ||
+      YGGDRASIL_RAPIDJSON_ASSERT(((*it)->code == "v") ||
 		       ((*it)->code == "f") ||
 		       ((*it)->code == "l"));
   }
@@ -92,7 +92,7 @@ template<typename ValueType>
 size_t countVarArgs(ValueType& schema, bool set) {
   GenericDocument<typename ValueType::EncodingType,
 		  typename ValueType::AllocatorType,
-		  RAPIDJSON_DEFAULT_STACK_ALLOCATOR> tmp;
+		  YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR> tmp;
   return tmp.CountVarArgs(schema, set);
 }
 
@@ -100,7 +100,7 @@ template<typename ValueType>
 bool VarArgList::skip(ValueType& schema, bool set) {
   GenericDocument<typename ValueType::EncodingType,
 		  typename ValueType::AllocatorType,
-		  RAPIDJSON_DEFAULT_STACK_ALLOCATOR> tmp;
+		  YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR> tmp;
   return tmp.SkipVarArgs(schema, *this, set);
 }
 
@@ -128,7 +128,7 @@ inline bool TranslateEncoding_inner(const void* src, SizeType srcNbytes,
   SizeType srcLength = srcNbytes / ((SizeType)sizeof(typename SourceEncoding::Ch));
   GenericStringStream<SourceEncoding> is((const typename SourceEncoding::Ch*)src);
   GenericStringBuffer<DestEncoding> os;
-  while (RAPIDJSON_LIKELY(is.Tell() < srcLength)) {
+  while (YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < srcLength)) {
     Transcoder<SourceEncoding, DestEncoding>::Transcode(is, os);
   }
   if (dst == NULL) {
@@ -182,6 +182,6 @@ inline bool TranslateEncoding(const void* src, SizeType srcNbytes, const Ch* src
 #undef COMPARE_
 #undef ENCODING_STRING_
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_DOC_HELPERS_H_
+#endif // YGGDRASIL_RAPIDJSON_DOC_HELPERS_H_

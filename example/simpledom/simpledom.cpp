@@ -6,7 +6,7 @@
 #include "rapidjson/stringbuffer.h"
 #include <iostream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 int main() {
     // 1. Parse a JSON string into DOM.

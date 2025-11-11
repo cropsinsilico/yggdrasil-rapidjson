@@ -20,7 +20,7 @@
 #include "rapidjson/memorystream.h"
 #include "rapidjson/memorybuffer.h"
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 class EncodedStreamTest : public ::testing::Test {
 public:

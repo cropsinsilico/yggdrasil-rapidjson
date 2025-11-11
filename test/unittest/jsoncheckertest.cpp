@@ -16,7 +16,7 @@
 
 #include "rapidjson/document.h"
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 static char* ReadFile(const char* filename, size_t& length) {
     const char *paths[] = {

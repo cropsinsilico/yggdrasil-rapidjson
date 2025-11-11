@@ -12,8 +12,8 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_ALLOCATORS_H_
-#define RAPIDJSON_ALLOCATORS_H_
+#ifndef YGGDRASIL_RAPIDJSON_ALLOCATORS_H_
+#define YGGDRASIL_RAPIDJSON_ALLOCATORS_H_
 
 #include "rapidjson.h"
 #include "internal/meta.h"
@@ -21,16 +21,16 @@
 #include <memory>
 #include <limits>
 
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 #include <type_traits>
 #endif
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 ///////////////////////////////////////////////////////////////////////////////
 // Allocator
 
-/*! \class rapidjson::Allocator
+/*! \class yggdrasil_rapidjson::Allocator
     \brief Concept for allocating, resizing and freeing memory block.
     
     Note that Malloc() and Realloc() are non-static but Free() is static.
@@ -61,15 +61,15 @@ concept Allocator {
 */
 
 
-/*! \def RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY
-    \ingroup RAPIDJSON_CONFIG
+/*! \def YGGDRASIL_RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY
+    \ingroup YGGDRASIL_RAPIDJSON_CONFIG
     \brief User-defined kDefaultChunkCapacity definition.
 
     User can define this as any \c size that is a power of 2.
 */
 
-#ifndef RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY
-#define RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY (64 * 1024)
+#ifndef YGGDRASIL_RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY
+#define YGGDRASIL_RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY (64 * 1024)
 #endif
 
 
@@ -85,24 +85,24 @@ public:
     static const bool kNeedFree = true;
     void* Malloc(size_t size) { 
         if (size) //  behavior of malloc(0) is implementation defined.
-            return RAPIDJSON_MALLOC(size);
+            return YGGDRASIL_RAPIDJSON_MALLOC(size);
         else
             return NULL; // standardize to returning NULL.
     }
     void* Realloc(void* originalPtr, size_t originalSize, size_t newSize) {
         (void)originalSize;
         if (newSize == 0) {
-            RAPIDJSON_FREE(originalPtr);
+            YGGDRASIL_RAPIDJSON_FREE(originalPtr);
             return NULL;
         }
-        return RAPIDJSON_REALLOC(originalPtr, newSize);
+        return YGGDRASIL_RAPIDJSON_REALLOC(originalPtr, newSize);
     }
-    static void Free(void *ptr) RAPIDJSON_NOEXCEPT { RAPIDJSON_FREE(ptr); }
+    static void Free(void *ptr) YGGDRASIL_RAPIDJSON_NOEXCEPT { YGGDRASIL_RAPIDJSON_FREE(ptr); }
 
-    bool operator==(const CrtAllocator&) const RAPIDJSON_NOEXCEPT {
+    bool operator==(const CrtAllocator&) const YGGDRASIL_RAPIDJSON_NOEXCEPT {
         return true;
     }
-    bool operator!=(const CrtAllocator&) const RAPIDJSON_NOEXCEPT {
+    bool operator!=(const CrtAllocator&) const YGGDRASIL_RAPIDJSON_NOEXCEPT {
         return false;
     }
 };
@@ -144,8 +144,8 @@ class MemoryPoolAllocator {
         bool ownBuffer;
     };
 
-    static const size_t SIZEOF_SHARED_DATA = RAPIDJSON_ALIGN(sizeof(SharedData));
-    static const size_t SIZEOF_CHUNK_HEADER = RAPIDJSON_ALIGN(sizeof(ChunkHeader));
+    static const size_t SIZEOF_SHARED_DATA = YGGDRASIL_RAPIDJSON_ALIGN(sizeof(SharedData));
+    static const size_t SIZEOF_CHUNK_HEADER = YGGDRASIL_RAPIDJSON_ALIGN(sizeof(ChunkHeader));
 
     static inline ChunkHeader *GetChunkHead(SharedData *shared)
     {
@@ -156,7 +156,7 @@ class MemoryPoolAllocator {
         return reinterpret_cast<uint8_t*>(shared->chunkHead) + SIZEOF_CHUNK_HEADER;
     }
 
-    static const size_t kDefaultChunkCapacity = RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY; //!< Default chunk capacity.
+    static const size_t kDefaultChunkCapacity = YGGDRASIL_RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY; //!< Default chunk capacity.
 
 public:
     static const bool kNeedFree = false;    //!< Tell users that no need to call Free() with this allocator. (concept Allocator)
@@ -169,11 +169,11 @@ public:
     explicit
     MemoryPoolAllocator(size_t chunkSize = kDefaultChunkCapacity, BaseAllocator* baseAllocator = 0) : 
         chunk_capacity_(chunkSize),
-        baseAllocator_(baseAllocator ? baseAllocator : RAPIDJSON_NEW(BaseAllocator)()),
+        baseAllocator_(baseAllocator ? baseAllocator : YGGDRASIL_RAPIDJSON_NEW(BaseAllocator)()),
         shared_(static_cast<SharedData*>(baseAllocator_ ? baseAllocator_->Malloc(SIZEOF_SHARED_DATA + SIZEOF_CHUNK_HEADER) : 0))
     {
-        RAPIDJSON_ASSERT(baseAllocator_ != 0);
-        RAPIDJSON_ASSERT(shared_ != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(baseAllocator_ != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(shared_ != 0);
         if (baseAllocator) {
             shared_->ownBaseAllocator = 0;
         }
@@ -203,7 +203,7 @@ public:
         baseAllocator_(baseAllocator),
         shared_(static_cast<SharedData*>(AlignBuffer(buffer, size)))
     {
-        RAPIDJSON_ASSERT(size >= SIZEOF_SHARED_DATA + SIZEOF_CHUNK_HEADER);
+        YGGDRASIL_RAPIDJSON_ASSERT(size >= SIZEOF_SHARED_DATA + SIZEOF_CHUNK_HEADER);
         shared_->chunkHead = GetChunkHead(shared_);
         shared_->chunkHead->capacity = size - SIZEOF_SHARED_DATA - SIZEOF_CHUNK_HEADER;
         shared_->chunkHead->size = 0;
@@ -213,17 +213,17 @@ public:
         shared_->refcount = 1;
     }
 
-    MemoryPoolAllocator(const MemoryPoolAllocator& rhs) RAPIDJSON_NOEXCEPT :
+    MemoryPoolAllocator(const MemoryPoolAllocator& rhs) YGGDRASIL_RAPIDJSON_NOEXCEPT :
         chunk_capacity_(rhs.chunk_capacity_),
         baseAllocator_(rhs.baseAllocator_),
         shared_(rhs.shared_)
     {
-        RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
         ++shared_->refcount;
     }
-    MemoryPoolAllocator& operator=(const MemoryPoolAllocator& rhs) RAPIDJSON_NOEXCEPT
+    MemoryPoolAllocator& operator=(const MemoryPoolAllocator& rhs) YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
-        RAPIDJSON_NOEXCEPT_ASSERT(rhs.shared_->refcount > 0);
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(rhs.shared_->refcount > 0);
         ++rhs.shared_->refcount;
         this->~MemoryPoolAllocator();
         baseAllocator_ = rhs.baseAllocator_;
@@ -232,18 +232,18 @@ public:
         return *this;
     }
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
-    MemoryPoolAllocator(MemoryPoolAllocator&& rhs) RAPIDJSON_NOEXCEPT :
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
+    MemoryPoolAllocator(MemoryPoolAllocator&& rhs) YGGDRASIL_RAPIDJSON_NOEXCEPT :
         chunk_capacity_(rhs.chunk_capacity_),
         baseAllocator_(rhs.baseAllocator_),
         shared_(rhs.shared_)
     {
-        RAPIDJSON_NOEXCEPT_ASSERT(rhs.shared_->refcount > 0);
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(rhs.shared_->refcount > 0);
         rhs.shared_ = 0;
     }
-    MemoryPoolAllocator& operator=(MemoryPoolAllocator&& rhs) RAPIDJSON_NOEXCEPT
+    MemoryPoolAllocator& operator=(MemoryPoolAllocator&& rhs) YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
-        RAPIDJSON_NOEXCEPT_ASSERT(rhs.shared_->refcount > 0);
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(rhs.shared_->refcount > 0);
         this->~MemoryPoolAllocator();
         baseAllocator_ = rhs.baseAllocator_;
         chunk_capacity_ = rhs.chunk_capacity_;
@@ -256,7 +256,7 @@ public:
     //! Destructor.
     /*! This deallocates all memory chunks, excluding the user-supplied buffer.
     */
-    ~MemoryPoolAllocator() RAPIDJSON_NOEXCEPT {
+    ~MemoryPoolAllocator() YGGDRASIL_RAPIDJSON_NOEXCEPT {
         if (!shared_) {
             // do nothing if moved
             return;
@@ -270,12 +270,12 @@ public:
         if (shared_->ownBuffer) {
             baseAllocator_->Free(shared_);
         }
-        RAPIDJSON_DELETE(a);
+        YGGDRASIL_RAPIDJSON_DELETE(a);
     }
 
     //! Deallocates all memory chunks, excluding the first/user one.
-    void Clear() RAPIDJSON_NOEXCEPT {
-        RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
+    void Clear() YGGDRASIL_RAPIDJSON_NOEXCEPT {
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
         for (;;) {
             ChunkHeader* c = shared_->chunkHead;
             if (!c->next) {
@@ -290,8 +290,8 @@ public:
     //! Computes the total capacity of allocated memory chunks.
     /*! \return total capacity in bytes.
     */
-    size_t Capacity() const RAPIDJSON_NOEXCEPT {
-        RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
+    size_t Capacity() const YGGDRASIL_RAPIDJSON_NOEXCEPT {
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
         size_t capacity = 0;
         for (ChunkHeader* c = shared_->chunkHead; c != 0; c = c->next)
             capacity += c->capacity;
@@ -301,8 +301,8 @@ public:
     //! Computes the memory blocks allocated.
     /*! \return total used bytes.
     */
-    size_t Size() const RAPIDJSON_NOEXCEPT {
-        RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
+    size_t Size() const YGGDRASIL_RAPIDJSON_NOEXCEPT {
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
         size_t size = 0;
         for (ChunkHeader* c = shared_->chunkHead; c != 0; c = c->next)
             size += c->size;
@@ -312,19 +312,19 @@ public:
     //! Whether the allocator is shared.
     /*! \return true or false.
     */
-    bool Shared() const RAPIDJSON_NOEXCEPT {
-        RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
+    bool Shared() const YGGDRASIL_RAPIDJSON_NOEXCEPT {
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
         return shared_->refcount > 1;
     }
 
     //! Allocates a memory block. (concept Allocator)
     void* Malloc(size_t size) {
-        RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
         if (!size)
             return NULL;
 
-        size = RAPIDJSON_ALIGN(size);
-        if (RAPIDJSON_UNLIKELY(shared_->chunkHead->size + size > shared_->chunkHead->capacity))
+        size = YGGDRASIL_RAPIDJSON_ALIGN(size);
+        if (YGGDRASIL_RAPIDJSON_UNLIKELY(shared_->chunkHead->size + size > shared_->chunkHead->capacity))
             if (!AddChunk(chunk_capacity_ > size ? chunk_capacity_ : size))
                 return NULL;
 
@@ -338,12 +338,12 @@ public:
         if (originalPtr == 0)
             return Malloc(newSize);
 
-        RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
         if (newSize == 0)
             return NULL;
 
-        originalSize = RAPIDJSON_ALIGN(originalSize);
-        newSize = RAPIDJSON_ALIGN(newSize);
+        originalSize = YGGDRASIL_RAPIDJSON_ALIGN(originalSize);
+        newSize = YGGDRASIL_RAPIDJSON_ALIGN(newSize);
 
         // Do not shrink if new size is smaller than original
         if (originalSize >= newSize)
@@ -369,16 +369,16 @@ public:
     }
 
     //! Frees a memory block (concept Allocator)
-    static void Free(void *ptr) RAPIDJSON_NOEXCEPT { (void)ptr; } // Do nothing
+    static void Free(void *ptr) YGGDRASIL_RAPIDJSON_NOEXCEPT { (void)ptr; } // Do nothing
 
     //! Compare (equality) with another MemoryPoolAllocator
-    bool operator==(const MemoryPoolAllocator& rhs) const RAPIDJSON_NOEXCEPT {
-        RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
-        RAPIDJSON_NOEXCEPT_ASSERT(rhs.shared_->refcount > 0);
+    bool operator==(const MemoryPoolAllocator& rhs) const YGGDRASIL_RAPIDJSON_NOEXCEPT {
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(shared_->refcount > 0);
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(rhs.shared_->refcount > 0);
         return shared_ == rhs.shared_;
     }
     //! Compare (inequality) with another MemoryPoolAllocator
-    bool operator!=(const MemoryPoolAllocator& rhs) const RAPIDJSON_NOEXCEPT {
+    bool operator!=(const MemoryPoolAllocator& rhs) const YGGDRASIL_RAPIDJSON_NOEXCEPT {
         return !operator==(rhs);
     }
 
@@ -389,7 +389,7 @@ private:
     */
     bool AddChunk(size_t capacity) {
         if (!baseAllocator_)
-            shared_->ownBaseAllocator = baseAllocator_ = RAPIDJSON_NEW(BaseAllocator)();
+            shared_->ownBaseAllocator = baseAllocator_ = YGGDRASIL_RAPIDJSON_NEW(BaseAllocator)();
         if (ChunkHeader* chunk = static_cast<ChunkHeader*>(baseAllocator_->Malloc(SIZEOF_CHUNK_HEADER + capacity))) {
             chunk->capacity = capacity;
             chunk->size = 0;
@@ -403,12 +403,12 @@ private:
 
     static inline void* AlignBuffer(void* buf, size_t &size)
     {
-        RAPIDJSON_NOEXCEPT_ASSERT(buf != 0);
+        YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(buf != 0);
         const uintptr_t mask = sizeof(void*) - 1;
         const uintptr_t ubuf = reinterpret_cast<uintptr_t>(buf);
-        if (RAPIDJSON_UNLIKELY(ubuf & mask)) {
+        if (YGGDRASIL_RAPIDJSON_UNLIKELY(ubuf & mask)) {
             const uintptr_t abuf = (ubuf + mask) & ~mask;
-            RAPIDJSON_ASSERT(size >= abuf - ubuf);
+            YGGDRASIL_RAPIDJSON_ASSERT(size >= abuf - ubuf);
             buf = reinterpret_cast<void*>(abuf);
             size -= abuf - ubuf;
         }
@@ -434,7 +434,7 @@ namespace internal {
 template<typename T, typename A>
 inline T* Realloc(A& a, T* old_p, size_t old_n, size_t new_n)
 {
-    RAPIDJSON_NOEXCEPT_ASSERT(old_n <= (std::numeric_limits<size_t>::max)() / sizeof(T) && new_n <= (std::numeric_limits<size_t>::max)() / sizeof(T));
+    YGGDRASIL_RAPIDJSON_NOEXCEPT_ASSERT(old_n <= (std::numeric_limits<size_t>::max)() / sizeof(T) && new_n <= (std::numeric_limits<size_t>::max)() / sizeof(T));
     return static_cast<T*>(a.Realloc(old_p, old_n * sizeof(T), new_n * sizeof(T)));
 }
 
@@ -451,8 +451,8 @@ inline void Free(A& a, T *p, size_t n = 1)
 }
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(effc++) // std::allocator can safely be inherited
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++) // std::allocator can safely be inherited
 #endif
 
 template <typename T, typename BaseAllocator = CrtAllocator>
@@ -460,7 +460,7 @@ class StdAllocator :
     public std::allocator<T>
 {
     typedef std::allocator<T> allocator_type;
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     typedef std::allocator_traits<allocator_type> traits_type;
 #else
     typedef allocator_type traits_type;
@@ -469,40 +469,40 @@ class StdAllocator :
 public:
     typedef BaseAllocator BaseAllocatorType;
 
-    StdAllocator() RAPIDJSON_NOEXCEPT :
+    StdAllocator() YGGDRASIL_RAPIDJSON_NOEXCEPT :
         allocator_type(),
         baseAllocator_()
     { }
 
-    StdAllocator(const StdAllocator& rhs) RAPIDJSON_NOEXCEPT :
+    StdAllocator(const StdAllocator& rhs) YGGDRASIL_RAPIDJSON_NOEXCEPT :
         allocator_type(rhs),
         baseAllocator_(rhs.baseAllocator_)
     { }
 
     template<typename U>
-    StdAllocator(const StdAllocator<U, BaseAllocator>& rhs) RAPIDJSON_NOEXCEPT :
+    StdAllocator(const StdAllocator<U, BaseAllocator>& rhs) YGGDRASIL_RAPIDJSON_NOEXCEPT :
         allocator_type(rhs),
         baseAllocator_(rhs.baseAllocator_)
     { }
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
-    StdAllocator(StdAllocator&& rhs) RAPIDJSON_NOEXCEPT :
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
+    StdAllocator(StdAllocator&& rhs) YGGDRASIL_RAPIDJSON_NOEXCEPT :
         allocator_type(std::move(rhs)),
         baseAllocator_(std::move(rhs.baseAllocator_))
     { }
 #endif
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     using propagate_on_container_move_assignment = std::true_type;
     using propagate_on_container_swap = std::true_type;
 #endif
 
     /* implicit */
-    StdAllocator(const BaseAllocator& baseAllocator) RAPIDJSON_NOEXCEPT :
+    StdAllocator(const BaseAllocator& baseAllocator) YGGDRASIL_RAPIDJSON_NOEXCEPT :
         allocator_type(),
         baseAllocator_(baseAllocator)
     { }
 
-    ~StdAllocator() RAPIDJSON_NOEXCEPT
+    ~StdAllocator() YGGDRASIL_RAPIDJSON_NOEXCEPT
     { }
 
     template<typename U>
@@ -517,21 +517,21 @@ public:
     typedef typename traits_type::pointer           pointer;
     typedef typename traits_type::const_pointer     const_pointer;
 
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 
     typedef typename std::add_lvalue_reference<value_type>::type &reference;
     typedef typename std::add_lvalue_reference<typename std::add_const<value_type>::type>::type &const_reference;
 
-    pointer address(reference r) const RAPIDJSON_NOEXCEPT
+    pointer address(reference r) const YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
         return std::addressof(r);
     }
-    const_pointer address(const_reference r) const RAPIDJSON_NOEXCEPT
+    const_pointer address(const_reference r) const YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
         return std::addressof(r);
     }
 
-    size_type max_size() const RAPIDJSON_NOEXCEPT
+    size_type max_size() const YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
         return traits_type::max_size(*this);
     }
@@ -546,21 +546,21 @@ public:
         traits_type::destroy(*this, p);
     }
 
-#else // !RAPIDJSON_HAS_CXX11
+#else // !YGGDRASIL_RAPIDJSON_HAS_CXX11
 
     typedef typename allocator_type::reference       reference;
     typedef typename allocator_type::const_reference const_reference;
 
-    pointer address(reference r) const RAPIDJSON_NOEXCEPT
+    pointer address(reference r) const YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
         return allocator_type::address(r);
     }
-    const_pointer address(const_reference r) const RAPIDJSON_NOEXCEPT
+    const_pointer address(const_reference r) const YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
         return allocator_type::address(r);
     }
 
-    size_type max_size() const RAPIDJSON_NOEXCEPT
+    size_type max_size() const YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
         return allocator_type::max_size();
     }
@@ -574,17 +574,17 @@ public:
         allocator_type::destroy(p);
     }
 
-#endif // !RAPIDJSON_HAS_CXX11
+#endif // !YGGDRASIL_RAPIDJSON_HAS_CXX11
 
     template <typename U>
     U* allocate(size_type n = 1, const void* = 0)
     {
-        return RAPIDJSON_NAMESPACE::Malloc<U>(baseAllocator_, n);
+        return YGGDRASIL_RAPIDJSON_NAMESPACE::Malloc<U>(baseAllocator_, n);
     }
     template <typename U>
     void deallocate(U* p, size_type n = 1)
     {
-        RAPIDJSON_NAMESPACE::Free<U>(baseAllocator_, p, n);
+        YGGDRASIL_RAPIDJSON_NAMESPACE::Free<U>(baseAllocator_, p, n);
     }
 
     pointer allocate(size_type n = 1, const void* = 0)
@@ -596,17 +596,17 @@ public:
         deallocate<value_type>(p, n);
     }
 
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     using is_always_equal = std::is_empty<BaseAllocator>;
 #endif
 
     template<typename U>
-    bool operator==(const StdAllocator<U, BaseAllocator>& rhs) const RAPIDJSON_NOEXCEPT
+    bool operator==(const StdAllocator<U, BaseAllocator>& rhs) const YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
         return baseAllocator_ == rhs.baseAllocator_;
     }
     template<typename U>
-    bool operator!=(const StdAllocator<U, BaseAllocator>& rhs) const RAPIDJSON_NOEXCEPT
+    bool operator!=(const StdAllocator<U, BaseAllocator>& rhs) const YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
         return !operator==(rhs);
     }
@@ -622,7 +622,7 @@ public:
     {
         return baseAllocator_.Realloc(originalPtr, originalSize, newSize);
     }
-    static void Free(void *ptr) RAPIDJSON_NOEXCEPT
+    static void Free(void *ptr) YGGDRASIL_RAPIDJSON_NOEXCEPT
     {
         BaseAllocator::Free(ptr);
     }
@@ -634,7 +634,7 @@ private:
     BaseAllocator baseAllocator_;
 };
 
-#if !RAPIDJSON_HAS_CXX17 // std::allocator<void> deprecated in C++17
+#if !YGGDRASIL_RAPIDJSON_HAS_CXX17 // std::allocator<void> deprecated in C++17
 template <typename BaseAllocator>
 class StdAllocator<void, BaseAllocator> :
     public std::allocator<void>
@@ -644,29 +644,29 @@ class StdAllocator<void, BaseAllocator> :
 public:
     typedef BaseAllocator BaseAllocatorType;
 
-    StdAllocator() RAPIDJSON_NOEXCEPT :
+    StdAllocator() YGGDRASIL_RAPIDJSON_NOEXCEPT :
         allocator_type(),
         baseAllocator_()
     { }
 
-    StdAllocator(const StdAllocator& rhs) RAPIDJSON_NOEXCEPT :
+    StdAllocator(const StdAllocator& rhs) YGGDRASIL_RAPIDJSON_NOEXCEPT :
         allocator_type(rhs),
         baseAllocator_(rhs.baseAllocator_)
     { }
 
     template<typename U>
-    StdAllocator(const StdAllocator<U, BaseAllocator>& rhs) RAPIDJSON_NOEXCEPT :
+    StdAllocator(const StdAllocator<U, BaseAllocator>& rhs) YGGDRASIL_RAPIDJSON_NOEXCEPT :
         allocator_type(rhs),
         baseAllocator_(rhs.baseAllocator_)
     { }
 
     /* implicit */
-    StdAllocator(const BaseAllocator& baseAllocator) RAPIDJSON_NOEXCEPT :
+    StdAllocator(const BaseAllocator& baseAllocator) YGGDRASIL_RAPIDJSON_NOEXCEPT :
         allocator_type(),
         baseAllocator_(baseAllocator)
     { }
 
-    ~StdAllocator() RAPIDJSON_NOEXCEPT
+    ~StdAllocator() YGGDRASIL_RAPIDJSON_NOEXCEPT
     { }
 
     template<typename U>
@@ -685,9 +685,9 @@ private:
 #endif
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_ENCODINGS_H_
+#endif // YGGDRASIL_RAPIDJSON_ENCODINGS_H_

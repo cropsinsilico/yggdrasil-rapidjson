@@ -11,7 +11,7 @@
 #include <vector>
 #include <cctype>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 template<typename OutputHandler>
 struct CapitalizeFilter {

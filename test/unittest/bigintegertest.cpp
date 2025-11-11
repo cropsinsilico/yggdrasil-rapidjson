@@ -16,7 +16,7 @@
 
 #include "rapidjson/internal/biginteger.h"
 
-using namespace rapidjson::internal;
+using namespace yggdrasil_rapidjson::internal;
 
 #define BIGINTEGER_LITERAL(s) BigInteger(s, sizeof(s) - 1)
 
@@ -52,11 +52,11 @@ TEST(BigInteger, AddUint64) {
     a += 1u;
     EXPECT_TRUE(BigInteger(2) == a);
 
-    EXPECT_TRUE(BigInteger(RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF)) == kUint64Max);
+    EXPECT_TRUE(BigInteger(YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF)) == kUint64Max);
     BigInteger b = kUint64Max;
     b += 1u;
     EXPECT_TRUE(kTwo64 == b);
-    b += RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF);
+    b += YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF);
     EXPECT_TRUE(BIGINTEGER_LITERAL("36893488147419103231") == b);
 }
 
@@ -76,9 +76,9 @@ TEST(BigInteger, MultiplyUint64) {
     BigInteger c(123);
     c *= static_cast<uint64_t>(456u);
     EXPECT_TRUE(BigInteger(123u * 456u) == c);
-    c *= RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF);
+    c *= YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF);
     EXPECT_TRUE(BIGINTEGER_LITERAL("1034640981606221330982120") == c);
-    c *= RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF);
+    c *= YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF);
     EXPECT_TRUE(BIGINTEGER_LITERAL("19085757395861596536664473018420572782123800") == c);
 }
 

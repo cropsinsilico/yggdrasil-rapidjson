@@ -8,18 +8,18 @@
 #include <map>
 
 using namespace std;
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 typedef map<string, string> MessageMap;
 
 #if defined(__GNUC__)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
 #endif
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(switch-enum)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(switch-enum)
 #endif
 
 struct MessageHandler
@@ -65,11 +65,11 @@ struct MessageHandler
 };
 
 #if defined(__GNUC__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
 static void ParseMessages(const char* json, MessageMap& messages) {

@@ -1,5 +1,5 @@
-#ifndef RAPIDJSON_PLY_H_
-#define RAPIDJSON_PLY_H_
+#ifndef YGGDRASIL_RAPIDJSON_PLY_H_
+#define YGGDRASIL_RAPIDJSON_PLY_H_
 
 #include "internal/meta.h"
 #include <iostream>
@@ -7,9 +7,9 @@
 #include <vector>
 #include <algorithm>
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
-#if RAPIDJSON_ENDIAN == RAPIDJSON_LITTLEENDIAN
+#if YGGDRASIL_RAPIDJSON_ENDIAN == YGGDRASIL_RAPIDJSON_LITTLEENDIAN
 #define NUMBER_MEMBER_BASE_(name, type, ptype1, ptype2, ptype3)		\
     name(const type x) : v(x), pad1(0), pad2(0), pad3(0) {}		\
     name() : v(0), pad1(0), pad2(0), pad3(0) {}				\
@@ -38,7 +38,7 @@ RAPIDJSON_NAMESPACE_BEGIN
     std::istream & read(std::istream &in) {				\
       int tmp = 0;							\
       in >> tmp;							\
-      RAPIDJSON_ASSERT(tmp >= 0 && tmp < 256);				\
+      YGGDRASIL_RAPIDJSON_ASSERT(tmp >= 0 && tmp < 256);				\
       v = (type)tmp;							\
       return in;							\
     }									\
@@ -62,7 +62,7 @@ RAPIDJSON_NAMESPACE_BEGIN
   case (kUint32Flag) : before x.u32.v after; break;			\
   case (kFloatFlag) : before x.f.v after; break;			\
   case (kDoubleFlag) : before x.d after; break;				\
-  default: RAPIDJSON_ASSERT(false);					\
+  default: YGGDRASIL_RAPIDJSON_ASSERT(false);					\
   }
 #define NUMBER_DATA_COMPARE_(x, y, flag, var)				\
   switch (flag) {							\
@@ -74,7 +74,7 @@ RAPIDJSON_NAMESPACE_BEGIN
   case (kUint32Flag) : var = (x.u32.v == y.u32.v); break;		\
   case (kFloatFlag) : var = (fabs(x.f.v - y.f.v) < 0.01f); break;	\
   case (kDoubleFlag) : var = (abs(x.d - y.d) < 0.01); break;		\
-  default: RAPIDJSON_ASSERT(false);					\
+  default: YGGDRASIL_RAPIDJSON_ASSERT(false);					\
   }
 // Forward declarations
 class PlyElement;
@@ -195,8 +195,8 @@ public:
     size_t i = 0;
     for (std::vector<std::string>::const_iterator name = property_order.begin(); name != property_order.end(); name++, i++) {
       std::map<std::string, Data>::iterator it = properties.find(*name);
-      RAPIDJSON_ASSERT(it != properties.end());
-      RAPIDJSON_ASSERT(i < arr.size());
+      YGGDRASIL_RAPIDJSON_ASSERT(it != properties.end());
+      YGGDRASIL_RAPIDJSON_ASSERT(i < arr.size());
       if ((it != properties.end()) && (i < arr.size())) {
         if (it->second.f & kListFlag) {
           it->second.assign(arr, ignore);
@@ -220,17 +220,17 @@ public:
     kDoubleFlag     = 0x0400,
     kListFlag       = 0x0800
   };
-#if !RAPIDJSON_HAS_CXX11
+#if !YGGDRASIL_RAPIDJSON_HAS_CXX11
   PlyElement& operator=(const PlyElement& other) {
     new (this) PlyElement(other);
     return *this;
   }
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
 private:
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
   //! Disable copy assignment for elements.
   PlyElement& operator=(const PlyElement& other);
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   void init_from_parent_();
   struct Number {
     int64_t i64;
@@ -351,7 +351,7 @@ private:
       case (kUint32Flag) : return u32.read(in);
       case (kFloatFlag) : return f.read(in);
       case (kDoubleFlag) : in >> d; return in;
-      default: RAPIDJSON_ASSERT(false);
+      default: YGGDRASIL_RAPIDJSON_ASSERT(false);
       }
       return in;
     }
@@ -369,7 +369,7 @@ private:
       case (kUint32Flag) : return u32.write(out);
       case (kFloatFlag) : return f.write(out);
       case (kDoubleFlag) : out << d; return out;
-      default: RAPIDJSON_ASSERT(false);
+      default: YGGDRASIL_RAPIDJSON_ASSERT(false);
       }
       return out;
     }
@@ -387,7 +387,7 @@ private:
       case (kUint32Flag) : return u32.is_equal(y.u32);
       case (kFloatFlag) : return f.is_equal(y.f);
       case (kDoubleFlag) : return internal::values_eq(d, y.d);
-      default: RAPIDJSON_ASSERT(false);
+      default: YGGDRASIL_RAPIDJSON_ASSERT(false);
       }
       return false;
     }
@@ -406,7 +406,7 @@ private:
       case (kUint32Flag) : return (T)(u32.v);
       case (kFloatFlag) : return (T)(f.v);
       case (kDoubleFlag) : return (T)(d);
-      default: RAPIDJSON_ASSERT(false);
+      default: YGGDRASIL_RAPIDJSON_ASSERT(false);
       }
       return 0;
     }
@@ -453,19 +453,19 @@ private:
     template<typename T>
     Data(const uint16_t flag, const std::vector<T> &x, const T* ignore = 0) :
       f(flag), n(flag), elements() {
-      RAPIDJSON_ASSERT(flag & kListFlag);
+      YGGDRASIL_RAPIDJSON_ASSERT(flag & kListFlag);
       uint16_t element_flags = (uint16_t)(flag & ~kListFlag);
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
       for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++) {
 	if (ignore && internal::values_eq(*ignore, *it)) return;
 	elements.emplace_back(element_flags, *it);
       }
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
       for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++) {
 	if (ignore && internal::values_eq(*ignore, *it)) return;
 	elements.push_back(Number(element_flags, *it));
       }
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     }
     //! \brief Read data value(s) from an input stream.
     //! \param in Input stream.
@@ -474,13 +474,13 @@ private:
 	uint16_t element_flags = (uint16_t)(f & ~kListFlag);
 	size_t size = 0;
 	in >> size;
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 	for (size_t i = 0; i < size; i++)
 	  elements.emplace_back(element_flags, in);
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 	for (size_t i = 0; i < size; i++)
 	  elements.push_back(Number(element_flags, in));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
       } else {
 	n.read(f, in);
       }
@@ -490,26 +490,26 @@ private:
     //! \param x Scalar.
     template<typename T>
     void assign(const std::vector<T>& x, const T* ignore = 0) {
-      RAPIDJSON_ASSERT(f & kListFlag);
+      YGGDRASIL_RAPIDJSON_ASSERT(f & kListFlag);
       uint16_t element_flags = (uint16_t)(f & ~kListFlag);
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
       for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++) {
 	if (ignore && internal::values_eq(*ignore, *it)) return;
 	elements.emplace_back(element_flags, *it);
       }
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
       for (typename std::vector<T>::const_iterator it = x.begin(); it != x.end(); it++) {
 	if (ignore && internal::values_eq(*ignore, *it)) return;
 	elements.push_back(Number(element_flags, *it));
       }
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     }
     //! \brief Assign a scalar value.
     //! \tparam Scalar type.
     //! \param x Scalar.
     template<typename T>
     void assign(const T& x) {
-      RAPIDJSON_ASSERT(!(f & kListFlag));
+      YGGDRASIL_RAPIDJSON_ASSERT(!(f & kListFlag));
       n.assign(f, x);
     }
     //! \brief Increment the data inplace.
@@ -649,7 +649,7 @@ private:
     case (kUint32Flag) : out.push_back((T)(x.u32.v)); break;
     case (kFloatFlag) : out.push_back((T)(x.f.v)); break;
     case (kDoubleFlag) : out.push_back((T)(x.d)); break;
-    default: RAPIDJSON_ASSERT(false);
+    default: YGGDRASIL_RAPIDJSON_ASSERT(false);
     }
   }
 
@@ -774,7 +774,7 @@ public:
       return kFloatFlag;
     else if (type == "double")
       return kDoubleFlag;
-    RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported type: ") + type));
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported type: ") + type));
     return 0;
   }
   //! \brief Convert a type flag into the ply serialized type name.
@@ -802,7 +802,7 @@ public:
     case kDoubleFlag:
       return "double";
     default:
-      RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported type: ") + std::to_string(type)));
+      YGGDRASIL_RAPIDJSON_ASSERT(!sizeof(std::string("Unsupported type: ") + std::to_string(type)));
     }
     return "";
   }
@@ -820,7 +820,7 @@ public:
     }
     for (std::map<std::string, Data>::const_iterator lit = this->properties.begin(); lit != this->properties.end(); lit++) {
       std::map<std::string, Data>::const_iterator rit = rhs.properties.find(lit->first);
-      RAPIDJSON_ASSERT(rit != rhs.properties.end());
+      YGGDRASIL_RAPIDJSON_ASSERT(rit != rhs.properties.end());
       if (rit == rhs.properties.end())
 	return false;
       if (!(lit->second.is_equal(rit->second)))
@@ -859,7 +859,7 @@ public:
     std::vector<std::string> to_erase;
     for (std::vector<std::string>::const_iterator name = property_order.begin(); name != property_order.end(); name++) {
       std::map<std::string, Data>::iterator it = properties.find(*name);
-      RAPIDJSON_ASSERT(it != properties.end());
+      YGGDRASIL_RAPIDJSON_ASSERT(it != properties.end());
       if (it == properties.end()) continue;
       it->second.read(in);
       if (it->second.has_default()) {
@@ -880,7 +880,7 @@ public:
   //! \return Data value.
   template <typename T>
   static T get_scalar(const Data &x) {
-    RAPIDJSON_ASSERT(!(x.f & kListFlag));
+    YGGDRASIL_RAPIDJSON_ASSERT(!(x.f & kListFlag));
     if (x.f & kInt8Flag)
       return (T)(x.n.i8.v);
     else if (x.f & kUint8Flag)
@@ -897,7 +897,7 @@ public:
       return (T)(x.n.f.v);
     else if (x.f & kDoubleFlag)
       return (T)(x.n.d);
-    RAPIDJSON_ASSERT(!sizeof("Cannot get scalar for type"));
+    YGGDRASIL_RAPIDJSON_ASSERT(!sizeof("Cannot get scalar for type"));
     return T(0);
   }
   //! \brief Get the number of values in the element.
@@ -953,7 +953,7 @@ public:
     for (std::vector<std::string>::const_iterator name = property_order.begin(); name != property_order.end(); name++) {
       if (skipColors && !colors.empty() && colors[0] == *name) break;
       std::map<std::string, Data>::const_iterator it = properties.find(*name);
-      RAPIDJSON_ASSERT(it != properties.end());
+      YGGDRASIL_RAPIDJSON_ASSERT(it != properties.end());
       if (it != properties.end())
 	extend_aray_data(it->second, out);
     }
@@ -1000,7 +1000,7 @@ public:
     for (std::vector<std::string>::const_iterator name = property_order.begin(); name != property_order.end(); name++) {
       if (skipColors && !colors.empty() && colors[0] == *name) break;
       std::map<std::string, Data>::const_iterator it = properties.find(*name);
-      RAPIDJSON_ASSERT(it != properties.end());
+      YGGDRASIL_RAPIDJSON_ASSERT(it != properties.end());
       if (it != properties.end())
 	extend_aray_data(it->second, out);
     }
@@ -1048,15 +1048,15 @@ public:
 	   name != colors.end(); name++, i++) {
 	property_order.push_back(*name);
 	std::map<std::string, uint16_t>::const_iterator it = properties0.find(*name);
-	RAPIDJSON_ASSERT(it != properties0.end());
+	YGGDRASIL_RAPIDJSON_ASSERT(it != properties0.end());
 	if (it == properties0.end()) return false;
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 	properties.emplace(std::piecewise_construct,
 			   std::forward_as_tuple(*name),
 			   std::forward_as_tuple(it->second, arr[i]));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 	properties[*name] = Data(it->second, arr[i]);
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
       }
     } else {
       if (colors != property_colors)
@@ -1065,7 +1065,7 @@ public:
       for (std::vector<std::string>::const_iterator name = colors.begin();
 	   name != colors.end(); name++, i++) {
 	std::map<std::string, uint16_t>::const_iterator it = properties0.find(*name);
-	RAPIDJSON_ASSERT(it != properties0.end());
+	YGGDRASIL_RAPIDJSON_ASSERT(it != properties0.end());
 	if (it == properties0.end()) return false;
 	properties[*name].n.assign(it->second, arr[i]);
       }
@@ -1170,7 +1170,7 @@ public:
     name(name0), elements(), property_order(),
     colors(property_colors), property_flags(), property_size_flags() {
     set_flags<T>(property_names, bool(N != (property_names.size())));
-    RAPIDJSON_ASSERT((N == property_names.size())
+    YGGDRASIL_RAPIDJSON_ASSERT((N == property_names.size())
 		     || (property_names.size() == 1));
     for (size_t i = 0; i < M; i++)
       add_element(std::vector<T>(arr[i], arr[i] + N), ignore);
@@ -1196,7 +1196,7 @@ public:
     name(name0), elements(), property_order(),
     colors(property_colors), property_flags(), property_size_flags() {
     set_flags<T>(property_names, bool(N != (property_names.size())));
-    RAPIDJSON_ASSERT((N == property_names.size())
+    YGGDRASIL_RAPIDJSON_ASSERT((N == property_names.size())
 		     || (property_names.size() == 1));
     for (size_t i = 0; i < M; i++)
       add_element(std::vector<T>(arr + (i * N), arr + (i * N) + N), ignore);
@@ -1240,33 +1240,33 @@ public:
     uint16_t flags = type2flag<T>();
     uint16_t size_flags = 0;
     if (is_array) {
-      RAPIDJSON_ASSERT(property_names.size() == 1);
+      YGGDRASIL_RAPIDJSON_ASSERT(property_names.size() == 1);
       flags = (flags | PlyElement::kListFlag);
       size_flags = PlyElement::kUint8Flag;
     }
     for (typename std::vector<std::string>::const_iterator it = property_names.begin(); it != property_names.end(); it++) {
       property_order.push_back(*it);
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
       property_flags.emplace(std::piecewise_construct,
 			     std::forward_as_tuple(*it),
 			     std::forward_as_tuple(flags));
       property_size_flags.emplace(std::piecewise_construct,
 				  std::forward_as_tuple(*it),
 				  std::forward_as_tuple(size_flags));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
       property_flags[*it] = flags;
       property_size_flags[*it] = size_flags;
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     }
   }
   //! \brief Add a single empty element to the geometry.
   //! \returns New element.
   PlyElement* add_element() {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements.emplace_back(this);
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements.push_back(PlyElement(this));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     return &(elements[elements.size() - 1]);
   }
   //! \brief Add an element to the set.
@@ -1278,22 +1278,22 @@ public:
   template<typename T>
   PlyElement* add_element(const std::vector<T> &arr, const T* ignore = 0)
   {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements.emplace_back(this, arr, ignore);
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements.push_back(PlyElement(this, arr, ignore));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     return &(elements[elements.size() - 1]);
   }
   //! \brief Add an element to the set by copying an existing element.
   //! \param other Element to copy.
   //! \returns New element.
   PlyElement* add_element(const PlyElement& other) {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements.emplace_back(other);
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements.push_back(PlyElement(this, other));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     return &(elements[elements.size() - 1]);
   }
   //! \brief Determine if an element set requires doubles to be represented
@@ -1302,7 +1302,7 @@ public:
   bool requires_double() const {
     for (std::vector<std::string>::const_iterator iname = property_order.begin(); iname != property_order.end(); iname++) {
       std::map<std::string, uint16_t>::const_iterator it = property_flags.find(*iname);
-      RAPIDJSON_ASSERT(it != property_flags.end());
+      YGGDRASIL_RAPIDJSON_ASSERT(it != property_flags.end());
       if (it->second & (PlyElement::kFloatFlag | PlyElement::kDoubleFlag))
 	return true;
     }
@@ -1463,7 +1463,7 @@ public:
     out << "element " << name << " " << elements.size() << std::endl;
     for (std::vector<std::string>::const_iterator iname = property_order.begin(); iname != property_order.end(); iname++) {
       std::map<std::string, uint16_t>::const_iterator it = property_flags.find(*iname);
-      RAPIDJSON_ASSERT(it != property_flags.end());
+      YGGDRASIL_RAPIDJSON_ASSERT(it != property_flags.end());
       
       out << "property " << PlyElement::flag2typename(it->second) << " ";
       if (it->second & PlyElement::kListFlag) {
@@ -1482,13 +1482,13 @@ public:
   //! \param count Number of elements to read.
   //! \return Input stream.
   std::istream & read(std::istream &in, uint32_t count) {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     for (size_t i = 0; i < count; i++)
       elements.emplace_back(this, in);
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     for (size_t i = 0; i < count; i++)
       elements.push_back(PlyElement(this, in));
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     return in;
   }
   //! \brief Read the next property from an input stream.
@@ -1655,7 +1655,7 @@ public:
     std::string name = ply_alias2base(name0);
     std::vector<std::string> property_names;
     if (name == "vertex") {
-      RAPIDJSON_ASSERT((N == 3) || (N == 6));
+      YGGDRASIL_RAPIDJSON_ASSERT((N == 3) || (N == 6));
       property_names.push_back("x");
       property_names.push_back("y");
       property_names.push_back("z");
@@ -1670,7 +1670,7 @@ public:
     } else if (name == "face") {
       property_names.push_back("vertex_index");
     } else if (name == "edge") {
-      RAPIDJSON_ASSERT((N == 2) || (N == 5));
+      YGGDRASIL_RAPIDJSON_ASSERT((N == 2) || (N == 5));
       property_names.push_back("vertex1");
       property_names.push_back("vertex2");
       if (N == 5) {
@@ -1701,7 +1701,7 @@ public:
 			  const T* ignore = 0) {
     std::string name = ply_alias2base(name0);
     bool is_array = bool(arr.size() != property_names.size());
-    RAPIDJSON_ASSERT((!is_array) || (property_names.size() == 1));
+    YGGDRASIL_RAPIDJSON_ASSERT((!is_array) || (property_names.size() == 1));
     if (elements.find(name) == elements.end()) {
       add_element_set(name);
       elements[name].set_flags<T>(property_names, is_array);
@@ -1754,17 +1754,17 @@ public:
 		       const std::vector<std::string>& property_colors,
 		       const T* ignore = 0) {
     std::string name = ply_alias2base(name0);
-    RAPIDJSON_ASSERT(elements.find(name) == elements.end());
+    YGGDRASIL_RAPIDJSON_ASSERT(elements.find(name) == elements.end());
     element_order.push_back(name);
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements.emplace(std::piecewise_construct,
 		     std::forward_as_tuple(name),
 		     std::forward_as_tuple(name, arr, property_names,
 					   property_colors, ignore));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements[name] = PlyElementSet(name, arr, property_names,
 				   property_colors, ignore);
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   }
   //! \brief Add a new element set to the geometry.
   //! \tparam T Type of property values.
@@ -1802,18 +1802,18 @@ public:
 		       const std::vector<std::string>& property_colors,
 		       const T* ignore = 0) {
     std::string name = ply_alias2base(name0);
-    RAPIDJSON_ASSERT(elements.find(name) == elements.end());
+    YGGDRASIL_RAPIDJSON_ASSERT(elements.find(name) == elements.end());
     element_order.push_back(name);
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements.emplace(std::piecewise_construct,
 		     std::forward_as_tuple(name),
 		     std::forward_as_tuple(name, arr, (size_t)M, (size_t)N,
 					   property_names, property_colors,
 					   ignore));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements[name] = PlyElementSet(name, arr, (size_t)M, (size_t)N,
 				   property_names, property_colors, ignore);
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   }
   //! \brief Add a new element set to the geometry.
   //! \tparam T Type of property values.
@@ -1837,13 +1837,13 @@ public:
   void add_element_set(const std::string& name0) {
     std::string name = ply_alias2base(name0);
     element_order.push_back(name);
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements.emplace(std::piecewise_construct,
 		     std::forward_as_tuple(name),
 		     std::forward_as_tuple(name));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements[name] = PlyElementSet(name);
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   }
   //! \brief Add a new element set to the geometry by copying an existing set.
   //! \param name0 Name of the type of element in the set.
@@ -1852,13 +1852,13 @@ public:
 		       const PlyElementSet& other) {
     std::string name = ply_alias2base(name0);
     element_order.push_back(name);
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements.emplace(std::piecewise_construct,
 		     std::forward_as_tuple(name),
 		     std::forward_as_tuple(other));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     elements[name] = PlyElementSet(other);
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   }
   //! \brief Add element colors to a set.
   //! \param name Name of the type of element in the set.
@@ -1870,14 +1870,14 @@ public:
   bool add_element_set_colors(const std::string& name,
 			      const T* arr, SizeType M, SizeType N) {
     if (N == 3) {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
       std::vector<std::string> property_colors({"red", "green", "blue"});
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
       std::vector<std::string> property_colors(3);
       property_colors[0].assign("red");
       property_colors[1].assign("green");
       property_colors[2].assign("blue");
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
       return add_element_set_colors(name, arr, M, N, property_colors);
     }
     return false;
@@ -2027,13 +2027,13 @@ public:
   //! \brief Get the minimum bounds of the structure in 3D.
   //! \return Minimum extend of structure in x, y, z.
   std::vector<double> minimums() const {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     std::vector<double> out = {NAN, NAN, NAN};
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     std::vector<double> out(3);
     for (size_t i = 0; i < 3; i++)
       out[i] = NAN;
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     const PlyElementSet* elementSet = get_element_set("vertex");
     if (elementSet) {
       std::vector<PlyElement>::const_iterator it = elementSet->elements.begin();
@@ -2051,13 +2051,13 @@ public:
   //! \brief Get the maximum bounds of the structure in 3D.
   //! \return Maximum extend of structure in x, y, z.
   std::vector<double> maximums() const {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     std::vector<double> out = {NAN, NAN, NAN};
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     std::vector<double> out(3);
     for (size_t i = 0; i < 3; i++)
       out[i] = NAN;
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
     const PlyElementSet* elementSet = get_element_set("vertex");
     if (elementSet) {
       std::vector<PlyElement>::const_iterator it = elementSet->elements.begin();
@@ -2150,7 +2150,7 @@ public:
       const std::vector<int> idx = it->get_int_array();
       out.push_back(std::vector<double>());
       for (std::vector<int>::const_iterator f = idx.begin(); f != idx.end(); f++) {
-	RAPIDJSON_ASSERT(*f < (int)vertices->elements.size());
+	YGGDRASIL_RAPIDJSON_ASSERT(*f < (int)vertices->elements.size());
 	if (*f >= (int)vertices->elements.size()) {
 	  out.clear();
 	  return out;
@@ -2225,14 +2225,14 @@ public:
       out << "comment " << *it << std::endl;
     for (std::vector<std::string>::const_iterator it = element_order.begin(); it != element_order.end(); it++) {
       std::map<std::string,PlyElementSet>::const_iterator eit = elements.find(*it);
-      RAPIDJSON_ASSERT(eit != elements.end());
+      YGGDRASIL_RAPIDJSON_ASSERT(eit != elements.end());
       eit->second.write_header(out);
     }
     out << "end_header" << std::endl;
     // Write body
     for (std::vector<std::string>::const_iterator it = element_order.begin(); it != element_order.end(); it++) {
       std::map<std::string,PlyElementSet>::const_iterator eit = elements.find(*it);
-      RAPIDJSON_ASSERT(eit != elements.end());
+      YGGDRASIL_RAPIDJSON_ASSERT(eit != elements.end());
       eit->second.write(out);
     }
     return out;
@@ -2245,7 +2245,7 @@ public:
     in >> std::ws;
     in >> word;
     if (word != "ply")
-      RAPIDJSON_ASSERT(!sizeof("Input does not appear to be in ply format"));
+      YGGDRASIL_RAPIDJSON_ASSERT(!sizeof("Input does not appear to be in ply format"));
     // Read header
     std::string current_element;
     bool inColors = false;
@@ -2282,14 +2282,14 @@ public:
       } else if (word == "property") {
 	elements[current_element].read_property(in, inColors);
       } else {
-	RAPIDJSON_ASSERT(!sizeof(std::string("Unrecognized input beginning w/ ") + word));
+	YGGDRASIL_RAPIDJSON_ASSERT(!sizeof(std::string("Unrecognized input beginning w/ ") + word));
       }
     }
     // Read body
     size_t i = 0;
     for (std::vector<std::string>::iterator it = element_order.begin(); it != element_order.end(); it++, i++) {
       std::map<std::string,PlyElementSet>::iterator eit = elements.find(*it);
-      RAPIDJSON_ASSERT(eit != elements.end());
+      YGGDRASIL_RAPIDJSON_ASSERT(eit != elements.end());
       eit->second.read(in, counts[i]);
     }
     return in;
@@ -2340,13 +2340,13 @@ void PlyElement::init_from_parent_() {
   colors = parent->colors;
   for (std::map<std::string, uint16_t>::const_iterator it = parent->property_flags.begin();
        it != parent->property_flags.end(); it++) {
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     properties.emplace(std::piecewise_construct,
 		       std::forward_as_tuple(it->first),
 		       std::forward_as_tuple(it->second));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     properties[it->first] = Data(it->second);
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   }
 }
 template <typename T>
@@ -2360,7 +2360,7 @@ bool PlyElement::set_property(const std::string name, const std::vector<T>& valu
       parent->colors.push_back(name);
     }
     uint16_t flags = type2flag<T>() | kListFlag;
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     properties.emplace(std::piecewise_construct,
 		       std::forward_as_tuple(name),
 		       std::forward_as_tuple(flags, values));
@@ -2370,11 +2370,11 @@ bool PlyElement::set_property(const std::string name, const std::vector<T>& valu
     parent->property_size_flags.emplace(std::piecewise_construct,
 					std::forward_as_tuple(name),
 					std::forward_as_tuple(kUint8Flag));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     properties[name] = Data(flags, values);
     parent->property_flags[name] = flags;
     parent->property_size_flags[name] = kUint8Flag;
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   } else {
     properties[name].assign(values);
   }
@@ -2392,7 +2392,7 @@ bool PlyElement::set_property(const std::string name, const T& value, bool isCol
       parent->colors.push_back(name);
     }
     uint16_t flags = type2flag<T>();
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     properties.emplace(std::piecewise_construct,
 		       std::forward_as_tuple(name),
 		       std::forward_as_tuple(flags, value));
@@ -2402,11 +2402,11 @@ bool PlyElement::set_property(const std::string name, const T& value, bool isCol
     parent->property_size_flags.emplace(std::piecewise_construct,
 					std::forward_as_tuple(name),
 					std::forward_as_tuple(0));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
     properties[name] = Data(flags, value);
     parent->property_flags[name] = flags;
     parent->property_size_flags[name] = 0;
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   } else {
     properties[name].assign(value);
   }
@@ -2414,6 +2414,6 @@ bool PlyElement::set_property(const std::string name, const T& value, bool isCol
   return true;
 }
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_PLY_H_
+#endif // YGGDRASIL_RAPIDJSON_PLY_H_

@@ -2,9 +2,9 @@
 #include "rapidjson/document.h"
 #include <iostream>
 
-RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
 #ifdef __GNUC__
-RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
 #endif
 
 // This example demonstrates JSON token-by-token parsing with an API that is
@@ -37,7 +37,7 @@ RAPIDJSON_DIAG_OFF(effc++)
 // This parser uses in-situ strings, so the JSON buffer will be altered during the
 // parse.
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 
 class LookaheadParserHandler {
@@ -116,7 +116,7 @@ public:
     void SkipArray();
     void SkipValue();
     Value* PeekValue();
-    int PeekType(); // returns a rapidjson::Type, or -1 for no value (at end of object/array)
+    int PeekType(); // returns a yggdrasil_rapidjson::Type, or -1 for no value (at end of object/array)
     
     bool IsValid() { return st_ != kError; }
     
@@ -293,32 +293,32 @@ int main() {
 
     LookaheadParser r(json);
     
-    RAPIDJSON_ASSERT(r.PeekType() == kObjectType);
+    YGGDRASIL_RAPIDJSON_ASSERT(r.PeekType() == kObjectType);
 
     r.EnterObject();
     while (const char* key = r.NextObjectKey()) {
         if (0 == strcmp(key, "hello")) {
-            RAPIDJSON_ASSERT(r.PeekType() == kStringType);
+            YGGDRASIL_RAPIDJSON_ASSERT(r.PeekType() == kStringType);
             cout << key << ":" << r.GetString() << endl;
         }
         else if (0 == strcmp(key, "t") || 0 == strcmp(key, "f")) {
-            RAPIDJSON_ASSERT(r.PeekType() == kTrueType || r.PeekType() == kFalseType);
+            YGGDRASIL_RAPIDJSON_ASSERT(r.PeekType() == kTrueType || r.PeekType() == kFalseType);
             cout << key << ":" << r.GetBool() << endl;
             continue;
         }
         else if (0 == strcmp(key, "n")) {
-            RAPIDJSON_ASSERT(r.PeekType() == kNullType);
+            YGGDRASIL_RAPIDJSON_ASSERT(r.PeekType() == kNullType);
             r.GetNull();
             cout << key << endl;
             continue;
         }
         else if (0 == strcmp(key, "pi")) {
-            RAPIDJSON_ASSERT(r.PeekType() == kNumberType);
+            YGGDRASIL_RAPIDJSON_ASSERT(r.PeekType() == kNumberType);
             cout << key << ":" << r.GetDouble() << endl;
             continue;
         }
         else if (0 == strcmp(key, "a")) {
-            RAPIDJSON_ASSERT(r.PeekType() == kArrayType);
+            YGGDRASIL_RAPIDJSON_ASSERT(r.PeekType() == kArrayType);
             
             r.EnterArray();
             
@@ -347,4 +347,4 @@ int main() {
     return 0;
 }
 
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP

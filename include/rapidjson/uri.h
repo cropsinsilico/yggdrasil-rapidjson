@@ -12,19 +12,19 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_URI_H_
-#define RAPIDJSON_URI_H_
+#ifndef YGGDRASIL_RAPIDJSON_URI_H_
+#define YGGDRASIL_RAPIDJSON_URI_H_
 
 #include "internal/strfunc.h"
 
 #if defined(__clang__)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(c++98-compat)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(c++98-compat)
 #elif defined(_MSC_VER)
-RAPIDJSON_DIAG_OFF(4512) // assignment operator could not be generated
+YGGDRASIL_RAPIDJSON_DIAG_OFF(4512) // assignment operator could not be generated
 #endif
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 ///////////////////////////////////////////////////////////////////////////////
 // GenericUri
@@ -33,7 +33,7 @@ template <typename ValueType, typename Allocator=CrtAllocator>
 class GenericUri {
 public:
     typedef typename ValueType::Ch Ch;
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     typedef std::basic_string<Ch> String;
 #endif
 
@@ -55,7 +55,7 @@ public:
         Parse(u, internal::StrLen<Ch>(u));
     }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     GenericUri(const String& uri, Allocator* allocator = 0) : uri_(), base_(), scheme_(), auth_(), path_(), query_(), frag_(), allocator_(allocator), ownAllocator_() {
         Parse(uri.c_str(), internal::StrLen<Ch>(uri.c_str()));
     }
@@ -74,7 +74,7 @@ public:
     //! Destructor.
     ~GenericUri() {
         Free();
-        RAPIDJSON_DELETE(ownAllocator_);
+        YGGDRASIL_RAPIDJSON_DELETE(ownAllocator_);
     }
 
     //! Assignment operator
@@ -115,7 +115,7 @@ public:
     const Ch* GetFragString() const { return frag_; }
     SizeType GetFragStringLength() const { return frag_ == 0 ? 0 : internal::StrLen<Ch>(frag_); }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     static String Get(const GenericUri& uri) { return String(uri.GetString(), uri.GetStringLength()); }
     static String GetBase(const GenericUri& uri) { return String(uri.GetBaseString(), uri.GetBaseStringLength()); }
     static String GetScheme(const GenericUri& uri) { return String(uri.GetSchemeString(), uri.GetSchemeStringLength()); }
@@ -234,7 +234,7 @@ private:
     std::size_t Allocate(std::size_t len) {
         // Create own allocator if user did not supply.
         if (!allocator_)
-            ownAllocator_ =  allocator_ = RAPIDJSON_NEW(Allocator)();
+            ownAllocator_ =  allocator_ = YGGDRASIL_RAPIDJSON_NEW(Allocator)();
 
         // Allocate one block containing each part of the URI (5) plus base plus full URI, all null terminated.
         // Order: scheme, auth, path, query, frag, base, uri
@@ -397,8 +397,8 @@ private:
     // Copy a part from one GenericUri to another
     // Return the pointer to the next part to be copied to
     Ch* CopyPart(Ch* to, Ch* from, std::size_t len) {
-        RAPIDJSON_ASSERT(to != 0);
-        RAPIDJSON_ASSERT(from != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(to != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(from != 0);
         std::memcpy(to, from, len * sizeof(Ch));
         to[len] = '\0';
         Ch* next = to + len + 1;
@@ -425,7 +425,7 @@ private:
             if (slashpos == 2 && path_[pathpos] == '.' && path_[pathpos + 1] == '.') {
                 // Backup a .. segment in the new path_
                 // We expect to find a previously added slash at the end or nothing
-                RAPIDJSON_ASSERT(newpos == 0 || path_[newpos - 1] == '/');
+                YGGDRASIL_RAPIDJSON_ASSERT(newpos == 0 || path_[newpos - 1] == '/');
                 size_t lastslashpos = newpos;
                 // Make sure we don't go beyond the start segment
                 if (lastslashpos > 1) {
@@ -442,7 +442,7 @@ private:
                 // Discard . segment, leaves new path_ unchanged
             } else {
                 // Move any other kind of segment to the new path_
-                RAPIDJSON_ASSERT(newpos <= pathpos);
+                YGGDRASIL_RAPIDJSON_ASSERT(newpos <= pathpos);
                 std::memmove(&path_[newpos], &path_[pathpos], slashpos * sizeof(Ch));
                 newpos += slashpos;
                 // Add slash if not at end
@@ -472,10 +472,10 @@ private:
 //! GenericUri for Value (UTF-8, default allocator).
 typedef GenericUri<Value> Uri;
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
 #if defined(__clang__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
-#endif // RAPIDJSON_URI_H_
+#endif // YGGDRASIL_RAPIDJSON_URI_H_

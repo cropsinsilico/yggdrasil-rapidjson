@@ -16,7 +16,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/cursorstreamwrapper.h"
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 // static const char json[] = "{\"string\"\n\n:\"my string\",\"array\"\n:[\"1\", \"2\", \"3\"]}";
 

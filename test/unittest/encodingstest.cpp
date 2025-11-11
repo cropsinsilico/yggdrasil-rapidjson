@@ -18,7 +18,7 @@
 #include "rapidjson/encodedstream.h"
 #include "rapidjson/stringbuffer.h"
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 // Verification of encoders/decoders with Hoehrmann's UTF8 decoder
 

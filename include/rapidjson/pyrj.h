@@ -1,5 +1,5 @@
-#ifndef RAPIDJSON_PYTHON_H_
-#define RAPIDJSON_PYTHON_H_
+#ifndef YGGDRASIL_RAPIDJSON_PYTHON_H_
+#define YGGDRASIL_RAPIDJSON_PYTHON_H_
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -12,7 +12,7 @@
 #include "rapidjson.h"
 #include <iostream>
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 inline
 bool isPythonInitialized() {
@@ -20,7 +20,7 @@ bool isPythonInitialized() {
   return false;
 }
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
 #define BEGIN_PY_GIL
 #define END_PY_GIL
@@ -46,7 +46,7 @@ RAPIDJSON_NAMESPACE_END
 #include "rapidjson.h"
 #include "encodings.h"
 
-#ifdef RAPIDJSON_CHECK_PYREFS
+#ifdef YGGDRASIL_RAPIDJSON_CHECK_PYREFS
 // #ifdef _Py_GetRefTotal
 // #undef _Py_GetRefTotal
 // #endif
@@ -73,9 +73,9 @@ void _rapidjson_Py_DECREF(PyObject *op) {
 #define Py_INCREF(op) _rapidjson_Py_INCREF(_PyObject_CAST(op))
 #define Py_DECREF(op) _rapidjson_Py_DECREF(_PyObject_CAST(op))
 #endif
-#endif // RAPIDJSON_CHECK_PYREFS
+#endif // YGGDRASIL_RAPIDJSON_CHECK_PYREFS
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 #ifdef YGGDRASIL_PYGIL_NO_MANAGEMENT
 #define BEGIN_PY_GIL				\
@@ -115,12 +115,12 @@ RAPIDJSON_NAMESPACE_BEGIN
 #endif // YGGDRASIL_PYGIL_NO_MANAGEMENT
 
 #ifdef _MSC_VER
-#define __RAPIDJSON_PRETTY_FUNCTION__ ""
+#define __YGGDRASIL_RAPIDJSON_PRETTY_FUNCTION__ ""
 #else
-#define __RAPIDJSON_PRETTY_FUNCTION__ __PRETTY_FUNCTION__
+#define __YGGDRASIL_RAPIDJSON_PRETTY_FUNCTION__ __PRETTY_FUNCTION__
 #endif
 
-#ifdef RAPIDJSON_CHECK_PYREFS
+#ifdef YGGDRASIL_RAPIDJSON_CHECK_PYREFS
 
 inline
 long _total_refs() {
@@ -194,10 +194,10 @@ void _check_refs(const std::string& src, PyObject* x, Args... args) {
 }
 
 #define CHECK_REFS(x)						\
-  _check_total_refs(__RAPIDJSON_PRETTY_FUNCTION__, #x)
-#else // RAPIDJSON_CHECK_PYREFS
+  _check_total_refs(__YGGDRASIL_RAPIDJSON_PRETTY_FUNCTION__, #x)
+#else // YGGDRASIL_RAPIDJSON_CHECK_PYREFS
 #define CHECK_REFS(x)
-#endif // RAPIDJSON_CHECK_PYREFS
+#endif // YGGDRASIL_RAPIDJSON_CHECK_PYREFS
 
 template<typename T>
 inline
@@ -325,8 +325,8 @@ bool global_PyThreadState(bool restore = false) {
 static inline
 std::string init_numpy_API() {
   std::string err;
-#ifndef RAPIDJSON_DONT_IMPORT_NUMPY
-#ifdef RAPIDJSON_FORCE_IMPORT_ARRAY
+#ifndef YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
+#ifdef YGGDRASIL_RAPIDJSON_FORCE_IMPORT_ARRAY
   BEGIN_PY_GIL;
 #ifdef _OPENMP
 #pragma omp critical (numpy)
@@ -342,8 +342,8 @@ std::string init_numpy_API() {
   }
 #endif
   END_PY_GIL;
-#endif // RAPIDJSON_FORCE_IMPORT_ARRAY
-#endif // RAPIDJSON_DONT_IMPORT_NUMPY
+#endif // YGGDRASIL_RAPIDJSON_FORCE_IMPORT_ARRAY
+#endif // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
   return err;
 }
 
@@ -355,7 +355,7 @@ std::string init_numpy_API() {
 static inline
 std::string init_python_API() {
   std::string err;
-#ifndef RAPIDJSON_YGGDRASIL_PYTHON
+#ifndef YGGDRASIL_RAPIDJSON_PYTHON_WRAPPER
 #ifdef _OPENMP
 #pragma omp critical (python)
   {
@@ -413,7 +413,7 @@ std::string init_python_API() {
 #ifdef _OPENMP
   }
 #endif
-#endif // RAPIDJSON_YGGDRASIL_PYTHON
+#endif // YGGDRASIL_RAPIDJSON_PYTHON_WRAPPER
   return err;
 }
 
@@ -421,7 +421,7 @@ std::string init_python_API() {
 inline
 bool isPythonInitialized() {
   bool out = false;
-#if defined(RAPIDJSON_FORCE_IMPORT_ARRAY) && !defined(RAPIDJSON_DONT_IMPORT_NUMPY)
+#if defined(YGGDRASIL_RAPIDJSON_FORCE_IMPORT_ARRAY) && !defined(YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY)
   out = (Py_IsInitialized() && (PY_ARRAY_UNIQUE_SYMBOL != NULL));
 #else
   out = (Py_IsInitialized());
@@ -460,7 +460,7 @@ std::string initialize_python(const std::string error_prefix="",
   @brief Finalize Python.
   @param[in] error_prefix Prefix to add to error messages.
  */
-#ifdef RAPIDJSON_YGGDRASIL_PYTHON
+#ifdef YGGDRASIL_RAPIDJSON_PYTHON_WRAPPER
 inline
 void finalize_python(const std::string="") {}
 #else
@@ -476,7 +476,7 @@ void finalize_python(const std::string error_prefix="") {
     throw std::runtime_error(error_prefix + "finalize_python: " + e.what()); // GCOVR_EXCL_LINE
   }
 }
-#endif // RAPIDJSON_YGGDRASIL_PYTHON
+#endif // YGGDRASIL_RAPIDJSON_PYTHON_WRAPPER
 
 #define PYTHON_ERROR_SETUP_			\
   std::string err;				\
@@ -488,7 +488,7 @@ void finalize_python(const std::string error_prefix="") {
   }
 // TODO: Version that doesn't throw error
 // TODO: Version that allows other actions in cleanup
-#ifdef RAPIDJSON_YGGDRASIL_PYTHON
+#ifdef YGGDRASIL_RAPIDJSON_PYTHON_WRAPPER
 #define ON_PYTHON_ERROR_DISP_
 #else
 #define ON_PYTHON_ERROR_DISP_ PyErr_Print()
@@ -499,7 +499,7 @@ void finalize_python(const std::string error_prefix="") {
   } else {								\
     ON_PYTHON_ERROR_DISP_;						\
     if (err.empty()) {							\
-      err = error_prefix + __RAPIDJSON_PRETTY_FUNCTION__ + ": Python error occured"; \
+      err = error_prefix + __YGGDRASIL_RAPIDJSON_PRETTY_FUNCTION__ + ": Python error occured"; \
     }									\
   }
 #define PYTHON_ERROR_CLEANUP_BASE_(on_error, on_success)	\
@@ -545,13 +545,13 @@ template<typename Encoding>
 inline bool assign_char_PyUnicode(PyObject*, Py_ssize_t&,
 				  const typename Encoding::Ch*&,
 				  PyObject*&,
-				  RAPIDJSON_DISABLEIF((internal::IsSame<typename Encoding::Ch,char>)))
+				  YGGDRASIL_RAPIDJSON_DISABLEIF((internal::IsSame<typename Encoding::Ch,char>)))
 { return false; }
 template<typename Encoding>
 inline bool assign_char_PyUnicode(PyObject* x, Py_ssize_t& py_len,
 				  const typename Encoding::Ch*& orig,
 				  PyObject*& x2,
-				  RAPIDJSON_ENABLEIF((internal::IsSame<typename Encoding::Ch,char>))) {
+				  YGGDRASIL_RAPIDJSON_ENABLEIF((internal::IsSame<typename Encoding::Ch,char>))) {
   bool out = false;
   PYTHON_ERROR_SETUP_;
 #define ENCODING_BRANCH(enc)						\
@@ -616,7 +616,7 @@ PyObject* import_python_module(const char* module_name,
 			       const bool ignore_error=false) {
   PYTHON_ERROR_SETUP_;
   PyObject* out = NULL;
-  RAPIDJSON_ASSERT(isPythonInitialized());
+  YGGDRASIL_RAPIDJSON_ASSERT(isPythonInitialized());
   if (!isPythonInitialized())
     goto cleanup;
   out = PyImport_ImportModule(module_name);
@@ -661,22 +661,22 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
     *inspect_getfile = NULL, *globals = NULL;
   int is_local = 0;
   PYTHON_ERROR_SETUP_;
-  RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__module__"));
-  RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__name__"));
+  YGGDRASIL_RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__module__"));
+  YGGDRASIL_RAPIDJSON_ASSERT(PyObject_HasAttrString(x, "__name__"));
   if (!(PyObject_HasAttrString(x, "__module__") && PyObject_HasAttrString(x, "__name__"))) {
     out = false;
     goto cleanup;
   }
   // Get the module
   mod_py = PyObject_GetAttrString(x, "__module__");
-  RAPIDJSON_ASSERT(mod_py != NULL);
+  YGGDRASIL_RAPIDJSON_ASSERT(mod_py != NULL);
   if (mod_py == NULL) {
     out = false;
     goto cleanup;
   }
   // Get the class
   cls_py = PyObject_GetAttrString(x, "__name__");
-  RAPIDJSON_ASSERT(cls_py != NULL);
+  YGGDRASIL_RAPIDJSON_ASSERT(cls_py != NULL);
   if (cls_py == NULL) {
     out = false;
     goto cleanup;
@@ -722,7 +722,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
   mod = PyUnicode_AsEncoding<Encoding,Allocator>(mod_py, mod_len, allocator);
   cls = PyUnicode_AsEncoding<Encoding,Allocator>(cls_py, cls_len, allocator);
   curr = mod_cls;
-  RAPIDJSON_ASSERT((mod != NULL) && (cls != NULL));
+  YGGDRASIL_RAPIDJSON_ASSERT((mod != NULL) && (cls != NULL));
   if ((mod == NULL) || (cls == NULL)) {
     out = false;
     goto cleanup;
@@ -730,7 +730,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
   mod_cls_siz = mod_len + cls_len + 1;
   if (file_py != NULL) {
     file = PyUnicode_AsEncoding<Encoding,Allocator>(file_py, file_len, allocator);
-    RAPIDJSON_ASSERT(file != NULL);
+    YGGDRASIL_RAPIDJSON_ASSERT(file != NULL);
     if (file == NULL) {
       out = false;
       goto cleanup;
@@ -743,7 +743,7 @@ bool export_python_object(PyObject* x, typename Encoding::Ch*&mod_cls,
     }
   }
   mod_cls = static_cast<Ch*>(allocator.Malloc((mod_cls_siz + 1) * sizeof(Ch)));
-  RAPIDJSON_ASSERT(mod_cls);
+  YGGDRASIL_RAPIDJSON_ASSERT(mod_cls);
   if (!mod_cls) {
     out = false;
     goto cleanup;
@@ -802,7 +802,7 @@ PyObject* import_python_object(const char* mod_class,
   Py_ssize_t tmp_size = 0;
   const char* tmp = NULL;
   PYTHON_ERROR_SETUP_;
-  RAPIDJSON_ASSERT(mod_class_len <= 256);
+  YGGDRASIL_RAPIDJSON_ASSERT(mod_class_len <= 256);
   if (mod_class_len > 256) {
     if (!(ignore_error)) {
       err = error_prefix + "import_python_object: Name of module is greater that 256 characters"; // GCOVR_EXCL_LINE
@@ -940,7 +940,7 @@ PyObject* import_python_object(const char* mod_class,
   // Removing added path makes the object un-picklable
   if (out == NULL && file_size > 0) {
     // Add file path
-    RAPIDJSON_ASSERT(path_add != NULL);
+    YGGDRASIL_RAPIDJSON_ASSERT(path_add != NULL);
     if (path_add == NULL) {
       out = NULL;
       goto cleanup;
@@ -1030,13 +1030,13 @@ bool PyObject_IsInstanceString(PyObject* x, std::string class_name) {
 }
 inline
 bool IsStructuredArray(PyObject* x) {
-  RAPIDJSON_ASSERT(isPythonInitialized());
+  YGGDRASIL_RAPIDJSON_ASSERT(isPythonInitialized());
   if (!isPythonInitialized())
     return false;
-#ifdef RAPIDJSON_DONT_IMPORT_NUMPY
+#ifdef YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
   (void)x;
   return false;
-#else // RAPIDJSON_DONT_IMPORT_NUMPY
+#else // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
   bool out = true;
   int nd = 0, j = 0;
   npy_intp *dims = NULL, *idims = NULL;
@@ -1051,13 +1051,13 @@ bool IsStructuredArray(PyObject* x) {
     PYTHON_ERROR_EXIT_(false);
   for (i = 0; i < N; i++) {
     item = PyList_GetItem(x, i);
-    RAPIDJSON_ASSERT(item);
+    YGGDRASIL_RAPIDJSON_ASSERT(item);
     if (item == NULL)
       PYTHON_ERROR_EXIT_(false);
     if (!PyArray_CheckExact(item))
       PYTHON_ERROR_EXIT_(false);
     desc = PyArray_DESCR((PyArrayObject*)item);
-    RAPIDJSON_ASSERT(desc);
+    YGGDRASIL_RAPIDJSON_ASSERT(desc);
     if (desc == NULL)
       PYTHON_ERROR_EXIT_(false);
     if (!PyDataType_HASFIELDS(desc))
@@ -1082,16 +1082,16 @@ bool IsStructuredArray(PyObject* x) {
     }
   }
   PYTHON_ERROR_CLEANUP_NOTHROW_;
-#endif // RAPIDJSON_DONT_IMPORT_NUMPY
+#endif // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
 }
 inline
 PyObject* GetStructuredArray(PyObject* x) {
-  RAPIDJSON_ASSERT(isPythonInitialized());
+  YGGDRASIL_RAPIDJSON_ASSERT(isPythonInitialized());
   if (!isPythonInitialized())
     return NULL;
-#ifdef RAPIDJSON_DONT_IMPORT_NUMPY
+#ifdef YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
   return x;
-#else // RAPIDJSON_DONT_IMPORT_NUMPY
+#else // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
   Py_ssize_t N = PyList_Size(x);
   int nd = 0;
   npy_intp *dims = NULL, *strides = NULL;
@@ -1194,7 +1194,7 @@ PyObject* GetStructuredArray(PyObject* x) {
   out = (PyObject*)array;
   array = NULL;
   PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(fields, names, desc, array);
-#endif // RAPIDJSON_DONT_IMPORT_NUMPY
+#endif // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
 }
 
 template<typename Ch>
@@ -1220,7 +1220,7 @@ public:
   METHOD_ARGS(EndArray, SizeType)
   template <typename YggSchemaValueType>
   bool YggdrasilString(const Ch* str, SizeType length, bool, YggSchemaValueType& valueSchema) {
-    RAPIDJSON_ASSERT(valueSchema.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(valueSchema.IsObject());
     if (!valueSchema.IsObject())
       return false;
     const Ch local_str[] = {'l', 'o', 'c', 'a', 'l', ':', '\0'};
@@ -1244,8 +1244,8 @@ public:
   METHOD_ARGS(YggdrasilEndObject, SizeType)
 };
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 
-#endif // RAPIDJSON_PYTHON_H_
+#endif // YGGDRASIL_RAPIDJSON_PYTHON_H_

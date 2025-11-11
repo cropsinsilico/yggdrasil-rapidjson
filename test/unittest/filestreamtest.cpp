@@ -17,7 +17,7 @@
 #include "rapidjson/filewritestream.h"
 #include "rapidjson/encodedstream.h"
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 class FileStreamTest : public ::testing::Test {
 public:

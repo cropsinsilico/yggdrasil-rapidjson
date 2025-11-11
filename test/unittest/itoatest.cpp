@@ -16,11 +16,11 @@
 #include "rapidjson/internal/itoa.h"
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(type-limits)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(type-limits)
 #endif
 
-using namespace rapidjson::internal;
+using namespace yggdrasil_rapidjson::internal;
 
 template <typename T>
 struct Traits {
@@ -156,5 +156,5 @@ TEST(itoa, i64toa) {
 }
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

@@ -13,7 +13,7 @@
 #include <mutex>
 #include <thread>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 template<unsigned parseFlags = kParseDefaultFlags>
 class AsyncDocumentParser {

@@ -19,11 +19,11 @@
 #include "rapidjson/fwd.h"
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 struct Foo {
     Foo();
@@ -105,120 +105,120 @@ typedef BaseReaderHandler<UTF8<>, void> BaseReaderHandlerUtf8Void;
 
 Foo::Foo() : 
     // encodings.h
-    utf8(RAPIDJSON_NEW(UTF8<>)),
-    utf16(RAPIDJSON_NEW(UTF16<>)),
-    utf16be(RAPIDJSON_NEW(UTF16BE<>)),
-    utf16le(RAPIDJSON_NEW(UTF16LE<>)),
-    utf32(RAPIDJSON_NEW(UTF32<>)),
-    utf32be(RAPIDJSON_NEW(UTF32BE<>)),
-    utf32le(RAPIDJSON_NEW(UTF32LE<>)),
-    ascii(RAPIDJSON_NEW(ASCII<>)),
-    autoutf(RAPIDJSON_NEW(AutoUTF<unsigned>)),
-    transcoder(RAPIDJSON_NEW(TranscoderUtf8ToUtf8)),
+    utf8(YGGDRASIL_RAPIDJSON_NEW(UTF8<>)),
+    utf16(YGGDRASIL_RAPIDJSON_NEW(UTF16<>)),
+    utf16be(YGGDRASIL_RAPIDJSON_NEW(UTF16BE<>)),
+    utf16le(YGGDRASIL_RAPIDJSON_NEW(UTF16LE<>)),
+    utf32(YGGDRASIL_RAPIDJSON_NEW(UTF32<>)),
+    utf32be(YGGDRASIL_RAPIDJSON_NEW(UTF32BE<>)),
+    utf32le(YGGDRASIL_RAPIDJSON_NEW(UTF32LE<>)),
+    ascii(YGGDRASIL_RAPIDJSON_NEW(ASCII<>)),
+    autoutf(YGGDRASIL_RAPIDJSON_NEW(AutoUTF<unsigned>)),
+    transcoder(YGGDRASIL_RAPIDJSON_NEW(TranscoderUtf8ToUtf8)),
 
     // allocators.h
-    crtallocator(RAPIDJSON_NEW(CrtAllocator)),
-    memorypoolallocator(RAPIDJSON_NEW(MemoryPoolAllocator<>)),
+    crtallocator(YGGDRASIL_RAPIDJSON_NEW(CrtAllocator)),
+    memorypoolallocator(YGGDRASIL_RAPIDJSON_NEW(MemoryPoolAllocator<>)),
 
     // stream.h
-    stringstream(RAPIDJSON_NEW(StringStream)(NULL)),
-    insitustringstream(RAPIDJSON_NEW(InsituStringStream)(NULL)),
+    stringstream(YGGDRASIL_RAPIDJSON_NEW(StringStream)(NULL)),
+    insitustringstream(YGGDRASIL_RAPIDJSON_NEW(InsituStringStream)(NULL)),
 
     // stringbuffer.h
-    stringbuffer(RAPIDJSON_NEW(StringBuffer)),
+    stringbuffer(YGGDRASIL_RAPIDJSON_NEW(StringBuffer)),
 
     // // filereadstream.h
-    // filereadstream(RAPIDJSON_NEW(FileReadStream)(stdout, buffer, sizeof(buffer))),
+    // filereadstream(YGGDRASIL_RAPIDJSON_NEW(FileReadStream)(stdout, buffer, sizeof(buffer))),
 
     // // filewritestream.h
-    // filewritestream(RAPIDJSON_NEW(FileWriteStream)(stdout, buffer, sizeof(buffer))),
+    // filewritestream(YGGDRASIL_RAPIDJSON_NEW(FileWriteStream)(stdout, buffer, sizeof(buffer))),
 
     // memorybuffer.h
-    memorybuffer(RAPIDJSON_NEW(MemoryBuffer)),
+    memorybuffer(YGGDRASIL_RAPIDJSON_NEW(MemoryBuffer)),
 
     // memorystream.h
-    memorystream(RAPIDJSON_NEW(MemoryStream)(NULL, 0)),
+    memorystream(YGGDRASIL_RAPIDJSON_NEW(MemoryStream)(NULL, 0)),
 
     // reader.h
-    basereaderhandler(RAPIDJSON_NEW(BaseReaderHandlerUtf8Void)),
-    reader(RAPIDJSON_NEW(Reader)),
+    basereaderhandler(YGGDRASIL_RAPIDJSON_NEW(BaseReaderHandlerUtf8Void)),
+    reader(YGGDRASIL_RAPIDJSON_NEW(Reader)),
 
     // writer.h
-    writer(RAPIDJSON_NEW(Writer<StringBuffer>)),
+    writer(YGGDRASIL_RAPIDJSON_NEW(Writer<StringBuffer>)),
 
     // prettywriter.h
-    prettywriter(RAPIDJSON_NEW(PrettyWriter<StringBuffer>)),
+    prettywriter(YGGDRASIL_RAPIDJSON_NEW(PrettyWriter<StringBuffer>)),
 
     // document.h
-    value(RAPIDJSON_NEW(Value)),
-    document(RAPIDJSON_NEW(Document)),
+    value(YGGDRASIL_RAPIDJSON_NEW(Value)),
+    document(YGGDRASIL_RAPIDJSON_NEW(Document)),
 
     // pointer.h
-    pointer(RAPIDJSON_NEW(Pointer)),
+    pointer(YGGDRASIL_RAPIDJSON_NEW(Pointer)),
 
     // schema.h
-    schemadocument(RAPIDJSON_NEW(SchemaDocument)(*document)),
-    schemavalidator(RAPIDJSON_NEW(SchemaValidator)(*schemadocument))
+    schemadocument(YGGDRASIL_RAPIDJSON_NEW(SchemaDocument)(*document)),
+    schemavalidator(YGGDRASIL_RAPIDJSON_NEW(SchemaValidator)(*schemadocument))
 {
 
 }
 
 Foo::~Foo() {
     // encodings.h
-    RAPIDJSON_DELETE(utf8);
-    RAPIDJSON_DELETE(utf16);
-    RAPIDJSON_DELETE(utf16be);
-    RAPIDJSON_DELETE(utf16le);
-    RAPIDJSON_DELETE(utf32);
-    RAPIDJSON_DELETE(utf32be);
-    RAPIDJSON_DELETE(utf32le);
-    RAPIDJSON_DELETE(ascii);
-    RAPIDJSON_DELETE(autoutf);
-    RAPIDJSON_DELETE(transcoder);
+    YGGDRASIL_RAPIDJSON_DELETE(utf8);
+    YGGDRASIL_RAPIDJSON_DELETE(utf16);
+    YGGDRASIL_RAPIDJSON_DELETE(utf16be);
+    YGGDRASIL_RAPIDJSON_DELETE(utf16le);
+    YGGDRASIL_RAPIDJSON_DELETE(utf32);
+    YGGDRASIL_RAPIDJSON_DELETE(utf32be);
+    YGGDRASIL_RAPIDJSON_DELETE(utf32le);
+    YGGDRASIL_RAPIDJSON_DELETE(ascii);
+    YGGDRASIL_RAPIDJSON_DELETE(autoutf);
+    YGGDRASIL_RAPIDJSON_DELETE(transcoder);
 
     // allocators.h
-    RAPIDJSON_DELETE(crtallocator);
-    RAPIDJSON_DELETE(memorypoolallocator);
+    YGGDRASIL_RAPIDJSON_DELETE(crtallocator);
+    YGGDRASIL_RAPIDJSON_DELETE(memorypoolallocator);
 
     // stream.h
-    RAPIDJSON_DELETE(stringstream);
-    RAPIDJSON_DELETE(insitustringstream);
+    YGGDRASIL_RAPIDJSON_DELETE(stringstream);
+    YGGDRASIL_RAPIDJSON_DELETE(insitustringstream);
 
     // stringbuffer.h
-    RAPIDJSON_DELETE(stringbuffer);
+    YGGDRASIL_RAPIDJSON_DELETE(stringbuffer);
 
     // // filereadstream.h
-    // RAPIDJSON_DELETE(filereadstream);
+    // YGGDRASIL_RAPIDJSON_DELETE(filereadstream);
 
     // // filewritestream.h
-    // RAPIDJSON_DELETE(filewritestream);
+    // YGGDRASIL_RAPIDJSON_DELETE(filewritestream);
 
     // memorybuffer.h
-    RAPIDJSON_DELETE(memorybuffer);
+    YGGDRASIL_RAPIDJSON_DELETE(memorybuffer);
 
     // memorystream.h
-    RAPIDJSON_DELETE(memorystream);
+    YGGDRASIL_RAPIDJSON_DELETE(memorystream);
 
     // reader.h
-    RAPIDJSON_DELETE(basereaderhandler);
-    RAPIDJSON_DELETE(reader);
+    YGGDRASIL_RAPIDJSON_DELETE(basereaderhandler);
+    YGGDRASIL_RAPIDJSON_DELETE(reader);
 
     // writer.h
-    RAPIDJSON_DELETE(writer);
+    YGGDRASIL_RAPIDJSON_DELETE(writer);
 
     // prettywriter.h
-    RAPIDJSON_DELETE(prettywriter);
+    YGGDRASIL_RAPIDJSON_DELETE(prettywriter);
 
     // document.h
-    RAPIDJSON_DELETE(value);
-    RAPIDJSON_DELETE(document);
+    YGGDRASIL_RAPIDJSON_DELETE(value);
+    YGGDRASIL_RAPIDJSON_DELETE(document);
 
     // pointer.h
-    RAPIDJSON_DELETE(pointer);
+    YGGDRASIL_RAPIDJSON_DELETE(pointer);
 
     // schema.h
-    RAPIDJSON_DELETE(schemadocument);
-    RAPIDJSON_DELETE(schemavalidator);
+    YGGDRASIL_RAPIDJSON_DELETE(schemadocument);
+    YGGDRASIL_RAPIDJSON_DELETE(schemavalidator);
 }
 
 TEST(Fwd, Fwd) {
@@ -226,5 +226,5 @@ TEST(Fwd, Fwd) {
 }
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

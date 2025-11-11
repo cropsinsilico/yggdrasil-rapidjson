@@ -17,11 +17,18 @@ jobs:
         python-install: [pip]
         python-version: ["3.11"]
         with-yggdrasil: [true]
+        configuration: [Debug]
         include:
           - os: ubuntu-latest
             python-install: pip
             python-version: "3.11"
             with-yggdrasil: false
+            configuration: Debug
+          - os: ubuntu-latest
+            python-install: pip
+            python-version: "3.11"
+            with-yggdrasil: true
+            configuration: Release
       fail-fast: false
     steps:
       - name: Check out repository code
@@ -70,27 +77,27 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DDISABLE_YGGDRASIL_RAPIDJSON=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON
       - name: (WINDOWS) Configure w/ yggdrasil
         if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=$env:pythonLocation -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DPython3_ROOT_DIR=$env:pythonLocation -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON
       - name: (UNIX) Configure w/ yggdrasil
         if: matrix.os != 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=${pythonLocation} -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DPython3_ROOT_DIR=${pythonLocation} -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
       - name: Build
         run: |
           cd build
-          cmake --build . --config Debug
+          cmake --build . --config ${{ matrix.configuration }}
       - name: Test
         run: |
           cd build
-          ctest -C Debug --output-on-failure --verbose
+          ctest -C ${{ matrix.configuration }} --output-on-failure --verbose
   build_conda:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -146,27 +153,27 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DDISABLE_YGGDRASIL_RAPIDJSON=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON
       - name: (WINDOWS) Configure w/ yggdrasil
         if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON
       - name: (UNIX) Configure w/ yggdrasil
         if: matrix.os != 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA=ON
       - name: Build
         run: |
           cd build
-          cmake --build . --config Debug
+          cmake --build . --config ${{ matrix.configuration }}
       - name: Test
         run: |
           cd build
-          ctest -C Debug --output-on-failure --verbose
+          ctest -C ${{ matrix.configuration }} --output-on-failure --verbose
       - name: Upload coverage report
         uses: codecov/codecov-action@v1
         with:

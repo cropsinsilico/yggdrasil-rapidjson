@@ -20,7 +20,7 @@
 #include <sstream>
 #include <fstream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 template <typename StringStreamType>

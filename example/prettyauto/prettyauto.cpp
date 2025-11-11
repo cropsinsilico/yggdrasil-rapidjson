@@ -13,7 +13,7 @@
 #include <io.h>
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 int main(int, char*[]) {
 #ifdef _WIN32

@@ -11,7 +11,7 @@
 #include "rapidjson/error/en.h"
 #include <stack>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 // This handler forwards event into an output handler, with filtering the descendent events of specified key.
 template <typename OutputHandler>

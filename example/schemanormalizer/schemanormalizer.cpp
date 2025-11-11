@@ -2,9 +2,9 @@
 
 // The example validates JSON text from stdin with a JSON schema specified in the argument.
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
-#define RAPIDJSON_HAS_STDSTRING 1
+#define YGGDRASIL_RAPIDJSON_HAS_STDSTRING 1
 
 #include "rapidjson/error/en.h"
 #include "rapidjson/filereadstream.h"
@@ -15,7 +15,7 @@
 #include <iostream>
 #include <sstream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 typedef GenericValue<UTF8<>, CrtAllocator > ValueType;
 
@@ -200,10 +200,10 @@ int main(int argc, char *argv[]) {
     }
 }
 
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
 
 int main(int, char*[]) {
   return 0;
 }
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON

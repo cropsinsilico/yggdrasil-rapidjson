@@ -4,7 +4,7 @@
 #include "rapidjson/stringbuffer.h"
 #include <iostream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 void traverse(const Value& v, const Pointer& p) {
     StringBuffer sb;

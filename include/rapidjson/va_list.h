@@ -1,7 +1,7 @@
-#ifndef RAPIDJSON_VALIST_H_
-#define RAPIDJSON_VALIST_H_
+#ifndef YGGDRASIL_RAPIDJSON_VALIST_H_
+#define YGGDRASIL_RAPIDJSON_VALIST_H_
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
 #include "internal/meta.h"
 
@@ -20,15 +20,15 @@ typedef struct complex_long_double {
 } complex_long_double_pod_t;
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 #include <cstdarg>
 
-#define RAPIDJSON_BEGIN_VAR_ARGS(out, last_arg, nargs, realloc)	\
+#define YGGDRASIL_RAPIDJSON_BEGIN_VAR_ARGS(out, last_arg, nargs, realloc)	\
   VarArgList out(nargs, realloc);				\
   va_start(out.va, last_arg)
 
-#define RAPIDJSON_END_VAR_ARGS(out)
+#define YGGDRASIL_RAPIDJSON_END_VAR_ARGS(out)
 
 enum VarArgsFlag {
   kSetVarArgsFlag   = 0x0008,
@@ -142,7 +142,7 @@ public:
   bool skip_nbytes(const size_t nbytes) {
     if (!nargs)
       return false;
-    RAPIDJSON_ASSERT(nargs && nargs[0] > 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(nargs && nargs[0] > 0);
     if (!nargs || nargs[0] == 0) {
       // ygglog_error("skip_nbytes: No more arguments");
       return false;
@@ -176,7 +176,7 @@ public:
   */
   void* pop_ptr(int allow_null = 0) {
     void *out = NULL;
-    RAPIDJSON_ASSERT(nargs && nargs[0] > 0 && ptrs != NULL);
+    YGGDRASIL_RAPIDJSON_ASSERT(nargs && nargs[0] > 0 && ptrs != NULL);
     if (!nargs || nargs[0] == 0) {
       // ygglog_throw_error("pop_ptr_cpp: No more arguments");
       return NULL;
@@ -189,7 +189,7 @@ public:
     iptr++;
     if (nargs[0] > 0)
       nargs[0]--;
-    RAPIDJSON_ASSERT((out != NULL) || (allow_null != 0));
+    YGGDRASIL_RAPIDJSON_ASSERT((out != NULL) || (allow_null != 0));
     if ((out == NULL) && (allow_null == 0)) {
       std::cerr << "pop_ptr_cpp: Argument " << iptr - 1 << " is NULL" << std::endl;
       // ygglog_throw_error("pop_ptr_cpp: Argument %d is NULL.", iptr - 1);
@@ -207,7 +207,7 @@ public:
   */
   void** pop_ptr_ref(int allow_null = 0) {
     void **out = NULL;
-    RAPIDJSON_ASSERT(nargs && nargs[0] > 0 && ptrs != NULL);
+    YGGDRASIL_RAPIDJSON_ASSERT(nargs && nargs[0] > 0 && ptrs != NULL);
     if (!nargs || nargs[0] == 0) {
       // ygglog_throw_error("pop_ptr_ref_cpp: No more arguments");
       return NULL;
@@ -220,7 +220,7 @@ public:
     iptr++;
     if (nargs[0] > 0)
       nargs[0]--;
-    RAPIDJSON_ASSERT(((out != NULL) && (*out != NULL)) || (allow_null != 0));
+    YGGDRASIL_RAPIDJSON_ASSERT(((out != NULL) && (*out != NULL)) || (allow_null != 0));
     if ((out == NULL) || ((*out == NULL) && (allow_null == 0))) {
       std::cerr << "pop_ptr_ref_cpp: Argument is NULL." << std::endl;
       // ygglog_throw_error("pop_ptr_ref_cpp: Argument is NULL.");
@@ -253,7 +253,7 @@ public:
   }
   template<typename T>
 #ifdef YGGDRASIL_LONG_DOUBLE_AVAILABLE
-  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
 			      internal::OrExpr<internal::IsSame<std::complex<float>, T>,
 			      internal::OrExpr<internal::IsSame<std::complex<double>, T>,
 			      internal::OrExpr<internal::IsSame<std::complex<long double>, T>,
@@ -265,7 +265,7 @@ public:
 			      internal::OrExpr<internal::IsSame<uint16_t, T>,
 			      internal::IsSame<float, T> > > > > > > > > > >), (bool))
 #else // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-  RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::OrExpr<internal::IsPointer<T>,
 			      internal::OrExpr<internal::IsSame<std::complex<float>, T>,
 			      internal::OrExpr<internal::IsSame<std::complex<double>, T>,
 			      internal::OrExpr<internal::IsSame<bool, T>,
@@ -293,7 +293,7 @@ public:
 #define POP_SPECIAL_(type, type_cast)					\
   template<typename T>							\
   bool pop(T& dst, int allow_null=false,    				\
-	   RAPIDJSON_ENABLEIF((internal::IsSame<type, T>))) {		\
+	   YGGDRASIL_RAPIDJSON_ENABLEIF((internal::IsSame<type, T>))) {		\
     if (!nargs || nargs[0] == 0) {					\
       return false;							\
     }									\
@@ -310,7 +310,7 @@ public:
 #define POP_COMPLEX_(type, type_cast)					\
   template<typename T>							\
   bool pop(T& dst, int allow_null=false,				\
-	   RAPIDJSON_ENABLEIF((internal::IsSame<std::complex<type>, T>))) { \
+	   YGGDRASIL_RAPIDJSON_ENABLEIF((internal::IsSame<std::complex<type>, T>))) { \
     if (!nargs || nargs[0] == 0) {					\
       return false;							\
     }									\
@@ -767,8 +767,8 @@ size_t is_schema_format_array(ValueType& d,
   return 1;
 }
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
   
-#endif // RAPIDJSON_VALIST_H_
+#endif // YGGDRASIL_RAPIDJSON_VALIST_H_

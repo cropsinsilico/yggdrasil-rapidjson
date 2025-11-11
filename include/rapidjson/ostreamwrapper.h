@@ -12,18 +12,18 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_OSTREAMWRAPPER_H_
-#define RAPIDJSON_OSTREAMWRAPPER_H_
+#ifndef YGGDRASIL_RAPIDJSON_OSTREAMWRAPPER_H_
+#define YGGDRASIL_RAPIDJSON_OSTREAMWRAPPER_H_
 
 #include "stream.h"
 #include <iosfwd>
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(padded)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(padded)
 #endif
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 //! Wrapper of \c std::basic_ostream into RapidJSON's Stream concept.
 /*!
@@ -56,11 +56,11 @@ public:
     }
 
     // Not implemented
-    char Peek() const { RAPIDJSON_ASSERT(false); return 0; }
-    char Take() { RAPIDJSON_ASSERT(false); return 0; }
-    size_t Tell() const { RAPIDJSON_ASSERT(false); return 0; }
-    char* PutBegin() { RAPIDJSON_ASSERT(false); return 0; }
-    size_t PutEnd(char*) { RAPIDJSON_ASSERT(false); return 0; }
+    char Peek() const { YGGDRASIL_RAPIDJSON_ASSERT(false); return 0; }
+    char Take() { YGGDRASIL_RAPIDJSON_ASSERT(false); return 0; }
+    size_t Tell() const { YGGDRASIL_RAPIDJSON_ASSERT(false); return 0; }
+    char* PutBegin() { YGGDRASIL_RAPIDJSON_ASSERT(false); return 0; }
+    size_t PutEnd(char*) { YGGDRASIL_RAPIDJSON_ASSERT(false); return 0; }
 
 private:
     BasicOStreamWrapper(const BasicOStreamWrapper&);
@@ -73,9 +73,9 @@ typedef BasicOStreamWrapper<std::ostream> OStreamWrapper;
 typedef BasicOStreamWrapper<std::wostream> WOStreamWrapper;
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_OSTREAMWRAPPER_H_
+#endif // YGGDRASIL_RAPIDJSON_OSTREAMWRAPPER_H_

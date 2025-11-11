@@ -1,6 +1,6 @@
 #include "perftest.h"
 
-#if TEST_RAPIDJSON
+#if TEST_YGGDRASIL_RAPIDJSON
 
 #include "rapidjson/schema.h"
 #include <ctime>
@@ -9,11 +9,11 @@
 
 #define ARRAY_SIZE(a) sizeof(a) / sizeof(a[0])
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
-RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
 #if defined(__GNUC__) && __GNUC__ >= 7
-RAPIDJSON_DIAG_OFF(format-overflow)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(format-overflow)
 #endif
 
 template <typename Allocator>
@@ -47,7 +47,7 @@ static char* ReadFile(const char* filename, Allocator& allocator) {
     return json;
 }
 
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 
 class Schema : public PerfTest {
 public:

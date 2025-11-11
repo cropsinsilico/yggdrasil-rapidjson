@@ -12,8 +12,8 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#define RAPIDJSON_SCHEMA_VERBOSE 0
-#define RAPIDJSON_HAS_STDSTRING 1
+#define YGGDRASIL_RAPIDJSON_SCHEMA_VERBOSE 0
+#define YGGDRASIL_RAPIDJSON_HAS_STDSTRING 1
 
 #include "unittest.h"
 #include "rapidjson/schema.h"
@@ -24,14 +24,14 @@
 #include "rapidjson/error/en.h"
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(variadic-macros)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(variadic-macros)
 #elif defined(_MSC_VER)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(4822) // local class member function does not have a body
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(4822) // local class member function does not have a body
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 #define TEST_HASHER(json1, json2, expected) \
 {\
@@ -152,9 +152,9 @@ TEST(SchemaValidator, Hasher) {
     }\
 }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #define SHOW_ERROR_MESSAGE_(name, instance)                             \
-  RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;                      \
+  YGGDRASIL_RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;                      \
   Value e_msg;                                                          \
   if (!instance.Get ## name ## Msg(e_msg, error_msg_allocator)) {	\
     StringBuffer sb_t;                                                  \
@@ -324,13 +324,13 @@ TEST(SchemaValidator, Enum_Typed) {
     SchemaDocument s(sd);
 
     VALIDATE(s, "\"red\"", true);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "\"blue\"", "", "enum", "",
         "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#\", \"expected\": [\"red\", \"amber\", \"green\"] }}");
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "\"blue\"", "", "enum", "",
         "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#\" }}");
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 }
 
 TEST(SchemaValidator, Enum_Typeless) {
@@ -341,13 +341,13 @@ TEST(SchemaValidator, Enum_Typeless) {
     VALIDATE(s, "\"red\"", true);
     VALIDATE(s, "null", true);
     VALIDATE(s, "42", true);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "0", "", "enum", "",
         "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#\", \"expected\": [\"red\", \"amber\", \"green\", null, 42] }}");
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "0", "", "enum", "",
         "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#\", \"schemaRef\": \"#\" }}");
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 }
 
 TEST(SchemaValidator, Enum_InvalidType) {
@@ -593,7 +593,7 @@ TEST(SchemaValidator, String_LengthRange) {
         "}}");
 }
 
-#if RAPIDJSON_SCHEMA_HAS_REGEX
+#if YGGDRASIL_RAPIDJSON_SCHEMA_HAS_REGEX
 TEST(SchemaValidator, String_Pattern) {
     Document sd;
     sd.Parse("{\"type\":\"string\",\"pattern\":\"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\"}");
@@ -601,7 +601,7 @@ TEST(SchemaValidator, String_Pattern) {
 
     VALIDATE(s, "\"555-1212\"", true);
     VALIDATE(s, "\"(888)555-1212\"", true);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "\"(888)555-1212 ext. 532\"", "", "pattern", "",
         "{ \"pattern\": {"
         "    \"errorCode\": 8,"
@@ -616,7 +616,7 @@ TEST(SchemaValidator, String_Pattern) {
         "    \"actual\": \"(800)FLOWERS\","
 	"    \"expected\": \"^(\\\\([0-9]{3}\\\\))?[0-9]{3}-[0-9]{4}$\""
         "}}");
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "\"(888)555-1212 ext. 532\"", "", "pattern", "",
         "{ \"pattern\": {"
         "    \"errorCode\": 8,"
@@ -629,7 +629,7 @@ TEST(SchemaValidator, String_Pattern) {
         "    \"instanceRef\": \"#\", \"schemaRef\": \"#\","
         "    \"actual\": \"(800)FLOWERS\""
         "}}");
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 }
 
 TEST(SchemaValidator, String_Pattern_Invalid) {
@@ -1424,7 +1424,7 @@ TEST(SchemaValidator, Object_SchemaDependencies) {
     VALIDATE(s, "{\"name\": \"John Doe\", \"billing_address\" : \"555 Debtor's Lane\"}", true);
 }
 
-#if RAPIDJSON_SCHEMA_HAS_REGEX
+#if YGGDRASIL_RAPIDJSON_SCHEMA_HAS_REGEX
 TEST(SchemaValidator, Object_PatternProperties) {
     Document sd;
     sd.Parse(
@@ -1629,13 +1629,13 @@ TEST(SchemaValidator, Array_ItemsTuple) {
     SchemaDocument s(sd);
 
     VALIDATE(s, "[1600, \"Pennsylvania\", \"Avenue\", \"NW\"]", true);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "[24, \"Sussex\", \"Drive\"]", "/items/2", "enum", "/2",
         "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#/2\", \"schemaRef\": \"#/items/2\", \"expected\": [\"Street\", \"Avenue\", \"Boulevard\"] }}");
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "[24, \"Sussex\", \"Drive\"]", "/items/2", "enum", "/2",
         "{ \"enum\": { \"errorCode\": 19, \"instanceRef\": \"#/2\", \"schemaRef\": \"#/items/2\" }}");
-#endif // RAPIDJSON_YGGDRASIL 
+#endif // DISABLE_YGGDRASIL_RAPIDJSON 
     INVALIDATE(s, "[\"Palais de l'Elysee\"]", "/items/0", "type", "/0",
         "{ \"type\": {"
         "    \"errorCode\": 20,"
@@ -1782,7 +1782,7 @@ TEST(SchemaValidator, Null) {
         "}}");
 }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 TEST(SchemaValidator, Array_UniqueItems_Yggdrasil) {
     Document sd;
     sd.Parse("{\"type\": \"array\", \"uniqueItems\": true}");
@@ -2863,7 +2863,7 @@ TEST(SchemaValidator, DeprecatingArray) {
 		   "]}")
 }
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 // Additional tests
 
@@ -2947,7 +2947,7 @@ TEST(SchemaValidator, AllOf_Nested) {
 
     VALIDATE(s, "\"ok\"", true);
     VALIDATE(s, "\"OK\"", true);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "\"okay\"", "", "allOf", "",
         "{ \"allOf\": {"
         "    \"errors\": ["
@@ -2961,7 +2961,7 @@ TEST(SchemaValidator, AllOf_Nested) {
         "    }}],"
         "    \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#\""
         "}}");
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "\"okay\"", "", "allOf", "",
         "{ \"allOf\": {"
         "    \"errors\": ["
@@ -2975,7 +2975,7 @@ TEST(SchemaValidator, AllOf_Nested) {
         "    }}],"
         "    \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#\""
         "}}");
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "\"o\"", "", "allOf", "",
         "{ \"allOf\": {"
         "  \"errors\": ["
@@ -2984,7 +2984,7 @@ TEST(SchemaValidator, AllOf_Nested) {
         "  ],"
         "  \"errorCode\": 23, \"instanceRef\": \"#\", \"schemaRef\": \"#\""
         "}}");
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "\"n\"", "", "allOf", "",
         "{ \"allOf\": {"
         "    \"errors\": ["
@@ -3030,7 +3030,7 @@ TEST(SchemaValidator, AllOf_Nested) {
         "    ],"
         "    \"errorCode\":23,\"instanceRef\":\"#\",\"schemaRef\":\"#\""
         "}}");
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s, "\"n\"", "", "allOf", "",
         "{ \"allOf\": {"
         "    \"errors\": ["
@@ -3076,7 +3076,7 @@ TEST(SchemaValidator, AllOf_Nested) {
         "    ],"
         "    \"errorCode\":23,\"instanceRef\":\"#\",\"schemaRef\":\"#\""
         "}}");
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 }
 
 TEST(SchemaValidator, EscapedPointer) {
@@ -3212,7 +3212,7 @@ TEST(SchemaValidator, SchemaPointer) {
         "    \"schemaRef\":\"#/paths/~1some~1path/post/parameters/0/schema/properties/b\","
         "    \"expected\": [\"integer\"], \"actual\":\"string\""
         "}}");
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s1,
         "{"
         "  \"a\": {"
@@ -3233,7 +3233,7 @@ TEST(SchemaValidator, SchemaPointer) {
         "    \"schemaRef\":\"#/definitions/Prop_a/properties/c\""
 	"    , \"expected\": [\"C1\", \"C2\", \"C3\"]"
         "}}");
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s1,
         "{"
         "  \"a\": {"
@@ -3253,7 +3253,7 @@ TEST(SchemaValidator, SchemaPointer) {
         "    \"instanceRef\":\"#/a/d/a/c\","
         "    \"schemaRef\":\"#/definitions/Prop_a/properties/c\""
         "}}");
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE(s1,
         "{"
         "  \"a\": {"
@@ -3649,12 +3649,12 @@ TEST(SchemaValidatingWriter, Simple) {
 }
 
 TEST(Schema, Issue848) {
-    rapidjson::Document d;
-    rapidjson::SchemaDocument s(d);
-    rapidjson::GenericSchemaValidator<rapidjson::SchemaDocument, rapidjson::Document> v(s);
+    yggdrasil_rapidjson::Document d;
+    yggdrasil_rapidjson::SchemaDocument s(d);
+    yggdrasil_rapidjson::GenericSchemaValidator<yggdrasil_rapidjson::SchemaDocument, yggdrasil_rapidjson::Document> v(s);
 }
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
 static SchemaDocument ReturnSchemaDocument() {
     Document sd;
@@ -3675,7 +3675,7 @@ TEST(Schema, Issue552) {
         "}}");
 }
 
-#endif // RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
 TEST(SchemaValidator, Issue608) {
     Document sd;
@@ -3964,7 +3964,7 @@ TEST(SchemaValidator, ContinueOnErrors) {
     ASSERT_FALSE(sd.HasParseError());
     SchemaDocument s(sd);
     VALIDATE(s, "{\"version\": 1.0, \"address\": {\"number\": 24, \"street1\": \"The Woodlands\", \"street3\": \"Ham\", \"city\": \"Romsey\", \"area\": \"Kent\", \"country\": \"UK\", \"postcode\": \"SO51 0GP\"}, \"phones\": [\"0111-222333\", \"0777-666888\"], \"names\": [\"Fred\", \"Bloggs\"]}", true);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{\"version\": 1.01, \"address\": {\"number\": 0, \"street2\": false,  \"street3\": \"Ham\", \"city\": \"RomseyTownFC\", \"area\": \"BC\", \"country\": \"USA\", \"postcode\": \"999ABC\"}, \"phones\": [], \"planet\": \"Earth\", \"extra\": {\"S_xxx\": 123}}", "#", "errors", "#",
         "{ \"multipleOf\": {"
         "    \"errorCode\": 1, \"instanceRef\": \"#/version\", \"schemaRef\": \"#/definitions/decimal_type\", \"expected\": 1.0, \"actual\": 1.01"
@@ -4044,7 +4044,7 @@ TEST(SchemaValidator, ContinueOnErrors) {
         "  }"
         "}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{\"version\": 1.01, \"address\": {\"number\": 0, \"street2\": false,  \"street3\": \"Ham\", \"city\": \"RomseyTownFC\", \"area\": \"Narnia\", \"country\": \"USA\", \"postcode\": \"999ABC\"}, \"phones\": [], \"planet\": \"Earth\", \"extra\": {\"S_xxx\": 123}}", "#", "errors", "#",
         "{ \"multipleOf\": {"
         "    \"errorCode\": 1, \"instanceRef\": \"#/version\", \"schemaRef\": \"#/definitions/decimal_type\", \"expected\": 1.0, \"actual\": 1.01"
@@ -4127,7 +4127,7 @@ TEST(SchemaValidator, ContinueOnErrors) {
         "  }"
         "}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
         CrtAllocator::Free(schema);
 }
@@ -4224,21 +4224,21 @@ TEST(SchemaValidator, ContinueOnErrors_UniqueItems) {
     INVALIDATE_(s, "{\"phones\":[\"12-34\",\"12-34\"]}", "#", "errors", "#",
         "{\"uniqueItems\": {\"duplicates\": [0,1], \"errorCode\": 11, \"instanceRef\": \"#/phones\", \"schemaRef\": \"#/properties/phones\"}}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{\"phones\":[\"ab-34\",\"cd-78\"]}", "#", "errors", "#",
         "{\"pattern\": ["
         "  {\"actual\": \"ab-34\", \"expected\": \"^[0-9]*-[0-9]*\", \"errorCode\": 8, \"instanceRef\": \"#/phones/0\", \"schemaRef\": \"#/definitions/phone_type\"},"
         "  {\"actual\": \"cd-78\", \"expected\": \"^[0-9]*-[0-9]*\", \"errorCode\": 8, \"instanceRef\": \"#/phones/1\", \"schemaRef\": \"#/definitions/phone_type\"}"
         "]}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{\"phones\":[\"ab-34\",\"cd-78\"]}", "#", "errors", "#",
         "{\"pattern\": ["
         "  {\"actual\": \"ab-34\", \"errorCode\": 8, \"instanceRef\": \"#/phones/0\", \"schemaRef\": \"#/definitions/phone_type\"},"
         "  {\"actual\": \"cd-78\", \"errorCode\": 8, \"instanceRef\": \"#/phones/1\", \"schemaRef\": \"#/definitions/phone_type\"}"
         "]}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     CrtAllocator::Free(schema);
 }
 
@@ -4252,15 +4252,15 @@ TEST(SchemaValidator, ContinueOnErrors_Enum) {
     ASSERT_FALSE(sd.HasParseError());
     SchemaDocument s(sd);
     VALIDATE(s, "{\"gender\":\"M\"}", true);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{\"gender\":\"X\"}", "#", "errors", "#",
         "{\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/gender\", \"schemaRef\": \"#/properties/gender\", \"expected\": [\"M\", \"F\"]}}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{\"gender\":\"X\"}", "#", "errors", "#",
         "{\"enum\": {\"errorCode\": 19, \"instanceRef\": \"#/gender\", \"schemaRef\": \"#/properties/gender\"}}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{\"gender\":1}", "#", "errors", "#",
         "{\"type\": {\"expected\":[\"string\"], \"actual\": \"integer\", \"errorCode\": 20, \"instanceRef\": \"#/gender\", \"schemaRef\": \"#/properties/gender\"}}",
         kValidateDefaultFlags | kValidateContinueOnErrorFlag, SchemaValidator, Pointer);
@@ -4854,21 +4854,21 @@ TEST(SchemaValidator, ReadOnlyWhenWriting) {
         "}");
     SchemaDocument s(sd, 0, 0, 0, 0, 0, Specification(kVersion20));
     VALIDATE(s, "{ \"rprop\": \"hello\" }", true);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{ \"rprop\": \"hello\" }", "/properties/rprop", "readOnly", "/rprop",
         "{ \"readOnly\": {"
         "    \"errorCode\": 48, \"instanceRef\": \"#/rprop\", \"schemaRef\": \"#/properties/rprop\""
         "  }"
         "}",
         kValidateDefaultFlags | kValidateWriteFlag, SchemaValidator, Pointer);
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{ \"rprop\": \"hello\" }", "/properties/rprop", "readOnly", "/rprop",
         "{ \"readOnly\": {"
         "    \"errorCode\": 26, \"instanceRef\": \"#/rprop\", \"schemaRef\": \"#/properties/rprop\""
         "  }"
         "}",
         kValidateDefaultFlags | kValidateWriteFlag, SchemaValidator, Pointer);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 }
 
 TEST(SchemaValidator, WriteOnlyWhenReading) {
@@ -4885,21 +4885,21 @@ TEST(SchemaValidator, WriteOnlyWhenReading) {
         "}");
     SchemaDocument s(sd, 0, 0, 0, 0, 0, Specification(kVersion30));
     VALIDATE(s, "{ \"wprop\": true }", true);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{ \"wprop\": true }", "/properties/wprop", "writeOnly", "/wprop",
         "{ \"writeOnly\": {"
         "    \"errorCode\": 49, \"instanceRef\": \"#/wprop\", \"schemaRef\": \"#/properties/wprop\""
         "  }"
         "}",
         kValidateDefaultFlags | kValidateReadFlag, SchemaValidator, Pointer);
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     INVALIDATE_(s, "{ \"wprop\": true }", "/properties/wprop", "writeOnly", "/wprop",
         "{ \"writeOnly\": {"
         "    \"errorCode\": 27, \"instanceRef\": \"#/wprop\", \"schemaRef\": \"#/properties/wprop\""
         "  }"
         "}",
         kValidateDefaultFlags | kValidateReadFlag, SchemaValidator, Pointer);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 }
 
 TEST(SchemaValidator, NullableTrue) {
@@ -4969,7 +4969,7 @@ TEST(SchemaValidator, NullableFalse) {
         "}}");
 }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #define VALIDATE_ENCODED(obj, exp, exp_min)				\
   Document d_obj;							\
   d_obj.Parse(obj);							\
@@ -5193,7 +5193,7 @@ TEST(SchemaEncoder, Schema) {
     EXPECT_FALSE(result);						\
     Document e;								\
     e.Parse(error);							\
-    RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;			\
+    YGGDRASIL_RAPIDJSON_DEFAULT_ALLOCATOR error_msg_allocator;			\
     Value e_msg;							\
     if (!validator_lhs.GetErrorMsg(e_msg, error_msg_allocator)) {	\
       StringBuffer sb_t;						\
@@ -7829,8 +7829,8 @@ TEST(SchemaGenerateData, PythonInstance) {
 		 "}");
 }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 #if defined(_MSC_VER) || defined(__clang__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

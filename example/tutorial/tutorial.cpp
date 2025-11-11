@@ -5,7 +5,7 @@
 #include "rapidjson/prettywriter.h" // for stringify JSON
 #include <cstdio>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 int main(int, char*[]) {

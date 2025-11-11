@@ -2,7 +2,7 @@
 #include <iostream>
 #include <sstream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 // If you can require C++11, you could use std::to_string here

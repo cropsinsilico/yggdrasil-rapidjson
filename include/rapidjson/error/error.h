@@ -12,53 +12,53 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_ERROR_ERROR_H_
-#define RAPIDJSON_ERROR_ERROR_H_
+#ifndef YGGDRASIL_RAPIDJSON_ERROR_ERROR_H_
+#define YGGDRASIL_RAPIDJSON_ERROR_ERROR_H_
 
 #include "../rapidjson.h"
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(padded)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(padded)
 #endif
 
 /*! \file error.h */
 
-/*! \defgroup RAPIDJSON_ERRORS RapidJSON error handling */
+/*! \defgroup YGGDRASIL_RAPIDJSON_ERRORS RapidJSON error handling */
 
 ///////////////////////////////////////////////////////////////////////////////
-// RAPIDJSON_ERROR_CHARTYPE
+// YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE
 
 //! Character type of error messages.
-/*! \ingroup RAPIDJSON_ERRORS
+/*! \ingroup YGGDRASIL_RAPIDJSON_ERRORS
     The default character type is \c char.
     On Windows, user can define this macro as \c TCHAR for supporting both
     unicode/non-unicode settings.
 */
-#ifndef RAPIDJSON_ERROR_CHARTYPE
-#define RAPIDJSON_ERROR_CHARTYPE char
+#ifndef YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE
+#define YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE char
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
-// RAPIDJSON_ERROR_STRING
+// YGGDRASIL_RAPIDJSON_ERROR_STRING
 
-//! Macro for converting string literal to \ref RAPIDJSON_ERROR_CHARTYPE[].
-/*! \ingroup RAPIDJSON_ERRORS
+//! Macro for converting string literal to \ref YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE[].
+/*! \ingroup YGGDRASIL_RAPIDJSON_ERRORS
     By default this conversion macro does nothing.
     On Windows, user can define this macro as \c _T(x) for supporting both
     unicode/non-unicode settings.
 */
-#ifndef RAPIDJSON_ERROR_STRING
-#define RAPIDJSON_ERROR_STRING(x) x
+#ifndef YGGDRASIL_RAPIDJSON_ERROR_STRING
+#define YGGDRASIL_RAPIDJSON_ERROR_STRING(x) x
 #endif
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 ///////////////////////////////////////////////////////////////////////////////
 // ParseErrorCode
 
 //! Error code of parsing.
-/*! \ingroup RAPIDJSON_ERRORS
+/*! \ingroup YGGDRASIL_RAPIDJSON_ERRORS
     \see GenericReader::Parse, GenericReader::GetParseErrorCode
 */
 enum ParseErrorCode {
@@ -91,7 +91,7 @@ enum ParseErrorCode {
 
 //! Result of parsing (wraps ParseErrorCode)
 /*!
-    \ingroup RAPIDJSON_ERRORS
+    \ingroup YGGDRASIL_RAPIDJSON_ERRORS
     \code
         Document doc;
         ParseResult ok = doc.Parse("[42]");
@@ -141,22 +141,22 @@ private:
 };
 
 //! Function pointer type of GetParseError().
-/*! \ingroup RAPIDJSON_ERRORS
+/*! \ingroup YGGDRASIL_RAPIDJSON_ERRORS
 
     This is the prototype for \c GetParseError_X(), where \c X is a locale.
     User can dynamically change locale in runtime, e.g.:
 \code
     GetParseErrorFunc GetParseError = GetParseError_En; // or whatever
-    const RAPIDJSON_ERROR_CHARTYPE* s = GetParseError(document.GetParseErrorCode());
+    const YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE* s = GetParseError(document.GetParseErrorCode());
 \endcode
 */
-typedef const RAPIDJSON_ERROR_CHARTYPE* (*GetParseErrorFunc)(ParseErrorCode);
+typedef const YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE* (*GetParseErrorFunc)(ParseErrorCode);
 
 ///////////////////////////////////////////////////////////////////////////////
 // ValidateErrorCode
 
 //! Error codes when validating.
-/*! \ingroup RAPIDJSON_ERRORS
+/*! \ingroup YGGDRASIL_RAPIDJSON_ERRORS
     \see GenericSchemaValidator
 */
 enum ValidateErrorCode {
@@ -193,7 +193,7 @@ enum ValidateErrorCode {
     kValidateErrorAllOf,                       //!< Property did not match all of the sub-schemas specified by 'allOf'.
     kValidateErrorAnyOf,                       //!< Property did not match any of the sub-schemas specified by 'anyOf'.
     kValidateErrorNot,                         //!< Property matched the sub-schema specified by 'not'.
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RJ
     kValidateErrorRequiredSchema,              //!< Schema is missing a required property.
     kValidateErrorSubType,                     //!< Property has a subtype that is not allowed by the schema.
     kValidateErrorPrecision,                   //!< Property has a precision that is not allowed by the schema.
@@ -216,29 +216,29 @@ enum ValidateErrorCode {
     kIncompatibleSchemas,                      //!< Incompatible schema property `%property`: %expected vs %actual.
     kValidateErrorMissingSubschema,            //!< Subschema is missing from one of the two schemas.
     kValidateErrorSubschemas,                  //!< Object has one or more invalid subschemas.
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RJ
 
     kValidateErrorReadOnly,                    //!< Property is read-only but has been provided when validation is for writing
     kValidateErrorWriteOnly                    //!< Property is write-only but has been provided when validation is for reading
 };
 
 //! Function pointer type of GetValidateError().
-/*! \ingroup RAPIDJSON_ERRORS
+/*! \ingroup YGGDRASIL_RAPIDJSON_ERRORS
 
     This is the prototype for \c GetValidateError_X(), where \c X is a locale.
     User can dynamically change locale in runtime, e.g.:
 \code
     GetValidateErrorFunc GetValidateError = GetValidateError_En; // or whatever
-    const RAPIDJSON_ERROR_CHARTYPE* s = GetValidateError(validator.GetInvalidSchemaCode());
+    const YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE* s = GetValidateError(validator.GetInvalidSchemaCode());
 \endcode
 */
-typedef const RAPIDJSON_ERROR_CHARTYPE* (*GetValidateErrorFunc)(ValidateErrorCode);
+typedef const YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE* (*GetValidateErrorFunc)(ValidateErrorCode);
 
 ///////////////////////////////////////////////////////////////////////////////
 // SchemaErrorCode
 
 //! Error codes when validating.
-/*! \ingroup RAPIDJSON_ERRORS
+/*! \ingroup YGGDRASIL_RAPIDJSON_ERRORS
     \see GenericSchemaValidator
 */
 enum SchemaErrorCode {
@@ -260,22 +260,22 @@ enum SchemaErrorCode {
 };
 
 //! Function pointer type of GetSchemaError().
-/*! \ingroup RAPIDJSON_ERRORS
+/*! \ingroup YGGDRASIL_RAPIDJSON_ERRORS
 
     This is the prototype for \c GetSchemaError_X(), where \c X is a locale.
     User can dynamically change locale in runtime, e.g.:
 \code
     GetSchemaErrorFunc GetSchemaError = GetSchemaError_En; // or whatever
-    const RAPIDJSON_ERROR_CHARTYPE* s = GetSchemaError(validator.GetInvalidSchemaCode());
+    const YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE* s = GetSchemaError(validator.GetInvalidSchemaCode());
 \endcode
 */
-typedef const RAPIDJSON_ERROR_CHARTYPE* (*GetSchemaErrorFunc)(SchemaErrorCode);
+typedef const YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE* (*GetSchemaErrorFunc)(SchemaErrorCode);
 
 ///////////////////////////////////////////////////////////////////////////////
 // PointerParseErrorCode
 
 //! Error code of JSON pointer parsing.
-/*! \ingroup RAPIDJSON_ERRORS
+/*! \ingroup YGGDRASIL_RAPIDJSON_ERRORS
     \see GenericPointer::GenericPointer, GenericPointer::GetParseErrorCode
 */
 enum PointerParseErrorCode {
@@ -288,22 +288,22 @@ enum PointerParseErrorCode {
 };
 
 //! Function pointer type of GetPointerParseError().
-/*! \ingroup RAPIDJSON_ERRORS
+/*! \ingroup YGGDRASIL_RAPIDJSON_ERRORS
 
     This is the prototype for \c GetPointerParseError_X(), where \c X is a locale.
     User can dynamically change locale in runtime, e.g.:
 \code
     GetPointerParseErrorFunc GetPointerParseError = GetPointerParseError_En; // or whatever
-    const RAPIDJSON_ERROR_CHARTYPE* s = GetPointerParseError(pointer.GetParseErrorCode());
+    const YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE* s = GetPointerParseError(pointer.GetParseErrorCode());
 \endcode
 */
-typedef const RAPIDJSON_ERROR_CHARTYPE* (*GetPointerParseErrorFunc)(PointerParseErrorCode);
+typedef const YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE* (*GetPointerParseErrorFunc)(PointerParseErrorCode);
 
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
-#endif // RAPIDJSON_ERROR_ERROR_H_
+#endif // YGGDRASIL_RAPIDJSON_ERROR_ERROR_H_

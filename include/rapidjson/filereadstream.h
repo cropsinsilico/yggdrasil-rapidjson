@@ -12,20 +12,20 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_FILEREADSTREAM_H_
-#define RAPIDJSON_FILEREADSTREAM_H_
+#ifndef YGGDRASIL_RAPIDJSON_FILEREADSTREAM_H_
+#define YGGDRASIL_RAPIDJSON_FILEREADSTREAM_H_
 
 #include "stream.h"
 #include <cstdio>
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(padded)
-RAPIDJSON_DIAG_OFF(unreachable-code)
-RAPIDJSON_DIAG_OFF(missing-noreturn)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(padded)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(unreachable-code)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(missing-noreturn)
 #endif
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 //! File byte stream for input using fread().
 /*!
@@ -42,8 +42,8 @@ public:
         \param bufferSize size of buffer in bytes. Must >=4 bytes.
     */
     FileReadStream(std::FILE* fp, char* buffer, size_t bufferSize) : fp_(fp), buffer_(buffer), bufferSize_(bufferSize), bufferLast_(0), current_(buffer_), readCount_(0), count_(0), eof_(false) { 
-        RAPIDJSON_ASSERT(fp_ != 0);
-        RAPIDJSON_ASSERT(bufferSize >= 4);
+        YGGDRASIL_RAPIDJSON_ASSERT(fp_ != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(bufferSize >= 4);
         Read();
     }
 
@@ -52,10 +52,10 @@ public:
     size_t Tell() const { return count_ + static_cast<size_t>(current_ - buffer_); }
 
     // Not implemented
-    void Put(Ch) { RAPIDJSON_ASSERT(false); }
-    void Flush() { RAPIDJSON_ASSERT(false); } 
-    Ch* PutBegin() { RAPIDJSON_ASSERT(false); return 0; }
-    size_t PutEnd(Ch*) { RAPIDJSON_ASSERT(false); return 0; }
+    void Put(Ch) { YGGDRASIL_RAPIDJSON_ASSERT(false); }
+    void Flush() { YGGDRASIL_RAPIDJSON_ASSERT(false); } 
+    Ch* PutBegin() { YGGDRASIL_RAPIDJSON_ASSERT(false); return 0; }
+    size_t PutEnd(Ch*) { YGGDRASIL_RAPIDJSON_ASSERT(false); return 0; }
 
     // For encoding detection only.
     const Ch* Peek4() const {
@@ -90,10 +90,10 @@ private:
     bool eof_;
 };
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
-#endif // RAPIDJSON_FILESTREAM_H_
+#endif // YGGDRASIL_RAPIDJSON_FILESTREAM_H_

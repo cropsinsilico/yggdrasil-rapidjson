@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <iostream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 static void printIt(const Value &doc) {

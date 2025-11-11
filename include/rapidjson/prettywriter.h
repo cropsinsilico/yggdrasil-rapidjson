@@ -12,33 +12,33 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_PRETTYWRITER_H_
-#define RAPIDJSON_PRETTYWRITER_H_
+#ifndef YGGDRASIL_RAPIDJSON_PRETTYWRITER_H_
+#define YGGDRASIL_RAPIDJSON_PRETTYWRITER_H_
 
 #include "writer.h"
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #include "istreamwrapper.h"
 #include "document.h"
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
 #endif
 
 #if defined(__clang__)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(c++98-compat)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(c++98-compat)
 #endif
 
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11 override
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 //! Combination of PrettyWriter format flags.
 /*! \see PrettyWriter::SetFormatOptions
@@ -73,7 +73,7 @@ public:
     explicit PrettyWriter(StackAllocator* allocator = 0, size_t levelDepth = Base::kDefaultLevelDepth) : 
         Base(allocator, levelDepth), indentChar_(' '), indentCharCount_(4), formatOptions_(kFormatDefault) {}
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
     PrettyWriter(PrettyWriter&& rhs) :
         Base(std::forward<PrettyWriter>(rhs)), indentChar_(rhs.indentChar_), indentCharCount_(rhs.indentCharCount_), formatOptions_(rhs.formatOptions_) {}
 #endif
@@ -84,7 +84,7 @@ public:
         \note The default indentation is 4 spaces.
     */
     PrettyWriter& SetIndent(Ch indentChar, unsigned indentCharCount) {
-        RAPIDJSON_ASSERT(indentChar == ' ' || indentChar == '\t' || indentChar == '\n' || indentChar == '\r');
+        YGGDRASIL_RAPIDJSON_ASSERT(indentChar == ' ' || indentChar == '\t' || indentChar == '\n' || indentChar == '\r');
         indentChar_ = indentChar;
         indentCharCount_ = indentCharCount;
         return *this;
@@ -103,44 +103,44 @@ public:
     */
     //@{
 
-#ifdef RAPIDJSON_YGGDRASIL
-#define RAPIDJSON_WRAP_BASE64_(method, arg1)		\
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#define YGGDRASIL_RAPIDJSON_WRAP_BASE64_(method, arg1)		\
   if (this->w64p_) return this->w64_()->method arg1
-#else // RAPIDJSON_YGGDRASIL
-#define RAPIDJSON_WRAP_BASE64_(method, arg1)
-#endif // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
+#define YGGDRASIL_RAPIDJSON_WRAP_BASE64_(method, arg1)
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
   
-    bool Null()                 { RAPIDJSON_WRAP_BASE64_(Null, ()); PrettyPrefix(kNullType);   return Base::EndValue(Base::WriteNull()); }
-    bool Bool(bool b)           { RAPIDJSON_WRAP_BASE64_(Bool, (b)); PrettyPrefix(b ? kTrueType : kFalseType); return Base::EndValue(Base::WriteBool(b)); }
-    bool Int(int i)             { RAPIDJSON_WRAP_BASE64_(Int, (i)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteInt(i)); }
-    bool Uint(unsigned u)       { RAPIDJSON_WRAP_BASE64_(Uint, (u)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteUint(u)); }
-    bool Int64(int64_t i64)     { RAPIDJSON_WRAP_BASE64_(Int64, (i64)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteInt64(i64)); }
-    bool Uint64(uint64_t u64)   { RAPIDJSON_WRAP_BASE64_(Uint64, (u64)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteUint64(u64));  }
-    bool Double(double d)       { RAPIDJSON_WRAP_BASE64_(Double, (d)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteDouble(d)); }
+    bool Null()                 { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Null, ()); PrettyPrefix(kNullType);   return Base::EndValue(Base::WriteNull()); }
+    bool Bool(bool b)           { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Bool, (b)); PrettyPrefix(b ? kTrueType : kFalseType); return Base::EndValue(Base::WriteBool(b)); }
+    bool Int(int i)             { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Int, (i)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteInt(i)); }
+    bool Uint(unsigned u)       { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Uint, (u)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteUint(u)); }
+    bool Int64(int64_t i64)     { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Int64, (i64)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteInt64(i64)); }
+    bool Uint64(uint64_t u64)   { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Uint64, (u64)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteUint64(u64));  }
+    bool Double(double d)       { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Double, (d)); PrettyPrefix(kNumberType); return Base::EndValue(Base::WriteDouble(d)); }
 
     bool RawNumber(const Ch* str, SizeType length, bool copy = false) {
-        RAPIDJSON_ASSERT(str != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(str != 0);
         (void)copy;
         PrettyPrefix(kNumberType);
         return Base::EndValue(Base::WriteString(str, length));
     }
 
     bool String(const Ch* str, SizeType length, bool copy = false) {
-        RAPIDJSON_WRAP_BASE64_(String, (str, length, copy));
-        RAPIDJSON_ASSERT(str != 0);
+        YGGDRASIL_RAPIDJSON_WRAP_BASE64_(String, (str, length, copy));
+        YGGDRASIL_RAPIDJSON_ASSERT(str != 0);
         (void)copy;
         PrettyPrefix(kStringType);
         return Base::EndValue(Base::WriteString(str, length));
     }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     bool String(const std::basic_string<Ch>& str) {
         return String(str.data(), SizeType(str.size()));
     }
 #endif
 
     bool StartObject() {
-        RAPIDJSON_WRAP_BASE64_(StartObject, ());
+        YGGDRASIL_RAPIDJSON_WRAP_BASE64_(StartObject, ());
         PrettyPrefix(kObjectType);
         new (Base::level_stack_.template Push<typename Base::Level>()) typename Base::Level(false);
         return Base::WriteStartObject();
@@ -148,18 +148,18 @@ public:
 
     bool Key(const Ch* str, SizeType length, bool copy = false) { return String(str, length, copy); }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     bool Key(const std::basic_string<Ch>& str) {
         return Key(str.data(), SizeType(str.size()));
     }
 #endif
 	
     bool EndObject(SizeType memberCount = 0) {
-        RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount));
+        YGGDRASIL_RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount));
         (void)memberCount;
-        RAPIDJSON_ASSERT(Base::level_stack_.GetSize() >= sizeof(typename Base::Level)); // not inside an Object
-        RAPIDJSON_ASSERT(!Base::level_stack_.template Top<typename Base::Level>()->inArray); // currently inside an Array, not Object
-        RAPIDJSON_ASSERT(0 == Base::level_stack_.template Top<typename Base::Level>()->valueCount % 2); // Object has a Key without a Value
+        YGGDRASIL_RAPIDJSON_ASSERT(Base::level_stack_.GetSize() >= sizeof(typename Base::Level)); // not inside an Object
+        YGGDRASIL_RAPIDJSON_ASSERT(!Base::level_stack_.template Top<typename Base::Level>()->inArray); // currently inside an Array, not Object
+        YGGDRASIL_RAPIDJSON_ASSERT(0 == Base::level_stack_.template Top<typename Base::Level>()->valueCount % 2); // Object has a Key without a Value
        
         bool empty = Base::level_stack_.template Pop<typename Base::Level>(1)->valueCount == 0;
 
@@ -169,24 +169,24 @@ public:
         }
         bool ret = Base::EndValue(Base::WriteEndObject());
         (void)ret;
-        RAPIDJSON_ASSERT(ret == true);
+        YGGDRASIL_RAPIDJSON_ASSERT(ret == true);
         if (Base::level_stack_.Empty()) // end of json text
             Base::Flush();
         return true;
     }
 
     bool StartArray() {
-        RAPIDJSON_WRAP_BASE64_(StartArray, ());
+        YGGDRASIL_RAPIDJSON_WRAP_BASE64_(StartArray, ());
         PrettyPrefix(kArrayType);
         new (Base::level_stack_.template Push<typename Base::Level>()) typename Base::Level(true);
         return Base::WriteStartArray();
     }
 
     bool EndArray(SizeType memberCount = 0) {
-        RAPIDJSON_WRAP_BASE64_(EndArray, (memberCount));
+        YGGDRASIL_RAPIDJSON_WRAP_BASE64_(EndArray, (memberCount));
         (void)memberCount;
-        RAPIDJSON_ASSERT(Base::level_stack_.GetSize() >= sizeof(typename Base::Level));
-        RAPIDJSON_ASSERT(Base::level_stack_.template Top<typename Base::Level>()->inArray);
+        YGGDRASIL_RAPIDJSON_ASSERT(Base::level_stack_.GetSize() >= sizeof(typename Base::Level));
+        YGGDRASIL_RAPIDJSON_ASSERT(Base::level_stack_.template Top<typename Base::Level>()->inArray);
         bool empty = Base::level_stack_.template Pop<typename Base::Level>(1)->valueCount == 0;
 
         if (!empty && !(formatOptions_ & kFormatSingleLineArray)) {
@@ -195,7 +195,7 @@ public:
         }
         bool ret = Base::EndValue(Base::WriteEndArray());
         (void)ret;
-        RAPIDJSON_ASSERT(ret == true);
+        YGGDRASIL_RAPIDJSON_ASSERT(ret == true);
         if (Base::level_stack_.Empty()) // end of json text
             Base::Flush();
         return true;
@@ -223,17 +223,17 @@ public:
         \note When using PrettyWriter::RawValue(), the result json may not be indented correctly.
     */
     bool RawValue(const Ch* json, size_t length, Type type) {
-        RAPIDJSON_ASSERT(json != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(json != 0);
         PrettyPrefix(type);
         return Base::EndValue(Base::WriteRawValue(json, length));
     }
 
-#undef RAPIDJSON_WRAP_BASE64_
+#undef YGGDRASIL_RAPIDJSON_WRAP_BASE64_
 
 protected:
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     void Prefix(Type type) OVERRIDE_CXX11 { PrettyPrefix(type); }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     void PrettyPrefix(Type type) {
         (void)type;
         if (Base::level_stack_.GetSize() != 0) { // this value is not at root
@@ -269,11 +269,11 @@ protected:
                     WriteIndent();
             }
             if (!level->inArray && level->valueCount % 2 == 0)
-                RAPIDJSON_ASSERT(type == kStringType);  // if it's in object, then even number should be a name
+                YGGDRASIL_RAPIDJSON_ASSERT(type == kStringType);  // if it's in object, then even number should be a name
             level->valueCount++;
         }
         else {
-            RAPIDJSON_ASSERT(!Base::hasRoot_);  // Should only has one and only one root.
+            YGGDRASIL_RAPIDJSON_ASSERT(!Base::hasRoot_);  // Should only has one and only one root.
             Base::hasRoot_ = true;
         }
     }
@@ -293,7 +293,7 @@ private:
     PrettyWriter& operator=(const PrettyWriter&);
 };
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
 template <typename Encoding, typename Allocator>
 inline
@@ -314,16 +314,16 @@ std::istream & operator >> (std::istream &in,
   return in;
 }
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
 #if defined(__clang__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
-#endif // RAPIDJSON_RAPIDJSON_H_
+#endif // YGGDRASIL_RAPIDJSON_PRETTYWRITER_H_

@@ -12,12 +12,12 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_FWD_H_
-#define RAPIDJSON_FWD_H_
+#ifndef YGGDRASIL_RAPIDJSON_FWD_H_
+#define YGGDRASIL_RAPIDJSON_FWD_H_
 
 #include "rapidjson.h"
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 // encodings.h
 
@@ -146,6 +146,6 @@ class GenericSchemaValidator;
 
 typedef GenericSchemaValidator<SchemaDocument, BaseReaderHandler<UTF8<char>, void>, CrtAllocator> SchemaValidator;
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_RAPIDJSONFWD_H_
+#endif // YGGDRASIL_RAPIDJSON_FWD_H_

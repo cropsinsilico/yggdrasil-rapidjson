@@ -16,7 +16,7 @@
 #include "stream.h"
 #include "precision.h"
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 extern "C" {
@@ -230,8 +230,8 @@ public:
   unsigned char PeekByte(size_t n = 0) {
     if ((buffer_pos_ + n) < 3)
       return buffer_[buffer_pos_ + n];
-    RAPIDJSON_ASSERT(buffer_pos_ == 3);  // Don't overwrite buffer
-    RAPIDJSON_ASSERT(n < 3);
+    YGGDRASIL_RAPIDJSON_ASSERT(buffer_pos_ == 3);  // Don't overwrite buffer
+    YGGDRASIL_RAPIDJSON_ASSERT(n < 3);
     ReadNext();
     return buffer_[buffer_pos_ + n];
   }
@@ -278,7 +278,7 @@ public:
   
   // unsigned char* PeekNext() {
   //   // std::cerr << "PeekNext" << std::endl;
-  //   // RAPIDJSON_ASSERT(false);
+  //   // YGGDRASIL_RAPIDJSON_ASSERT(false);
   //   // return NULL;
   //   unsigned char *out = (unsigned char*)malloc(3 * sizeof(unsigned char));
   //   unsigned char *pos = out;
@@ -327,7 +327,7 @@ public:
     // std::cerr << "  encoded: ";
     for (size_t i = 0; i < 4; i++) {
       while (encoded[i] == 0x80) {
-	RAPIDJSON_ASSERT(stream_.Peek() != '\0');
+	YGGDRASIL_RAPIDJSON_ASSERT(stream_.Peek() != '\0');
 	// std::cerr << stream_.Peek();
 	src = (unsigned char)(stream_.Take());
 	encoded[i] = dtable_[src];
@@ -550,7 +550,7 @@ public:
   //! \brief Insert a byte.
   //! \param ch Byte.
   void PutByte(unsigned char ch) {
-    RAPIDJSON_ASSERT(buffer_pos_ < 3);
+    YGGDRASIL_RAPIDJSON_ASSERT(buffer_pos_ < 3);
     buffer_empty_[buffer_pos_] = false;
     buffer_[buffer_pos_++] = ch;
     if (buffer_pos_ == 3)
@@ -665,7 +665,7 @@ bool parseYggdrasilString(const typename Encoding::Ch* str, SizeType length, boo
     end_body = length - len_ygg;
     len_body = end_body - beg_body;
     elen_body = len_body * 3 / 4;
-    RAPIDJSON_ASSERT((end_body + len_ygg) == length);
+    YGGDRASIL_RAPIDJSON_ASSERT((end_body + len_ygg) == length);
     // Add stream
     GenericStringStream<Encoding> is(str);
     is.src_ += len_ygg;
@@ -699,12 +699,12 @@ bool parseYggdrasilString(const typename Encoding::Ch* str, SizeType length, boo
     }
     elen_body = elen_body - nempty_body;
     is.src_ += len_ygg;
-    RAPIDJSON_ASSERT(is.Tell() == (size_t)length);
+    YGGDRASIL_RAPIDJSON_ASSERT(is.Tell() == (size_t)length);
     // std::cerr << "schema: \"" << os_schema.GetString() << "\"" << std::endl;
     // std::cerr << "body: \"" << os_body.GetString() << "\"" << std::endl;
     return true;
 }
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
 #endif // BASE64_H_

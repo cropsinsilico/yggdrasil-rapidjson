@@ -1,5 +1,5 @@
-#ifndef RAPIDJSON_PRECISION_H_
-#define RAPIDJSON_PRECISION_H_
+#ifndef YGGDRASIL_RAPIDJSON_PRECISION_H_
+#define YGGDRASIL_RAPIDJSON_PRECISION_H_
 
 /*! \file precision.h */
 
@@ -51,9 +51,9 @@
 #endif // UINT64_MAX
 
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
 #define YGGDRASIL_IS_CASTABLE(T1, T2)					\
   internal::OrExpr<							\
@@ -152,14 +152,14 @@ RAPIDJSON_NAMESPACE_BEGIN
 
 template <typename T1, typename T2>
 bool canCast(bool allowDecreasedPrecision=true,
-	     RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T1, T2)))) {
+	     YGGDRASIL_RAPIDJSON_ENABLEIF((YGGDRASIL_IS_CASTABLE(T1, T2)))) {
   if (!allowDecreasedPrecision && (sizeof(T2) < sizeof(T1)))
     return false;
   return true;
 }
 template <typename T1, typename T2>
 bool canCast(bool=true,
-	     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T1, T2)))) {
+	     YGGDRASIL_RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T1, T2)))) {
   return false;
 }
 template <typename T2, size_t>
@@ -177,23 +177,23 @@ bool canCast(YggSubType S1, SizeType P1,
 
 template <typename T1, typename T2>
 T2 castPrecision(const T1& v1,
-		 RAPIDJSON_DISABLEIF((internal::OrExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
+		 YGGDRASIL_RAPIDJSON_DISABLEIF((internal::OrExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
 				      YGGDRASIL_IS_COMPLEX_TYPE(T2)>)))
 { return static_cast<const T2>(v1); }
 template <typename T1, typename T2>
 T2 castPrecision(const T1& v1,
-		 RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
+		 YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
 				     YGGDRASIL_IS_COMPLEX_TYPE(T2)>)))
 { return T2(static_cast<typename T2::value_type>(v1.real()),
 	    static_cast<typename T2::value_type>(v1.imag())); }
 template <typename T1, typename T2>
 T2 castPrecision(const T1& v1,
-		 RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
+		 YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<YGGDRASIL_IS_COMPLEX_TYPE(T1),
 				     internal::NotExpr<YGGDRASIL_IS_COMPLEX_TYPE(T2)> >)))
 { return static_cast<const T2>(v1.real()); }
 template <typename T1, typename T2>
 T2 castPrecision(const T1& v1,
-		 RAPIDJSON_ENABLEIF((internal::AndExpr<internal::NotExpr<
+		 YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<internal::NotExpr<
 				     internal::OrExpr<internal::IsSame<long, T1>,
 				     internal::OrExpr<internal::IsSame<unsigned long, T1>,
 				     internal::OrExpr<internal::IsSame<long long, T1>,
@@ -203,7 +203,7 @@ T2 castPrecision(const T1& v1,
 { return T2(v1); }
 template <typename T1, typename T2>
 const T2 castPrecision(const T1& v1,
-		       RAPIDJSON_ENABLEIF((internal::AndExpr<
+		       YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 					   internal::OrExpr<internal::IsSame<long, T1>,
 					   internal::OrExpr<internal::IsSame<unsigned long, T1>,
 					   internal::OrExpr<internal::IsSame<long long, T1>,
@@ -229,14 +229,14 @@ const T2 castPrecision(const T1& v1,
 
 template <typename T1, typename T2>
 void changePrecision(const unsigned char* bytes, T2* dst, SizeType nelements,
-		     RAPIDJSON_ENABLEIF((internal::IsSame<T1, T2>))) {
+		     YGGDRASIL_RAPIDJSON_ENABLEIF((internal::IsSame<T1, T2>))) {
   CAST_SOURCE;
   memcpy((void*)dst, (void*)src, nelements * sizeof(T2));
 }
 
 template <typename T1, typename T2>
 void changePrecision(const unsigned char* bytes, T2* dst, SizeType nelements,
-		     RAPIDJSON_ENABLEIF((internal::AndExpr<
+		     YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 					 internal::NotExpr<
 					 internal::IsSame<T1, T2> >,
 					 YGGDRASIL_IS_CASTABLE(T1,T2)>))) {
@@ -247,9 +247,9 @@ void changePrecision(const unsigned char* bytes, T2* dst, SizeType nelements,
 
 template <typename T1, typename T2>
 void changePrecision(const unsigned char*, T2*, SizeType,
-		     RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T1,T2)))) {
+		     YGGDRASIL_RAPIDJSON_DISABLEIF((YGGDRASIL_IS_CASTABLE(T1,T2)))) {
   std::cerr << typeid(T1).name() << " cannot be cast to " << typeid(T2).name() << std::endl;
-  RAPIDJSON_ASSERT(!sizeof("Cannot change from T1 to T2"));
+  YGGDRASIL_RAPIDJSON_ASSERT(!sizeof("Cannot change from T1 to T2"));
 }
 
 #undef SAME_PRECISION
@@ -259,9 +259,9 @@ template <typename T1, typename T2, typename Allocator>
 T2* changePrecision(const unsigned char* bytes, SizeType nelements,
 		    Allocator& allocator) {
   T2* v2 = (T2*)allocator.Malloc(nelements * sizeof(T2));
-  RAPIDJSON_ASSERT(v2);
+  YGGDRASIL_RAPIDJSON_ASSERT(v2);
   changePrecision<T1,T2>(bytes, v2, nelements);
-  // RAPIDJSON_ASSERT(GetYggSubType<T1>() == GetYggSubType<T2>());
+  // YGGDRASIL_RAPIDJSON_ASSERT(GetYggSubType<T1>() == GetYggSubType<T2>());
   // if (sizeof(T2) == sizeof(T1))
   //   return (T2*)bytes;
   // else if (sizeof(T2) < sizeof(T1))
@@ -279,7 +279,7 @@ void changePrecision(YggSubType subtype, SizeType precision,
 		     SizeType nelements) {
   SWITCH_SUBTYPE(subtype, precision, changePrecision,
 		 PACK_MACRO(T), (bytes, dst, nelements),
-		 RAPIDJSON_ASSERT(false));
+		 YGGDRASIL_RAPIDJSON_ASSERT(false));
 }
 
 template <typename T, size_t>
@@ -295,10 +295,10 @@ void changePrecision(YggSubType subtype, SizeType precision,
 		     const unsigned char* src_bytes,
 		     unsigned char* dst_bytes, SizeType& dst_nbytes,
 		     SizeType nelements) {
-  RAPIDJSON_ASSERT((nelements * sizeof(T)) <= dst_nbytes);
+  YGGDRASIL_RAPIDJSON_ASSERT((nelements * sizeof(T)) <= dst_nbytes);
   SWITCH_SUBTYPE(subtype, precision, changePrecision,
 		 PACK_MACRO(T), (src_bytes, (T*)dst_bytes, nelements),
-		 RAPIDJSON_ASSERT(false));
+		 YGGDRASIL_RAPIDJSON_ASSERT(false));
   dst_nbytes = nelements * (SizeType)sizeof(T);
 }
 
@@ -311,22 +311,22 @@ void changePrecision(const YggSubType src_subtype, const SizeType src_precision,
   (void)src_nbytes;
   // SizeType src_size = sizeOfSubtype(src_subtype, src_precision);
   // SizeType dst_size = sizeOfSubtype(dst_subtype, dst_precision);
-  // RAPIDJSON_ASSERT((nelements * src_size) == src_nbytes);
-  // RAPIDJSON_ASSERT((nelements * dst_size) <= dst_nbytes);
-  // RAPIDJSON_ASSERT(dst_size <= src_size);
+  // YGGDRASIL_RAPIDJSON_ASSERT((nelements * src_size) == src_nbytes);
+  // YGGDRASIL_RAPIDJSON_ASSERT((nelements * dst_size) <= dst_nbytes);
+  // YGGDRASIL_RAPIDJSON_ASSERT(dst_size <= src_size);
   SWITCH_SUBTYPE(dst_subtype, dst_precision, changePrecision,
 		 PACK_MACRO(1), (src_subtype, src_precision, src_bytes,
 				 dst_bytes, dst_nbytes, nelements),
-		 RAPIDJSON_ASSERT(false));
+		 YGGDRASIL_RAPIDJSON_ASSERT(false));
 }
 
 #define MIN_MAX_(TT, min, max)			\
   template<typename T>				\
-  T get_max_(const T, RAPIDJSON_ENABLEIF((internal::IsSame<T, TT>))) {	\
+  T get_max_(const T, YGGDRASIL_RAPIDJSON_ENABLEIF((internal::IsSame<T, TT>))) {	\
     return max;					\
   }						\
   template<typename T>				\
-  T get_min_(const T, RAPIDJSON_ENABLEIF((internal::IsSame<T, TT>))) {	\
+  T get_min_(const T, YGGDRASIL_RAPIDJSON_ENABLEIF((internal::IsSame<T, TT>))) {	\
     return min;					\
   }
 #define MIN_MAX_S_(T, base)			\
@@ -372,7 +372,7 @@ MIN_MAX_F_(long double, LDBL)
 
 template <typename T1, typename T2>
 bool canTruncate(const T1& x,
-		 RAPIDJSON_ENABLEIF((internal::AndExpr<
+		 YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 				     YGGDRASIL_IS_FLOAT_TYPE(T1),
 				     internal::OrExpr<
 				     YGGDRASIL_IS_INT_TYPE(T2),
@@ -384,7 +384,7 @@ bool canTruncate(const T1& x,
 }
 template <typename T1, typename T2>
 bool canTruncate(const T1& x,
-		 RAPIDJSON_ENABLEIF((internal::OrExpr<
+		 YGGDRASIL_RAPIDJSON_ENABLEIF((internal::OrExpr<
 				     internal::AndExpr<
 				     internal::OrExpr<
 				     YGGDRASIL_IS_INT_TYPE(T1),
@@ -398,7 +398,7 @@ bool canTruncate(const T1& x,
 }
 template <typename T1, typename T2>
 bool canTruncate(const T1& x,
-		 RAPIDJSON_ENABLEIF((internal::AndExpr<
+		 YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 				     YGGDRASIL_IS_COMPLEX_TYPE(T1),
 				     YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) {
   return (canTruncate<typename T1::value_type, typename T2::value_type>(x.real()) &&
@@ -406,7 +406,7 @@ bool canTruncate(const T1& x,
 }
 template <typename T1, typename T2>
 bool canTruncate(const T1& x,
-		 RAPIDJSON_ENABLEIF((internal::AndExpr<
+		 YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 				     internal::NotExpr<
 				     YGGDRASIL_IS_COMPLEX_TYPE(T1)>,
 				     YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) {
@@ -414,7 +414,7 @@ bool canTruncate(const T1& x,
 }
 template <typename T1, typename T2>
 bool canTruncate(const T1& x,
-		 RAPIDJSON_ENABLEIF((internal::AndExpr<
+		 YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 				     YGGDRASIL_IS_COMPLEX_TYPE(T1),
 				     internal::NotExpr<
 				     YGGDRASIL_IS_COMPLEX_TYPE(T2)> >))) {
@@ -440,7 +440,7 @@ bool canTruncate(YggSubType subtype, SizeType precision,
 		 SizeType nelements) {
   SWITCH_SUBTYPE(subtype, precision, canTruncate,
 		 PACK_MACRO(T), (src_bytes, nelements),
-		 RAPIDJSON_ASSERT(false));
+		 YGGDRASIL_RAPIDJSON_ASSERT(false));
   return false;
 }
 
@@ -452,13 +452,13 @@ bool canTruncate(const YggSubType src_subtype, const SizeType src_precision,
   SWITCH_SUBTYPE(dst_subtype, dst_precision, canTruncate,
 		 PACK_MACRO(1), (src_subtype, src_precision, src_bytes,
 				 nelements),
-		 RAPIDJSON_ASSERT(false));
+		 YGGDRASIL_RAPIDJSON_ASSERT(false));
   return false;
 }
 
 template <typename T1, typename T2>
 T2 truncateCast(const T1& x,
-		RAPIDJSON_ENABLEIF((internal::AndExpr<
+		YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 				    internal::NotExpr<
 				    YGGDRASIL_IS_COMPLEX_TYPE(T1)>,
 				    internal::NotExpr<
@@ -466,21 +466,21 @@ T2 truncateCast(const T1& x,
 { return static_cast<const T2>(x); }
 template <typename T1, typename T2>
 T2 truncateCast(const T1& x,
-		RAPIDJSON_ENABLEIF((internal::AndExpr<
+		YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 				    internal::NotExpr<
 				    YGGDRASIL_IS_COMPLEX_TYPE(T1)>,
 				    YGGDRASIL_IS_COMPLEX_TYPE(T2)>)))
 { return T2(truncateCast<T1, typename T2::value_type>(x)); }
 template <typename T1, typename T2>
 T2 truncateCast(const T1& x,
-		RAPIDJSON_ENABLEIF((internal::AndExpr<
+		YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 				    YGGDRASIL_IS_COMPLEX_TYPE(T1),
 				    internal::NotExpr<
 				    YGGDRASIL_IS_COMPLEX_TYPE(T2)> >)))
 { return truncateCast<typename T1::value_type, T2>(x.real()); }
 template <typename T1, typename T2>
 T2 truncateCast(const T1& x,
-		RAPIDJSON_ENABLEIF((internal::AndExpr<
+		YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 				    YGGDRASIL_IS_COMPLEX_TYPE(T1),
 				    YGGDRASIL_IS_COMPLEX_TYPE(T2)>))) {
   return T2(truncateCast<typename T1::value_type, typename T2::value_type>(x.real()),
@@ -500,7 +500,7 @@ void truncateCast(const unsigned char* bytes, T2* dst, SizeType nelements) {
 // 		  SizeType nelements) {
 //   SWITCH_SUBTYPE(subtype, precision, truncateCast,
 // 		 PACK_MACRO(T), (bytes, dst, nelements),
-// 		 RAPIDJSON_ASSERT(false));
+// 		 YGGDRASIL_RAPIDJSON_ASSERT(false));
 // }
 
 template <typename T, size_t>
@@ -509,7 +509,7 @@ void truncateCast(YggSubType subtype, SizeType precision,
 		  unsigned char* dst_bytes, SizeType nelements) {
   SWITCH_SUBTYPE(subtype, precision, truncateCast,
 		 PACK_MACRO(T), (src_bytes, (T*)dst_bytes, nelements),
-		 RAPIDJSON_ASSERT(false));
+		 YGGDRASIL_RAPIDJSON_ASSERT(false));
 }
 
 static inline
@@ -521,12 +521,12 @@ void truncateCast(const YggSubType src_subtype, const SizeType src_precision,
   SWITCH_SUBTYPE(dst_subtype, dst_precision, truncateCast,
 		 PACK_MACRO(1), (src_subtype, src_precision, src_bytes,
 				 dst_bytes, nelements),
-		 RAPIDJSON_ASSERT(false));
+		 YGGDRASIL_RAPIDJSON_ASSERT(false));
 }
 #undef CAST_SOURCE
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
-#endif // RAPIDJSON_PRECISION_H_
+#endif // YGGDRASIL_RAPIDJSON_PRECISION_H_

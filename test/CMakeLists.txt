@@ -68,8 +68,12 @@ if(TEST_LIBRARIES)
     endif()
 
     add_custom_target(tests ALL)
-    add_subdirectory(perftest)
-    add_subdirectory(unittest)
+    if(YGGDRASIL_RAPIDJSON_BUILD_PERFTESTS)
+        add_subdirectory(perftest)
+    endif()
+    if(YGGDRASIL_RAPIDJSON_BUILD_UNITTESTS)
+        add_subdirectory(unittest)
+    endif()
     
     if(YGGDRASIL_RAPIDJSON_ENABLE_COVERAGE)
         # setup_target_for_coverage_gcovr_html(

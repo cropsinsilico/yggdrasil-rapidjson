@@ -12,33 +12,33 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_INTERNAL_META_H_
-#define RAPIDJSON_INTERNAL_META_H_
+#ifndef YGGDRASIL_RAPIDJSON_INTERNAL_META_H_
+#define YGGDRASIL_RAPIDJSON_INTERNAL_META_H_
 
 #include "../rapidjson.h"
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(6334)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(6334)
 #endif
 
-#if RAPIDJSON_HAS_CXX11_TYPETRAITS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_TYPETRAITS
 #include <type_traits>
 #endif
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #include <cstdarg>
 #include <limits>
 #include <vector>
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-//@cond RAPIDJSON_INTERNAL
-RAPIDJSON_NAMESPACE_BEGIN
+//@cond YGGDRASIL_RAPIDJSON_INTERNAL
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 namespace internal {
 
@@ -104,7 +104,7 @@ template <typename T> struct IsPointer<T*> : TrueType {};
 ///////////////////////////////////////////////////////////////////////////////
 // IsBaseOf
 //
-#if RAPIDJSON_HAS_CXX11_TYPETRAITS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_TYPETRAITS
 
 template <typename B, typename D> struct IsBaseOf
     : BoolType< ::std::is_base_of<B,D>::value> {};
@@ -112,8 +112,8 @@ template <typename B, typename D> struct IsBaseOf
 #else // simplified version adopted from Boost
 
 template<typename B, typename D> struct IsBaseOfImpl {
-    RAPIDJSON_STATIC_ASSERT(sizeof(B) != 0);
-    RAPIDJSON_STATIC_ASSERT(sizeof(D) != 0);
+    YGGDRASIL_RAPIDJSON_STATIC_ASSERT(sizeof(B) != 0);
+    YGGDRASIL_RAPIDJSON_STATIC_ASSERT(sizeof(D) != 0);
 
     typedef char (&Yes)[1];
     typedef char (&No) [2];
@@ -133,7 +133,7 @@ template<typename B, typename D> struct IsBaseOfImpl {
 template <typename B, typename D> struct IsBaseOf
     : OrExpr<IsSame<B, D>, BoolExpr<IsBaseOfImpl<B, D> > >::Type {};
 
-#endif // RAPIDJSON_HAS_CXX11_TYPETRAITS
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11_TYPETRAITS
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -156,43 +156,43 @@ struct SfinaeTag {};
 template <typename T> struct RemoveSfinaeTag;
 template <typename T> struct RemoveSfinaeTag<SfinaeTag&(*)(T)> { typedef T Type; };
 
-#define RAPIDJSON_REMOVEFPTR_(type) \
-    typename ::RAPIDJSON_NAMESPACE::internal::RemoveSfinaeTag \
-        < ::RAPIDJSON_NAMESPACE::internal::SfinaeTag&(*) type>::Type
+#define YGGDRASIL_RAPIDJSON_REMOVEFPTR_(type) \
+    typename ::YGGDRASIL_RAPIDJSON_NAMESPACE::internal::RemoveSfinaeTag \
+        < ::YGGDRASIL_RAPIDJSON_NAMESPACE::internal::SfinaeTag&(*) type>::Type
 
-#define RAPIDJSON_ENABLEIF(cond) \
-    typename ::RAPIDJSON_NAMESPACE::internal::EnableIf \
-        <RAPIDJSON_REMOVEFPTR_(cond)>::Type * = NULL
+#define YGGDRASIL_RAPIDJSON_ENABLEIF(cond) \
+    typename ::YGGDRASIL_RAPIDJSON_NAMESPACE::internal::EnableIf \
+        <YGGDRASIL_RAPIDJSON_REMOVEFPTR_(cond)>::Type * = NULL
 
-#define RAPIDJSON_DISABLEIF(cond) \
-    typename ::RAPIDJSON_NAMESPACE::internal::DisableIf \
-        <RAPIDJSON_REMOVEFPTR_(cond)>::Type * = NULL
+#define YGGDRASIL_RAPIDJSON_DISABLEIF(cond) \
+    typename ::YGGDRASIL_RAPIDJSON_NAMESPACE::internal::DisableIf \
+        <YGGDRASIL_RAPIDJSON_REMOVEFPTR_(cond)>::Type * = NULL
 
-#define RAPIDJSON_ENABLEIF_RETURN(cond,returntype) \
-    typename ::RAPIDJSON_NAMESPACE::internal::EnableIf \
-        <RAPIDJSON_REMOVEFPTR_(cond), \
-         RAPIDJSON_REMOVEFPTR_(returntype)>::Type
+#define YGGDRASIL_RAPIDJSON_ENABLEIF_RETURN(cond,returntype) \
+    typename ::YGGDRASIL_RAPIDJSON_NAMESPACE::internal::EnableIf \
+        <YGGDRASIL_RAPIDJSON_REMOVEFPTR_(cond), \
+         YGGDRASIL_RAPIDJSON_REMOVEFPTR_(returntype)>::Type
 
-#define RAPIDJSON_DISABLEIF_RETURN(cond,returntype) \
-    typename ::RAPIDJSON_NAMESPACE::internal::DisableIf \
-        <RAPIDJSON_REMOVEFPTR_(cond), \
-         RAPIDJSON_REMOVEFPTR_(returntype)>::Type
+#define YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN(cond,returntype) \
+    typename ::YGGDRASIL_RAPIDJSON_NAMESPACE::internal::DisableIf \
+        <YGGDRASIL_RAPIDJSON_REMOVEFPTR_(cond), \
+         YGGDRASIL_RAPIDJSON_REMOVEFPTR_(returntype)>::Type
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_YGGDRASIL_RAPIDJSON
 // https://stackoverflow.com/questions/257288/templated-check-for-the-existence-of-a-class-member-function
 template<typename Type, typename ValueType>  //, typename SchemaType>
 class HasYggdrasilMethodImpl
 {
   typedef char Yes;
   typedef long No;
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
   template <typename T, typename VT>
   static Yes HasYggdrasil(decltype(&T::template YggdrasilString<VT>));
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
   template<typename T, typename VT, bool (T::*)(const typename T::Ch*, SizeType, bool, VT&)> struct SFINAE {};
   template <typename T, typename VT>
   static Yes HasYggdrasil(SFINAE<T, VT, &T::template YggdrasilString<VT> >*);
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
   template <typename T, typename VT>
   static No  HasYggdrasil(...);
 public:
@@ -327,7 +327,7 @@ std::vector<T> pack_vector__(const size_t N, const T first...) {
 
 template<typename Ta, typename Tb>
 inline bool values_eq(const Ta& a, const Tb& b,
-		      RAPIDJSON_DISABLEIF((internal::OrExpr<
+		      YGGDRASIL_RAPIDJSON_DISABLEIF((internal::OrExpr<
 					   YGGDRASIL_IS_FLOAT_TYPE(Ta),
 					   internal::OrExpr<
 					   YGGDRASIL_IS_FLOAT_TYPE(Tb),
@@ -339,7 +339,7 @@ inline bool values_eq(const Ta& a, const Tb& b,
   
 template<typename Ta, typename Tb>
 inline bool values_eq(const Ta& a0, const Tb& b0,
-		      RAPIDJSON_ENABLEIF((internal::OrExpr<
+		      YGGDRASIL_RAPIDJSON_ENABLEIF((internal::OrExpr<
 			         	  YGGDRASIL_IS_FLOAT_TYPE(Ta),
 					  YGGDRASIL_IS_FLOAT_TYPE(Tb)>))) {
   double a = static_cast<double>(a0);
@@ -354,7 +354,7 @@ inline bool values_eq(const Ta& a0, const Tb& b0,
 
 template<typename Ta, typename Tb>
 inline bool values_eq(const Ta& a, const Tb& b,
-		      RAPIDJSON_ENABLEIF((internal::AndExpr<
+		      YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 			         	  YGGDRASIL_IS_COMPLEX_TYPE(Ta),
 					  YGGDRASIL_IS_COMPLEX_TYPE(Tb)>))) {
   return (values_eq(a.real(), b.real()) && values_eq(a.imag(), b.imag()));
@@ -362,26 +362,26 @@ inline bool values_eq(const Ta& a, const Tb& b,
   
 template<typename Ta, typename Tb>
 inline bool values_lt(const Ta& a, const Tb& b,
-		      RAPIDJSON_DISABLEIF((internal::OrExpr<
+		      YGGDRASIL_RAPIDJSON_DISABLEIF((internal::OrExpr<
 			          	   YGGDRASIL_IS_COMPLEX_TYPE(Ta),
 					   YGGDRASIL_IS_COMPLEX_TYPE(Tb)>)))
 { return a < static_cast<Ta>(b); }
 template<typename Ta, typename Tb>
 inline bool values_lt(const Ta& a, const Tb& b,
-		      RAPIDJSON_ENABLEIF((internal::AndExpr<
+		      YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 					  YGGDRASIL_IS_COMPLEX_TYPE(Ta),
 					  YGGDRASIL_IS_COMPLEX_TYPE(Tb)>)))
 { return values_lt(std::abs(a), std::abs(b)); }
 
 template<typename Ta, typename Tb>
 inline bool values_gt(const Ta& a, const Tb& b,
-		      RAPIDJSON_DISABLEIF((internal::OrExpr<
+		      YGGDRASIL_RAPIDJSON_DISABLEIF((internal::OrExpr<
 			          	   YGGDRASIL_IS_COMPLEX_TYPE(Ta),
 					   YGGDRASIL_IS_COMPLEX_TYPE(Tb)>)))
 { return a > static_cast<Ta>(b); }
 template<typename Ta, typename Tb>
 inline bool values_gt(const Ta& a, const Tb& b,
-		      RAPIDJSON_ENABLEIF((internal::AndExpr<
+		      YGGDRASIL_RAPIDJSON_ENABLEIF((internal::AndExpr<
 					  YGGDRASIL_IS_COMPLEX_TYPE(Ta),
 					  YGGDRASIL_IS_COMPLEX_TYPE(Tb)>)))
 { return values_gt(std::abs(a), std::abs(b)); }
@@ -405,19 +405,19 @@ inline unsigned int countBits(unsigned int n)
   return count;
 }
   
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
   
 } // namespace internal
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 //@endcond
 
 #if defined(_MSC_VER) && !defined(__clang__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
-#endif // RAPIDJSON_INTERNAL_META_H_
+#endif // YGGDRASIL_RAPIDJSON_INTERNAL_META_H_

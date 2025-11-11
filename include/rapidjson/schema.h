@@ -12,8 +12,8 @@
 // CONDITIONS OF ANY KIND, either express or implied-> See the License for the
 // specific language governing permissions and limitations under the License->
 
-#ifndef RAPIDJSON_SCHEMA_H_
-#define RAPIDJSON_SCHEMA_H_
+#ifndef YGGDRASIL_RAPIDJSON_SCHEMA_H_
+#define YGGDRASIL_RAPIDJSON_SCHEMA_H_
 
 #include "document.h"
 #include "pointer.h"
@@ -24,71 +24,71 @@
 #define _USE_MATH_DEFINES
 #endif
 #include <cmath> // abs, floor
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #include <iostream>
 #include "units.h"
 #include "writer.h"
 #include "metaschema.h"
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11 override
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define OVERRIDE_CXX11
-#endif // RAPIDJSON_HAS_CXX11
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-#define RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-#define RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
-#define RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
+#define YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
+#define YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
+#define YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 #include "prettywriter.h"
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-#if !defined(RAPIDJSON_SCHEMA_USE_INTERNALREGEX)
-#define RAPIDJSON_SCHEMA_USE_INTERNALREGEX 1
+#if !defined(YGGDRASIL_RAPIDJSON_SCHEMA_USE_INTERNALREGEX)
+#define YGGDRASIL_RAPIDJSON_SCHEMA_USE_INTERNALREGEX 1
 #endif
 
-#if !defined(RAPIDJSON_SCHEMA_USE_STDREGEX) || !(__cplusplus >=201103L || (defined(_MSC_VER) && _MSC_VER >= 1800))
-#define RAPIDJSON_SCHEMA_USE_STDREGEX 0
+#if !defined(YGGDRASIL_RAPIDJSON_SCHEMA_USE_STDREGEX) || !(__cplusplus >=201103L || (defined(_MSC_VER) && _MSC_VER >= 1800))
+#define YGGDRASIL_RAPIDJSON_SCHEMA_USE_STDREGEX 0
 #endif
 
-#if RAPIDJSON_SCHEMA_USE_INTERNALREGEX
+#if YGGDRASIL_RAPIDJSON_SCHEMA_USE_INTERNALREGEX
 #include "internal/regex.h"
-#elif RAPIDJSON_SCHEMA_USE_STDREGEX
+#elif YGGDRASIL_RAPIDJSON_SCHEMA_USE_STDREGEX
 #include <regex>
 #endif
 
-#if RAPIDJSON_SCHEMA_USE_INTERNALREGEX || RAPIDJSON_SCHEMA_USE_STDREGEX
-#define RAPIDJSON_SCHEMA_HAS_REGEX 1
+#if YGGDRASIL_RAPIDJSON_SCHEMA_USE_INTERNALREGEX || YGGDRASIL_RAPIDJSON_SCHEMA_USE_STDREGEX
+#define YGGDRASIL_RAPIDJSON_SCHEMA_HAS_REGEX 1
 #else
-#define RAPIDJSON_SCHEMA_HAS_REGEX 0
+#define YGGDRASIL_RAPIDJSON_SCHEMA_HAS_REGEX 0
 #endif
 
-#ifndef RAPIDJSON_SCHEMA_VERBOSE
-#define RAPIDJSON_SCHEMA_VERBOSE 0
+#ifndef YGGDRASIL_RAPIDJSON_SCHEMA_VERBOSE
+#define YGGDRASIL_RAPIDJSON_SCHEMA_VERBOSE 0
 #endif
 
-RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
 
 #if defined(__GNUC__)
-RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
 #endif
 
 #ifdef __clang__
-RAPIDJSON_DIAG_OFF(weak-vtables)
-RAPIDJSON_DIAG_OFF(exit-time-destructors)
-RAPIDJSON_DIAG_OFF(c++98-compat-pedantic)
-RAPIDJSON_DIAG_OFF(variadic-macros)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(weak-vtables)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(exit-time-destructors)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(c++98-compat-pedantic)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(variadic-macros)
 #elif defined(_MSC_VER)
-RAPIDJSON_DIAG_OFF(4512) // assignment operator could not be generated
+YGGDRASIL_RAPIDJSON_DIAG_OFF(4512) // assignment operator could not be generated
 #endif
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 ///////////////////////////////////////////////////////////////////////////////
 // Verbose Utilities
 
-#if RAPIDJSON_SCHEMA_VERBOSE
+#if YGGDRASIL_RAPIDJSON_SCHEMA_VERBOSE
 
 namespace internal {
 
@@ -162,47 +162,47 @@ inline void PrintMethodData(const char* method, const wchar_t* s1, const wchar_t
 
 } // namespace internal
 
-#endif // RAPIDJSON_SCHEMA_VERBOSE
+#endif // YGGDRASIL_RAPIDJSON_SCHEMA_VERBOSE
 
-#ifndef RAPIDJSON_SCHEMA_PRINT
-#if RAPIDJSON_SCHEMA_VERBOSE
-#define RAPIDJSON_SCHEMA_PRINT(name, ...) internal::Print##name##Data(__VA_ARGS__)
+#ifndef YGGDRASIL_RAPIDJSON_SCHEMA_PRINT
+#if YGGDRASIL_RAPIDJSON_SCHEMA_VERBOSE
+#define YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(name, ...) internal::Print##name##Data(__VA_ARGS__)
 #else
-#define RAPIDJSON_SCHEMA_PRINT(name, ...)
+#define YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(name, ...)
 #endif
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
-// RAPIDJSON_INVALID_KEYWORD_RETURN
+// YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN
 
-#define RAPIDJSON_INVALID_KEYWORD_RETURN(code)\
-RAPIDJSON_MULTILINEMACRO_BEGIN\
+#define YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(code)\
+YGGDRASIL_RAPIDJSON_MULTILINEMACRO_BEGIN\
     context.invalidCode = code;\
     context.invalidKeyword = SchemaType::GetValidateErrorKeyword(code).GetString();\
-    RAPIDJSON_SCHEMA_PRINT(InvalidKeyword, context.invalidKeyword);\
+    YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(InvalidKeyword, context.invalidKeyword);\
     return false;\
-RAPIDJSON_MULTILINEMACRO_END
+YGGDRASIL_RAPIDJSON_MULTILINEMACRO_END
 
-#ifdef RAPIDJSON_YGGDRASIL
-#define RAPIDJSON_INVALID_KEYWORD_WARNING(code)\
-RAPIDJSON_MULTILINEMACRO_BEGIN\
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#define YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_WARNING(code)\
+YGGDRASIL_RAPIDJSON_MULTILINEMACRO_BEGIN\
     context.invalidCode = code;\
     context.invalidKeyword = SchemaType::GetValidateErrorKeyword(code).GetString();\
-    RAPIDJSON_SCHEMA_PRINT(InvalidKeyword, context.invalidKeyword);\
-RAPIDJSON_MULTILINEMACRO_END
-#endif // RAPIDJSON_YGGDRASIL
+    YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(InvalidKeyword, context.invalidKeyword);\
+YGGDRASIL_RAPIDJSON_MULTILINEMACRO_END
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 ///////////////////////////////////////////////////////////////////////////////
 // ValidateFlag
 
-/*! \def RAPIDJSON_VALIDATE_DEFAULT_FLAGS
-    \ingroup RAPIDJSON_CONFIG
+/*! \def YGGDRASIL_RAPIDJSON_VALIDATE_DEFAULT_FLAGS
+    \ingroup YGGDRASIL_RAPIDJSON_CONFIG
     \brief User-defined kValidateDefaultFlags definition.
 
     User can define this as any \c ValidateFlag combinations.
 */
-#ifndef RAPIDJSON_VALIDATE_DEFAULT_FLAGS
-#define RAPIDJSON_VALIDATE_DEFAULT_FLAGS kValidateNoFlags
+#ifndef YGGDRASIL_RAPIDJSON_VALIDATE_DEFAULT_FLAGS
+#define YGGDRASIL_RAPIDJSON_VALIDATE_DEFAULT_FLAGS kValidateNoFlags
 #endif
 
 //! Combination of validate flags
@@ -211,7 +211,7 @@ enum ValidateFlag {
     kValidateContinueOnErrorFlag = 1,                           //!< Don't stop after first validation error.
     kValidateReadFlag = 2,                                      //!< Validation is for a read semantic.
     kValidateWriteFlag = 4,                                     //!< Validation is for a write semantic.
-    kValidateDefaultFlags = RAPIDJSON_VALIDATE_DEFAULT_FLAGS    //!< Default validate flags. Can be customized by defining RAPIDJSON_VALIDATE_DEFAULT_FLAGS
+    kValidateDefaultFlags = YGGDRASIL_RAPIDJSON_VALIDATE_DEFAULT_FLAGS    //!< Default validate flags. Can be customized by defining YGGDRASIL_RAPIDJSON_VALIDATE_DEFAULT_FLAGS
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -262,26 +262,26 @@ struct Specification {
 template <typename ValueType, typename Allocator>
 class GenericSchemaDocument;
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 template <
   typename SchemaDocumentType,
   typename OutputHandler,
   typename StateAllocator>
 class GenericSchemaNormalizer;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 namespace internal {
 
 template <typename SchemaDocumentType>
 class Schema;
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 template <typename SchemaDocumentType, typename StackAllocator>
 class GenericNormalizedDocument;
   
 template <typename SchemaType>
 class IValidationErrorHandler;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 ///////////////////////////////////////////////////////////////////////////////
 // ISchemaValidator
@@ -292,12 +292,12 @@ public:
     virtual bool IsValid() const = 0;
     virtual void SetValidateFlags(unsigned flags) = 0;
     virtual unsigned GetValidateFlags() const = 0;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual unsigned GetValidatorID() const { return 0; }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 };
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 ///////////////////////////////////////////////////////////////////////////////
 // ISchemaIterator
   
@@ -421,7 +421,7 @@ public:
   
 };
   
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 ///////////////////////////////////////////////////////////////////////////////
 // ISchemaStateFactory
@@ -430,11 +430,11 @@ template <typename SchemaType>
 class ISchemaStateFactory {
 public:
     virtual ~ISchemaStateFactory() {}
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual ISchemaValidator* CreateSchemaValidator(const SchemaType&, const bool inheritContinueOnErrors, typename SchemaType::PointerType) = 0;
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     virtual ISchemaValidator* CreateSchemaValidator(const SchemaType&, const bool inheritContinueOnErrors) = 0;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     virtual void DestroySchemaValidator(ISchemaValidator* validator) = 0;
     virtual void* CreateHasher() = 0;
     virtual uint64_t GetHashCode(void* hasher) = 0;
@@ -466,12 +466,12 @@ public:
 
     virtual void TooLong(const Ch* str, SizeType length, SizeType expected) = 0;
     virtual void TooShort(const Ch* str, SizeType length, SizeType expected) = 0;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual void DoesNotMatch(const Ch* str, SizeType length,
 			      const Ch* str_exp, SizeType length_exp) = 0;
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     virtual void DoesNotMatch(const Ch* str, SizeType length) = 0;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     virtual void DisallowedItem(SizeType index) = 0;
     virtual void TooFewItems(SizeType actualCount, SizeType expectedCount) = 0;
@@ -493,31 +493,31 @@ public:
     virtual void AddDependencySchemaError(const SValue& souceName, ISchemaValidator* subvalidator) = 0;
     virtual bool EndDependencyErrors() = 0;
 
-#ifndef RAPIDJSON_YGGDRASIL
+#ifdef DISABLE_YGGDRASIL_RAPIDJSON
     virtual void DisallowedValue(const ValidateErrorCode code) = 0;
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     virtual void StartDisallowedTypeKey(bool actual) = 0;
     virtual void AddExpectedTypeKey(const typename SchemaType::ValueType& expectedType, bool actual) = 0;
     virtual void EndDisallowedTypeKey(bool actual) = 0;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     virtual void StartDisallowedType() = 0;
     virtual void AddExpectedType(const typename SchemaType::ValueType& expectedType) = 0;
     virtual void EndDisallowedType(const typename SchemaType::ValueType& actualType) = 0;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual void StartDisallowedSubTypeKey(bool actual) = 0;
     virtual void AddExpectedSubTypeKey(const typename SchemaType::ValueType& expectedType, bool actual) = 0;
     virtual void EndDisallowedSubTypeKey(bool actual) = 0;
     virtual void StartDisallowedSubType() = 0;
     virtual void AddExpectedSubType(const typename SchemaType::ValueType& expectedType) = 0;
     virtual void EndDisallowedSubType(const typename SchemaType::ValueType& actualType) = 0;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     virtual void NotAllOf(ISchemaValidator** subvalidators, SizeType count) = 0;
     virtual void NoneOf(ISchemaValidator** subvalidators, SizeType count) = 0;
     virtual void NotOneOf(ISchemaValidator** subvalidators, SizeType count) = 0;
     virtual void MultipleOneOf(SizeType index1, SizeType index2) = 0;
     virtual void Disallowed() = 0;
   
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
   virtual void MissingRequiredSchemaProperty(const typename SchemaType::ValueType& name) = 0;
   virtual void IncorrectPrecision(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
   virtual void IncorrectUnits(const typename SchemaType::ValueType& actual, const SValue& expected) = 0;
@@ -541,9 +541,9 @@ public:
   virtual bool EndMissingPropertiesShared(const SValue& instanceRef, const SValue& schemaRef) = 0;
   virtual void DisallowedValueEnum(const SValue& expected) = 0;
   virtual ValidateErrorCode SharedNormalizationError(ISchemaValidator* subvalidator) = 0;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
   virtual void GenericError(const char* str) = 0;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
   virtual void IncompatibleSchemas(const typename SchemaType::ValueType& key, const SValue& expected, const SValue& actual, bool existingValues = false) = 0;
   virtual void ResetError() = 0;
   
@@ -552,15 +552,15 @@ public:
   virtual void AddDisallowedProperty(const SValue& name) = 0;
   virtual bool EndDisallowedProperties() = 0;
   virtual void AddMissingSubschema(const SValue& name) = 0;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
   
     virtual void DisallowedWhenWriting() = 0;
     virtual void DisallowedWhenReading() = 0;
 };
 
-#ifdef RAPIDJSON_YGGDRASIL
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-#define RAPIDJSON_YGGDRASIL_GENERIC_SET_ERROR(...)			\
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
+#define YGGDRASIL_RAPIDJSON_GENERIC_SET_ERROR(...)			\
   {									\
     std::string error_msg;						\
     int N = snprintf(&(error_msg.front()), 0, __VA_ARGS__);		\
@@ -572,13 +572,13 @@ public:
     snprintf(&(error_msg.front()), (size_t)(N + 1), __VA_ARGS__);	\
     context.error_handler.GenericError(error_msg.c_str());		\
   }
-#define RAPIDJSON_YGGDRASIL_GENERIC_ERROR(...)				\
+#define YGGDRASIL_RAPIDJSON_GENERIC_ERROR(...)				\
   {									\
-    RAPIDJSON_YGGDRASIL_GENERIC_SET_ERROR(__VA_ARGS__);			\
-    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorGeneric);			\
+    YGGDRASIL_RAPIDJSON_GENERIC_SET_ERROR(__VA_ARGS__);			\
+    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorGeneric);			\
   }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-#endif // RAPIDJSON_YGGDRASIL
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 ///////////////////////////////////////////////////////////////////////////////
 // Hasher
@@ -616,7 +616,7 @@ public:
         return true;
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
   template <typename YggSchemaValueType>
   bool YggdrasilString(const Ch* str, SizeType len, bool copy, YggSchemaValueType& schema) {
     if (!schema.Accept(*this)) return false;
@@ -641,7 +641,7 @@ public:
     *stack_.template Push<uint64_t>() = h;
     return true;
   }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     bool StartObject() { return true; }
     bool Key(const Ch* str, SizeType len, bool copy) { return String(str, len, copy); }
@@ -669,7 +669,7 @@ public:
     bool IsValid() const { return stack_.GetSize() == sizeof(uint64_t); }
 
     uint64_t GetHashCode() const {
-        RAPIDJSON_ASSERT(IsValid());
+        YGGDRASIL_RAPIDJSON_ASSERT(IsValid());
         return *stack_.template Top<uint64_t>();
     }
 
@@ -689,7 +689,7 @@ private:
     
     bool WriteBuffer(Type type, const void* data, size_t len) {
         // FNV-1a from http://isthe.com/chongo/tech/comp/fnv/
-        uint64_t h = Hash(RAPIDJSON_UINT64_C2(0xcbf29ce4, 0x84222325), type);
+        uint64_t h = Hash(YGGDRASIL_RAPIDJSON_UINT64_C2(0xcbf29ce4, 0x84222325), type);
         const unsigned char* d = static_cast<const unsigned char*>(data);
         for (size_t i = 0; i < len; i++)
             h = Hash(h, d[i]);
@@ -698,7 +698,7 @@ private:
     }
 
     static uint64_t Hash(uint64_t h, uint64_t d) {
-        static const uint64_t kPrime = RAPIDJSON_UINT64_C2(0x00000100, 0x000001b3);
+        static const uint64_t kPrime = YGGDRASIL_RAPIDJSON_UINT64_C2(0x00000100, 0x000001b3);
         h ^= d;
         h *= kPrime;
         return h;
@@ -707,7 +707,7 @@ private:
     Stack<Allocator> stack_;
 };
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
   
 ///////////////////////////////////////////////////////////////////////////////
 // SharedProperties
@@ -722,7 +722,7 @@ public:
   typedef typename SchemaType::SharedProperty SharedPropertyType;
   typedef typename SchemaType::PointerType PointerType;
   typedef typename SchemaType::Ch Ch;
-  typedef GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
+  typedef GenericNormalizedDocument<SchemaDocumentType, YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
   typedef typename NormalizedDocumentType::ValueType NormValueType;
   SharedProperties() :
     localPropertyCount(0), otherPropertyCount(0), propertyCount(0),
@@ -769,13 +769,13 @@ public:
     if (localProperties) {
       for (SizeType i = 0; i < localPropertyCount; i++)
 	localProperties[i].SortSources(root, path);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       std::cerr << "SortSources: ";
       NormalizedDocumentType::DisplayPointer(path);
       std::cerr << std::endl;
       Display();
       std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     }
   }
   bool isLocal(const SizeType& i) const {
@@ -837,12 +837,12 @@ public:
 		 const PointerType& schemaPtr,
 		 const SValue& present,
 		 NormalizedDocumentType& normalized) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     // std::cerr << "AddObject [";
     // NormalizedDocumentType::DisplayPointer(schemaPtr);
     // std::cerr << "]:" << std::endl;
     // Display();
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     for (SizeType i = 0; i < propertyCount; i++)
       GetProperty(i)->AddObject(instancePtr, schemaPtr,
 				normalized, present, isLocal(i));
@@ -859,7 +859,7 @@ public:
   SharedPropertyType** otherProperties;
 };
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 ///////////////////////////////////////////////////////////////////////////////
 // SchemaValidationContext
@@ -871,7 +871,7 @@ struct SchemaValidationContext {
     typedef IValidationErrorHandler<SchemaType> ErrorHandlerType;
     typedef typename SchemaType::ValueType ValueType;
     typedef typename ValueType::Ch Ch;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     typedef ISchemaHandler<SchemaType> SchemaHandlerType;
     typedef ISchemaIterator<SchemaType> SchemaIteratorType;
     typedef IJointSchemaHandler<SchemaType> JointSchemaHandlerType;
@@ -879,9 +879,9 @@ struct SchemaValidationContext {
     typedef typename SchemaType::AllocatorType AllocatorType;
     typedef typename SchemaType::PointerType PointerType;
     typedef SharedProperties<SchemaDocumentType> SharedPropertiesType;
-    typedef GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
+    typedef GenericNormalizedDocument<SchemaDocumentType, YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
     typedef SchemaValidationContext<SchemaDocumentType> ContextType;
-#endif //RAPIDJSON_YGGDRASIL
+#endif //DISABLE_YGGDRASIL_RAPIDJSON
 
     enum PatternValidatorType {
         kPatternValidatorOnly,
@@ -889,7 +889,7 @@ struct SchemaValidationContext {
         kPatternValidatorWithAdditionalProperty
     };
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     enum OtherValidatorType {
         kOtherValidatorNull,
         kOtherValidatorPropertiesOnly,
@@ -913,7 +913,7 @@ struct SchemaValidationContext {
       kJointIterationType,
       kJointSubschemaIterationType
     };
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     SchemaValidationContext(SchemaValidatorFactoryType& f, ErrorHandlerType& eh, const SchemaType* s, unsigned fl = 0) :
         factory(f),
@@ -936,7 +936,7 @@ struct SchemaValidationContext {
         inArray(false),
         valueUniqueness(false),
         arrayUniqueness(false)
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	, normalized(0),
 	schemaPointerAbs(),
 	valuePointer(),
@@ -957,7 +957,7 @@ struct SchemaValidationContext {
 	iterationType(kNoIterationType),
 	iterationContext(0),
 	iterationPropertyIndex(~SizeType(0))
-#endif //RAPIDJSON_YGGDRASIL
+#endif //DISABLE_YGGDRASIL_RAPIDJSON
     {}
 
     ~SchemaValidationContext() {
@@ -983,7 +983,7 @@ struct SchemaValidationContext {
             factory.FreeState(patternPropertiesSchemas);
         if (propertyExist)
             factory.FreeState(propertyExist);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (patternPropertiesPointers) {
 	    for (SizeType i = 0; i < patternPropertiesSchemaCount; i++)
 	        (patternPropertiesPointers + i)->~PointerType();
@@ -1007,10 +1007,10 @@ struct SchemaValidationContext {
 	        (otherPointers + i)->~PointerType();
 	    factory.FreeState(otherPointers);
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     void ResetForSubschema(const SchemaType* typeless) {
 	// if (patternPropertiesPointers) {
 	//     for (SizeType i = 0; i < patternPropertiesSchemaCount; i++)
@@ -1030,7 +1030,7 @@ struct SchemaValidationContext {
 	arrayElementIndex = 0;
 	// iterationType = kJointSubschemaIterationType;
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     SchemaValidatorFactoryType& factory;
     ErrorHandlerType& error_handler;
@@ -1054,7 +1054,7 @@ struct SchemaValidationContext {
     bool inArray;
     bool valueUniqueness;
     bool arrayUniqueness;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     NormalizedDocumentType* normalized;
     PointerType schemaPointerAbs;
     PointerType valuePointer;
@@ -1078,10 +1078,10 @@ struct SchemaValidationContext {
     SizeType iterationPropertyIndex;
     // SizeType valuePropertyIndex;
     // SizeType objectPropertyIndex;
-#endif //RAPIDJSON_YGGDRASIL
+#endif //DISABLE_YGGDRASIL_RAPIDJSON
 };
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
 enum SingularFlag {
   kSingularNoFlags = 0,
@@ -1097,7 +1097,7 @@ enum SingularFlag {
 
 // template<typename ValueType>
 // void printAliases_(const ValueType& aliases) {
-//   RAPIDJSON_ASSERT(aliases.IsObject());
+//   YGGDRASIL_RAPIDJSON_ASSERT(aliases.IsObject());
 //   for (typename ValueType::ConstMemberIterator it = aliases.MemberBegin(); it != aliases.MemberEnd(); ++it) {
 //     std::cerr << it->name.GetString() << ":";
 //     if (it->value.IsObject()) {
@@ -1113,10 +1113,10 @@ enum SingularFlag {
 template<typename ValueType, typename AllocatorType>
 bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 		     ValueType* dest, AllocatorType& allocator) {
-  RAPIDJSON_ASSERT(aliases.IsObject());
+  YGGDRASIL_RAPIDJSON_ASSERT(aliases.IsObject());
   typename ValueType::ConstMemberIterator primary = aliases.FindMember(orig);
   ValueType path(kArrayType);
-  RAPIDJSON_ASSERT(orig.IsString());
+  YGGDRASIL_RAPIDJSON_ASSERT(orig.IsString());
   path.PushBack(ValueType(orig.GetString(),
 			  orig.GetStringLength(),
 			  allocator).Move(), allocator);
@@ -1131,7 +1131,7 @@ bool follow_aliases_(const ValueType& aliases, const ValueType& orig,
 			    primary->value.GetStringLength(),
 			    allocator).Move(), allocator);
     primary = aliases.FindMember(primary->value);
-    RAPIDJSON_ASSERT(primary->value.IsString());
+    YGGDRASIL_RAPIDJSON_ASSERT(primary->value.IsString());
   }
   if (primary != aliases.MemberEnd())
     dest->CopyFrom(primary->value, allocator, true);
@@ -1163,7 +1163,7 @@ public:
     }
   }
   void stealMemory() {
-    RAPIDJSON_ASSERT(!mem_);
+    YGGDRASIL_RAPIDJSON_ASSERT(!mem_);
     mem_ = doc_->temporary_memory_;
     doc_->temporary_memory_ = NULL;
   }
@@ -1193,7 +1193,7 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 // GenericNormalizedDocument
   
-template <typename SchemaDocumentType, typename StackAllocator = RAPIDJSON_DEFAULT_STACK_ALLOCATOR>
+template <typename SchemaDocumentType, typename StackAllocator = YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR>
 class GenericNormalizedDocument {
 public:
   typedef Schema<SchemaDocumentType> SchemaType;
@@ -1406,7 +1406,7 @@ public:
       present(kArrayType),
       set(false), local(false), missing(false), multiple(false),
       parent(0) {}
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
     void Display(bool useInstance = false) const {
       if (!set) {
 	std::cerr << "NULL (";
@@ -1420,7 +1420,7 @@ public:
       if (!set)
 	std::cerr << ")";
     }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
     void CopyFrom(const SharedValueEntry& rhs, AllocatorType& allocator) {
       instancePtr = rhs.instancePtr;
       schemaPtr = rhs.schemaPtr;
@@ -1474,7 +1474,7 @@ public:
       src.CopyFrom(other.src, *allocator);
       dst.CopyFrom(other.dst, *allocator);
     }
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
     void Display(bool useInstance = false) const {
       src.Display(useInstance);
       std::cerr << " -> ";
@@ -1488,7 +1488,7 @@ public:
 	std::cerr << "]";
       }
     }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
     bool missing() const { return dst.missing || src.missing; }
     bool set() const { return dst.set && src.set; }
     bool operator==(const PairEntry& rhs) const {
@@ -1500,7 +1500,7 @@ public:
       const SharedValueEntry* iVo = GetValue(!source);
       const SharedValueEntry* oVi = other.GetValue(source);
       const SharedValueEntry* oVo = other.GetValue(!source);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       std::cerr << "Completes: " << Matches(oVi->schemaPtr, source, false) << ", " << Matches(oVo->schemaPtr, !source, false) << ", " << Matches(oVi->instancePtr, source, true) << ", " << other.Matches(iVo->instancePtr, !source, true) << std::endl;
       std::cerr << "    First: ";
       DisplayPointer(prefix);
@@ -1536,7 +1536,7 @@ public:
       std::cerr << "        ";
       oVo->Display(true);
       std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       if (!iVi->set || iVo->set || !oVo->set || oVi->set ||
 	  prefix != other.prefix ||
 	  ((iVi->local || !oVi->multiple)
@@ -1580,7 +1580,7 @@ public:
 	  typename SchemaType::SharedPropertyBase* parent = it->parent;
 	  if (!parent)
 	    parent = GetValue(!source)->parent;
-	  RAPIDJSON_ASSERT(parent && parent->schema);
+	  YGGDRASIL_RAPIDJSON_ASSERT(parent && parent->schema);
 	  return parent->schema->PointerMatches(it->instancePtr, ptr,
 						parent->hasRegex);
 	}
@@ -1590,7 +1590,7 @@ public:
     }
     void SetProperties(typename SchemaType::SharedPropertyBase* property,
 		       AllocatorType* allocator) {
-      RAPIDJSON_ASSERT(properties.IsArray() &&
+      YGGDRASIL_RAPIDJSON_ASSERT(properties.IsArray() &&
 		       src.properties.IsArray() &&
 		       dst.properties.IsArray());
       if (property && properties.Size() == 0) {
@@ -1625,7 +1625,7 @@ public:
 		  typename SchemaType::SharedPropertyBase* property,
 		  AllocatorType* allocator,
 		  bool multiple = false) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       std::cerr << "Template (";
       if (!source)
 	std::cerr << "dst";
@@ -1634,7 +1634,7 @@ public:
       std::cerr << "): ";
       DisplayPointer(property->instancePtr);
       std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       SharedValueEntry* it = 0;
       SharedValueEntry* ot = 0;
       if (source) {
@@ -1645,7 +1645,7 @@ public:
 	ot = &src;
       }
       if (!ot->missing) {
-	RAPIDJSON_ASSERT(!it->set && ot->set);
+	YGGDRASIL_RAPIDJSON_ASSERT(!it->set && ot->set);
 	if (it->set || !ot->set) return;
       }
       it->instancePtr = prefix;
@@ -1666,7 +1666,7 @@ public:
 		 typename SchemaType::SharedPropertyBase* property,
 		 AllocatorType* allocator,
 		 bool multiple = false) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       std::cerr << "Missing (";
       if (!source)
 	std::cerr << "dst";
@@ -1675,7 +1675,7 @@ public:
       std::cerr << "): ";
       DisplayPointer(property->instancePtr);
       std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       SharedValueEntry* it = 0;
       SharedValueEntry* ot = 0;
       if (source) {
@@ -1685,7 +1685,7 @@ public:
 	it = &dst;
 	ot = &src;
       }
-      RAPIDJSON_ASSERT(!it->set && !ot->missing && !ot->set);
+      YGGDRASIL_RAPIDJSON_ASSERT(!it->set && !ot->missing && !ot->set);
       if (it->set || ot->missing || ot->set) return;
       it->missing = true;
       it->instancePtr = instancePtr;
@@ -1712,7 +1712,7 @@ public:
 		  const SValue& present,
 		  AllocatorType* allocator,
 		  typename SchemaType::SharedPropertyBase* property = 0) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       std::cerr << "AddObject (";
       if (!source)
 	std::cerr << "dst";
@@ -1723,7 +1723,7 @@ public:
       std::cerr << " ";
       DisplayValue(present);
       std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       SharedValueEntry* it = 0;
       SharedValueEntry* ot = 0;
       if (source) {
@@ -1734,7 +1734,7 @@ public:
 	ot = &src;
       }
       if (it->set) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	if (it->instancePtr != instancePtr || it->schemaPtr != schemaPtr) {
 	  std::cerr << "PAIR ENTRY CONFLICT: [";
 	  DisplayPointer(it->instancePtr);
@@ -1748,7 +1748,7 @@ public:
 	  DisplayPointer(prefix);
 	  std::cerr << std::endl;
 	}
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	return;
       }
       it->instancePtr = instancePtr;
@@ -1756,7 +1756,7 @@ public:
       if (property)
 	it->parent = property;
       else
-	RAPIDJSON_ASSERT(it->parent);
+	YGGDRASIL_RAPIDJSON_ASSERT(it->parent);
       it->present.CopyFrom(present, *allocator, true);
       it->set = true;
       if (ot->set)
@@ -1772,20 +1772,20 @@ public:
       return;
     }
     bool BeginCircular(
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 		       const char* msg = 0
-#else // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#else // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 		       const char* = 0
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 		       ) {
       if (inShared) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	if (msg) {
 	  std::cerr << msg << " [CIRCULAR SHARED]: ";
 	  Display();
 	  std::cerr << std::endl;
 	}
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	return true;
       }
       inShared = true;
@@ -1830,17 +1830,17 @@ public:
     ValueType* GetMember(const SValue& name,
 			 GenericNormalizedDocument& normalized,
 			 ValueType*& parent) {
-      RAPIDJSON_ASSERT(src.set);
+      YGGDRASIL_RAPIDJSON_ASSERT(src.set);
       if (!src.set) return 0;
-      RAPIDJSON_ASSERT(dst.parent);
+      YGGDRASIL_RAPIDJSON_ASSERT(dst.parent);
       if (!dst.parent) return 0;
       typename SchemaType::SharedProperty::PropertyEntry* prop = dst.parent->FindProperty(name);
-      RAPIDJSON_ASSERT(prop);
+      YGGDRASIL_RAPIDJSON_ASSERT(prop);
       if (!prop) return 0;
       if (!parent)
 	parent = GetParent(normalized, true);
-      RAPIDJSON_ASSERT(parent && parent->IsObject());
-      RAPIDJSON_ASSERT(parent && parent->HasMember(name));
+      YGGDRASIL_RAPIDJSON_ASSERT(parent && parent->IsObject());
+      YGGDRASIL_RAPIDJSON_ASSERT(parent && parent->HasMember(name));
       if (!(parent && parent->HasMember(name))) return 0;
       if (!prop->inSource)
 	src.shared.PushBack(SValue(name.GetString(),
@@ -1861,15 +1861,15 @@ public:
 		   GenericNormalizedDocument& normalized,
 		   ValueType*& parent) {
       ValueType value0(kNullType);
-      RAPIDJSON_ASSERT(dst.set);
+      YGGDRASIL_RAPIDJSON_ASSERT(dst.set);
       if (!dst.set) return false;
       if (value) {
 	if (!parent)
 	  parent = GetParent(normalized, false);
-	RAPIDJSON_ASSERT(parent && parent->IsObject() && dst.parent);
+	YGGDRASIL_RAPIDJSON_ASSERT(parent && parent->IsObject() && dst.parent);
 	if (parent && dst.parent && !parent->HasMember(name)) {
 	  typename SchemaType::SharedProperty::PropertyEntry* prop = dst.parent->FindProperty(name);
-	  RAPIDJSON_ASSERT(prop);
+	  YGGDRASIL_RAPIDJSON_ASSERT(prop);
 	  if (!prop) return false;
 	  PointerType iP = dst.instancePtr.Append(name.GetString(), name.GetStringLength(), &normalized.GetAllocator());
 	  PointerType iS = dst.schemaPtr.Append(SchemaType::GetPropertiesString(), &normalized.GetAllocator()).Append(name.GetString(), name.GetStringLength(), &normalized.GetAllocator());
@@ -1882,13 +1882,13 @@ public:
 	    return false; // GCOVR_EXCL_LINE
 	  value = &value0;
 	  if (!parent->HasMember(name)) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	    std::cerr << "SETTING [" << name.GetString() << "]: ";
 	    DisplayPointer(dst.instancePtr);
 	    std::cerr << " = ";
 	    DisplayValue(*value);
 	    std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	    parent->AddMember(ValueType(name.GetString(),
 					name.GetStringLength(),
 					normalized.GetAllocator()).Move(),
@@ -1926,9 +1926,9 @@ public:
 	  continue;
 	}
 	ValueType* val = GetMember(copy[i], normalized, srcParent);
-	RAPIDJSON_ASSERT(val);
+	YGGDRASIL_RAPIDJSON_ASSERT(val);
 	if (!val) continue;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	std::cerr << "AssignMissing [";
 	DisplayPointer(src.instancePtr);
 	std::cerr << "--";
@@ -1938,7 +1938,7 @@ public:
 	std::cerr << "--";
 	DisplayPointer(dst.schemaPtr);
 	std::cerr << "]: " << copy[i].GetString() << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	if (!SetMember(context, copy[i], val, normalized, dstParent)) {
 	  typename SValue::ConstValueIterator sh = src.shared.Index(copy[i]);
 	  if (sh != src.shared.End())
@@ -1955,10 +1955,10 @@ public:
       SValue copy(dst.properties, normalized.GetAllocator(), true);
       for (SizeType i = 0; i < copy.Size(); i++) {
 	if (!IsFinalized(copy[i], false, normalized)) continue;
-	RAPIDJSON_ASSERT(dst.parent);
+	YGGDRASIL_RAPIDJSON_ASSERT(dst.parent);
 	if (!dst.parent) continue;
 	typename SchemaType::SharedProperty::PropertyEntry* prop = dst.parent->FindProperty(copy[i]);
-	RAPIDJSON_ASSERT(prop);
+	YGGDRASIL_RAPIDJSON_ASSERT(prop);
 	if (!prop) continue;
 	if (!prop->base->required) {
 	  RemoveMember(copy[i]);
@@ -1966,13 +1966,13 @@ public:
 	}
 	const ValueType* val = prop->GetDefault();
 	if (!val) continue;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	std::cerr << "AssignDefaults [";
 	DisplayPointer(dst.instancePtr);
 	std::cerr << "--";
 	DisplayPointer(dst.schemaPtr);
 	std::cerr << "]: " << copy[i].GetString() << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	if (!SetMember(context, copy[i], val, normalized, dstParent))
 	  return false; // GCOVR_EXCL_LINE
       }
@@ -1988,14 +1988,14 @@ public:
 	if (!IsFinalized(copy[i], false, normalized)) continue;
 	if (!parent)
 	  parent = GetParent(normalized, false);
-	RAPIDJSON_ASSERT(parent && parent->IsObject() && dst.parent);
+	YGGDRASIL_RAPIDJSON_ASSERT(parent && parent->IsObject() && dst.parent);
 	if (!parent || parent->HasMember(copy[i]) || !dst.parent) continue;
 	typename SchemaType::SharedProperty::PropertyEntry* prop = dst.parent->FindProperty(copy[i]);
-	RAPIDJSON_ASSERT(prop);
+	YGGDRASIL_RAPIDJSON_ASSERT(prop);
 	if (!prop) continue;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	std::cerr << "RecordMissing: " << copy[i].GetString() << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	dst.instancePtr.StringifyUriFragment(sb);
 	ValueType val(kArrayType);
 	val.PushBack(ValueType(sb.GetString(),
@@ -2012,7 +2012,7 @@ public:
 				  (SizeType)sb.GetLength(),
 				  normalized.GetAllocator());
 	sb.Clear();
-	RAPIDJSON_ASSERT(missing.IsObject());
+	YGGDRASIL_RAPIDJSON_ASSERT(missing.IsObject());
 	if (!missing.HasMember(schemaRef))
 	  missing.AddMember(ValueType(schemaRef.GetString(),
 				      schemaRef.GetStringLength(),
@@ -2032,12 +2032,12 @@ public:
 	  continue;
 	if (!parent)
 	  parent = GetParent(normalized, true);
-	RAPIDJSON_ASSERT(parent && parent->IsObject());
+	YGGDRASIL_RAPIDJSON_ASSERT(parent && parent->IsObject());
 	if (!parent || !parent->IsObject() ||
 	    !parent->HasMember(copy[i])) continue;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	std::cerr << "RemoveShared: " << copy[i].GetString() << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	parent->RemoveMember(copy[i]);
 	typename SValue::ConstValueIterator it = src.properties.Index(copy[i]);
 	if (it != src.properties.End())
@@ -2114,9 +2114,9 @@ public:
   bool ExtendChild(Context& context, const SchemaType& baseSchema,
 		   const SchemaType& schema, unsigned index) {
     GenericNormalizedDocument* child = FindChild(index);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     if (!child)
-      RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Could not find child: %d", // GCOVR_EXCL_LINE
+      YGGDRASIL_RAPIDJSON_GENERIC_ERROR("Could not find child: %d", // GCOVR_EXCL_LINE
 					(int)index);
     std::cerr << "ExtendChild: ";
     DisplayPointer(context.schemaPointerAbs);
@@ -2125,27 +2125,27 @@ public:
     DisplayModifications();
     std::cerr << "Child ";
     child->DisplayModifications();
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-    RAPIDJSON_ASSERT(child);
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
+    YGGDRASIL_RAPIDJSON_ASSERT(child);
     child->FinalizeFromStack();
     child->ResetModifiedVisited();
     PointerType pCurrent = GetInstancePointer(false, true);
     ResetModifiedVisited(pCurrent);
     bool replaced = false;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     std::cerr << "Parent Aliases: ";
     DisplayValue(aliases_);
     std::cerr << std::endl << "Child Aliases: ";
     DisplayValue(child->aliases_);
     std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     if (!child->ExtendAliases(context, aliases_, &replaced)) return false;
     if (!ExtendAliases(context, child->aliases_, &replaced)) return false;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     std::cerr << "Merged aliases: ";
     DisplayValue(aliases_);
     std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     if (!ExtendShared(context, schema, child->sharedStack_)) return false;
     if (!(replaced || child->WasModified()))
       return true;
@@ -2194,7 +2194,7 @@ public:
   bool ExtendShared(Context& context, const SchemaType& schema,
 		    const PairEntry* childShared, size_t childSharedCount,
 		    bool skipCheck = false) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     if (childSharedCount > 0) {
       std::cerr << "ExtendShared Child: " << std::endl;
       for (SizeType i = 0; i < childSharedCount; i++) {
@@ -2208,7 +2208,7 @@ public:
       std::cerr << "ExtendShared Before: " << std::endl;
       DisplayShared(false);
     }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     size_t NStack = sharedStack_.GetSize() / sizeof(PairEntry);
     for (size_t i = 0; i < childSharedCount; i++) {
       const PairEntry* ot = childShared + i;
@@ -2237,12 +2237,12 @@ public:
 	new (pair) PairEntry(*ot, &GetAllocator());
       }
     }
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     if (sharedStack_.GetSize() > 0) {
       std::cerr << "ExtendShared After: " << std::endl;
       DisplayShared(false);
     }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     if (!skipCheck)
       return CheckSharedPairs(context, schema);
     return true;
@@ -2265,19 +2265,19 @@ public:
 
   bool Extend(Context& context, const SchemaType& schema,
 	      const ValueType& document, const SchemaType* baseSchema=0) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     if ((flags_ & kNormalizerStateExtending) ||
 	extend_context_ || extend_schema_ ||
 	document_.WasFinalized() || (document_.StackSize() == 0))
-      RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Something is wrong with the state of"
+      YGGDRASIL_RAPIDJSON_GENERIC_ERROR("Something is wrong with the state of"
 					" the normalized document at the "
 					" start of an extend call.");
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-    RAPIDJSON_ASSERT(!(flags_ & kNormalizerStateExtending));
-    RAPIDJSON_ASSERT(!extend_context_);
-    RAPIDJSON_ASSERT(!extend_schema_);
-    RAPIDJSON_ASSERT(!document_.WasFinalized());
-    RAPIDJSON_ASSERT(document_.StackSize() > 0);
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
+    YGGDRASIL_RAPIDJSON_ASSERT(!(flags_ & kNormalizerStateExtending));
+    YGGDRASIL_RAPIDJSON_ASSERT(!extend_context_);
+    YGGDRASIL_RAPIDJSON_ASSERT(!extend_schema_);
+    YGGDRASIL_RAPIDJSON_ASSERT(!document_.WasFinalized());
+    YGGDRASIL_RAPIDJSON_ASSERT(document_.StackSize() > 0);
     PointerType pCurrent = GetInstancePointer(false, true);
     ValueType* baseDocument = document_.StackTop();
     if (baseSchema) {
@@ -2297,11 +2297,11 @@ public:
     extend_context_ = NULL;
     extend_schema_ = NULL;
     PopValue();
-    RAPIDJSON_ASSERT(keyStack_.Empty());
+    YGGDRASIL_RAPIDJSON_ASSERT(keyStack_.Empty());
     return out;
   }
 
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 #define DEBUG_STEP							\
   std::cerr << __debug_section << " " << __debug_section_mark <<	\
     "[" << __debug_section_idx << "]: " <<				\
@@ -2337,12 +2337,12 @@ public:
   __debug_section_mark = #mark;			\
   __debug_section_value = value;		\
   DEBUG_STEP
-#else // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#else // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 #define DEBUG_STEP
 #define DEBUG_MSG(msg)
 #define DEBUG_INIT(section, mark, value, schema)
 #define DEBUG_MOD(section, mark, value)
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 #define INIT_CHECK(section, mark, value, schema)	\
   bool out = true;					\
   DEBUG_INIT(section, mark, value, schema)
@@ -2357,7 +2357,7 @@ public:
     if (document_.StackSize() == 0 &&
 	!(flags_ & kNormalizerStateBasePointerSet)) {
       SetBasePointer(GetInstancePointer(false, true));
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       std::cerr << "BeginNorm: FIRST ELEMENT: ";
       DisplayPointer(GetInstancePointer());
       std::cerr << ", ";
@@ -2366,21 +2366,21 @@ public:
       DisplayPointer(GetSchemaPointer(schema));
       std::cerr << std::endl;
       DisplayModifications();
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     }
     if ((schema.isSingular_ == kSingularItem) && (ToggleSingular())) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       std::cerr << "BeginNorm: Wrapping singular element in array" << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       RecordModifiedSingular(kModificationTypeSingularArray, (SizeType)0);
       return NormStartArray(context, schema);
     } else if ((schema.isSingular_ == kSingularValue) && (ToggleSingular())) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       std::cerr << "BeginNorm: Wrapping singular element in object" << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       RecordModifiedSingular(kModificationTypeSingularObject, schema.parentKey_);
       if (!NormStartObject(context, schema)) return false;
-      RAPIDJSON_ASSERT(schema.parentKey_.IsString());
+      YGGDRASIL_RAPIDJSON_ASSERT(schema.parentKey_.IsString());
       return NormKey(context, schema, schema.parentKey_.GetString(),
 		     schema.parentKey_.GetStringLength(), true);
     }
@@ -2388,7 +2388,7 @@ public:
   }
   bool EndNorm(Context& context, const SchemaType& schema) {
     if ((schema.isSingular_ == kSingularItem) && (ToggleSingular())) {
-      RAPIDJSON_ASSERT(schema.parentSchema_ &&
+      YGGDRASIL_RAPIDJSON_ASSERT(schema.parentSchema_ &&
 		       schema.parentSchema_->allowSingularSchema_.schemas);
       return (schema.parentSchema_ &&
 	      schema.parentSchema_->allowSingularSchema_.schemas &&
@@ -2397,7 +2397,7 @@ public:
     } else if ((schema.isSingular_ == kSingularValue) && (ToggleSingular())) {
       // TODO: Missing after defaults from parentSchema set?
       SizeType memberCount = 1;
-      RAPIDJSON_ASSERT(schema.parentSchema_ &&
+      YGGDRASIL_RAPIDJSON_ASSERT(schema.parentSchema_ &&
 		       schema.parentSchema_->allowSingularSchema_.schemas);
       return (schema.parentSchema_ &&
 	      schema.parentSchema_->allowSingularSchema_.schemas &&
@@ -2554,7 +2554,7 @@ public:
 	modified = true;
 	SizeType src_size = sizeOfSubtype((YggSubType)src_subtype_code, src_precision);
 	SizeType dst_size = sizeOfSubtype((YggSubType)idst_subtype, dst_precision);
-	RAPIDJSON_ASSERT(src_nbytes == (nelements * src_size));
+	YGGDRASIL_RAPIDJSON_ASSERT(src_nbytes == (nelements * src_size));
 	if (src_nbytes != (nelements * src_size))
 	  return false;
 	dst_nbytes = nelements * dst_size;
@@ -2814,7 +2814,7 @@ public:
   bool NormYggdrasilString(Context& context, const SchemaType& schema, const Ch*& str, SizeType& length, bool, YggSchemaValueType& valueSchema) {
     NORM_BEGIN_(YggdrasilString);
     // Scalar
-    RAPIDJSON_ASSERT(valueSchema.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(valueSchema.IsObject());
     typename YggSchemaValueType::ConstMemberIterator typeV = valueSchema.FindMember(SchemaType::GetTypeString());
     typename YggSchemaValueType::ConstMemberIterator subtypeV = valueSchema.FindMember(SchemaType::GetSubTypeString());
     typename YggSchemaValueType::ConstMemberIterator precisionV = valueSchema.FindMember(SchemaType::GetPrecisionString());
@@ -3061,7 +3061,7 @@ public:
 		bool dont_check_aliases = false) {
     if (!dont_check_aliases) {
       const ValueType& aliases = AddAliases(schema);
-      RAPIDJSON_ASSERT(aliases.IsObject());
+      YGGDRASIL_RAPIDJSON_ASSERT(aliases.IsObject());
       orig.SetString(str, len, GetAllocator());
       ConstMemberIterator match = aliases.MemberEnd();
       flag = 0;
@@ -3072,13 +3072,13 @@ public:
 	len = primary.GetStringLength();
 	str = primary.GetString();
 	flag = (1 << kAliasSrc);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	std::cerr << "AliasKey [src]: ";
 	DisplayValue(orig);
 	std::cerr << " -> ";
 	DisplayValue(primary);
 	std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       } else if (FindAliasValue(aliases, orig, match)) {
 	ConstMemberIterator existMatch = aliases.MemberEnd();
 	if (InExtend() &&
@@ -3089,13 +3089,13 @@ public:
 	primary.CopyFrom(orig, GetAllocator(), true);
 	orig.CopyFrom(match->name, GetAllocator(), true);
 	flag = (1 << kAliasDst);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	std::cerr << "AliasKey [dst]: ";
 	DisplayValue(orig);
 	std::cerr << " -> ";
 	DisplayValue(primary);
 	std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       }
       // Check previous keys for alias target
       if (match != aliases.MemberEnd()) {
@@ -3107,7 +3107,7 @@ public:
 	    //   subsequent nested calls or retrieving the subsequent value
 	    //   in advanced based on teh pointer address
 	    context.error_handler.DuplicateAlias(orig, primary);
-	    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
+	    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
 	  }
 	}
       }
@@ -3191,17 +3191,17 @@ public:
   bool FinalizeShared(Context& context, const SchemaType& schema,
 		      const PointerType& iP, const PointerType& iS) {
     if (!schema.sharedProperties_) return true;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     std::cerr << "FinalizeShared: ";
     DisplayPointer(iS);
     std::cerr << ", ";
     DisplayPointer(iP);
     std::cerr << std::endl;
     schema.sharedProperties_->Display();
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     ValueType* v = CurrentValue();
     SValue present(kArrayType);
-    RAPIDJSON_ASSERT(v->IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(v->IsObject());
     for (MemberIterator it = v->MemberBegin(); it != v->MemberEnd(); it++)
       present.PushBack(SValue(it->name.GetString(),
 			      it->name.GetStringLength(),
@@ -3241,15 +3241,15 @@ public:
       it->RecordMissing(*this, missing);
       it->RemoveShared(*this);
     }
-    RAPIDJSON_ASSERT(missing.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(missing.IsObject());
     for (ConstMemberIterator it = missing.MemberBegin();
 	 it != missing.MemberEnd(); ++it) {
       context.error_handler.StartMissingProperties();
-      RAPIDJSON_ASSERT(it->value.IsArray());
+      YGGDRASIL_RAPIDJSON_ASSERT(it->value.IsArray());
       for (ConstValueIterator v = it->value.Begin(); v != it->value.End(); ++v)
 	context.error_handler.AddMissingProperty((*v)[1]);
       if (context.error_handler.EndMissingPropertiesShared((*it->value.Begin())[0], it->name))
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
     }
     return true;
   }
@@ -3262,7 +3262,7 @@ public:
     }
     return 0;
   }
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
   void DisplayShared(bool useInstance = false,
 		     bool unsetOnly = false) const {
     for (const PairEntry* it = sharedStack_.template Bottom<PairEntry>();
@@ -3274,7 +3274,7 @@ public:
     }
     std::cerr << std::endl;
   }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
   void PruneDuplicatePair() {
     PairEntry* check = sharedStack_.template Top<PairEntry>();
     for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
@@ -3297,10 +3297,10 @@ public:
 	  !it->prefix.PartialCompare(instancePtr) ||
 	  !it->Matches(instancePtr, source, true)) continue;
       it->Complete(source, instancePtr, schemaPtr, present, &GetAllocator());
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       std::cerr << "AddSharedObject [COMPLETE]: " << std::endl;
       DisplayShared();
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     }
   }
   void AddSharedObject(const PointerType& prefix0,
@@ -3319,10 +3319,10 @@ public:
     pair->Template(partner->source, partner,
 		   &GetAllocator(), multiplePartners);
     PruneDuplicatePair();
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     std::cerr << "AddSharedObject: " << std::endl;
     DisplayShared();
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
   }
   void AddMissingObject(const PointerType& prefix0,
 			const PointerType& instancePtr,
@@ -3334,21 +3334,21 @@ public:
 						  &GetAllocator());
     PairEntry* pair = sharedStack_.template Push<PairEntry>();
     new (pair) PairEntry(prefix, &GetAllocator());
-    RAPIDJSON_ASSERT(parent && partner);
+    YGGDRASIL_RAPIDJSON_ASSERT(parent && partner);
     pair->Missing(parent->source, instancePtr, parent,
 		  &GetAllocator(), multiplePairs);
     pair->Template(partner->source, partner,
 		   &GetAllocator(), multiplePartners);
     PruneDuplicatePair();
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
     std::cerr << "AddMissingObject: " << std::endl;
     DisplayShared();
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
   }
   bool IsFinalizedShared(const PairEntry* skip, const SValue& name,
 			 bool source) {
     const SharedValueEntry* skipV = skip->GetValue(source);
-    RAPIDJSON_ASSERT(skipV->set);
+    YGGDRASIL_RAPIDJSON_ASSERT(skipV->set);
     if (!skipV->set) return false;
     for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
 	 it != sharedStack_.template End<PairEntry>(); it++) {
@@ -3363,7 +3363,7 @@ public:
   bool HasUnvisitedSharedSiblings(PairEntry* skip, const SValue& name,
 				  bool source) {
     SharedValueEntry* skipV = skip->GetValue(!source);
-    RAPIDJSON_ASSERT(skipV->set);
+    YGGDRASIL_RAPIDJSON_ASSERT(skipV->set);
     if (!skipV->set) return true;
     for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
 	 it != sharedStack_.template End<PairEntry>(); it++) {
@@ -3400,10 +3400,10 @@ public:
   bool SetSharedSiblings(Context& context,
 			 PairEntry* skip, const SValue& name,
 			 const ValueType* value) {
-    RAPIDJSON_ASSERT(skip);
+    YGGDRASIL_RAPIDJSON_ASSERT(skip);
     if (!skip) return false;
     SharedValueEntry* skipV = skip->GetValue(false);
-    RAPIDJSON_ASSERT(skipV->set);
+    YGGDRASIL_RAPIDJSON_ASSERT(skipV->set);
     if (!skipV->set) return false;
     for (PairEntry* it = sharedStack_.template Bottom<PairEntry>();
 	 it != sharedStack_.template End<PairEntry>(); it++) {
@@ -3429,22 +3429,22 @@ public:
     SchemaDocumentType sd(sdv);
     GenericStringBuffer<EncodingType> sb;
     instancePtr.StringifyUriFragment(sb);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     std::cerr << "NormalizeShared: ";
     DisplayPointer(instancePtr);
     std::cerr << ", ";
     DisplayPointer(schemaPtr);
     std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     // TODO: Move intializer to factory?
-    typedef GenericSchemaNormalizer<SchemaDocumentType, BaseReaderHandler<EncodingType>, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizerType;
+    typedef GenericSchemaNormalizer<SchemaDocumentType, BaseReaderHandler<EncodingType>, YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizerType;
     NormalizerType n(sd, schema, sb.GetString(), sb.GetLength(), schemaPtr, *this);
     if (context.python_disabled)
       n.DisablePython();
     x.Accept(n);
     if (!n.IsValid()) {
       ValidateErrorCode code = context.error_handler.SharedNormalizationError(static_cast<ISchemaValidator*>(&n));
-      RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(code);
     }
     if (n.WasNormalized())
       dest.CopyFrom(n.GetNormalized(), GetAllocator(), true);
@@ -3483,50 +3483,50 @@ public:
   bool BeginExtend(Context& context, bool dont_recurse=false,
 		   bool skipPush=false) {
     ValueType* current = CurrentValue();
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     if (!current)
-      RAPIDJSON_YGGDRASIL_GENERIC_ERROR("No current value set");
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-    RAPIDJSON_ASSERT(current);
+      YGGDRASIL_RAPIDJSON_GENERIC_ERROR("No current value set");
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
+    YGGDRASIL_RAPIDJSON_ASSERT(current);
     if (CurrentIdx() && !skipPush) {
       bool childMod = false;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       if (!current->IsArray())
-	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an array,"
+	YGGDRASIL_RAPIDJSON_GENERIC_ERROR("Current value is not an array,"
 					  " but an index %d is set (type = %d)",
 					  (int)(*CurrentIdx()),
 					  (int)(current->GetType()));
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       if (*CurrentIdx() >= current->Size()) {
 	if ((!CurrentModified()) && CurrentChildModified()) {
 	  current->PushBack(ValueType(kNullType).Move(), GetAllocator());
 	  childMod = true;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	} else {
-	  RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current index %d outside of"
+	  YGGDRASIL_RAPIDJSON_GENERIC_ERROR("Current index %d outside of"
 					    " the current array (size = %d)",
 					    (int)(*CurrentIdx()),
 					    (int)(current->Size()));
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	}
       }
-      RAPIDJSON_ASSERT(current->IsArray() && *CurrentIdx() < current->Size());
+      YGGDRASIL_RAPIDJSON_ASSERT(current->IsArray() && *CurrentIdx() < current->Size());
       PushValue((*current)[*CurrentIdx()], *CurrentIdx(), false, childMod);
       CurrentIdx()[0]++;
       current = CurrentValue();
     } else if (CurrentKey() && !skipPush) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       if (!current->IsObject())
-	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value is not an object,"
+	YGGDRASIL_RAPIDJSON_GENERIC_ERROR("Current value is not an object,"
 					  " but a key \"%s\" is set (type = %d)",
 					  (const char*)(CurrentKey()->GetString()),
 					  (int)(current->GetType()));
       if (!current->HasMember(CurrentKey()->GetString()))
-	RAPIDJSON_YGGDRASIL_GENERIC_ERROR("Current value does not have the "
+	YGGDRASIL_RAPIDJSON_GENERIC_ERROR("Current value does not have the "
 					  "expected key: %s",
 					  (const char*)(CurrentKey()->GetString()));
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-      RAPIDJSON_ASSERT(current->IsObject() && current->HasMember(CurrentKey()->GetString()));
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
+      YGGDRASIL_RAPIDJSON_ASSERT(current->IsObject() && current->HasMember(CurrentKey()->GetString()));
       if (InAliasedKey())
 	PushValue((*current)[*CurrentKey()], *(AliasedKey()->aliased));
       else
@@ -3541,7 +3541,7 @@ public:
       if (current->IsArray()) {
 	PushKey((SizeType)0);
       } else if (current->IsObject()) {
-	RAPIDJSON_ASSERT(key.IsString());
+	YGGDRASIL_RAPIDJSON_ASSERT(key.IsString());
 	PushKey(key.GetString(), key.GetStringLength());
       }
       return BeginExtend(context, true);
@@ -3562,7 +3562,7 @@ public:
       StealChildModified();
     }
     if (CurrentChildSingular()) {
-      RAPIDJSON_ASSERT(!valueStack_.Empty());
+      YGGDRASIL_RAPIDJSON_ASSERT(!valueStack_.Empty());
       if (valueStack_.Empty())
 	return false;
       ModificationEntry* child_singular = extend_child_->GetModified(valueStack_.template Top<ValueEntry>()->child_singular);
@@ -3589,13 +3589,13 @@ public:
 					   *(aliased->key));		\
       out = false;							\
       DEBUG_STEP;							\
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);	\
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);	\
     } else {								\
       context.error_handler.NormalizationMergeConflict(SchemaType::Get ## method ## String(), \
 						       *current, ValueType args.Move()); \
       out = false;							\
       DEBUG_STEP;							\
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorMergeConflict);	\
     }									\
   }
 #define EXTEND_BEGIN_STUB_(method)					\
@@ -3606,7 +3606,7 @@ public:
   ValueType* current = CurrentValue();					\
   if (CurrentReplaced()) {						\
     DEBUG_MSG("CurrentReplaced");					\
-    RAPIDJSON_ASSERT(current && (current->IsArray() || (current->IsObject() && CurrentKey()))); \
+    YGGDRASIL_RAPIDJSON_ASSERT(current && (current->IsArray() || (current->IsObject() && CurrentKey()))); \
     ValueType child_swap args;						\
     if (current->IsArray())						\
       current->PushBack(child_swap, GetAllocator());			\
@@ -3633,7 +3633,7 @@ public:
   CHECK_RESULT;								\
   ValueType key_(kNullType);						\
   if ((!CurrentModified()) && CurrentChildModified() && !CurrentReplaced()) { \
-    RAPIDJSON_ASSERT(!valueStack_.Empty());				\
+    YGGDRASIL_RAPIDJSON_ASSERT(!valueStack_.Empty());				\
     DEBUG_MSG("CurrentChildModified");					\
     ValueType child_swap args;						\
     CurrentValue()->Swap(child_swap);					\
@@ -3647,12 +3647,12 @@ public:
     /* CurrentValue()->CopyFrom(tmp, GetAllocator(), true); */		\
     ValueType child_swap args;						\
     CurrentValue()->Swap(child_swap);					\
-    RAPIDJSON_ASSERT(!key_.IsNull());					\
+    YGGDRASIL_RAPIDJSON_ASSERT(!key_.IsNull());					\
     if (CurrentValue()->IsArray()) {					\
       RecordModifiedSingular(kModificationTypeSingularArray, (SizeType)0); \
       CurrentValue()->PushBack(child_swap, GetAllocator());		\
     } else if (CurrentValue()->IsObject()) {				\
-      RAPIDJSON_ASSERT(key_.IsString());				\
+      YGGDRASIL_RAPIDJSON_ASSERT(key_.IsString());				\
       CHECK_RESULT;							\
       RecordModifiedSingular(kModificationTypeSingularObject, key_);	\
       CurrentValue()->AddMember(ValueType(key_, GetAllocator()).Move(), \
@@ -3746,7 +3746,7 @@ public:
     ValueType key;
     if (extend_child_ && key_.IsNull() &&
 	CurrentModified() && CurrentChildSingular() && !CurrentSingular()) {
-      RAPIDJSON_ASSERT(key.IsString());
+      YGGDRASIL_RAPIDJSON_ASSERT(key.IsString());
       ValueType tmp(kObjectType);
       tmp.AddMember(ValueType(key, GetAllocator(), true).Move(),
 		    ValueType(kNullType).Move(), GetAllocator());
@@ -3838,9 +3838,9 @@ public:
   }
 
   void* SetTemporary(SizeType size) {
-    RAPIDJSON_ASSERT(!temporary_memory_);
+    YGGDRASIL_RAPIDJSON_ASSERT(!temporary_memory_);
     temporary_memory_ = GetAllocator().Malloc(size);
-    RAPIDJSON_ASSERT(temporary_memory_);
+    YGGDRASIL_RAPIDJSON_ASSERT(temporary_memory_);
     return temporary_memory_;
   }
   
@@ -3853,12 +3853,12 @@ public:
   template <typename VType>
   PointerType GetInstancePointer(const VType& key, bool parent,
 				 bool modified=false,
-				 RAPIDJSON_DISABLEIF((
+				 YGGDRASIL_RAPIDJSON_DISABLEIF((
        internal::OrExpr<YGGDRASIL_IS_INT_TYPE(VType),
        internal::OrExpr<YGGDRASIL_IS_UINT_TYPE(VType),
        internal::OrExpr<internal::IsSame<VType, bool>,
        internal::IsPointer<VType> > > >))) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     std::cerr << "GetInstancePointer (key = " << key.GetString() << ", " << key.GetStringLength() << ") -> ";
     if (parent) {
       DisplayPointer(GetInstancePointer(false, modified));
@@ -3870,7 +3870,7 @@ public:
 							       key.GetStringLength(),
 							       &GetAllocator()));
     std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     return GetInstancePointer(parent, modified).Append(key.GetString(),
 						       key.GetStringLength(),
 						       &GetAllocator());
@@ -3888,7 +3888,7 @@ public:
     return instancePointer;
   }
   PointerType GetInstancePointerBase(AllocatorType* allocator = 0) const {
-    RAPIDJSON_ASSERT(documentStack_);
+    YGGDRASIL_RAPIDJSON_ASSERT(documentStack_);
     if (InExtend() && !valueStack_.Empty()) {
       return PointerType(CurrentPointer(), allocator);
     } else {
@@ -3903,7 +3903,7 @@ public:
     PointerType pSing(p); // = ReplaceSingular(p);
     if (core_ && !pSing.StartsWith(basePointer_))
       return core_->Get(pSing, unresolvedTokenIndex);
-    RAPIDJSON_ASSERT(pSing.StartsWith(basePointer_));
+    YGGDRASIL_RAPIDJSON_ASSERT(pSing.StartsWith(basePointer_));
     return pSing.PartialBack(basePointer_.GetTokenCount()).GetFromUnfinalized(document_, unresolvedTokenIndex);
   }
   bool RecordModified(const ModificationType type,
@@ -3928,7 +3928,7 @@ public:
       if (ref->isWrapped())
 	last->wrapped = ref_idx;
     }
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     std::cerr << "RecordModified[";
     switch (type) {
     case (kModificationTypeAny) :
@@ -3974,7 +3974,7 @@ public:
     DisplayPointer(after);
     std::cerr << ") ";
     DisplayModifications(stack);
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     return out;
   }
   
@@ -4014,7 +4014,7 @@ private:
   }
 
   void SwapAliasValues(ValueType* base, const ValueType& primary, const ValueType& alias) {
-    RAPIDJSON_ASSERT(base && base->IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(base && base->IsObject());
     if (!(base->IsObject() && base->HasMember(alias))) {
       return;
     }
@@ -4029,7 +4029,7 @@ private:
   template<typename VType>
   void RecordModifiedSingular(ModificationType type, const VType& key,
 			      bool setStack = false) {
-    RAPIDJSON_ASSERT(type == kModificationTypeSingularArray ||
+    YGGDRASIL_RAPIDJSON_ASSERT(type == kModificationTypeSingularArray ||
 		     type == kModificationTypeSingularObject);
     PointerType base = GetInstancePointer(false, true);
     RecordModified(type, base,
@@ -4039,7 +4039,7 @@ private:
   template<typename VType>
   void RecordModifiedWrapped(ModificationType type, const VType& key,
 			     bool setStack = false) {
-    RAPIDJSON_ASSERT(type == kModificationTypeWrappedArray ||
+    YGGDRASIL_RAPIDJSON_ASSERT(type == kModificationTypeWrappedArray ||
 		     type == kModificationTypeWrappedObject);
     PointerType base = GetInstancePointer(false, true);
     RecordModified(type, base.Append(key, &GetAllocator()), base,
@@ -4158,13 +4158,13 @@ private:
 	ValueType* current = CurrentValue();
 	if (current && current->IsObject() && current->HasMember(key)) {
 	  // TODO: Check if the parent modified the key being removed?
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	  std::cerr << "StealChildRemoved [";
 	  DisplayPointer(p);
 	  std::cerr << "]: ";
 	  DisplayValue(key);
 	  std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	  current->RemoveMember(key);
 	  RecordModified(*it);
 	}
@@ -4330,11 +4330,11 @@ private:
   ValueType* CurrentValue() {
     ValueType* out = NULL;
     if (InExtend()) {
-      RAPIDJSON_ASSERT(!valueStack_.Empty());
+      YGGDRASIL_RAPIDJSON_ASSERT(!valueStack_.Empty());
       if (!valueStack_.Empty())
 	out = valueStack_.template Top<ValueEntry>()->val;
     } else {
-      RAPIDJSON_ASSERT(document_.StackSize() > 0);
+      YGGDRASIL_RAPIDJSON_ASSERT(document_.StackSize() > 0);
       if (document_.StackSize() != 0)
 	out = document_.StackTop();
     }
@@ -4419,7 +4419,7 @@ private:
 							       true);
       if (ref->child_singular >= 0 || child_modified || extend_child_->isValueModified(pChild))
 	ref->flags = (ref->flags | (1 << kValueFlagChildModified));
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
       std::cerr << "PushValue (" << appended << "): ";
       DisplayPointer(p);
       std::cerr << " [";
@@ -4434,7 +4434,7 @@ private:
       std::cerr << "Child ";
       extend_child_->DisplayModifications();
       DisplayStack(true);
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     }
   }
   void PushValue(ValueType& value, ValueType& key,
@@ -4451,12 +4451,12 @@ private:
   }
   void PopValue() {
     ValueEntry* ref = valueStack_.template Pop<ValueEntry>(1);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     std::cerr << "PopValue: ";
     DisplayValue(*(ref->val));
     std::cerr << std::endl;
     DisplayStack(true);
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     if (ref->singular >= 0)
       GetModified(ref->singular)->visited = true;
     if (ref->child_singular >= 0)
@@ -4467,7 +4467,7 @@ private:
     return valueStack_.GetSize() / sizeof(ValueEntry);
   }
   const PointerType& CurrentPointer() const {
-    RAPIDJSON_ASSERT(!valueStack_.Empty());
+    YGGDRASIL_RAPIDJSON_ASSERT(!valueStack_.Empty());
     return valueStack_.template Top<ValueEntry>()->ptr;
   }
   PointerType CurrentPointer(const SizeType& index) {
@@ -4519,7 +4519,7 @@ private:
     ref->key = key;
     ref->idx = idx;
     ref->aliased = aliased;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     std::cerr << "PushKey: ";
     if (ref->key)
       DisplayValue(*(ref->key));
@@ -4529,11 +4529,11 @@ private:
       std::cerr << "null";
     std::cerr << std::endl;
     DisplayStack(true);
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
   }
   void PopKey() {
     KeyEntry* ref = keyStack_.template Pop<KeyEntry>(1);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     std::cerr << "PopKey: ";
     if (ref->key)
       DisplayValue(*(ref->key));
@@ -4543,7 +4543,7 @@ private:
       std::cerr << "null";
     std::cerr << std::endl;
     DisplayStack(true);
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     if (ref->key) {
       delete ref->key;
       ref->key = NULL;
@@ -4564,7 +4564,7 @@ private:
 		     const ValueType& orig, ValueType* dest) {
     if (!follow_aliases_(aliases, orig, dest, GetAllocator())) {
       context.error_handler.CircularAlias(*dest);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
     }
     return true;
   }
@@ -4589,7 +4589,7 @@ private:
   // 	  return;
   //   }
   //   if (InExtend()) {
-  //     RAPIDJSON_ASSERT(CurrentValue()->IsObject());
+  //     YGGDRASIL_RAPIDJSON_ASSERT(CurrentValue()->IsObject());
   //     CurrentValue()->RemoveMember(key);
   //     return;
   //   }
@@ -4607,10 +4607,10 @@ private:
   // 	return;
   //     while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
   //   }
-  //   RAPIDJSON_ASSERT(base->IsObject());
+  //   YGGDRASIL_RAPIDJSON_ASSERT(base->IsObject());
   //   base++;
   //   while (base != document_.StackTop()) {
-  //     RAPIDJSON_ASSERT(base->IsString());
+  //     YGGDRASIL_RAPIDJSON_ASSERT(base->IsString());
   //     if ((*base == key) && (base != document_.StackTop())) {
   // 	if (base + 1 == document_.StackTop()) {
   // 	  document_.StackPop()->~ValueType();
@@ -4634,7 +4634,7 @@ private:
   // }
   bool HasMember(const ValueType& key) const {
     if (InExtend()) {
-      RAPIDJSON_ASSERT(CurrentValue()->IsObject());
+      YGGDRASIL_RAPIDJSON_ASSERT(CurrentValue()->IsObject());
       if (CurrentValue()->HasMember(key))
 	return true;
       return false;
@@ -4645,10 +4645,10 @@ private:
     if (base->IsObject())
       return false;
     while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
-    RAPIDJSON_ASSERT(base->IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(base->IsObject());
     base++;
     while (base != document_.StackTop()) {
-      RAPIDJSON_ASSERT(base->IsString());
+      YGGDRASIL_RAPIDJSON_ASSERT(base->IsString());
       if (*base == key)
 	return true;
       base++;
@@ -4659,7 +4659,7 @@ private:
   }
   // ValueType* GetMember(const ValueType& key, SizeType* memberCount=NULL) {
   //   if (InExtend()) {
-  //     RAPIDJSON_ASSERT(CurrentValue()->IsObject());
+  //     YGGDRASIL_RAPIDJSON_ASSERT(CurrentValue()->IsObject());
   //     std::cerr << "GetMember: " << key.GetString() << std::endl;
   //     if (CurrentValue()->HasMember(key))
   // 	return &(CurrentValue()->FindMember(key)->value);
@@ -4679,10 +4679,10 @@ private:
   // 	return NULL;
   //     while ((base != document_.StackBottom()) && (!base->IsObject())) base--;
   //   }
-  //   RAPIDJSON_ASSERT(base->IsObject());
+  //   YGGDRASIL_RAPIDJSON_ASSERT(base->IsObject());
   //   base++;
   //   while (base != document_.StackTop()) {
-  //     RAPIDJSON_ASSERT(base->IsString());
+  //     YGGDRASIL_RAPIDJSON_ASSERT(base->IsString());
   //     if ((*base == key) && (base != document_.StackTop()))
   // 	return (base + 1);
   //     base++;
@@ -4727,7 +4727,7 @@ private:
   bool ExtendAliases(Context& context, const ValueType& aliases, bool* replaced) {
     if (replaced)
       *replaced = false;
-    RAPIDJSON_ASSERT(aliases.IsObject() &&
+    YGGDRASIL_RAPIDJSON_ASSERT(aliases.IsObject() &&
 		     aliases_.IsObject() &&
 		     (document_.WasFinalized() ||
 		      document_.StackSize() > 0));
@@ -4738,7 +4738,7 @@ private:
 				     GetAllocator()).Move(),
 			   kObjectType, GetAllocator());
       }
-      RAPIDJSON_ASSERT(it->value.IsObject() &&
+      YGGDRASIL_RAPIDJSON_ASSERT(it->value.IsObject() &&
 		       aliases_.HasMember(it->name) &&
 		       aliases_[it->name].IsObject());
       for (typename ValueType::ConstMemberIterator v = it->value.MemberBegin(); v != it->value.MemberEnd(); ++v) {
@@ -4746,7 +4746,7 @@ private:
 	  typename ValueType::ConstMemberIterator existing = aliases_[it->name].FindMember(v->name);
 	  if (existing->value != v->value) {
 	    context.error_handler.ConflictingAliases(v->name, existing->value, v->value);
-	    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorConflictingAliases);
+	    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorConflictingAliases);
 	  }
 	} else {
 	  aliases_[it->name].AddMember(ValueType(v->name.GetString(),
@@ -4780,7 +4780,7 @@ private:
 	      if (alt->value != old->value) {
 		// TODO: Check for default that was set?
 		context.error_handler.DuplicateAlias(v->value, v->name);
-		RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
+		YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorAliasDuplicate);
 	      }
 	    } else {
 	      if (replaced)
@@ -4795,13 +4795,13 @@ private:
   }
   bool FindAliasName(const ValueType& aliases, const ValueType& name,
 		     ConstMemberIterator& match) {
-    RAPIDJSON_ASSERT(aliases.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(aliases.IsObject());
     match = aliases.FindMember(name);
     return (match != aliases.MemberEnd());
   }
   bool FindAliasValue(const ValueType& aliases, const ValueType& name,
 		      ConstMemberIterator& match) {
-    RAPIDJSON_ASSERT(aliases.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(aliases.IsObject());
     match = aliases.MemberBegin();
     for ( ; match != aliases.MemberEnd(); ++match)
       if (name == match->value)
@@ -4815,13 +4815,13 @@ private:
     for ( ; match != aliases.MemberEnd(); ++match)
       if (match->value == start->value && HasMember(match->name))
 	return true;
-    RAPIDJSON_ASSERT(match != start);
+    YGGDRASIL_RAPIDJSON_ASSERT(match != start);
     return false;
   }
   ValueType& GetAliases() {
     GenericStringBuffer<EncodingType> address;
     GetInstanceRef(address, (OutsideExtend()), true);
-    RAPIDJSON_ASSERT(aliases_.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(aliases_.IsObject());
     if (!aliases_.HasMember(address.GetString())) {
       aliases_.AddMember(ValueType(address.GetString(),
 				   (SizeType)address.GetLength(),
@@ -4832,11 +4832,11 @@ private:
   }
   const ValueType& AddAliases(const SchemaType* schema) {
     ValueType& aliases = GetAliases();
-    RAPIDJSON_ASSERT(aliases.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(aliases.IsObject());
     if ((schema == NULL) || (schema->child_aliases_.IsObject() &&
 				schema->child_aliases_.MemberCount() == 0))
       return aliases;
-    RAPIDJSON_ASSERT(schema->child_aliases_.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(schema->child_aliases_.IsObject());
     for (typename SValue::ConstMemberIterator it = schema->child_aliases_.MemberBegin(); it != schema->child_aliases_.MemberEnd(); ++it) {
       if (!aliases.HasMember(it->name.GetString())) {
 	aliases.AddMember(ValueType(it->name.GetString(),
@@ -4863,9 +4863,9 @@ public:
     DisplayPointer(GetInstancePointer());
   }
   void DisplayStack(bool extension=false
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
 		    , bool pretty=false
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
 		    ) const {
     if (extension) {
       std::cerr << "Value Stack:" << std::endl;
@@ -4892,37 +4892,37 @@ public:
       return;
     }
     StringBuffer sb;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
     if (pretty) {
       PrettyWriter<StringBuffer, typename DocumentType::EncodingType, UTF8<> > w(sb);
       document_.RecordStack(w);
     } else {
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
       Writer<StringBuffer, typename DocumentType::EncodingType, UTF8<> > w(sb);
       document_.RecordStack(w);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
     }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
     std::cerr << (const char*)(sb.GetString());
   }
   template<typename VType>
   static void DisplayValue(VType& value
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
 			   , bool pretty=false
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
 			   ) {
     StringBuffer sb;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
     if (pretty) {
       PrettyWriter<StringBuffer, typename VType::EncodingType, UTF8<> > w(sb);
       value.Accept(w);
     } else {
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
       Writer<StringBuffer, typename VType::EncodingType, UTF8<> > w(sb);
       value.Accept(w);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
     }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
     std::cerr << (const char*)(sb.GetString());
   }
   void DisplayAliases() {
@@ -4985,7 +4985,7 @@ public:
   (Context& context, const SchemaType& schema, __VA_ARGS__)
 #define ADD_NORMALIZE_HANDLER_(method, param, ...)			\
   bool method param {							\
-    RAPIDJSON_ASSERT(flags_ & kNormalizerStateExtending);		\
+    YGGDRASIL_RAPIDJSON_ASSERT(flags_ & kNormalizerStateExtending);		\
     return Base ## method(*extend_context_, *extend_schema_, __VA_ARGS__); \
   }									\
   bool Base ## method PARAM_WITH_CONTEXT_ param {			\
@@ -4997,7 +4997,7 @@ public:
   }
 #define ADD_NORMALIZE_HANDLER_NOARGS_(method)				\
   bool method() {							\
-    RAPIDJSON_ASSERT(flags_ & kNormalizerStateExtending);		\
+    YGGDRASIL_RAPIDJSON_ASSERT(flags_ & kNormalizerStateExtending);		\
     return Base ## method(*extend_context_, *extend_schema_);		\
   }									\
   bool Base ## method(Context& context, const SchemaType& schema) {	\
@@ -5010,7 +5010,7 @@ public:
 #define ADD_NORMALIZE_HANDLER_TEMPLATE_(method, param, ...)		\
   template <typename YggSchemaValueType>				\
   bool method param {							\
-    RAPIDJSON_ASSERT(flags_ & kNormalizerStateExtending);		\
+    YGGDRASIL_RAPIDJSON_ASSERT(flags_ & kNormalizerStateExtending);		\
     return Base ## method(*extend_context_, *extend_schema_, __VA_ARGS__); \
   }									\
   template <typename YggSchemaValueType>				\
@@ -5054,7 +5054,7 @@ public:
 
 };
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 ///////////////////////////////////////////////////////////////////////////////
 // Schema
@@ -5073,22 +5073,22 @@ public:
     typedef IValidationErrorHandler<Schema> ErrorHandler;
     typedef GenericUri<ValueType, AllocatorType> UriType;
     friend class GenericSchemaDocument<ValueType, AllocatorType>;
-#ifdef RAPIDJSON_YGGDRASIL
-    friend class GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR>;
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+    friend class GenericNormalizedDocument<SchemaDocumentType, YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR>;
     friend class SharedProperties<SchemaDocumentType>;
-    typedef GenericNormalizedDocument<SchemaDocumentType, RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
+    typedef GenericNormalizedDocument<SchemaDocumentType, YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR> NormalizedDocumentType;
     typedef SharedProperties<SchemaDocumentType> SharedPropertiesType;
     typedef units::GenericUnits<EncodingType> UnitsType;
     typedef ISchemaIterator<SchemaType> SchemaIteratorType;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     Schema(SchemaDocumentType* schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document, AllocatorType* allocator, const UriType& id = UriType()
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	   , const unsigned int flags = 0,
 	   // , const bool isMetaschema = false, const SingularFlag isSingular = kSingularNoFlags,
 	   const SingularFlag isSingular = kSingularNoFlags,
 	   const SchemaType* parentSchema = NULL, const ValueType* parentKey = NULL
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	   ) :
         allocator_(allocator),
         uri_(schemaDocument->GetURI(), *allocator),
@@ -5122,9 +5122,9 @@ public:
         additionalItems_(true),
         uniqueItems_(false),
         pattern_(),
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	patternStr_(),
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         minLength_(0),
         maxLength_(~SizeType(0)),
         exclusiveMinimum_(false),
@@ -5133,7 +5133,7 @@ public:
         readOnly_(false),
         writeOnly_(false),
         nullable_(false)
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	,
 	yggtype_((1 << kYggTotalSchemaType) - 1),
 	subtype_((1 << kYggTotalSchemaSubType) - 1),
@@ -5159,11 +5159,11 @@ public:
 	sharedProperties_(0),
 	additionalPropertiesExplicit_(false),
 	additionalItemsExplicit_(false)
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     {
         GenericStringBuffer<EncodingType> sb;
         p.StringifyUriFragment(sb);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Schema", sb.GetString(), id.GetString());
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Schema", sb.GetString(), id.GetString());
 
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
         typedef typename ValueType::ConstMemberIterator ConstMemberIterator;
@@ -5189,15 +5189,15 @@ public:
             if (v->IsString()) {
                 UriType local(*v, allocator);
                 id_ = local.Resolve(id_, allocator);
-                    RAPIDJSON_SCHEMA_PRINT(SchemaIds, id.GetString(), v->GetString(), id_.GetString());
+                    YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(SchemaIds, id.GetString(), v->GetString(), id_.GetString());
             }
         }
 
         if (const ValueType* v = GetMember(value, GetTypeString())) {
             type_ = 0;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    yggtype_ = 0;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             if (v->IsString())
                 AddType(*v);
             else if (v->IsArray())
@@ -5205,7 +5205,7 @@ public:
                     AddType(*itr);
         }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (parentKey)
 	  parentKey_.CopyFrom(*parentKey, *allocator_, true);
 	if (const ValueType* v = GetMember(value, GetAliasesString())) {
@@ -5224,7 +5224,7 @@ public:
 	  AssignSingularIfExist(*schemaDocument, p, value, GetAllowSingularString(), document, kSingular, true);
 	  if (allowSingularSchema_.schemas) {
 	    schemaDocument->CreateSchema(&allowSingularSchema_.schemas[0], p, value, document, id_, &kSingular);
-	    RAPIDJSON_ASSERT(!allowSingularSchema_.schemas[0]->allowSingularSchema_.schemas);
+	    YGGDRASIL_RAPIDJSON_ASSERT(!allowSingularSchema_.schemas[0]->allowSingularSchema_.schemas);
 	    // Reset types so that they are only evaluated within the nested
 	    // schema
 	    type_ = (1 << kTotalSchemaType) - 1;
@@ -5299,7 +5299,7 @@ public:
 	      allowWrappedSchema_.begin = validatorCount_;
 	      validatorCount_ += allowWrappedSchema_.count;
 	      singularPtr_ = q;
-	      RAPIDJSON_ASSERT(!allowWrappedSchema_.schemas[0]->allowWrappedSchema_.schemas);
+	      YGGDRASIL_RAPIDJSON_ASSERT(!allowWrappedSchema_.schemas[0]->allowWrappedSchema_.schemas);
 	      // Reset types so that they are only evaluated within the
 	      // nested schema
 	      type_ = (1 << kTotalSchemaType) - 1;
@@ -5319,7 +5319,7 @@ public:
 	    if (v->IsPythonClass() || v->IsString())
 	      class_.CopyFrom(*v, *allocator_, true);
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	
         if (const ValueType* v = GetMember(value, GetEnumString())) {
             if (v->IsArray() && v->Size() > 0) {
@@ -5332,9 +5332,9 @@ public:
                     itr->Accept(h);
                     enum_[enumCount_++] = h.GetHashCode();
                 }
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		CopyValueType(enumValues_, *v);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             }
         }
 
@@ -5352,7 +5352,7 @@ public:
                 validatorCount_++;
             }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    if ((yggtype_ & ((1 << kYggSchemaSchemaType) |
 			     (1 << kYggPythonInstanceSchemaType))) &&
 		!(type_ & (1 << kObjectSchemaType))) {
@@ -5366,7 +5366,7 @@ public:
 		validatorCount_++;
 	      }
 	    }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	}
 
         // Object
@@ -5415,12 +5415,12 @@ public:
             for (ConstMemberIterator itr = properties->MemberBegin(); itr != properties->MemberEnd(); ++itr) {
                 SizeType index;
                 if (FindPropertyIndex(itr->name, &index))
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		  {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
                     schemaDocument->CreateSchema(&properties_[index].schema, q.Append(itr->name, allocator_), itr->value, document, id_);
-#ifdef RAPIDJSON_YGGDRASIL
-		    RAPIDJSON_ASSERT(properties_[index].schema->aliases_.IsArray());
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+		    YGGDRASIL_RAPIDJSON_ASSERT(properties_[index].schema->aliases_.IsArray());
 		    if (properties_[index].schema->aliases_.Size() > 0) {
 		      hasAliases_ = true;
 		      for (typename SValue::ConstValueIterator itv = properties_[index].schema->aliases_.Begin(); itv != properties_[index].schema->aliases_.End(); ++itv)
@@ -5433,11 +5433,11 @@ public:
 						*allocator_);
 		    }
 		  }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             }
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    child_aliases_.CopyFrom(child_aliases, *allocator_, true);
-#endif // RAPIDJSON_YGGDRASIL	    
+#endif // DISABLE_YGGDRASIL_RAPIDJSON	    
 	}
 
         // PatternProperties not supported for open api 2.0 and 3.0
@@ -5451,9 +5451,9 @@ public:
                 new (&patternProperties_[patternPropertyCount_]) PatternProperty();
                 PointerType r = q.Append(itr->name, allocator_);
                 patternProperties_[patternPropertyCount_].pattern = CreatePattern(itr->name, schemaDocument, r);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		patternProperties_[patternPropertyCount_].patternStr.SetString(itr->name.GetString(), itr->name.GetStringLength(), *allocator_);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
                 schemaDocument->CreateSchema(&patternProperties_[patternPropertyCount_].schema, r, itr->value, document, id_);
                 patternPropertyCount_++;
             }
@@ -5501,10 +5501,10 @@ public:
                 additionalProperties_ = v->GetBool();
             else if (v->IsObject())
                 schemaDocument->CreateSchema(&additionalPropertiesSchema_, p.Append(GetAdditionalPropertiesString(), allocator_), *v, document, id_);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    additionalPropertiesExplicit_ = (v->IsBool());
 	    // && additionalProperties_);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         }
 
         AssignIfExist(minProperties_, value, GetMinPropertiesString());
@@ -5533,10 +5533,10 @@ public:
                 additionalItems_ = v->GetBool();
             else if (v->IsObject())
                 schemaDocument->CreateSchema(&additionalItemsSchema_, p.Append(GetAdditionalItemsString(), allocator_), *v, document, id_);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    additionalItemsExplicit_ = (v->IsBool());
 	    // && additionalItems_);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         }
 
         AssignIfExist(uniqueItems_, value, GetUniqueItemsString());
@@ -5546,14 +5546,14 @@ public:
         AssignIfExist(maxLength_, value, GetMaxLengthString());
 
         if (const ValueType* v = GetMember(value, GetPatternString()))
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	  {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             pattern_ = CreatePattern(*v, schemaDocument, p.Append(GetPatternString(), allocator_));
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    patternStr_.CopyFrom(*v, *allocator_, true);
 	  }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
         // Number
         if (const ValueType* v = GetMember(value, GetMinimumString()))
@@ -5573,18 +5573,18 @@ public:
 
         // Default
         if (const ValueType* v = GetMember(value, GetDefaultValueString()))
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	  {
 	    defaultSet_ = true;
 	    default_.CopyFrom(*v, *allocator_, true);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             if (v->IsString())
                 defaultValueLength_ = v->GetStringLength();
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	  }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	// Yggdrasil properties
 	if (const ValueType* v = GetMember(value, GetSubTypeString())) {
 	  subtype_ = 0;
@@ -5640,7 +5640,7 @@ public:
 	    AssignSharedProperties(pullProperties);
 	}
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
         // ReadOnly - open api only (until draft 7 supported)
         // WriteOnly - open api 3 only (until draft 7 supported)
@@ -5660,7 +5660,7 @@ public:
                 AddType(GetNullString());
         }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (schemaDocument) {
 	  SizeType externalCount = 0;
 	  if (allOf_.schemas) externalCount++;
@@ -5670,7 +5670,7 @@ public:
 	  if (externalCount == value.MemberCount())
 	    flags_ |= (1 << kNoBaseFlag);
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	
     }
 
@@ -5687,21 +5687,21 @@ public:
             AllocatorType::Free(patternProperties_);
         }
         AllocatorType::Free(itemsTuple_);
-#if RAPIDJSON_SCHEMA_HAS_REGEX
+#if YGGDRASIL_RAPIDJSON_SCHEMA_HAS_REGEX
         if (pattern_) {
             pattern_->~RegexType();
             AllocatorType::Free(pattern_);
         }
 #endif
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (sharedProperties_) {
 	  delete sharedProperties_;
 	  sharedProperties_ = NULL;
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     static unsigned NormPrecision(int prec, bool isComplex=false) {
       // This method handles backwards compatible precision that were in
       //   bits rather than bytes
@@ -6075,11 +6075,11 @@ public:
       const char letters_char[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
 	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
 	'w', 'x', 'y', 'z'};
-// #if RAPIDJSON_HAS_CXX11
+// #if YGGDRASIL_RAPIDJSON_HAS_CXX11
 //       const char32_t
-// #else // RAPIDJSON_HAS_CXX11
+// #else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 //       const wchar_t
-// #endif // RAPIDJSON_HAS_CXX11
+// #endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
       int32_t letters_wchar[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
 	'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
 	'w', 'x', 'y', 'z'};
@@ -6535,7 +6535,7 @@ public:
 #undef CASE_PREC_LONG_DOUBLE_
 #undef CASE_PREC_COMPLEX_LONG_DOUBLE_
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     const SValue& GetURI() const {
         return uri_;
@@ -6554,7 +6554,7 @@ public:
     }
 
     bool BeginValue(Context& context) const {
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::BeginValue");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::BeginValue");
         if (context.inArray) {
             if (uniqueItems_)
                 context.valueUniqueness = true;
@@ -6574,20 +6574,20 @@ public:
                     context.valueSchema = typeless_;
                     // Must bump arrayElementIndex for when kValidateContinueOnErrorFlag is set
                     context.arrayElementIndex++;
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalItems);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalItems);
                 }
             }
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    else if (additionalItemsSchema_) {
 	      context.valueSchema = additionalItemsSchema_;
 	    }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             else
                 context.valueSchema = typeless_;
 
             context.arrayElementIndex++;
         }
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         if (context.inArray) {
 	    if (itemsList_) {
 	        context.valuePointer = context.schemaPointerAbs.Append(GetItemsString(), allocator_);
@@ -6602,22 +6602,22 @@ public:
 	    }
 	}
 	if (hasAliases_) {
-	  RAPIDJSON_ASSERT(child_aliases_.IsObject());
+	  YGGDRASIL_RAPIDJSON_ASSERT(child_aliases_.IsObject());
 	  for (typename SValue::ConstMemberIterator a = child_aliases_.MemberBegin(); a != child_aliases_.MemberEnd(); a++) {
 	    for (typename SValue::ConstMemberIterator b = a + 1; b != child_aliases_.MemberEnd(); b++) {
 	      if ((a->name == b->name) && (a->value != b->value)) {
 		context.error_handler.ConflictingAliases(a->name, a->value, b->value);
-		RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorConflictingAliases);
+		YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorConflictingAliases);
 	      }
 	    }
 	  }
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         return true;
     }
 
-    RAPIDJSON_FORCEINLINE bool EndValue(Context& context) const {
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::EndValue");
+    YGGDRASIL_RAPIDJSON_FORCEINLINE bool EndValue(Context& context) const {
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::EndValue");
         // Only check pattern properties if we have validators
         if (context.patternPropertiesValidatorCount > 0) {
             bool otherValid = false;
@@ -6635,22 +6635,22 @@ public:
             if (context.objectPatternValidatorType == Context::kPatternValidatorOnly) {
                 if (!patternValid) {
                     context.error_handler.PropertyViolations(context.patternPropertiesValidators, count);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPatternProperties);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPatternProperties);
                 }
             }
             else if (context.objectPatternValidatorType == Context::kPatternValidatorWithProperty) {
                 if (!patternValid || !otherValid) {
                     context.error_handler.PropertyViolations(context.patternPropertiesValidators, count + 1);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPatternProperties);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPatternProperties);
                 }
             }
             else if (!patternValid && !otherValid) { // kPatternValidatorWithAdditionalProperty)
                 context.error_handler.PropertyViolations(context.patternPropertiesValidators, count + 1);
-                RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPatternProperties);
+                YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPatternProperties);
             }
         }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         // Only check other schemas if we have validators
         if (context.otherValidatorCount > 0) {
             bool explicitValid = false;
@@ -6671,25 +6671,25 @@ public:
 		context.objectOtherValidatorType == Context::kOtherValidatorItemsOnly) {
                 if (!otherValid) {
                     context.error_handler.PropertyViolations(context.otherValidators, count);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubschemas);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubschemas);
                 }
             }
             else if (context.objectOtherValidatorType == Context::kOtherValidatorPropertiesWithExplicit) {
                 if (!otherValid || !explicitValid) {
                     context.error_handler.PropertyViolations(context.otherValidators, count + 1);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubschemas);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubschemas);
                 }
             }
 	    else if (context.objectOtherValidatorType == Context::kOtherValidatorPropertiesWithAdditional ||
 		     context.objectOtherValidatorType == Context::kOtherValidatorItemsWithAdditional) {
 	        if (!otherValid && !explicitValid) {
 		    context.error_handler.PropertyViolations(context.otherValidators, count + 1);
-		    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubschemas);
+		    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubschemas);
 		}
 	    }
 	}
 	    
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	
         // For enums only check if we have a hasher
         if (enum_ && context.hasher) {
@@ -6697,12 +6697,12 @@ public:
             for (SizeType i = 0; i < enumCount_; i++)
                 if (enum_[i] == h)
                     goto foundEnum;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
             context.error_handler.DisallowedValueEnum(enumValues_);
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
             context.error_handler.DisallowedValue(kValidateErrorEnum);
-#endif // RAPIDJSON_YGGDRASIL
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorEnum);
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorEnum);
             foundEnum:;
         }
 
@@ -6712,7 +6712,7 @@ public:
                 for (SizeType i = allOf_.begin; i < allOf_.begin + allOf_.count; i++)
                     if (!context.validators[i]->IsValid()) {
                         context.error_handler.NotAllOf(&context.validators[allOf_.begin], allOf_.count);
-                        RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAllOf);
+                        YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAllOf);
                     }
 
             if (anyOf_.schemas) {
@@ -6720,7 +6720,7 @@ public:
                     if (context.validators[i]->IsValid())
                         goto foundAny;
                 context.error_handler.NoneOf(&context.validators[anyOf_.begin], anyOf_.count);
-                RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAnyOf);
+                YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAnyOf);
                 foundAny:;
             }
 
@@ -6731,7 +6731,7 @@ public:
                     if (context.validators[i]->IsValid()) {
                         if (oneValid) {
                             context.error_handler.MultipleOneOf(firstMatch, i - oneOf_.begin);
-                            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorOneOfMatch);
+                            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorOneOfMatch);
                         } else {
                             oneValid = true;
                             firstMatch = i - oneOf_.begin;
@@ -6739,33 +6739,33 @@ public:
                     }
                 if (!oneValid) {
                     context.error_handler.NotOneOf(&context.validators[oneOf_.begin], oneOf_.count);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorOneOf);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorOneOf);
                 }
             }
 
             if (not_ && context.validators[notValidatorIndex_]->IsValid()) {
                 context.error_handler.Disallowed();
-                RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorNot);
+                YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorNot);
             }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    if (metaschema_ && !context.validators[metaschemaValidatorIndex_]->IsValid()) {
 	      ValidateErrorCode code = kValidateErrorInvalidSchema;
 	      context.error_handler.InvalidSchema(code, context.validators[metaschemaValidatorIndex_]);
-	      RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+	      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(code);
 	    }
 
 	    if (instance_ && !context.validators[instanceValidatorIndex_]->IsValid()) {
 	      ValidateErrorCode code = kValidateErrorInvalidSchema;
 	      context.error_handler.InvalidSchema(code, context.validators[instanceValidatorIndex_]);
-	      RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+	      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(code);
 	    }
 
 	    if (allowSingularSchema_.schemas) {
 	      if (!((context.validators[allowSingularSchema_.begin]->IsValid()) ||
 		    (context.validators[allowSingularSchema_.begin + 1]->IsValid()))) {
 		ValidateErrorCode code = context.error_handler.NotSingularItem(&context.validators[allowSingularSchema_.begin]);
-		RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+		YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(code);
 	      }
 	    }
 
@@ -6773,7 +6773,7 @@ public:
 	      if (!((context.validators[allowWrappedSchema_.begin]->IsValid()) ||
 		    (context.validators[allowWrappedSchema_.begin + 1]->IsValid()))) {
 		ValidateErrorCode code = context.error_handler.NotWrappedItem(&context.validators[allowWrappedSchema_.begin]);
-		RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+		YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(code);
 	      }
 	    }
 
@@ -6884,24 +6884,24 @@ public:
 		  context.error_handler.AddWarnings(&context.validators[i], 1);
 		  break;
 		}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	    
         }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (deprecated_.IsBool() && deprecated_.GetBool()) {
 	  context.error_handler.DeprecationWarning();
-	  RAPIDJSON_INVALID_KEYWORD_WARNING(kDeprecatedWarning);
+	  YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_WARNING(kDeprecatedWarning);
 	} else if (deprecated_.IsString()) {
 	  context.error_handler.DeprecationWarning(&deprecated_);
-	  RAPIDJSON_INVALID_KEYWORD_WARNING(kDeprecatedWarning);
+	  YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_WARNING(kDeprecatedWarning);
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	
         return true;
     }
   
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
   bool RequiresPython() const {
     if (!class_.IsNull() || isMetaschema() ||
@@ -6935,7 +6935,7 @@ public:
     return false;
   }
 
-#define RAPIDJSON_NORMALIZER_BASE_(method, arg, cleanup)		\
+#define YGGDRASIL_RAPIDJSON_NORMALIZER_BASE_(method, arg, cleanup)		\
   NormalizerContext<typename Context::NormalizedDocumentType> __normalizer_context(context.normalized);	\
   if (__normalizer_context.enabled()) {					\
     if (!context.normalized->Base ## method arg) {			\
@@ -6947,86 +6947,86 @@ public:
       return true;							\
     }									\
   }
-#define RAPIDJSON_NORMALIZER_NOARG_(method)				\
-  RAPIDJSON_NORMALIZER_BASE_(method, (context, *this), )
-#define RAPIDJSON_NORMALIZER_(method, ...)				\
-  RAPIDJSON_NORMALIZER_BASE_(method, (context, *this, __VA_ARGS__), )
-#define RAPIDJSON_NORMALIZER_CLEANUP_(method, cleanup, ...)		\
-  RAPIDJSON_NORMALIZER_BASE_(method, (context, *this, __VA_ARGS__), cleanup)
+#define YGGDRASIL_RAPIDJSON_NORMALIZER_NOARG_(method)				\
+  YGGDRASIL_RAPIDJSON_NORMALIZER_BASE_(method, (context, *this), )
+#define YGGDRASIL_RAPIDJSON_NORMALIZER_(method, ...)				\
+  YGGDRASIL_RAPIDJSON_NORMALIZER_BASE_(method, (context, *this, __VA_ARGS__), )
+#define YGGDRASIL_RAPIDJSON_NORMALIZER_CLEANUP_(method, cleanup, ...)		\
+  YGGDRASIL_RAPIDJSON_NORMALIZER_BASE_(method, (context, *this, __VA_ARGS__), cleanup)
 #else
-#define RAPIDJSON_NORMALIZER_BASE_(method, arg)	 \
+#define YGGDRASIL_RAPIDJSON_NORMALIZER_BASE_(method, arg)	 \
   {}
-#define RAPIDJSON_NORMALIZER_NOARG_(method)	\
+#define YGGDRASIL_RAPIDJSON_NORMALIZER_NOARG_(method)	\
   {}
-#define RAPIDJSON_NORMALIZER_(method, ...)       \
+#define YGGDRASIL_RAPIDJSON_NORMALIZER_(method, ...)       \
   {}
-#define RAPIDJSON_NORMALIZER_CLEANUP_(method, cleanup, ...)	\
+#define YGGDRASIL_RAPIDJSON_NORMALIZER_CLEANUP_(method, cleanup, ...)	\
   {}
-#endif // RAPIDJSON_YGGDRASIL  
+#endif // DISABLE_YGGDRASIL_RAPIDJSON  
 
     bool Null(Context& context) const {
-        RAPIDJSON_NORMALIZER_NOARG_(Null);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Null");
+        YGGDRASIL_RAPIDJSON_NORMALIZER_NOARG_(Null);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Null");
         if (!(type_ & (1 << kNullSchemaType))) {
             DisallowedType(context, GetNullString());
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
         return CreateParallelValidator(context);
     }
 
     bool Bool(Context& context, bool b) const {
-        RAPIDJSON_NORMALIZER_(Bool, b);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Bool", b);
+        YGGDRASIL_RAPIDJSON_NORMALIZER_(Bool, b);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Bool", b);
         if (!CheckBool(context, b))
             return false;
         return CreateParallelValidator(context);
     }
 
     bool Int(Context& context, int i) const {
-        RAPIDJSON_NORMALIZER_(Int, i);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Int", (int64_t)i);
+        YGGDRASIL_RAPIDJSON_NORMALIZER_(Int, i);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Int", (int64_t)i);
         if (!CheckInt(context, i))
             return false;
         return CreateParallelValidator(context);
     }
 
     bool Uint(Context& context, unsigned u) const {
-        RAPIDJSON_NORMALIZER_(Uint, u);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Uint", (uint64_t)u);
+        YGGDRASIL_RAPIDJSON_NORMALIZER_(Uint, u);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Uint", (uint64_t)u);
         if (!CheckUint(context, u))
             return false;
         return CreateParallelValidator(context);
     }
 
     bool Int64(Context& context, int64_t i) const {
-        RAPIDJSON_NORMALIZER_(Int64, i);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Int64", i);
+        YGGDRASIL_RAPIDJSON_NORMALIZER_(Int64, i);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Int64", i);
         if (!CheckInt(context, i))
             return false;
         return CreateParallelValidator(context);
     }
 
     bool Uint64(Context& context, uint64_t u) const {
-        RAPIDJSON_NORMALIZER_(Uint64, u);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Uint64", u);
+        YGGDRASIL_RAPIDJSON_NORMALIZER_(Uint64, u);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Uint64", u);
         if (!CheckUint(context, u))
             return false;
         return CreateParallelValidator(context);
     }
 
     bool Double(Context& context, double d) const {
-        RAPIDJSON_NORMALIZER_(Double, d);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Double", d);
-#ifdef RAPIDJSON_YGGDRASIL
+        YGGDRASIL_RAPIDJSON_NORMALIZER_(Double, d);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Double", d);
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if ((yggtype_ & (1 << kYggScalarSchemaType))) {
 	  if (!(CheckScalar(context, GetFloatSubTypeString(), ValueType(8))))
 	    return false;
 	} else if (!(type_ & (1 << kNumberSchemaType))) {
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
 	if (!(type_ & (1 << kNumberSchemaType))) {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             DisallowedType(context, GetNumberString());
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
 
         if (!minimum_.IsNull() && !CheckDoubleMinimum(context, d))
@@ -7042,26 +7042,26 @@ public:
     }
 
     bool String(Context& context, const Ch* str, SizeType length, bool copy) const {
-        RAPIDJSON_NORMALIZER_(String, str, length, copy);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::String", str);
+        YGGDRASIL_RAPIDJSON_NORMALIZER_(String, str, length, copy);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::String", str);
 	(void)copy;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         if (!((type_ & (1 << kStringSchemaType)) ||
 	      (yggtype_ & ((1 << kYggPythonClassSchemaType) |
 			   (1 << kYggPythonFunctionSchemaType))) ||
 	      ((yggtype_ & (1 << kYggScalarSchemaType)) &&
 	       (subtype_ & (1 << kYggStringSchemaSubType))))) {
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
         if (!(type_ & (1 << kStringSchemaType))) {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             DisallowedType(context, GetStringString());
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
 
         if (!CheckString(context, str, length))
           return false;
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if ((yggtype_ & ((1 << kYggPythonClassSchemaType) |
 			 (1 << kYggPythonFunctionSchemaType))) &&
 	    !(type_ & (1 << kStringSchemaType))) {
@@ -7073,12 +7073,12 @@ public:
 	  if (!CheckPrecision(context, &actual, true))
 	    return false;
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
         return CreateParallelValidator(context);
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
   template <typename YggSchemaValueType>
   bool YggdrasilString(Context& context, const Ch* str, SizeType length, bool copy, const YggSchemaValueType& schema0) const {
     YggSchemaValueType* schema = const_cast<YggSchemaValueType*>(&schema0);
@@ -7089,10 +7089,10 @@ public:
     }
 #define CLEANUP_				\
     if (context.normalized) delete schema
-    RAPIDJSON_ASSERT(schema->IsObject());
-    RAPIDJSON_NORMALIZER_CLEANUP_(YggdrasilString, CLEANUP_;, str, length, copy, *schema);
+    YGGDRASIL_RAPIDJSON_ASSERT(schema->IsObject());
+    YGGDRASIL_RAPIDJSON_NORMALIZER_CLEANUP_(YggdrasilString, CLEANUP_;, str, length, copy, *schema);
     typename YggSchemaValueType::ConstMemberIterator vs = schema->FindMember(GetTypeString());
-    RAPIDJSON_ASSERT(vs != schema->MemberEnd());
+    YGGDRASIL_RAPIDJSON_ASSERT(vs != schema->MemberEnd());
     if (vs == schema->MemberEnd())
       return false;
     typename ValueType::AllocatorType allocator;
@@ -7173,7 +7173,7 @@ public:
       if ((!x.read(ss)) || (!x.is_valid())) {
 	CLEANUP_;
 	context.error_handler.InvalidPly(str, length);
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPly);
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPly);
       }
     } else if ((v == GetObjString()) &&
 	       (yggtype_ & (1 << kYggObjSchemaType))) {
@@ -7183,7 +7183,7 @@ public:
       if ((!x.read(ss)) || (!x.is_valid())) {
 	CLEANUP_;
 	context.error_handler.InvalidObjWavefront(str, length);
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorObjWavefront);
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorObjWavefront);
       }
     } else if (v == GetStringString() &&
                (type_ & (1 << kStringSchemaType)) &&
@@ -7195,7 +7195,7 @@ public:
     } else {
       CLEANUP_;
       YggDisallowedType(context, v);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
     CLEANUP_;
 #undef CLEANUP_
@@ -7203,10 +7203,10 @@ public:
   }
   template <typename YggSchemaValueType>
   bool YggdrasilStartObject(Context& context, YggSchemaValueType& schema) const {
-    RAPIDJSON_ASSERT(schema.IsObject());
-    RAPIDJSON_NORMALIZER_(YggdrasilStartObject, schema);
+    YGGDRASIL_RAPIDJSON_ASSERT(schema.IsObject());
+    YGGDRASIL_RAPIDJSON_NORMALIZER_(YggdrasilStartObject, schema);
     const typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetTypeString());
-    RAPIDJSON_ASSERT(vs != schema.MemberEnd());
+    YGGDRASIL_RAPIDJSON_ASSERT(vs != schema.MemberEnd());
     const ValueType v(vs->value.GetString(), vs->value.GetStringLength());
     if ((isMetaschema() &&
 	 !((v == GetPythonInstanceString()) || (v == GetSchemaTypeString()))) ||
@@ -7216,39 +7216,39 @@ public:
 	   (v == GetSchemaTypeString() &&
 	    yggtype_ & (1 << kYggSchemaSchemaType))))) {
       YggDisallowedType(context, v);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
     }
     return StartObject(context, true);
   }
   bool YggdrasilEndObject(Context& context, SizeType memberCount) const {
-    RAPIDJSON_NORMALIZER_(YggdrasilEndObject, memberCount);
+    YGGDRASIL_RAPIDJSON_NORMALIZER_(YggdrasilEndObject, memberCount);
     return EndObject(context, memberCount, true);
   }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     bool StartObject(Context& context, bool skip_normalize = false) const {
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::StartObject");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::StartObject");
         if (!skip_normalize) {
-	  RAPIDJSON_NORMALIZER_NOARG_(StartObject);
+	  YGGDRASIL_RAPIDJSON_NORMALIZER_NOARG_(StartObject);
 	}
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         if (!((type_ & (1 << kObjectSchemaType)) ||
 	      (yggtype_ & ((1 << kYggPythonInstanceSchemaType) |
 			   (1 << kYggSchemaSchemaType))))) {
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
         if (!(type_ & (1 << kObjectSchemaType))) {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             DisallowedType(context, GetObjectString());
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         if (hasDependencies_ || hasRequired_ || sharedProperties_ ||
 	    (properties_ && context.mode != Context::kValidationMode &&
 	     context.mode != Context::kNormalizationMode)) {
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
 	if (hasDependencies_ || hasRequired_) {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             context.propertyExist = static_cast<bool*>(context.factory.MallocState(sizeof(bool) * propertyCount_));
             std::memset(context.propertyExist, 0, sizeof(bool) * propertyCount_);
         }
@@ -7258,14 +7258,14 @@ public:
             context.patternPropertiesSchemas = static_cast<const SchemaType**>(context.factory.MallocState(sizeof(const SchemaType*) * count));
             context.patternPropertiesSchemaCount = 0;
             std::memset(context.patternPropertiesSchemas, 0, sizeof(SchemaType*) * count);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    context.patternPropertiesPointers = static_cast<PointerType*>(context.factory.MallocState(sizeof(PointerType) * count));
 	    for (SizeType i = 0; i < count; i++)
 	      new (&context.patternPropertiesPointers[i]) PointerType(allocator_);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (context.mode != Context::kValidationMode
 	    && context.mode != Context::kNormalizationMode
 	    && (patternProperties_ || additionalPropertiesSchema_)) {
@@ -7285,101 +7285,101 @@ public:
 	  for (SizeType i = 0; i < count; i++)
 	    new (&context.otherPointers[i]) PointerType(allocator_);
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
         return CreateParallelValidator(context);
     }
 
     bool Key(Context& context, const Ch* str, SizeType len, bool copy) const {
-        RAPIDJSON_NORMALIZER_(Key, str, len, copy);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Key", str);
+        YGGDRASIL_RAPIDJSON_NORMALIZER_(Key, str, len, copy);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::Key", str);
 	(void)copy;
-#ifdef RAPIDJSON_YGGDRASIL
-	RAPIDJSON_ASSERT(child_aliases_.IsObject());
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+	YGGDRASIL_RAPIDJSON_ASSERT(child_aliases_.IsObject());
 	SValue dest;
 	if (child_aliases_.HasMember(str)) {
 	  SValue orig(str, len, *allocator_);
 	  if (!follow_aliases_(child_aliases_, orig, &dest, *allocator_)) {
 	    context.error_handler.CircularAlias(dest);
-	    RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
+	    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kNormalizeErrorCircularAlias);
 	  }
 	  str = dest.GetString();
 	  len = dest.GetStringLength();
 	  copy = true;
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         if (patternProperties_) {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	  PointerType pPattern = context.schemaPointerAbs.Append(SchemaType::GetPatternPropertiesString(),
 								 allocator_);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             context.patternPropertiesSchemaCount = 0;
             for (SizeType i = 0; i < patternPropertyCount_; i++)
                 if (patternProperties_[i].pattern && IsPatternMatch(patternProperties_[i].pattern, str, len)) {
                     context.patternPropertiesSchemas[context.patternPropertiesSchemaCount++] = patternProperties_[i].schema;
                     context.valueSchema = typeless_;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		    context.patternPropertiesPointers[context.patternPropertiesSchemaCount - 1] = pPattern.Append(i, allocator_);
 		    if (context.patternPropertyExist)
 		        context.patternPropertyExist[i] = true;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
                 }
         }
 
         SizeType index  = 0;
         if (FindPropertyIndex(ValueType(str, len).Move(), &index)) {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    PointerType pProp = context.schemaPointerAbs.Append(SchemaType::GetPropertiesString(), allocator_).Append(str, len, allocator_);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             if (context.patternPropertiesSchemaCount > 0) {
                 context.patternPropertiesSchemas[context.patternPropertiesSchemaCount++] = properties_[index].schema;
                 context.valueSchema = typeless_;
                 context.valuePatternValidatorType = Context::kPatternValidatorWithProperty;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		context.patternPropertiesPointers[context.patternPropertiesSchemaCount - 1] = pProp;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             }
             else
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	      {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
                 context.valueSchema = properties_[index].schema;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		context.valuePointer = pProp;
 	      }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
             if (context.propertyExist)
                 context.propertyExist[index] = true;
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    if (!SchemaFoundIterationKey(context))
 	      return false;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             return true;
         }
 
         if (additionalPropertiesSchema_) {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    PointerType pProp = context.schemaPointerAbs.Append(SchemaType::GetAdditionalPropertiesString(), allocator_);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             if (context.patternPropertiesSchemaCount > 0) {
                 context.patternPropertiesSchemas[context.patternPropertiesSchemaCount++] = additionalPropertiesSchema_;
                 context.valueSchema = typeless_;
                 context.valuePatternValidatorType = Context::kPatternValidatorWithAdditionalProperty;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		context.patternPropertiesPointers[context.patternPropertiesSchemaCount - 1] = pProp;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             }
             else
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	      {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
                 context.valueSchema = additionalPropertiesSchema_;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		context.valuePointer = pProp;
 	      }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             return true;
         }
         else if (additionalProperties_) {
@@ -7388,18 +7388,18 @@ public:
         }
 
         if (context.patternPropertiesSchemaCount == 0) { // patternProperties are not additional properties
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    if (context.normalized &&
 		sharedProperties_ &&
 		sharedProperties_->isSrc(context.schemaPointerAbs, str, len)) {
 	        context.valueSchema = typeless_;
 		return true;
 	    }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             // Must set valueSchema for when kValidateContinueOnErrorFlag is set, else reports spurious type error
             context.valueSchema = typeless_;
             context.error_handler.DisallowedProperty(str, len);
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
         }
 
         return true;
@@ -7408,9 +7408,9 @@ public:
     bool EndObject(Context& context, SizeType memberCount,
 		   bool skip_normalize = false) const {
         if (!skip_normalize) {
-	  RAPIDJSON_NORMALIZER_(EndObject, memberCount);
+	  YGGDRASIL_RAPIDJSON_NORMALIZER_(EndObject, memberCount);
 	}
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::EndObject");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::EndObject");
         if (hasRequired_) {
             context.error_handler.StartMissingProperties();
             for (SizeType index = 0; index < propertyCount_; index++)
@@ -7418,17 +7418,17 @@ public:
                     if (properties_[index].schema->defaultValueLength_ == 0 )
                         context.error_handler.AddMissingProperty(properties_[index].name);
             if (context.error_handler.EndMissingProperties())
-                RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
+                YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
         }
 
         if (memberCount < minProperties_) {
             context.error_handler.TooFewProperties(memberCount, minProperties_);
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinProperties);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinProperties);
         }
 
         if (memberCount > maxProperties_) {
             context.error_handler.TooManyProperties(memberCount, maxProperties_);
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxProperties);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxProperties);
         }
 
         if (hasDependencies_) {
@@ -7451,24 +7451,24 @@ public:
                 }
             }
             if (context.error_handler.EndDependencyErrors())
-                RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorDependencies);
+                YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorDependencies);
         }
 
         return true;
     }
 
     bool StartArray(Context& context) const {
-        RAPIDJSON_NORMALIZER_NOARG_(StartArray);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::StartArray");
+        YGGDRASIL_RAPIDJSON_NORMALIZER_NOARG_(StartArray);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::StartArray");
         context.arrayElementIndex = 0;
         context.inArray = true;  // Ensure we note that we are in an array
 
         if (!(type_ & (1 << kArraySchemaType))) {
             DisallowedType(context, GetArrayString());
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if ((itemsTuple_ || itemsList_ || additionalItemsSchema_) &&
 	    context.mode != Context::kValidationMode &&
 	    context.mode != Context::kNormalizationMode) {
@@ -7480,32 +7480,32 @@ public:
 	  for (SizeType i = 0; i < count; i++)
 	    new (&context.otherPointers[i]) PointerType(allocator_);
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	
         return CreateParallelValidator(context);
     }
 
     bool EndArray(Context& context, SizeType elementCount) const {
-        RAPIDJSON_NORMALIZER_(EndArray, elementCount);
-        RAPIDJSON_SCHEMA_PRINT(Method, "Schema::EndArray");
+        YGGDRASIL_RAPIDJSON_NORMALIZER_(EndArray, elementCount);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::EndArray");
         context.inArray = false;
 
         if (elementCount < minItems_) {
             context.error_handler.TooFewItems(elementCount, minItems_);
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinItems);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinItems);
         }
 
         if (elementCount > maxItems_) {
             context.error_handler.TooManyItems(elementCount, maxItems_);
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxItems);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxItems);
         }
 
         return true;
     }
 
-#undef RAPIDJSON_NORMALIZER_
-#undef RAPIDJSON_NORMALIZER_NOARG_
-#undef RAPIDJSON_NORMALIZER_BASE_
+#undef YGGDRASIL_RAPIDJSON_NORMALIZER_
+#undef YGGDRASIL_RAPIDJSON_NORMALIZER_NOARG_
+#undef YGGDRASIL_RAPIDJSON_NORMALIZER_BASE_
 
     static const ValueType& GetValidateErrorKeyword(ValidateErrorCode validateErrorCode) {
         switch (validateErrorCode) {
@@ -7540,7 +7540,7 @@ public:
             case kValidateErrorAnyOf:                   return GetAnyOfString();
             case kValidateErrorNot:                     return GetNotString();
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    case kValidateErrorRequiredSchema:          return GetRequiredString();
 	    case kValidateErrorSubType:                 return GetSubTypeString();
 	    case kValidateErrorPrecision:               return GetPrecisionString();
@@ -7555,13 +7555,13 @@ public:
 	    case kNormalizeErrorConflictingAliases:     return GetAliasesString();
 	    case kNormalizeErrorMergeConflict:          return GetNormalizationString();
 	    case kDeprecatedWarning:                    return GetDeprecatedString();
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	    case kValidateErrorGeneric:                 return GetGenericString();
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	    case kIncompatibleSchemas:                  return GetCompareString();
 	    case kValidateErrorMissingSubschema:        return GetSubschemasString();
   	    case kValidateErrorSubschemas:              return GetSubschemasString();
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             case kValidateErrorReadOnly:                return GetReadOnlyString();
             case kValidateErrorWriteOnly:               return GetWriteOnlyString();
 
@@ -7571,120 +7571,120 @@ public:
 
 
     // Generate functions for string literal according to Ch
-#define RAPIDJSON_STRING_(name, ...) \
+#define YGGDRASIL_RAPIDJSON_STRING_(name, ...) \
     static const ValueType& Get##name##String() {\
         static const Ch s[] = { __VA_ARGS__, '\0' };\
         static const ValueType v(s, static_cast<SizeType>(sizeof(s) / sizeof(Ch) - 1));\
         return v;\
     }
 
-    RAPIDJSON_STRING_(Null, 'n', 'u', 'l', 'l')
-    RAPIDJSON_STRING_(Boolean, 'b', 'o', 'o', 'l', 'e', 'a', 'n')
-    RAPIDJSON_STRING_(Object, 'o', 'b', 'j', 'e', 'c', 't')
-    RAPIDJSON_STRING_(Array, 'a', 'r', 'r', 'a', 'y')
-    RAPIDJSON_STRING_(String, 's', 't', 'r', 'i', 'n', 'g')
-    RAPIDJSON_STRING_(Number, 'n', 'u', 'm', 'b', 'e', 'r')
-    RAPIDJSON_STRING_(Integer, 'i', 'n', 't', 'e', 'g', 'e', 'r')
-    RAPIDJSON_STRING_(Type, 't', 'y', 'p', 'e')
-    RAPIDJSON_STRING_(Enum, 'e', 'n', 'u', 'm')
-    RAPIDJSON_STRING_(AllOf, 'a', 'l', 'l', 'O', 'f')
-    RAPIDJSON_STRING_(AnyOf, 'a', 'n', 'y', 'O', 'f')
-    RAPIDJSON_STRING_(OneOf, 'o', 'n', 'e', 'O', 'f')
-    RAPIDJSON_STRING_(Not, 'n', 'o', 't')
-    RAPIDJSON_STRING_(Properties, 'p', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
-    RAPIDJSON_STRING_(Required, 'r', 'e', 'q', 'u', 'i', 'r', 'e', 'd')
-    RAPIDJSON_STRING_(Dependencies, 'd', 'e', 'p', 'e', 'n', 'd', 'e', 'n', 'c', 'i', 'e', 's')
-    RAPIDJSON_STRING_(PatternProperties, 'p', 'a', 't', 't', 'e', 'r', 'n', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
-    RAPIDJSON_STRING_(AdditionalProperties, 'a', 'd', 'd', 'i', 't', 'i', 'o', 'n', 'a', 'l', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
-    RAPIDJSON_STRING_(MinProperties, 'm', 'i', 'n', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
-    RAPIDJSON_STRING_(MaxProperties, 'm', 'a', 'x', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
-    RAPIDJSON_STRING_(Items, 'i', 't', 'e', 'm', 's')
-    RAPIDJSON_STRING_(MinItems, 'm', 'i', 'n', 'I', 't', 'e', 'm', 's')
-    RAPIDJSON_STRING_(MaxItems, 'm', 'a', 'x', 'I', 't', 'e', 'm', 's')
-    RAPIDJSON_STRING_(AdditionalItems, 'a', 'd', 'd', 'i', 't', 'i', 'o', 'n', 'a', 'l', 'I', 't', 'e', 'm', 's')
-    RAPIDJSON_STRING_(UniqueItems, 'u', 'n', 'i', 'q', 'u', 'e', 'I', 't', 'e', 'm', 's')
-    RAPIDJSON_STRING_(MinLength, 'm', 'i', 'n', 'L', 'e', 'n', 'g', 't', 'h')
-    RAPIDJSON_STRING_(MaxLength, 'm', 'a', 'x', 'L', 'e', 'n', 'g', 't', 'h')
-    RAPIDJSON_STRING_(Pattern, 'p', 'a', 't', 't', 'e', 'r', 'n')
-    RAPIDJSON_STRING_(Minimum, 'm', 'i', 'n', 'i', 'm', 'u', 'm')
-    RAPIDJSON_STRING_(Maximum, 'm', 'a', 'x', 'i', 'm', 'u', 'm')
-    RAPIDJSON_STRING_(ExclusiveMinimum, 'e', 'x', 'c', 'l', 'u', 's', 'i', 'v', 'e', 'M', 'i', 'n', 'i', 'm', 'u', 'm')
-    RAPIDJSON_STRING_(ExclusiveMaximum, 'e', 'x', 'c', 'l', 'u', 's', 'i', 'v', 'e', 'M', 'a', 'x', 'i', 'm', 'u', 'm')
-    RAPIDJSON_STRING_(MultipleOf, 'm', 'u', 'l', 't', 'i', 'p', 'l', 'e', 'O', 'f')
-    RAPIDJSON_STRING_(DefaultValue, 'd', 'e', 'f', 'a', 'u', 'l', 't')
-    RAPIDJSON_STRING_(Schema, '$', 's', 'c', 'h', 'e', 'm', 'a')
-    RAPIDJSON_STRING_(Ref, '$', 'r', 'e', 'f')
-    RAPIDJSON_STRING_(Id, 'i', 'd')
-    RAPIDJSON_STRING_(Swagger, 's', 'w', 'a', 'g', 'g', 'e', 'r')
-    RAPIDJSON_STRING_(OpenApi, 'o', 'p', 'e', 'n', 'a', 'p', 'i')
-    RAPIDJSON_STRING_(ReadOnly, 'r', 'e', 'a', 'd', 'O', 'n', 'l', 'y')
-    RAPIDJSON_STRING_(WriteOnly, 'w', 'r', 'i', 't', 'e', 'O', 'n', 'l', 'y')
-    RAPIDJSON_STRING_(Nullable, 'n', 'u', 'l', 'l', 'a', 'b', 'l', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Null, 'n', 'u', 'l', 'l')
+    YGGDRASIL_RAPIDJSON_STRING_(Boolean, 'b', 'o', 'o', 'l', 'e', 'a', 'n')
+    YGGDRASIL_RAPIDJSON_STRING_(Object, 'o', 'b', 'j', 'e', 'c', 't')
+    YGGDRASIL_RAPIDJSON_STRING_(Array, 'a', 'r', 'r', 'a', 'y')
+    YGGDRASIL_RAPIDJSON_STRING_(String, 's', 't', 'r', 'i', 'n', 'g')
+    YGGDRASIL_RAPIDJSON_STRING_(Number, 'n', 'u', 'm', 'b', 'e', 'r')
+    YGGDRASIL_RAPIDJSON_STRING_(Integer, 'i', 'n', 't', 'e', 'g', 'e', 'r')
+    YGGDRASIL_RAPIDJSON_STRING_(Type, 't', 'y', 'p', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Enum, 'e', 'n', 'u', 'm')
+    YGGDRASIL_RAPIDJSON_STRING_(AllOf, 'a', 'l', 'l', 'O', 'f')
+    YGGDRASIL_RAPIDJSON_STRING_(AnyOf, 'a', 'n', 'y', 'O', 'f')
+    YGGDRASIL_RAPIDJSON_STRING_(OneOf, 'o', 'n', 'e', 'O', 'f')
+    YGGDRASIL_RAPIDJSON_STRING_(Not, 'n', 'o', 't')
+    YGGDRASIL_RAPIDJSON_STRING_(Properties, 'p', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(Required, 'r', 'e', 'q', 'u', 'i', 'r', 'e', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(Dependencies, 'd', 'e', 'p', 'e', 'n', 'd', 'e', 'n', 'c', 'i', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(PatternProperties, 'p', 'a', 't', 't', 'e', 'r', 'n', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(AdditionalProperties, 'a', 'd', 'd', 'i', 't', 'i', 'o', 'n', 'a', 'l', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(MinProperties, 'm', 'i', 'n', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(MaxProperties, 'm', 'a', 'x', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(Items, 'i', 't', 'e', 'm', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(MinItems, 'm', 'i', 'n', 'I', 't', 'e', 'm', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(MaxItems, 'm', 'a', 'x', 'I', 't', 'e', 'm', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(AdditionalItems, 'a', 'd', 'd', 'i', 't', 'i', 'o', 'n', 'a', 'l', 'I', 't', 'e', 'm', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(UniqueItems, 'u', 'n', 'i', 'q', 'u', 'e', 'I', 't', 'e', 'm', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(MinLength, 'm', 'i', 'n', 'L', 'e', 'n', 'g', 't', 'h')
+    YGGDRASIL_RAPIDJSON_STRING_(MaxLength, 'm', 'a', 'x', 'L', 'e', 'n', 'g', 't', 'h')
+    YGGDRASIL_RAPIDJSON_STRING_(Pattern, 'p', 'a', 't', 't', 'e', 'r', 'n')
+    YGGDRASIL_RAPIDJSON_STRING_(Minimum, 'm', 'i', 'n', 'i', 'm', 'u', 'm')
+    YGGDRASIL_RAPIDJSON_STRING_(Maximum, 'm', 'a', 'x', 'i', 'm', 'u', 'm')
+    YGGDRASIL_RAPIDJSON_STRING_(ExclusiveMinimum, 'e', 'x', 'c', 'l', 'u', 's', 'i', 'v', 'e', 'M', 'i', 'n', 'i', 'm', 'u', 'm')
+    YGGDRASIL_RAPIDJSON_STRING_(ExclusiveMaximum, 'e', 'x', 'c', 'l', 'u', 's', 'i', 'v', 'e', 'M', 'a', 'x', 'i', 'm', 'u', 'm')
+    YGGDRASIL_RAPIDJSON_STRING_(MultipleOf, 'm', 'u', 'l', 't', 'i', 'p', 'l', 'e', 'O', 'f')
+    YGGDRASIL_RAPIDJSON_STRING_(DefaultValue, 'd', 'e', 'f', 'a', 'u', 'l', 't')
+    YGGDRASIL_RAPIDJSON_STRING_(Schema, '$', 's', 'c', 'h', 'e', 'm', 'a')
+    YGGDRASIL_RAPIDJSON_STRING_(Ref, '$', 'r', 'e', 'f')
+    YGGDRASIL_RAPIDJSON_STRING_(Id, 'i', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(Swagger, 's', 'w', 'a', 'g', 'g', 'e', 'r')
+    YGGDRASIL_RAPIDJSON_STRING_(OpenApi, 'o', 'p', 'e', 'n', 'a', 'p', 'i')
+    YGGDRASIL_RAPIDJSON_STRING_(ReadOnly, 'r', 'e', 'a', 'd', 'O', 'n', 'l', 'y')
+    YGGDRASIL_RAPIDJSON_STRING_(WriteOnly, 'w', 'r', 'i', 't', 'e', 'O', 'n', 'l', 'y')
+    YGGDRASIL_RAPIDJSON_STRING_(Nullable, 'n', 'u', 'l', 'l', 'a', 'b', 'l', 'e')
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     // yggdrasil types and properties
-    RAPIDJSON_STRING_(Scalar, 's', 'c', 'a', 'l', 'a', 'r')
-    RAPIDJSON_STRING_(1DArray, '1', 'd', 'a', 'r', 'r', 'a', 'y')
-    RAPIDJSON_STRING_(NDArray, 'n', 'd', 'a', 'r', 'r', 'a', 'y')
-    RAPIDJSON_STRING_(PythonClass, 'c', 'l', 'a', 's', 's')
-    RAPIDJSON_STRING_(PythonFunction, 'f', 'u', 'n', 'c', 't', 'i', 'o', 'n')
-    RAPIDJSON_STRING_(PythonInstance, 'i', 'n', 's', 't', 'a', 'n', 'c', 'e')
-    RAPIDJSON_STRING_(Obj, 'o', 'b', 'j')
-    RAPIDJSON_STRING_(Ply, 'p', 'l', 'y')
-    RAPIDJSON_STRING_(Any, 'a', 'n', 'y')
-    RAPIDJSON_STRING_(SchemaType, 's', 'c', 'h', 'e', 'm', 'a')
+    YGGDRASIL_RAPIDJSON_STRING_(Scalar, 's', 'c', 'a', 'l', 'a', 'r')
+    YGGDRASIL_RAPIDJSON_STRING_(1DArray, '1', 'd', 'a', 'r', 'r', 'a', 'y')
+    YGGDRASIL_RAPIDJSON_STRING_(NDArray, 'n', 'd', 'a', 'r', 'r', 'a', 'y')
+    YGGDRASIL_RAPIDJSON_STRING_(PythonClass, 'c', 'l', 'a', 's', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(PythonFunction, 'f', 'u', 'n', 'c', 't', 'i', 'o', 'n')
+    YGGDRASIL_RAPIDJSON_STRING_(PythonInstance, 'i', 'n', 's', 't', 'a', 'n', 'c', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Obj, 'o', 'b', 'j')
+    YGGDRASIL_RAPIDJSON_STRING_(Ply, 'p', 'l', 'y')
+    YGGDRASIL_RAPIDJSON_STRING_(Any, 'a', 'n', 'y')
+    YGGDRASIL_RAPIDJSON_STRING_(SchemaType, 's', 'c', 'h', 'e', 'm', 'a')
     // for backward compat
-    RAPIDJSON_STRING_(Bytes, 'b', 'y', 't', 'e', 's')
-    RAPIDJSON_STRING_(Unicode, 'u', 'n', 'i', 'c', 'o', 'd', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Bytes, 'b', 'y', 't', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(Unicode, 'u', 'n', 'i', 'c', 'o', 'd', 'e')
     // props
-    RAPIDJSON_STRING_(SubType, 's', 'u', 'b', 't', 'y', 'p', 'e')
-    RAPIDJSON_STRING_(Precision, 'p', 'r', 'e', 'c', 'i', 's', 'i', 'o', 'n')
-    RAPIDJSON_STRING_(Units, 'u', 'n', 'i', 't', 's')
-    RAPIDJSON_STRING_(Length, 'l', 'e', 'n', 'g', 't', 'h')
-    RAPIDJSON_STRING_(Shape, 's', 'h', 'a', 'p', 'e')
-    RAPIDJSON_STRING_(NDim, 'n', 'd', 'i', 'm')
-    RAPIDJSON_STRING_(Encoding, 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g')
-    RAPIDJSON_STRING_(NullEncoding, 'n', 'u', 'l', 'l')
-    RAPIDJSON_STRING_(ASCIIEncoding, 'A', 'S', 'C', 'I', 'I')
-    RAPIDJSON_STRING_(UCS4Encoding, 'U', 'C', 'S', '4')
-    RAPIDJSON_STRING_(UTF8Encoding, 'U', 'T', 'F', '8')
-    RAPIDJSON_STRING_(UTF16Encoding, 'U', 'T', 'F', '1', '6')
-    RAPIDJSON_STRING_(UTF32Encoding, 'U', 'T', 'F', '3', '2')
-    RAPIDJSON_STRING_(Args, 'a', 'r', 'g', 's')
-    RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
-    RAPIDJSON_STRING_(Aliases, 'a', 'l', 'i', 'a', 's', 'e', 's')
-    RAPIDJSON_STRING_(AllowSingular, 'a', 'l', 'l', 'o', 'w', 'S', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
-    RAPIDJSON_STRING_(AllowWrapped, 'a', 'l', 'l', 'o', 'w', 'W', 'r', 'a', 'p', 'p', 'e', 'd')
-    RAPIDJSON_STRING_(Deprecated, 'd', 'e', 'p', 'r', 'e', 'c', 'a', 't', 'e', 'd')
-    RAPIDJSON_STRING_(PushProperties, 'p', 'u', 's', 'h', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
-    RAPIDJSON_STRING_(PullProperties, 'p', 'u', 'l', 'l', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(SubType, 's', 'u', 'b', 't', 'y', 'p', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Precision, 'p', 'r', 'e', 'c', 'i', 's', 'i', 'o', 'n')
+    YGGDRASIL_RAPIDJSON_STRING_(Units, 'u', 'n', 'i', 't', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(Length, 'l', 'e', 'n', 'g', 't', 'h')
+    YGGDRASIL_RAPIDJSON_STRING_(Shape, 's', 'h', 'a', 'p', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(NDim, 'n', 'd', 'i', 'm')
+    YGGDRASIL_RAPIDJSON_STRING_(Encoding, 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g')
+    YGGDRASIL_RAPIDJSON_STRING_(NullEncoding, 'n', 'u', 'l', 'l')
+    YGGDRASIL_RAPIDJSON_STRING_(ASCIIEncoding, 'A', 'S', 'C', 'I', 'I')
+    YGGDRASIL_RAPIDJSON_STRING_(UCS4Encoding, 'U', 'C', 'S', '4')
+    YGGDRASIL_RAPIDJSON_STRING_(UTF8Encoding, 'U', 'T', 'F', '8')
+    YGGDRASIL_RAPIDJSON_STRING_(UTF16Encoding, 'U', 'T', 'F', '1', '6')
+    YGGDRASIL_RAPIDJSON_STRING_(UTF32Encoding, 'U', 'T', 'F', '3', '2')
+    YGGDRASIL_RAPIDJSON_STRING_(Args, 'a', 'r', 'g', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(Kwargs, 'k', 'w', 'a', 'r', 'g', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(Aliases, 'a', 'l', 'i', 'a', 's', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(AllowSingular, 'a', 'l', 'l', 'o', 'w', 'S', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
+    YGGDRASIL_RAPIDJSON_STRING_(AllowWrapped, 'a', 'l', 'l', 'o', 'w', 'W', 'r', 'a', 'p', 'p', 'e', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(Deprecated, 'd', 'e', 'p', 'r', 'e', 'c', 'a', 't', 'e', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(PushProperties, 'p', 'u', 's', 'h', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(PullProperties, 'p', 'u', 'l', 'l', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'i', 'e', 's')
     // Subtypes
-    RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'g')
-    RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
-    RAPIDJSON_STRING_(UintSubType, 'u', 'i', 'n', 't')
-    RAPIDJSON_STRING_(FloatSubType, 'f', 'l', 'o', 'a', 't')
-    RAPIDJSON_STRING_(ComplexSubType, 'c', 'o', 'm', 'p', 'l', 'e', 'x')
+    YGGDRASIL_RAPIDJSON_STRING_(StringSubType, 's', 't', 'r', 'i', 'n', 'g')
+    YGGDRASIL_RAPIDJSON_STRING_(IntSubType, 'i', 'n', 't')
+    YGGDRASIL_RAPIDJSON_STRING_(UintSubType, 'u', 'i', 'n', 't')
+    YGGDRASIL_RAPIDJSON_STRING_(FloatSubType, 'f', 'l', 'o', 'a', 't')
+    YGGDRASIL_RAPIDJSON_STRING_(ComplexSubType, 'c', 'o', 'm', 'p', 'l', 'e', 'x')
     // Normalization
-    RAPIDJSON_STRING_(Normalization, 'n', 'o', 'r', 'm', 'a', 'l', 'i', 'z', 'a', 't', 'i', 'o', 'n')
-    RAPIDJSON_STRING_(Bool, 'b', 'o', 'o', 'l')
-    RAPIDJSON_STRING_(Double, 'd', 'o', 'u', 'b', 'l', 'e')
-    RAPIDJSON_STRING_(Int, 'i', 'n', 't')
-    RAPIDJSON_STRING_(Uint, 'u', 'i', 'n', 't')
-    RAPIDJSON_STRING_(Int64, 'i', 'n', 't', '6', '4')
-    RAPIDJSON_STRING_(Uint64, 'u', 'i', 'n', 't', '6', '4')
-    RAPIDJSON_STRING_(YggdrasilObject, 'y', 'g', 'g', 'O', 'b', 'j', 'e', 'c', 't')
-    RAPIDJSON_STRING_(YggdrasilString, 'y', 'g', 'g', 'S', 't', 'r', 'i', 'n', 'g')
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-    RAPIDJSON_STRING_(Generic, 'g', 'e', 'n', 'e', 'r', 'i', 'c')
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-    RAPIDJSON_STRING_(Compare, 'c', 'o', 'm', 'p', 'a', 'r', 'e')
-    RAPIDJSON_STRING_(Subschemas, 's', 'u', 'b', 's', 'c', 'h', 'e', 'm', 'a', 's')
-    RAPIDJSON_STRING_(RelativeUp, '.', '.')
-    RAPIDJSON_STRING_(Wildcard, '.', '*')
-    RAPIDJSON_STRING_(Asterix, '*')
-#endif // RAPIDJSON_YGGDRASIL
+    YGGDRASIL_RAPIDJSON_STRING_(Normalization, 'n', 'o', 'r', 'm', 'a', 'l', 'i', 'z', 'a', 't', 'i', 'o', 'n')
+    YGGDRASIL_RAPIDJSON_STRING_(Bool, 'b', 'o', 'o', 'l')
+    YGGDRASIL_RAPIDJSON_STRING_(Double, 'd', 'o', 'u', 'b', 'l', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Int, 'i', 'n', 't')
+    YGGDRASIL_RAPIDJSON_STRING_(Uint, 'u', 'i', 'n', 't')
+    YGGDRASIL_RAPIDJSON_STRING_(Int64, 'i', 'n', 't', '6', '4')
+    YGGDRASIL_RAPIDJSON_STRING_(Uint64, 'u', 'i', 'n', 't', '6', '4')
+    YGGDRASIL_RAPIDJSON_STRING_(YggdrasilObject, 'y', 'g', 'g', 'O', 'b', 'j', 'e', 'c', 't')
+    YGGDRASIL_RAPIDJSON_STRING_(YggdrasilString, 'y', 'g', 'g', 'S', 't', 'r', 'i', 'n', 'g')
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
+    YGGDRASIL_RAPIDJSON_STRING_(Generic, 'g', 'e', 'n', 'e', 'r', 'i', 'c')
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
+    YGGDRASIL_RAPIDJSON_STRING_(Compare, 'c', 'o', 'm', 'p', 'a', 'r', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Subschemas, 's', 'u', 'b', 's', 'c', 'h', 'e', 'm', 'a', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(RelativeUp, '.', '.')
+    YGGDRASIL_RAPIDJSON_STRING_(Wildcard, '.', '*')
+    YGGDRASIL_RAPIDJSON_STRING_(Asterix, '*')
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-#undef RAPIDJSON_STRING_
+#undef YGGDRASIL_RAPIDJSON_STRING_
 
 protected:
     enum SchemaValueType {
@@ -7698,7 +7698,7 @@ protected:
         kTotalSchemaType
     };
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     enum YggSchemaValueType {
         kYggNullSchemaType,
     	kYggScalarSchemaType,
@@ -7747,11 +7747,11 @@ protected:
     bool isInstance() const {
       return (flags_ & (1 << kInstanceFlag));
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-#if RAPIDJSON_SCHEMA_USE_INTERNALREGEX
+#if YGGDRASIL_RAPIDJSON_SCHEMA_USE_INTERNALREGEX
         typedef internal::GenericRegex<EncodingType, AllocatorType> RegexType;
-#elif RAPIDJSON_SCHEMA_USE_STDREGEX
+#elif YGGDRASIL_RAPIDJSON_SCHEMA_USE_STDREGEX
         typedef std::basic_regex<Ch> RegexType;
 #else
         typedef char RegexType;
@@ -7779,7 +7779,7 @@ protected:
         return itr != value.MemberEnd() ? &(itr->value) : 0;
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
   void AssignSingularIfExist(SchemaDocumentType& schemaDocument, const PointerType& p, const ValueType& value, const ValueType& name, const ValueType& document, const SingularFlag containerFlag, bool first_pass=false, bool force=false) {
     const ValueType* v = GetMember(value, name);
     bool deleteV = false;
@@ -7848,7 +7848,7 @@ protected:
       AssignSingularIfExist(schemaDocument, p.Append(GetPropertiesString(), allocator_), *properties, *prop0, document, kSingularObject, false, force);
     }
   }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     static void AssignIfExist(bool& out, const ValueType& value, const ValueType& name) {
         if (const ValueType* v = GetMember(value, name))
@@ -7877,19 +7877,19 @@ protected:
         }
     }
 
-#if RAPIDJSON_SCHEMA_USE_INTERNALREGEX
+#if YGGDRASIL_RAPIDJSON_SCHEMA_USE_INTERNALREGEX
     template <typename ValueType>
     RegexType* CreatePattern(const ValueType& value, SchemaDocumentType* sd, const PointerType& p) const {
         if (value.IsString()) {
             RegexType* r = new (allocator_->Malloc(sizeof(RegexType))) RegexType(value.GetString(), allocator_);
             if (!r->IsValid()) {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	      if (sd) {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
                 sd->SchemaErrorValue(kSchemaErrorRegexInvalid, p, value.GetString(), value.GetStringLength());
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	      }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
                 r->~RegexType();
                 AllocatorType::Free(r);
                 r = 0;
@@ -7903,7 +7903,7 @@ protected:
         GenericRegexSearch<RegexType> rs(*pattern);
         return rs.Search(str);
     }
-#elif RAPIDJSON_SCHEMA_USE_STDREGEX
+#elif YGGDRASIL_RAPIDJSON_SCHEMA_USE_STDREGEX
     template <typename ValueType>
     RegexType* CreatePattern(const ValueType& value, SchemaDocumentType* sd, const PointerType& p) {
         if (value.IsString()) {
@@ -7930,7 +7930,7 @@ protected:
     }
 
     static bool IsPatternMatch(const RegexType*, const Ch *, SizeType) { return true; }
-#endif // RAPIDJSON_SCHEMA_USE_STDREGEX
+#endif // YGGDRASIL_RAPIDJSON_SCHEMA_USE_STDREGEX
 
     void AddType(const ValueType& type) {
         if      (type == GetNullString()   ) type_ |= 1 << kNullSchemaType;
@@ -7940,7 +7940,7 @@ protected:
         else if (type == GetStringString() ) type_ |= 1 << kStringSchemaType;
         else if (type == GetIntegerString()) type_ |= 1 << kIntegerSchemaType;
         else if (type == GetNumberString() ) type_ |= (1 << kNumberSchemaType) | (1 << kIntegerSchemaType);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	// yggdrasil types
 	else if (type == GetScalarString()  ) yggtype_ |= 1 << kYggScalarSchemaType;
 	else if (type == Get1DArrayString() ) {
@@ -7964,10 +7964,10 @@ protected:
 	    subtype_ = subT; // Direct assignment as this will be before subtype actually parsed
 	  }
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     bool PointerMatches(const PointerType pattern,
 			const PointerType x,
 			bool patternHasRegex) const {
@@ -7984,18 +7984,18 @@ protected:
 	// SchemaDocumentType*, const PointerType&
 	RegexType* patternReg = CreatePattern(SValue(pattern.GetTokens()[i].name, pattern.GetTokens()[i].length).Move(),
 					      (SchemaDocumentType*)NULL, x);
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	if (!patternReg) {
 	  std::cerr << "PointerMatches: Invalid pattern \"" << pattern.GetTokens()[i].name << "\"" << std::endl;
 	  out = false;
 	  break;
 	}
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
-	RAPIDJSON_ASSERT(patternReg);
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
+	YGGDRASIL_RAPIDJSON_ASSERT(patternReg);
 	bool match = IsPatternMatch(patternReg,
 				    x.GetTokens()[i].name,
 				    x.GetTokens()[i].length);
-#if RAPIDJSON_SCHEMA_HAS_REGEX
+#if YGGDRASIL_RAPIDJSON_SCHEMA_HAS_REGEX
 	patternReg->~RegexType();
 	AllocatorType::Free(patternReg);
 #endif
@@ -8226,38 +8226,38 @@ protected:
     case (kYggUCS4SchemaEncodingType): return GetUCS4EncodingString();
     default:
       const ValueType& out = GetNullString();
-      RAPIDJSON_ASSERT(out != GetNullString());
+      YGGDRASIL_RAPIDJSON_ASSERT(out != GetNullString());
       return out;
     }
   }
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     // Creates parallel validators for allOf, anyOf, oneOf, not and schema dependencies, if required.
     // Also creates a hasher for enums and array uniqueness, if required.
     // Also a useful place to add type-independent error checks.
     bool CreateParallelValidator(Context& context) const {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         if (context.iterationType != Context::kNoIterationType &&
 	    context.iterationType != Context::kInitIterationType)
 	    return true;
 	if ((context.mode == Context::kValidationMode ||
 	     context.mode == Context::kNormalizationMode) &&
 	    context.iterationType != Context::kInitIterationType) {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	  if (enum_ || context.arrayUniqueness)
             context.hasher = context.factory.CreateHasher();
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
         if (validatorCount_) {
-            RAPIDJSON_ASSERT(context.validators == 0);
+            YGGDRASIL_RAPIDJSON_ASSERT(context.validators == 0);
             context.validators = static_cast<ISchemaValidator**>(context.factory.MallocState(sizeof(ISchemaValidator*) * validatorCount_));
             std::memset(context.validators, 0, sizeof(ISchemaValidator*) * validatorCount_);
             context.validatorCount = validatorCount_;
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
             // Always return after first failure for these sub-validators
             if (allOf_.schemas)
 	        CreateSchemaValidators(context, allOf_, false,
@@ -8280,7 +8280,7 @@ protected:
 		    if (properties_[i].dependenciesSchema)
 		        context.validators[properties_[i].dependenciesValidatorIndex] = context.factory.CreateSchemaValidator(*properties_[i].dependenciesSchema, false, pDepend.Append(properties_[i].name.GetString(), properties_[i].name.GetStringLength(), allocator_));
 	    }
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
             // Always return after first failure for these sub-validators
             if (allOf_.schemas)
                 CreateSchemaValidators(context, allOf_, false);
@@ -8299,9 +8299,9 @@ protected:
                     if (properties_[i].dependenciesSchema)
                         context.validators[properties_[i].dependenciesValidatorIndex] = context.factory.CreateSchemaValidator(*properties_[i].dependenciesSchema, false);
             }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	    
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    if (metaschema_)
 	      context.validators[metaschemaValidatorIndex_] = context.factory.CreateSchemaValidator(*metaschema_, false, context.schemaPointerAbs);
 	    
@@ -8328,37 +8328,37 @@ protected:
 	      }
 	      context.validators[allowWrappedSchema_.begin + 1] = context.factory.CreateSchemaValidator(*allowWrappedSchema_.schemas[1], false, pWrap);
 	    }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 	    
         }
 
         // Add any other type-independent checks here
         if (readOnly_ && (context.flags & kValidateWriteFlag)) {
             context.error_handler.DisallowedWhenWriting();
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorReadOnly);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorReadOnly);
         }
         if (writeOnly_ && (context.flags & kValidateReadFlag)) {
             context.error_handler.DisallowedWhenReading();
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorWriteOnly);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorWriteOnly);
         }
 
         return true;
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     void CreateSchemaValidators(Context& context, const SchemaArray& schemas, const bool inheritContinueOnErrors, const ValueType& str) const {
         PointerType pGroup = context.schemaPointerAbs.Append(str, allocator_);
         for (SizeType i = 0; i < schemas.count; i++)
 	    context.validators[schemas.begin + i] = context.factory.CreateSchemaValidator(*schemas.schemas[i], inheritContinueOnErrors, pGroup.Append(i, allocator_));
     }
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     void CreateSchemaValidators(Context& context, const SchemaArray& schemas, const bool inheritContinueOnErrors) const {
         for (SizeType i = 0; i < schemas.count; i++)
             context.validators[schemas.begin + i] = context.factory.CreateSchemaValidator(*schemas.schemas[i], inheritContinueOnErrors);
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     const SchemaType* FindItemSchema(const SizeType idx) const {
       if (itemsTuple_ && idx < itemsTupleCount_) {
 	return itemsTuple_[idx];
@@ -8410,13 +8410,13 @@ protected:
       ValueType name(str, len);
       return FindPropertyIndex(name, outIndex);
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     // O(n)
     bool FindPropertyIndex(const ValueType& name, SizeType* outIndex) const {
         SizeType len = name.GetStringLength();
         const Ch* str = name.GetString();
-#ifdef RAPIDJSON_YGGDRASIL
-	RAPIDJSON_ASSERT(child_aliases_.IsObject());
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+	YGGDRASIL_RAPIDJSON_ASSERT(child_aliases_.IsObject());
 	SValue orig(str, len, *allocator_);
 	if (child_aliases_.HasMember(orig)) {
 	  SValue dest;
@@ -8425,7 +8425,7 @@ protected:
 	    len = dest.GetStringLength();
 	  }
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         for (SizeType index = 0; index < propertyCount_; index++)
             if (properties_[index].name.GetStringLength() == len &&
                 (std::memcmp(properties_[index].name.GetString(), str, sizeof(Ch) * len) == 0))
@@ -8436,7 +8436,7 @@ protected:
         return false;
     }
     
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     bool CheckInt(Context& context, int i) const {
       bool skipType = false;
       if ((yggtype_ & (1 << kYggScalarSchemaType))) {
@@ -8460,22 +8460,22 @@ protected:
       }
       return CheckUint(context, (uint64_t)i, skipType);
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     bool CheckBool(Context& context, bool) const {
         if (!(type_ & (1 << kBooleanSchemaType))) {
             DisallowedType(context, GetBooleanString());
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
         return true;
     }
 
     bool CheckInt(Context& context, int64_t i
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		  , bool skipType = false
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 		  ) const {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         if (!skipType) {
 	  if ((yggtype_ & (1 << kYggScalarSchemaType))) {
 	    if (i >= 0) {
@@ -8487,26 +8487,26 @@ protected:
 	    }
 	  } else if (!(type_ & ((1 << kIntegerSchemaType) | (1 << kNumberSchemaType)))) {
             DisallowedType(context, GetIntegerString());
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
 	  }
 	}
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
         if (!(type_ & ((1 << kIntegerSchemaType) | (1 << kNumberSchemaType)))) {
             DisallowedType(context, GetIntegerString());
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
         if (!minimum_.IsNull()) {
             if (minimum_.IsInt64()) {
                 if (exclusiveMinimum_ ? i <= minimum_.GetInt64() : i < minimum_.GetInt64()) {
                     context.error_handler.BelowMinimum(i, minimum_, exclusiveMinimum_);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMinimum_ ? kValidateErrorExclusiveMinimum : kValidateErrorMinimum);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMinimum_ ? kValidateErrorExclusiveMinimum : kValidateErrorMinimum);
                 }
             }
             else if (minimum_.IsUint64()) {
                 context.error_handler.BelowMinimum(i, minimum_, exclusiveMinimum_);
-                RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMinimum_ ? kValidateErrorExclusiveMinimum : kValidateErrorMinimum); // i <= max(int64_t) < minimum.GetUint64()
+                YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMinimum_ ? kValidateErrorExclusiveMinimum : kValidateErrorMinimum); // i <= max(int64_t) < minimum.GetUint64()
             }
             else if (!CheckDoubleMinimum(context, static_cast<double>(i)))
                 return false;
@@ -8516,7 +8516,7 @@ protected:
             if (maximum_.IsInt64()) {
                 if (exclusiveMaximum_ ? i >= maximum_.GetInt64() : i > maximum_.GetInt64()) {
                     context.error_handler.AboveMaximum(i, maximum_, exclusiveMaximum_);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMaximum_ ? kValidateErrorExclusiveMaximum : kValidateErrorMaximum);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMaximum_ ? kValidateErrorExclusiveMaximum : kValidateErrorMaximum);
                 }
             }
             else if (maximum_.IsUint64()) { }
@@ -8529,7 +8529,7 @@ protected:
             if (multipleOf_.IsUint64()) {
                 if (static_cast<uint64_t>(i >= 0 ? i : -i) % multipleOf_.GetUint64() != 0) {
                     context.error_handler.NotMultipleOf(i, multipleOf_);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMultipleOf);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMultipleOf);
                 }
             }
             else if (!CheckDoubleMultipleOf(context, static_cast<double>(i)))
@@ -8540,32 +8540,32 @@ protected:
     }
 
     bool CheckUint(Context& context, uint64_t i
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		   , bool skipType = false
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 		   ) const {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         if (!skipType) {
 	  if ((yggtype_ & (1 << kYggScalarSchemaType))) {
 	    if (!(CheckScalar(context, GetUintSubTypeString(), ValueType(8))))
 	      return false;
 	  } else if (!(type_ & ((1 << kIntegerSchemaType) | (1 << kNumberSchemaType)))) {
             DisallowedType(context, GetIntegerString());
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
 	  }
 	}
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
         if (!(type_ & ((1 << kIntegerSchemaType) | (1 << kNumberSchemaType)))) {
             DisallowedType(context, GetIntegerString());
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorType);
         }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
         if (!minimum_.IsNull()) {
             if (minimum_.IsUint64()) {
                 if (exclusiveMinimum_ ? i <= minimum_.GetUint64() : i < minimum_.GetUint64()) {
                     context.error_handler.BelowMinimum(i, minimum_, exclusiveMinimum_);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMinimum_ ? kValidateErrorExclusiveMinimum : kValidateErrorMinimum);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMinimum_ ? kValidateErrorExclusiveMinimum : kValidateErrorMinimum);
                 }
             }
             else if (minimum_.IsInt64())
@@ -8578,12 +8578,12 @@ protected:
             if (maximum_.IsUint64()) {
                 if (exclusiveMaximum_ ? i >= maximum_.GetUint64() : i > maximum_.GetUint64()) {
                     context.error_handler.AboveMaximum(i, maximum_, exclusiveMaximum_);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMaximum_ ? kValidateErrorExclusiveMaximum : kValidateErrorMaximum);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMaximum_ ? kValidateErrorExclusiveMaximum : kValidateErrorMaximum);
                 }
             }
             else if (maximum_.IsInt64()) {
                 context.error_handler.AboveMaximum(i, maximum_, exclusiveMaximum_);
-                RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMaximum_ ? kValidateErrorExclusiveMaximum : kValidateErrorMaximum); // i >= 0 > maximum_
+                YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMaximum_ ? kValidateErrorExclusiveMaximum : kValidateErrorMaximum); // i >= 0 > maximum_
             }
             else if (!CheckDoubleMaximum(context, static_cast<double>(i)))
                 return false;
@@ -8593,7 +8593,7 @@ protected:
             if (multipleOf_.IsUint64()) {
                 if (i % multipleOf_.GetUint64() != 0) {
                     context.error_handler.NotMultipleOf(i, multipleOf_);
-                    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMultipleOf);
+                    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMultipleOf);
                 }
             }
             else if (!CheckDoubleMultipleOf(context, static_cast<double>(i)))
@@ -8606,7 +8606,7 @@ protected:
     bool CheckDoubleMinimum(Context& context, double d) const {
         if (exclusiveMinimum_ ? d <= minimum_.GetDouble() : d < minimum_.GetDouble()) {
             context.error_handler.BelowMinimum(d, minimum_, exclusiveMinimum_);
-            RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMinimum_ ? kValidateErrorExclusiveMinimum : kValidateErrorMinimum);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMinimum_ ? kValidateErrorExclusiveMinimum : kValidateErrorMinimum);
         }
         return true;
     }
@@ -8614,7 +8614,7 @@ protected:
     bool CheckDoubleMaximum(Context& context, double d) const {
         if (exclusiveMaximum_ ? d >= maximum_.GetDouble() : d > maximum_.GetDouble()) {
             context.error_handler.AboveMaximum(d, maximum_, exclusiveMaximum_);
-            RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMaximum_ ? kValidateErrorExclusiveMaximum : kValidateErrorMaximum);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(exclusiveMaximum_ ? kValidateErrorExclusiveMaximum : kValidateErrorMaximum);
         }
         return true;
     }
@@ -8628,7 +8628,7 @@ protected:
         bool isMultiple = difference <= scaledEpsilon || difference < (std::numeric_limits<double>::min)();
         if (!isMultiple) {
             context.error_handler.NotMultipleOf(d, multipleOf_);
-            RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMultipleOf);
+            YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMultipleOf);
         }
         return true;
     }
@@ -8639,29 +8639,29 @@ protected:
 	if (internal::CountStringCodePoint<EncodingType>(str, length, &count)) {
 	  if (count < minLength_) {
 	    context.error_handler.TooShort(str, length, minLength_);
-	    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinLength);
+	    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinLength);
 	  }
 	  if (count > maxLength_) {
 	    context.error_handler.TooLong(str, length, maxLength_);
-	    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxLength);
+	    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMaxLength);
 	  }
 	}
       }
       
       if (pattern_ && !IsPatternMatch(pattern_, str, length)) {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	context.error_handler.DoesNotMatch(str, length,
 					   patternStr_.GetString(),
 					   patternStr_.GetStringLength());
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
 	context.error_handler.DoesNotMatch(str, length);
-#endif // RAPIDJSON_YGGDRASIL
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPattern);
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPattern);
       }
       return true;
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     void YggDisallowedType(Context& context, const ValueType& actualType) const {
 #define CHECK_(name)				\
       if (actualType == Get ## name ## String()) { DisallowedType(context, Get ## name ## String()); }
@@ -8683,7 +8683,7 @@ protected:
       }
 #undef CHECK_
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     void DisallowedType(Context& context, const ValueType& actualType) const {
         ErrorHandler& eh = context.error_handler;
@@ -8697,7 +8697,7 @@ protected:
 
         if (type_ & (1 << kNumberSchemaType)) eh.AddExpectedType(GetNumberString());
         else if (type_ & (1 << kIntegerSchemaType)) eh.AddExpectedType(GetIntegerString());
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (yggtype_ & (1 << kYggScalarSchemaType)) eh.AddExpectedType(GetScalarString());
 	if (yggtype_ & (1 << kYggNDArraySchemaType)) eh.AddExpectedType(GetNDArrayString());
 	if (yggtype_ & (1 << kYggPythonClassSchemaType)) eh.AddExpectedType(GetPythonClassString());
@@ -8708,11 +8708,11 @@ protected:
 	if (yggtype_ & (1 << kYggSchemaSchemaType)) eh.AddExpectedType(GetSchemaTypeString());
 	if (yggtype_ == ((1 << kYggTotalSchemaType) - 1))
 	  eh.AddExpectedType(GetAnyString());
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         eh.EndDisallowedType(actualType);
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     void DisallowedSubType(Context& context, const ValueType& actualSubType) const {
       DisallowedSubType(context, actualSubType, subtype_);
     }
@@ -8729,15 +8729,15 @@ protected:
 #undef ADD_TYPE
       eh.EndDisallowedSubType(actualSubType);
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
   template <typename YggSchemaValueType>
   bool CheckRequiredSchemaProperty(Context& context, const YggSchemaValueType& schema, const ValueType& name) const {
-    RAPIDJSON_ASSERT(schema.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(schema.IsObject());
     if (!schema.HasMember(name)) {
       context.error_handler.MissingRequiredSchemaProperty(name);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequiredSchema);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequiredSchema);
     }
     return true;
   }
@@ -8765,7 +8765,7 @@ protected:
 	(!((subtype_schema & (1 << kYggIntSchemaSubType)) &&
 	   (subtype_code & (1 << kYggUintSchemaSubType))))) {
       DisallowedSubType(context, *subtype_str, subtype_schema);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubType);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorSubType);
     }
     if (!has_encoding && encoding_code != kYggNullSchemaEncodingType) {
       const ValueType& encoding_str = EncodingType2String(encoding_code);
@@ -8781,7 +8781,7 @@ protected:
   template <typename YggSchemaValueType>
   bool CheckSubType(Context& context, const YggSchemaValueType& schema,
 		    const unsigned int subtype_schema) const {
-    RAPIDJSON_ASSERT(schema.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(schema.IsObject());
     if (!CheckRequiredSchemaProperty(context, schema, GetSubTypeString()))
       return false;
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetSubTypeString());
@@ -8799,7 +8799,7 @@ protected:
       return true;
     if (precision.GetUint() < actual->GetUint()) {
       context.error_handler.IncorrectPrecision(*actual, precision);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPrecision);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPrecision);
     }
     return true;
   }
@@ -8816,7 +8816,7 @@ protected:
   template <typename YggSchemaValueType>
   bool CheckPrecision(Context& context, const YggSchemaValueType& schema,
 		      const SValue& precision) const {
-    RAPIDJSON_ASSERT(schema.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(schema.IsObject());
     if (!CheckRequiredSchemaProperty(context, schema, GetPrecisionString()))
       return false;
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetPrecisionString());
@@ -8834,13 +8834,13 @@ protected:
 			   false);
     if (!(actual_units.is_compatible(expected_units))) {
       context.error_handler.IncorrectUnits(*actual, units_);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValdiateErrorUnits);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValdiateErrorUnits);
     }
     return true;
   }
   template <typename YggSchemaValueType>
   bool CheckUnits(Context& context, const YggSchemaValueType& schema) const {
-    RAPIDJSON_ASSERT(schema.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(schema.IsObject());
     if (!schema.HasMember(GetUnitsString())) return true; // Allow missing
     if (!CheckRequiredSchemaProperty(context, schema, GetUnitsString()))
       return false;
@@ -8850,7 +8850,7 @@ protected:
   }
   template <typename YggSchemaValueType>
   bool CheckShape(Context& context, const YggSchemaValueType& schema) const {
-    RAPIDJSON_ASSERT(schema.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(schema.IsObject());
     if (!CheckRequiredSchemaProperty(context, schema, GetShapeString()))
       return false;
     if (shape_.IsNull() && ndim_ == 0) {
@@ -8862,14 +8862,14 @@ protected:
       actual.PushBack(static_cast<SizeType>(v->GetUint()), *allocator_);
     if (!shape_.IsNull() && (shape_ != actual)) {
       context.error_handler.IncorrectShape(actual, shape_);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorShape);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorShape);
     } else if (ndim_ != 0 && actual.Size() != ndim_) {
       SValue expected(kArrayType);
       for (SizeType i = 0; i < ndim_; i++) {
 	expected.PushBack(SValue(kNullType).Move(), *allocator_);
       }
       context.error_handler.IncorrectShape(actual, expected);
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorShape);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorShape);
     }
     return true;
   }
@@ -8879,13 +8879,13 @@ protected:
     YggSchemaEncodingType encoding_code = GetEncodingType(*encoding_str);
     if (encoding_ != encoding_code) {
       context.error_handler.IncorrectEncoding(*encoding_str, EncodingType2String(encoding_));
-      RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorEncoding);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorEncoding);
     }
     return true;
   }
   template <typename YggSchemaValueType>
   bool CheckEncoding(Context& context, const YggSchemaValueType& schema) const {
-    RAPIDJSON_ASSERT(schema.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(schema.IsObject());
     ValueType actual(kStringType);
     typename YggSchemaValueType::ConstMemberIterator vs = schema.FindMember(GetEncodingString());
     if (vs != schema.MemberEnd()) {
@@ -8922,7 +8922,7 @@ protected:
   bool CheckPythonImport(Context& context, const Ch* str, SizeType length) const {
 #ifdef YGGDRASIL_DISABLE_PYTHON_C_API
     context.error_handler.PythonDisabled(str, length);
-    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonDisabled);
+    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonDisabled);
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
     if (context.python_disabled)
       return true;
@@ -8954,7 +8954,7 @@ protected:
     Py_CLEAR(pycls);
     END_PY_GIL;
     if (code != kValidateErrorNone) {
-      RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(code);
     }
     return true;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
@@ -8962,7 +8962,7 @@ protected:
   bool CheckPythonPickle(Context& context, const Ch* str, SizeType length) const {
 #ifdef YGGDRASIL_DISABLE_PYTHON_C_API
     context.error_handler.PythonDisabled(str, length);
-    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonDisabled);
+    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorPythonDisabled);
 #else // YGGDRASIL_DISABLE_PYTHON_C_API
     if (context.python_disabled)
       return true;
@@ -8989,22 +8989,22 @@ protected:
     Py_CLEAR(pycls);
     END_PY_GIL;
     if (code != kValidateErrorNone) {
-      RAPIDJSON_INVALID_KEYWORD_RETURN(code);
+      YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(code);
     }
     return true;
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
   }
 
     class SharedProperty; //!< Forward declaration.
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     struct Property {
         Property() : schema(), dependenciesSchema(), dependenciesValidatorIndex(), dependencies(), required(false)
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		   , sharedProperty()
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
       {}
         ~Property() { AllocatorType::Free(dependencies); }
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         bool operator==(const Property& rhs) const {
 	  if (name != rhs.name) return false;
 	  if (*schema != *(rhs.schema)) return false;
@@ -9021,31 +9021,31 @@ protected:
         bool operator!=(const Property& rhs) const {
 	  return (!(operator==(rhs)));
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         SValue name;
         const SchemaType* schema;
         const SchemaType* dependenciesSchema;
         SizeType dependenciesValidatorIndex;
         bool* dependencies;
         bool required;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         SharedProperty* sharedProperty;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     };
     
     struct PatternProperty {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         PatternProperty() : schema(), pattern(), patternStr() {}
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
         PatternProperty() : schema(), pattern() {}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         ~PatternProperty() {
             if (pattern) {
                 pattern->~RegexType();
                 AllocatorType::Free(pattern);
             }
         }
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         bool operator==(const PatternProperty& rhs) const {
 	  if (patternStr != rhs.patternStr) return false;
 	  if (*schema != *(rhs.schema)) return false;
@@ -9054,15 +9054,15 @@ protected:
         bool operator!=(const PatternProperty& rhs) const {
 	  return (!(operator==(rhs)));
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         const SchemaType* schema;
         RegexType* pattern;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         SValue patternStr;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     };
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     enum PointerOrderFlag {
       kPointerOrderFalse,
       kPointerOrderTrue,
@@ -9122,14 +9122,14 @@ protected:
       }
       void SetInstancePtr(AllocatorType* allocator = 0) {
 	size_t invalidToken = schemaPtr.GetTokenCount() + 1;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	  std::cerr << "SharedPropertyBase: ";
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	instancePtr = SchemaPointer2InstancePointer(schemaPtr,
 						    hasRegex,
 						    &invalidToken,
 						    allocator);
-	RAPIDJSON_ASSERT(invalidToken == (schemaPtr.GetTokenCount() + 1));
+	YGGDRASIL_RAPIDJSON_ASSERT(invalidToken == (schemaPtr.GetTokenCount() + 1));
       }
       ~SharedPropertyBase() {
 	if (ownProperties && properties) {
@@ -9161,13 +9161,13 @@ protected:
 	Property* base;
 	bool inSource;
       };
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
       void Display() const {
 	NormalizedDocumentType::DisplayPointer(schemaPtr);
       }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
       void AddPropertiesRef(SharedPropertyBase* parent) {
-	RAPIDJSON_ASSERT(parent->properties && !properties);
+	YGGDRASIL_RAPIDJSON_ASSERT(parent->properties && !properties);
 	ownProperties = false;
 	propertyCount = parent->propertyCount;
 	properties = parent->properties;
@@ -9176,13 +9176,13 @@ protected:
 			    const SchemaType* src = 0) {
 	if (!src) src = schema;
 	ownProperties = true;
-	RAPIDJSON_ASSERT(property->propertyNames.IsArray());
+	YGGDRASIL_RAPIDJSON_ASSERT(property->propertyNames.IsArray());
 	if (property->propertyFlag == kSharedPropertyAllPropsFlag ||
 	    property->propertyFlag == kSharedPropertyExcludeFlag)
 	  propertyCount = src->propertyCount_;
 	else if (property->propertyFlag == kSharedPropertyIncludeFlag)
 	  propertyCount = property->propertyNames.Size();
-	RAPIDJSON_ASSERT(!properties);
+	YGGDRASIL_RAPIDJSON_ASSERT(!properties);
 	properties = static_cast<PropertyEntry*>(src->allocator_->Malloc(propertyCount * sizeof(PropertyEntry)));
 	SizeType j = 0;
 	for (SizeType i = 0; i < src->propertyCount_; i++) {
@@ -9324,13 +9324,13 @@ protected:
 	    AddPropertiesPull(parentProperty);
 	}
 	void AddPropertiesPull(SharedProperty* parent) {
-	  RAPIDJSON_ASSERT(!parent->push && parent->properties);
+	  YGGDRASIL_RAPIDJSON_ASSERT(!parent->push && parent->properties);
 	  this->AddPropertiesRef(parent);
 	  this->SetInSource(this->schema);
 	}
 	void AddPropertiesPush(SharedProperty* parent) {
 	  // Should only be run for links in push
-	  RAPIDJSON_ASSERT(parent->push);
+	  YGGDRASIL_RAPIDJSON_ASSERT(parent->push);
 	  this->AddPropertiesCpy(parent, this->schema);
 	  this->SetInSource(parent->schema);
 	}
@@ -9363,7 +9363,7 @@ protected:
 	  while (!links.Empty())
 	    links.template Pop<LinkEntry>(1)->~LinkEntry();
 	}
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
         void DisplayLinks() const {
 	  std::cerr << "[";
 	  for (const LinkEntry* it = LinksBegin(); it != LinksEnd(); it++) {
@@ -9380,7 +9380,7 @@ protected:
 	  DisplayLinks();
 	  std::cerr << ")";
 	}
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
         size_t NLinks() const {
 	  return (links.GetSize() / sizeof(LinkEntry));
 	}
@@ -9401,7 +9401,7 @@ protected:
 	  GenericStringBuffer<EncodingType> sb;
 	  if (!p.IsValid())
 	    std::cerr << "AddMissingPtr: invalid pointer" << std::endl;
-	  RAPIDJSON_ASSERT(allocator);
+	  YGGDRASIL_RAPIDJSON_ASSERT(allocator);
 	  if (!allocator) return;
 	  p.StringifyUriFragment(sb);
 	  missing->PushBack(SValue(sb.GetString(), (SizeType)sb.GetLength(),
@@ -9409,7 +9409,7 @@ protected:
 			    *allocator);
 	}
 	bool HasProperty(const SValue& name) const {
-	  RAPIDJSON_ASSERT(propertyNames.IsArray());
+	  YGGDRASIL_RAPIDJSON_ASSERT(propertyNames.IsArray());
 	  return propertyNames.Contains(name); // HERE INSTANCE
 	}
 	bool Matches(const PointerType& x, bool local0,
@@ -9441,9 +9441,9 @@ protected:
 	    prefix = this->instancePtr.PartialFront(nMatch, iSchema->allocator_);
 	    first = iSchema->PointersOrdered(this->schemaPtr, ref->schemaPtr);
 	  } else {
-	    RAPIDJSON_ASSERT(prefix.PartialCompare(ref->instancePtr));
-	    RAPIDJSON_ASSERT(LinksBegin()->instancePtr == ref->instancePtr);
-	    RAPIDJSON_ASSERT(first == iSchema->PointersOrdered(this->schemaPtr, ref->schemaPtr));
+	    YGGDRASIL_RAPIDJSON_ASSERT(prefix.PartialCompare(ref->instancePtr));
+	    YGGDRASIL_RAPIDJSON_ASSERT(LinksBegin()->instancePtr == ref->instancePtr);
+	    YGGDRASIL_RAPIDJSON_ASSERT(first == iSchema->PointersOrdered(this->schemaPtr, ref->schemaPtr));
 	  }
 	  // HERE INSTANCE
 	  SharedPropertyBase* src = 0;
@@ -9485,7 +9485,7 @@ protected:
 	  bool multiplePairs = false;
 	  bool multiplePartners = false;
 	  if (local0) {
-	    RAPIDJSON_ASSERT(NLinks() > 0);
+	    YGGDRASIL_RAPIDJSON_ASSERT(NLinks() > 0);
 	    multiplePartners = NLinks() > 1;
 	    pairProperty = this;
 	    partnerProperty = LinksBegin();
@@ -9518,7 +9518,7 @@ protected:
 	      pair = normalized.FindSharedPair(this->schemaPtr, !source0);
 	    if (pair) return;
 	  }
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	  std::cerr << "AddObject [";
 	  NormalizedDocumentType::DisplayPointer(instancePtr0);
 	  std::cerr << ", ";
@@ -9528,12 +9528,12 @@ protected:
 	  std::cerr << ", existing = ";
 	  NormalizedDocumentType::DisplayValue(props);
 	  std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	  SharedPropertyBase* pairProperty = 0;
 	  SharedPropertyBase* partnerProperty = 0;
 	  bool multiplePartners = false;
 	  if (local0) {
-	    RAPIDJSON_ASSERT(NLinks() > 0);
+	    YGGDRASIL_RAPIDJSON_ASSERT(NLinks() > 0);
 	    multiplePartners = NLinks() > 2;
 	    pairProperty = this;
 	    partnerProperty = LinksBegin();
@@ -9546,17 +9546,17 @@ protected:
 		pairProperty = it;
 		partnerProperty = this;
 		nLinkMatched++;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 		std::cerr << "AddObject (LINK MATCH): ";
 		NormalizedDocumentType::DisplayPointer(schemaPtr0);
 		std::cerr << " vs ";
 		NormalizedDocumentType::DisplayPointer(it->schemaPtr);
 		std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	      }
 	    }
 	    if (nLinkMatched != 1) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	      std::cerr << "AddObject (NO LINK MATCHED): " <<
 		std::endl << "    ";
 	      NormalizedDocumentType::DisplayPointer(schemaPtr0);
@@ -9566,11 +9566,11 @@ protected:
 		NormalizedDocumentType::DisplayPointer(it->schemaPtr);
 		std::cerr << std::endl;
 	      }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	      return; // Don't create/add to a pair
 	    }
 	  }
-	  RAPIDJSON_ASSERT(source0 == pairProperty->source &&
+	  YGGDRASIL_RAPIDJSON_ASSERT(source0 == pairProperty->source &&
 			   !source0 == partnerProperty->source);
 	  normalized.AddSharedObject(prefix, instancePtr0, schemaPtr0,
 				     props, pairProperty, partnerProperty,
@@ -9582,7 +9582,7 @@ protected:
 	SValue propertyNames; // HERE INSTANCE
         internal::Stack<AllocatorType> links;
       };
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
       void DisplayInstances() const {
 	std::cerr << "[";
 	for (const InstanceEntry* it = InstsBegin(); it != InstsEnd(); it++) {
@@ -9610,7 +9610,7 @@ protected:
 	DisplayInstances();
 	std::cerr << ")";
       }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_DISPLAY
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_DISPLAY
       size_t NInsts() const {
 	return (instances.GetSize() / sizeof(InstanceEntry));
       }
@@ -9660,7 +9660,7 @@ protected:
 	return HasProperty(SValue(str, length).Move());
       }
       void AddPropertiesPull() {
-	RAPIDJSON_ASSERT(!push && this->schema && !this->properties);
+	YGGDRASIL_RAPIDJSON_ASSERT(!push && this->schema && !this->properties);
 	this->AddPropertiesCpy(this);
       }
       InstanceEntry* AddInstance(const PointerType& schemaPtr0) {
@@ -9707,13 +9707,13 @@ protected:
 							       PointerType(),
 							       this);
 	}
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	if (NInsts() == 0) {
 	  std::cerr << "SortSources: No instances found ";
 	  Display();
 	  std::cerr << std::endl;
 	}
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       }
       void AddObject(PointerType instancePtr0, PointerType schemaPtr0,
 		     NormalizedDocumentType& normalized,
@@ -9784,13 +9784,13 @@ protected:
       }
       if (last == GetPropertiesString())
 	return kPointerOrderNull;
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       std::cerr << "PointersOrdered: Could not order pointers ";
       NormalizedDocumentType::DisplayPointer(a);
       std::cerr << " -> ";
       NormalizedDocumentType::DisplayPointer(b);
       std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       return kPointerOrderNull;
     }
     bool HasSharedProperties() const {
@@ -9839,7 +9839,7 @@ protected:
 			       SharedProperty* sharedProp,
 			       const SchemaType* childSchema=NULL,
 			       bool parallelSchema=false) {
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       std::cerr << "AddSharedPropertyLink: ";
       NormalizedDocumentType::DisplayPointer(ptr);
       std::cerr << ", ";
@@ -9847,7 +9847,7 @@ protected:
       std::cerr << " [";
       NormalizedDocumentType::DisplayPointer(pointer_);
       std::cerr << "]" << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       if (childSchema) {
 	if (parallelSchema) {
 	  const_cast<SchemaType*>(childSchema)->AddSharedPropertyLink(ptr,
@@ -9865,7 +9865,7 @@ protected:
       }
       /// NESTED SECTION
       if (ptr.GetTokenCount() > 0) {
-	RAPIDJSON_ASSERT(!(ptr.GetTokens()[0].length == 2 &&
+	YGGDRASIL_RAPIDJSON_ASSERT(!(ptr.GetTokens()[0].length == 2 &&
 			   ptr.GetTokens()[0].name[0] == '.' &&
 			   ptr.GetTokens()[0].name[1] == '.'));
 	if (ptr.GetTokens()[0].length == 2 &&
@@ -9979,9 +9979,9 @@ protected:
 				  sharedProp, additionalItemsSchema_);
 	  else if (!patternMatched) {
 	    std::cerr << "AddSharedPropertyLink: Failed to find child property: " << name.GetString() << ", ";
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	    NormalizedDocumentType::DisplayPointer(ptr);
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	    std::cerr << std::endl;
 	    return;
 	  }
@@ -10004,9 +10004,9 @@ protected:
 				  sharedProp, additionalItemsSchema_);
 	  else {
 	    std::cerr << "AddSharedPropertyLink: Failed to find child item: " << name.GetUint() << ", ";
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	    NormalizedDocumentType::DisplayPointer(ptr);
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	    std::cerr << std::endl;
 	    return;
 	  }
@@ -10108,7 +10108,7 @@ protected:
 	// Error: unresolved token
 	if (unresolvedTokenIndex)
 	  *unresolvedTokenIndex = static_cast<size_t>(t - p.GetTokens());
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	if (t == p.GetTokens() + p.GetTokenCount()) {
 	  std::cerr << "SchemaPointer2InstancePointer: Missing final token \"";
 	  NormalizedDocumentType::DisplayPointer(p);
@@ -10118,16 +10118,16 @@ protected:
 	  NormalizedDocumentType::DisplayPointer(p);
 	  std::cerr << std::endl;
 	}
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
 	break;
       }
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       std::cerr << "SchemaPointer2InstancePointer: ";
       NormalizedDocumentType::DisplayPointer(p);
       std::cerr << " -> ";
       NormalizedDocumentType::DisplayPointer(out);
       std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       return out;
     }
 						     
@@ -10157,7 +10157,7 @@ protected:
 	  }								\
         }								\
       }
-      RAPIDJSON_ASSERT(p.IsValid());
+      YGGDRASIL_RAPIDJSON_ASSERT(p.IsValid());
       const SchemaType* v = root;
       for (const typename PointerType::Token *t = p.GetTokens(); t != p.GetTokens() + p.GetTokenCount(); ++t) {
 	if (t->index == kPointerInvalidIndex) {
@@ -10302,7 +10302,7 @@ protected:
 	// Error: unresolved token
 	if (unresolvedTokenIndex)
 	  *unresolvedTokenIndex = static_cast<size_t>(t - p.GetTokens());
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	std::cerr << "Get: Error in ";
 	NormalizedDocumentType::DisplayPointer(v->pointer_);
 	std::cerr << std::endl;
@@ -10321,10 +10321,10 @@ protected:
 	  for (SizeType index = 0; index < v->propertyCount_; index++)
 	    std::cerr << "    " << v->properties_[index].name.GetString() << std::endl;
 	}
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
 	return 0;
       }
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       std::cerr << "Get: ";
       NormalizedDocumentType::DisplayPointer(p);
       std::cerr << " -> ";
@@ -10333,7 +10333,7 @@ protected:
       else
 	std::cerr << "NULL";
       std::cerr << std::endl;
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION_SHARED
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION_SHARED
       return v;
 #undef APPEND_ALT
     }
@@ -10437,7 +10437,7 @@ protected:
 	}
 	SValue key;
 	if (key0) {
-	  RAPIDJSON_ASSERT(key0->IsString());
+	  YGGDRASIL_RAPIDJSON_ASSERT(key0->IsString());
 	  key.SetString(key0->GetString(),
 			key0->GetStringLength(),
 			*allocator_);
@@ -10446,7 +10446,7 @@ protected:
 			GetRelativeUpString().GetStringLength(),
 			*allocator_);
 	}
-	RAPIDJSON_ASSERT(key.IsString());
+	YGGDRASIL_RAPIDJSON_ASSERT(key.IsString());
 	if (!sharedProperties_)
 	  sharedProperties_ = new SharedPropertiesType();
 	sharedProperties_->AddLocalProperty(this, key, v, push);
@@ -10932,7 +10932,7 @@ public:
 	context.valueSchema = typeless_;
 	// TODO: Create DisallowedPatternProperty?
 	context.error_handler.DisallowedProperty(str, len);
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
       }
       return true;
     }
@@ -10992,7 +10992,7 @@ public:
 	  context.otherSchemaCount == 0) {
 	context.valueSchema = typeless_;
 	context.error_handler.DisallowedProperty(SchemaType::GetAdditionalPropertiesString().GetString(), SchemaType::GetAdditionalPropertiesString().GetStringLength());
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
       }
       return true;
     }
@@ -11033,13 +11033,13 @@ public:
       if (context.arrayElementIndex < itemsTupleCount_) {
 	context.error_handler.TooFewItems(context.arrayElementIndex,
 					  itemsTupleCount_);
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinItems);
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMinItems);
       }
       // TODO: Error on unmatched additionalItems?
       // if (context.arrayElementIndex == itemsTupleCount_ &&
       // 	  additionalItemsSchema_ && !additionalItems) {
       // 	context.error_handler.AddMissingSubschema(GetAdditionalItemsString());
-      // 	RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMissingSubschema);
+      // 	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMissingSubschema);
       // }
       return true;
     }
@@ -11066,10 +11066,10 @@ public:
 	}
 	if (additionalProperties) {
 	  if (context.error_handler.EndMissingProperties())
-	    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
+	    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
 	} else {
 	  if (context.error_handler.EndDisallowedProperties())
-	    RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
+	    YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorAdditionalProperties);
 	}
       }
       // TODO: Use disallowed when additionalProperties is False
@@ -11085,7 +11085,7 @@ public:
 	  }
 	}
 	if (context.error_handler.EndMissingProperties())
-	  RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
+	  YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorRequired);
 	// TODO: Error on unmatched additionalProperties?
 	// if (additionalPropertiesSchema_) {
 	//   SizeType index = patternPropertyCount_;
@@ -11094,7 +11094,7 @@ public:
 	//       context.patternPropertyExist[index] = true;
 	//     else {
 	//       context.error_handler.AddMissingSubschema(GetAdditionalPropertiesString());
-	//       RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMissingSubschema);
+	//       YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorMissingSubschema);
 	//     }
 	//   }
 	// }
@@ -11170,28 +11170,28 @@ public:
     // Schema comparison
     //////////////////////////////
     
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA(key, expected, actual)		\
+#define YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(key, expected, actual)		\
       {									\
 	context.error_handler.IncompatibleSchemas(key, expected, actual); \
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
       }
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(key, expected, actual)	\
+#define YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(key, expected, actual)	\
       {									\
 	context.error_handler.IncompatibleSchemas(key, expected, actual, true); \
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
       }
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, a, b)	\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a).Move(), SValue(b).Move())
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(key, a, b)	\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a.GetString(), a.GetStringLength()).Move(), SValue(b.GetString(), b.GetStringLength()).Move())
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(key, a, b)	\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, (bool)(a), (bool)(b))
+#define YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, a, b)	\
+      YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a).Move(), SValue(b).Move())
+#define YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(key, a, b)	\
+      YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a.GetString(), a.GetStringLength()).Move(), SValue(b.GetString(), b.GetStringLength()).Move())
+#define YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(key, a, b)	\
+      YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, (bool)(a), (bool)(b))
 #define CHECK_INCOMPATIBLE_IF_SET(key, err, def)			\
     if (lhs.key != def && rhs.key != def && lhs.key != rhs.key)		\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), SValue(lhs.key).Move(), SValue(rhs.key).Move())
+      YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), SValue(lhs.key).Move(), SValue(rhs.key).Move())
 #define CHECK_INCOMPATIBLE_IF_PRESENT(key, err) \
     if (!lhs.key.IsNull() && !rhs.key.IsNull() && lhs.key != rhs.key)	\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), lhs.key, rhs.key)
+      YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), lhs.key, rhs.key)
     
     bool CompareSkip(Context&, const SchemaType& it_schema) const {
       SCHEMA_LHS_RHS;
@@ -11219,14 +11219,14 @@ public:
 	} else {
 	  lhs.DisallowedTypeKey(context);
 	  rhs.DisallowedTypeKey(context, true);
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+	  YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
 	}
       }
       if ((!native_scalar) && (!(rhs_any || lhs_any))
 	  && (!(lhs.subtype_ & rhs.subtype_))) {
 	lhs.DisallowedSubTypeKey(context);
 	rhs.DisallowedSubTypeKey(context, true);
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetSubTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetSubTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
       }
       // Enum
       if (lhs.enumCount_ || rhs.enumCount_) {
@@ -11236,11 +11236,11 @@ public:
 	      goto foundEnum;
 	  }
 	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetEnumString(), lhs.enumValues_, rhs.enumValues_);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(GetEnumString(), lhs.enumValues_, rhs.enumValues_);
       foundEnum:;
       }
       // if (lhs.additionalProperties_ != rhs.additionalProperties_) {
-      // 	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), lhs.additionalProperties_, rhs.additionalProperties_);
+      // 	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), lhs.additionalProperties_, rhs.additionalProperties_);
       // }
       return true;
     }
@@ -11275,7 +11275,7 @@ public:
       if (lhs.encoding_ != rhs.encoding_) {
 	const ValueType& lhs_encoding = EncodingType2String(lhs.encoding_);
 	const ValueType& rhs_encoding = EncodingType2String(rhs.encoding_);
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetEncodingString(), lhs_encoding, rhs_encoding);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetEncodingString(), lhs_encoding, rhs_encoding);
       }
       return true;
     }
@@ -11300,9 +11300,9 @@ public:
       CHECK_INCOMPATIBLE_IF_PRESENT(shape_, Shape);
       CHECK_INCOMPATIBLE_IF_SET(ndim_, NDim, 0);
       if (lhs.ndim_ != 0 && (!rhs.shape_.IsNull()) && lhs.ndim_ != rhs.shape_.Size())
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(lhs.ndim_).Move(), SValue(rhs.shape_.Size()).Move());
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(lhs.ndim_).Move(), SValue(rhs.shape_.Size()).Move());
       if ((!lhs.shape_.IsNull()) && rhs.ndim_ != 0 && lhs.shape_.Size() != rhs.ndim_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(lhs.shape_.Size()).Move(), SValue(rhs.ndim_).Move());
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(GetNDimString(), SValue(lhs.shape_.Size()).Move(), SValue(rhs.ndim_).Move());
       if (rhs.subtype_ & (1 << kYggStringSchemaSubType)) {
 	if (!CompareEncoding(context, it_schema))
 	  return false;
@@ -11312,7 +11312,7 @@ public:
     bool ComparePython(Context& context, const SchemaType& it_schema) const {
       SCHEMA_LHS_RHS;
       if (lhs.class_ != rhs.class_) {
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPythonClassString(), lhs.class_, rhs.class_);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(GetPythonClassString(), lhs.class_, rhs.class_);
       }
       return true;
     }
@@ -11329,7 +11329,7 @@ public:
       // if (lhs_addProps != rhs_addProps &&
       // 	  ((!rhs_addProps && lhs.maxProperties_ == SizeType(~0)) ||
       // 	   (!lhs_addProps && rhs.maxProperties_ == SizeType(~0)))) {
-      // 	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), lhs_addProps, rhs_addProps);
+      // 	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), lhs_addProps, rhs_addProps);
       // }
       if (lhs.minProperties_ != rhs.minProperties_) {
 	SizeType lhs_minProps = lhs.minProperties_, rhs_minProps = rhs.minProperties_;
@@ -11343,7 +11343,7 @@ public:
 	    goto minPropertiesMatch;
 	  rhs_minProps = rhs.propertyCount_;
 	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinPropertiesString(), lhs_minProps, rhs_minProps);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinPropertiesString(), lhs_minProps, rhs_minProps);
         minPropertiesMatch:;
       }
       if (lhs.maxProperties_ != rhs.maxProperties_) {
@@ -11358,7 +11358,7 @@ public:
 	    goto maxPropertiesMatch;
 	  rhs_maxProps = rhs.propertyCount_;
 	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxPropertiesString(), lhs_maxProps, rhs_maxProps);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxPropertiesString(), lhs_maxProps, rhs_maxProps);
         maxPropertiesMatch:;
       }
       return true;
@@ -11372,7 +11372,7 @@ public:
     bool CompareEndObject(Context& context, SizeType memberCount, const bool additionalProperties=false) const {
       if (memberCount == 0 && !additionalProperties &&
 	  additionalProperties_ && additionalPropertiesExplicit_) {
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), additionalProperties, additionalProperties_);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalPropertiesString(), additionalProperties, additionalProperties_);
       }
       return true;
     }
@@ -11381,7 +11381,7 @@ public:
       bool lhs_addItems = (lhs.additionalItems_ || lhs.additionalItemsSchema_);
       bool rhs_addItems = (rhs.additionalItems_ || rhs.additionalItemsSchema_);
       if (lhs.uniqueItems_ != rhs.uniqueItems_)
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetUniqueItemsString(), lhs.uniqueItems_, rhs.uniqueItems_);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetUniqueItemsString(), lhs.uniqueItems_, rhs.uniqueItems_);
       if (lhs.minItems_ != rhs.minItems_) {
 	SizeType lhs_minItems = lhs.minItems_, rhs_minItems = rhs.minItems_;
 	if (lhs.minItems_ == 0) {
@@ -11394,7 +11394,7 @@ public:
 	    goto minItemsMatch;
 	  rhs_minItems = rhs.itemsTupleCount_;
 	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinItemsString(), lhs_minItems, rhs_minItems);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMinItemsString(), lhs_minItems, rhs_minItems);
         minItemsMatch:;
       }
       if (lhs.maxItems_ != rhs.maxItems_) {
@@ -11409,7 +11409,7 @@ public:
 	    goto maxItemsMatch;
 	  rhs_maxItems = rhs.itemsTupleCount_;
 	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxItemsString(), lhs_maxItems, rhs_maxItems);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(GetMaxItemsString(), lhs_maxItems, rhs_maxItems);
         maxItemsMatch:;
       }
       return true;
@@ -11420,21 +11420,21 @@ public:
     bool CompareEndArray(Context& context, SizeType elementCount, const bool additionalItems=false) const {
       if (elementCount == 0 && !additionalItems &&
 	  additionalItems_ && additionalItemsExplicit_) {
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalItemsString(), additionalItems, additionalItems_);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(GetAdditionalItemsString(), additionalItems, additionalItems_);
       }
       return true;
     }
 #undef CHECK_INCOMPATIBLE_IF_PRESENT
 #undef CHECK_INCOMPATIBLE_IF_SET
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_STR
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA
+#undef YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL
+#undef YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_STR
+#undef YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP
+#undef YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP
+#undef YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA
 #undef SCHEMA_LHS_RHS
 protected:
   
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     // HERE
     AllocatorType* allocator_;
@@ -11475,9 +11475,9 @@ protected:
     bool uniqueItems_;
 
     RegexType* pattern_;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     SValue patternStr_;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     SizeType minLength_;
     SizeType maxLength_;
 
@@ -11492,7 +11492,7 @@ protected:
     bool writeOnly_;
     bool nullable_;
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     // Yggdrasil properties
     unsigned int yggtype_; // bitmask of SchemaYggType
     unsigned int subtype_; // bitmask of YggSchemaValueSubType
@@ -11526,13 +11526,13 @@ protected:
     SharedPropertiesType* sharedProperties_;
     bool additionalPropertiesExplicit_;
     bool additionalItemsExplicit_;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
   
 };
 
 template<typename Stack, typename Ch>
 struct TokenHelper {
-    RAPIDJSON_FORCEINLINE static void AppendIndexToken(Stack& documentStack, SizeType index) {
+    YGGDRASIL_RAPIDJSON_FORCEINLINE static void AppendIndexToken(Stack& documentStack, SizeType index) {
         *documentStack.template Push<Ch>() = '/';
         char buffer[21];
         size_t length = static_cast<size_t>((sizeof(SizeType) == 4 ? u32toa(index, buffer) : u64toa(index, buffer)) - buffer);
@@ -11544,8 +11544,8 @@ struct TokenHelper {
 // Partial specialized version for char to prevent buffer copying.
 template <typename Stack>
 struct TokenHelper<Stack, char> {
-    RAPIDJSON_FORCEINLINE static void AppendIndexToken(Stack& documentStack, SizeType index) {
-        RAPIDJSON_IF_CONSTEXPR (sizeof(SizeType) == 4) {
+    YGGDRASIL_RAPIDJSON_FORCEINLINE static void AppendIndexToken(Stack& documentStack, SizeType index) {
+        YGGDRASIL_RAPIDJSON_IF_CONSTEXPR (sizeof(SizeType) == 4) {
             char *buffer = documentStack.template Push<char>(1 + 10); // '/' + uint
             *buffer++ = '/';
             const char* end = internal::u32toa(index, buffer);
@@ -11628,9 +11628,9 @@ public:
         IRemoteSchemaDocumentProviderType* remoteProvider = 0, Allocator* allocator = 0,
         const PointerType& pointer = PointerType(), // PR #1393
         const Specification& spec = Specification(kDraft04)
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 				   , unsigned int flags = 0
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 				   ) :  // PR #1393
         remoteProvider_(remoteProvider),
         allocator_(allocator),
@@ -11642,14 +11642,14 @@ public:
         spec_(spec),
         error_(kObjectType),
         currentError_()
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	, flags_(flags), metaschema_doc_(), metaschema_(),
 	instanceMap_(allocator, kInitialInstanceMapSize)
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaDocument::GenericSchemaDocument");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaDocument::GenericSchemaDocument");
         if (!allocator_)
-            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator)();
+            ownAllocator_ = allocator_ = YGGDRASIL_RAPIDJSON_NEW(Allocator)();
 
         Ch noUri[1] = {0};
         uri_.SetString(uri ? uri : noUri, uriLength, *allocator_);
@@ -11678,18 +11678,18 @@ public:
             SchemaErrorValue(kSchemaErrorStartUnknown, PointerType(), sb.GetString(), static_cast<SizeType>(sb.GetSize() / sizeof(Ch)));
         }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	const_cast<SchemaType*>(root_)->SortSharedProperties(root_, PointerType());
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-        RAPIDJSON_ASSERT(root_ != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(root_ != 0);
 
         schemaRef_.ShrinkToFit(); // Deallocate all memory for ref
     }
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
     //! Move constructor in C++11
-    GenericSchemaDocument(GenericSchemaDocument&& rhs) RAPIDJSON_NOEXCEPT :
+    GenericSchemaDocument(GenericSchemaDocument&& rhs) YGGDRASIL_RAPIDJSON_NOEXCEPT :
         remoteProvider_(rhs.remoteProvider_),
         allocator_(rhs.allocator_),
         ownAllocator_(rhs.ownAllocator_),
@@ -11702,9 +11702,9 @@ public:
         spec_(rhs.spec_),
         error_(std::move(rhs.error_)),
         currentError_(std::move(rhs.currentError_))
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	, flags_(rhs.flags_), metaschema_doc_(rhs.metaschema_doc_), metaschema_(rhs.metaschema_), instanceMap_(std::move(rhs.instanceMap_))
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     {
         rhs.remoteProvider_ = 0;
         rhs.allocator_ = 0;
@@ -11728,9 +11728,9 @@ public:
         error_.SetNull();
         currentError_.SetNull();
 
-        RAPIDJSON_DELETE(ownAllocator_);
+        YGGDRASIL_RAPIDJSON_DELETE(ownAllocator_);
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if ((metaschema_) && (!isMetaschema())) {
 	  delete metaschema_;
 	  delete metaschema_doc_;
@@ -11739,7 +11739,7 @@ public:
 	}
 	while (!instanceMap_.Empty())
 	  instanceMap_.template Pop<InstanceSchemaEntry>(1)->~InstanceSchemaEntry();
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     }
 
     const GValue& GetURI() const { return uri_; }
@@ -11829,7 +11829,7 @@ public:
         bool owned;
     };
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     typedef GenericSchemaDocument<ValueT, Allocator> InstanceSchemaDoc;
   
     struct InstanceSchemaEntry {
@@ -11851,7 +11851,7 @@ public:
                 return target->document;
         return 0;
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
   
     void AddErrorInstanceLocation(GValue& result, const PointerType& location) {
       GenericStringBuffer<EncodingType> sb;
@@ -11875,40 +11875,40 @@ public:
     }
 
     void AddCurrentError(const SchemaErrorCode code, const PointerType& location) {
-      RAPIDJSON_SCHEMA_PRINT(InvalidKeyword, GetSchemaErrorKeyword(code));
+      YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(InvalidKeyword, GetSchemaErrorKeyword(code));
       currentError_.AddMember(GetErrorCodeString(), code, *allocator_);
       AddErrorInstanceLocation(currentError_, location);
       AddError(GValue(GetSchemaErrorKeyword(code)).Move(), currentError_);
     }
 
-#define RAPIDJSON_STRING_(name, ...) \
+#define YGGDRASIL_RAPIDJSON_STRING_(name, ...) \
     static const StringRefType& Get##name##String() {\
         static const Ch s[] = { __VA_ARGS__, '\0' };\
         static const StringRefType v(s, static_cast<SizeType>(sizeof(s) / sizeof(Ch) - 1)); \
         return v;\
     }
 
-    RAPIDJSON_STRING_(InstanceRef, 'i', 'n', 's', 't', 'a', 'n', 'c', 'e', 'R', 'e', 'f')
-    RAPIDJSON_STRING_(ErrorCode, 'e', 'r', 'r', 'o', 'r', 'C', 'o', 'd', 'e')
-    RAPIDJSON_STRING_(Value, 'v', 'a', 'l', 'u', 'e')
-    RAPIDJSON_STRING_(Offset, 'o', 'f', 'f', 's', 'e', 't')
+    YGGDRASIL_RAPIDJSON_STRING_(InstanceRef, 'i', 'n', 's', 't', 'a', 'n', 'c', 'e', 'R', 'e', 'f')
+    YGGDRASIL_RAPIDJSON_STRING_(ErrorCode, 'e', 'r', 'r', 'o', 'r', 'C', 'o', 'd', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Value, 'v', 'a', 'l', 'u', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Offset, 'o', 'f', 'f', 's', 'e', 't')
 
-    RAPIDJSON_STRING_(Null, 'n', 'u', 'l', 'l')
-    RAPIDJSON_STRING_(SpecUnknown, 'S', 'p', 'e', 'c', 'U', 'n', 'k', 'n', 'o', 'w', 'n')
-    RAPIDJSON_STRING_(SpecUnsupported, 'S', 'p', 'e', 'c', 'U', 'n', 's', 'u', 'p', 'p', 'o', 'r', 't', 'e', 'd')
-    RAPIDJSON_STRING_(SpecIllegal, 'S', 'p', 'e', 'c', 'I', 'l', 'l', 'e', 'g', 'a', 'l')
-    RAPIDJSON_STRING_(StartUnknown, 'S', 't', 'a', 'r', 't', 'U', 'n', 'k', 'n', 'o', 'w', 'n')
-    RAPIDJSON_STRING_(RefPlainName, 'R', 'e', 'f', 'P', 'l', 'a', 'i', 'n', 'N', 'a', 'm', 'e')
-    RAPIDJSON_STRING_(RefInvalid, 'R', 'e', 'f', 'I', 'n', 'v', 'a', 'l', 'i', 'd')
-    RAPIDJSON_STRING_(RefPointerInvalid, 'R', 'e', 'f', 'P', 'o', 'i', 'n', 't', 'e', 'r', 'I', 'n', 'v', 'a', 'l', 'i', 'd')
-    RAPIDJSON_STRING_(RefUnknown, 'R', 'e', 'f', 'U', 'n', 'k', 'n', 'o', 'w', 'n')
-    RAPIDJSON_STRING_(RefCyclical, 'R', 'e', 'f', 'C', 'y', 'c', 'l', 'i', 'c', 'a', 'l')
-    RAPIDJSON_STRING_(RefNoRemoteProvider, 'R', 'e', 'f', 'N', 'o', 'R', 'e', 'm', 'o', 't', 'e', 'P', 'r', 'o', 'v', 'i', 'd', 'e', 'r')
-    RAPIDJSON_STRING_(RefNoRemoteSchema, 'R', 'e', 'f', 'N', 'o', 'R', 'e', 'm', 'o', 't', 'e', 'S', 'c', 'h', 'e', 'm', 'a')
-    RAPIDJSON_STRING_(ReadOnlyAndWriteOnly, 'R', 'e', 'a', 'd', 'O', 'n', 'l', 'y', 'A', 'n', 'd', 'W', 'r', 'i', 't', 'e', 'O', 'n', 'l', 'y')
-    RAPIDJSON_STRING_(RegexInvalid, 'R', 'e', 'g', 'e', 'x', 'I', 'n', 'v', 'a', 'l', 'i', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(Null, 'n', 'u', 'l', 'l')
+    YGGDRASIL_RAPIDJSON_STRING_(SpecUnknown, 'S', 'p', 'e', 'c', 'U', 'n', 'k', 'n', 'o', 'w', 'n')
+    YGGDRASIL_RAPIDJSON_STRING_(SpecUnsupported, 'S', 'p', 'e', 'c', 'U', 'n', 's', 'u', 'p', 'p', 'o', 'r', 't', 'e', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(SpecIllegal, 'S', 'p', 'e', 'c', 'I', 'l', 'l', 'e', 'g', 'a', 'l')
+    YGGDRASIL_RAPIDJSON_STRING_(StartUnknown, 'S', 't', 'a', 'r', 't', 'U', 'n', 'k', 'n', 'o', 'w', 'n')
+    YGGDRASIL_RAPIDJSON_STRING_(RefPlainName, 'R', 'e', 'f', 'P', 'l', 'a', 'i', 'n', 'N', 'a', 'm', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(RefInvalid, 'R', 'e', 'f', 'I', 'n', 'v', 'a', 'l', 'i', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(RefPointerInvalid, 'R', 'e', 'f', 'P', 'o', 'i', 'n', 't', 'e', 'r', 'I', 'n', 'v', 'a', 'l', 'i', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(RefUnknown, 'R', 'e', 'f', 'U', 'n', 'k', 'n', 'o', 'w', 'n')
+    YGGDRASIL_RAPIDJSON_STRING_(RefCyclical, 'R', 'e', 'f', 'C', 'y', 'c', 'l', 'i', 'c', 'a', 'l')
+    YGGDRASIL_RAPIDJSON_STRING_(RefNoRemoteProvider, 'R', 'e', 'f', 'N', 'o', 'R', 'e', 'm', 'o', 't', 'e', 'P', 'r', 'o', 'v', 'i', 'd', 'e', 'r')
+    YGGDRASIL_RAPIDJSON_STRING_(RefNoRemoteSchema, 'R', 'e', 'f', 'N', 'o', 'R', 'e', 'm', 'o', 't', 'e', 'S', 'c', 'h', 'e', 'm', 'a')
+    YGGDRASIL_RAPIDJSON_STRING_(ReadOnlyAndWriteOnly, 'R', 'e', 'a', 'd', 'O', 'n', 'l', 'y', 'A', 'n', 'd', 'W', 'r', 'i', 't', 'e', 'O', 'n', 'l', 'y')
+    YGGDRASIL_RAPIDJSON_STRING_(RegexInvalid, 'R', 'e', 'g', 'e', 'x', 'I', 'n', 'v', 'a', 'l', 'i', 'd')
 
-#undef RAPIDJSON_STRING_
+#undef YGGDRASIL_RAPIDJSON_STRING_
 
     // Static method to get schema draft of any schema document
     static SchemaDraft GetSchemaDraft(const ValueType& document) {
@@ -12008,19 +12008,19 @@ public:
 
     // Changed by PR #1393
     const UriType& CreateSchema(const SchemaType** schema, const PointerType& pointer, const ValueType& v, const ValueType& document, const UriType& id
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		,
 		internal::SingularFlag* singular=NULL,
 		const SchemaType* parentSchema=NULL,
 		const ValueType* parentKey=NULL
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 				) {
-        RAPIDJSON_ASSERT(pointer.IsValid());
+        YGGDRASIL_RAPIDJSON_ASSERT(pointer.IsValid());
         GenericStringBuffer<EncodingType> sb;
         pointer.StringifyUriFragment(sb);
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaDocument::CreateSchema", sb.GetString(), id.GetString());
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaDocument::CreateSchema", sb.GetString(), id.GetString());
         if (v.IsObject()) {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    if (const SchemaType* sc = GetSchema(pointer, singular)) {
 	        if (schema)
 		    *schema = sc;
@@ -12035,7 +12035,7 @@ public:
 		    *schema = s;
 		return s->GetId();
 	    }
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
             if (const SchemaType* sc = GetSchema(pointer)) {
                 if (schema)
                     *schema = sc;
@@ -12048,7 +12048,7 @@ public:
                     *schema = s;
                 return s->GetId();
             }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         }
         else {
             if (schema)
@@ -12058,7 +12058,7 @@ public:
         return id;
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
   const UriType& CreateMetaSchema(const SchemaType** schema) {
       if (!metaschema_) {
 	if (isMetaschema()) {
@@ -12087,17 +12087,17 @@ public:
 	ValueType v;
 	v.SetArray();
 	v.PushBack(ValueType(v.GetPythonClassString(), d.GetAllocator()).Move(), d.GetAllocator());
-	RAPIDJSON_ASSERT(d.IsObject());
+	YGGDRASIL_RAPIDJSON_ASSERT(d.IsObject());
 	d.AddMember(SchemaType::GetRequiredString(), v, d.GetAllocator());
 	if (cls.IsPythonClass()) {
-	  RAPIDJSON_ASSERT(d[v.GetPropertiesString()][v.GetPythonClassString()][SchemaType::GetAnyOfString()][0].IsObject());
+	  YGGDRASIL_RAPIDJSON_ASSERT(d[v.GetPropertiesString()][v.GetPythonClassString()][SchemaType::GetAnyOfString()][0].IsObject());
 	  d[v.GetPropertiesString()][v.GetPythonClassString()][SchemaType::GetAnyOfString()][0].AddMember(
   	      v.GetPythonClassString(),
 	      ValueType(cls.GetString(),
 			cls.GetStringLength(),
 			d.GetAllocator()).Move(),
 	      d.GetAllocator());
-	  RAPIDJSON_ASSERT(d[v.GetPropertiesString()][v.GetPythonClassString()][SchemaType::GetAnyOfString()][1][v.GetItemsString()].IsObject());
+	  YGGDRASIL_RAPIDJSON_ASSERT(d[v.GetPropertiesString()][v.GetPythonClassString()][SchemaType::GetAnyOfString()][1][v.GetItemsString()].IsObject());
 	  d[v.GetPropertiesString()][v.GetPythonClassString()][SchemaType::GetAnyOfString()][1][v.GetItemsString()].AddMember(
 	      v.GetPythonClassString(),
 	      ValueType(cls.GetString(),
@@ -12114,17 +12114,17 @@ public:
       *schema = sc;
       return sc->GetId();
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     // Changed by PR #1393
     // TODO should this return a UriType& ?
     bool HandleRefSchema(const PointerType& source, const SchemaType** schema, const ValueType& v, const ValueType& document, const UriType& id
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 		,
 		internal::SingularFlag* singular=NULL,
 		const SchemaType* parentSchema=NULL,
 		const ValueType* parentKey=NULL
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 			 ) {
         typename ValueType::ConstMemberIterator itr = v.FindMember(SchemaType::GetRefString());
         if (itr == v.MemberEnd())
@@ -12132,7 +12132,7 @@ public:
 
         GenericStringBuffer<EncodingType> sb;
         source.StringifyUriFragment(sb);
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaDocument::HandleRefSchema", sb.GetString(), id.GetString());
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaDocument::HandleRefSchema", sb.GetString(), id.GetString());
         // Resolve the source pointer to the $ref'ed schema (finally)
         new (schemaRef_.template Push<SchemaRefPtr>()) SchemaRefPtr(&source);
 
@@ -12144,7 +12144,7 @@ public:
                 // First resolve $ref against the in-scope id
                 UriType scopeId = UriType(id, allocator_);
                 UriType ref = UriType(itr->value, allocator_).Resolve(scopeId, allocator_);
-                RAPIDJSON_SCHEMA_PRINT(SchemaIds, id.GetString(), itr->value.GetString(), ref.GetString());
+                YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(SchemaIds, id.GetString(), itr->value.GetString(), ref.GetString());
                 // See if the resolved $ref minus the fragment matches a resolved id in this document
                 // Search from the root. Returns the subschema in the document and its absolute JSON pointer.
                 PointerType basePointer = PointerType();
@@ -12164,11 +12164,11 @@ public:
                                     SchemaErrorPointer(kSchemaErrorRefPointerInvalid, source, s, len, pointer);
                                 else {
                                     // Get the subschema
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 				    if (const SchemaType *sc = remoteDocument->GetSchema(pointer, singular)) {
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
                                     if (const SchemaType *sc = remoteDocument->GetSchema(pointer)) {
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
                                         if (schema)
                                             *schema = sc;
                                         AddSchemaRefs(const_cast<SchemaType *>(sc));
@@ -12205,11 +12205,11 @@ public:
                                     // TODO: cache pointer <-> id mapping
                                     size_t unresolvedTokenIndex;
                                     scopeId = pointer.GetUri(document, docId_, &unresolvedTokenIndex, allocator_);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
                                     CreateSchema(schema, pointer, *pv, document, scopeId, singular, parentSchema, parentKey);
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
                                     CreateSchema(schema, pointer, *pv, document, scopeId);
-#endif //RAPIDJSON_YGGDRASIL
+#endif //DISABLE_YGGDRASIL_RAPIDJSON
                                     return true;
                                 }
                             } else
@@ -12231,11 +12231,11 @@ public:
                                 // TODO: cache pointer <-> id mapping
                                 size_t unresolvedTokenIndex;
                                 scopeId = pointer.GetUri(document, docId_, &unresolvedTokenIndex, allocator_);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
                                 CreateSchema(schema, pointer, *pv, document, scopeId, singular, parentSchema, parentKey);
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
                                 CreateSchema(schema, pointer, *pv, document, scopeId);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
                                 return true;
                             }
                         } else
@@ -12269,7 +12269,7 @@ public:
             }
             // See if it matches
             if (localuri.Match(finduri, full)) {
-                RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaDocument::FindId (match)", full ? localuri.GetString() : localuri.GetBaseString());
+                YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaDocument::FindId (match)", full ? localuri.GetString() : localuri.GetBaseString());
                 resval = const_cast<ValueType *>(&doc);
                 resptr = here;
                 return resval;
@@ -12296,7 +12296,7 @@ public:
 
     // Added by PR #1393
     void AddSchemaRefs(SchemaType* schema) {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaDocument::AddSchemaRefs");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaDocument::AddSchemaRefs");
         while (!schemaRef_.Empty()) {
             SchemaRefPtr *ref = schemaRef_.template Pop<SchemaRefPtr>(1);
             SchemaEntry *entry = schemaMap_.template Push<SchemaEntry>();
@@ -12313,22 +12313,22 @@ public:
     }
 
     const SchemaType* GetSchema(const PointerType& pointer
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 				,
 				internal::SingularFlag* singular = 0
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 				) const {
         for (const SchemaEntry* target = schemaMap_.template Bottom<SchemaEntry>(); target != schemaMap_.template End<SchemaEntry>(); ++target)
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	  {
 	    if ((singular && (*singular != target->schema->isSingular_)) ||
 		(!singular && target->schema->isSingular_)) continue;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             if (pointer == target->pointer)
                 return target->schema;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	  }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         return 0;
     }
 
@@ -12341,7 +12341,7 @@ public:
 
     const SchemaType* GetTypeless() const { return typeless_; }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     bool isMetaschema(bool ignoreInstance=false) const {
       if (ignoreInstance)
 	return (flags_ & (1 << SchemaType::kMetaschemaFlag));
@@ -12351,7 +12351,7 @@ public:
     bool isInstance() const {
       return (flags_ & (1 << SchemaType::kInstanceFlag));
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     static const size_t kInitialSchemaMapSize = 64;
     static const size_t kInitialSchemaRefSize = 64;
@@ -12368,13 +12368,13 @@ public:
     Specification spec_;
     GValue error_;
     GValue currentError_;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     static const size_t kInitialInstanceMapSize = 4;
     const unsigned int flags_;
     const GenericDocument<EncodingType, typename ValueType::AllocatorType>* metaschema_doc_;
     const GenericSchemaDocument<ValueT, Allocator>* metaschema_;
     internal::Stack<Allocator> instanceMap_;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 };
 
 //! GenericSchemaDocument using Value type.
@@ -12404,10 +12404,10 @@ template <
 class GenericSchemaValidator :
     public internal::ISchemaStateFactory<typename SchemaDocumentType::SchemaType>, 
     public internal::ISchemaValidator,
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     public internal::ISchemaIterator<typename SchemaDocumentType::SchemaType>,
     public internal::ISchemaHandler<typename SchemaDocumentType::SchemaType>,
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     public internal::IValidationErrorHandler<typename SchemaDocumentType::SchemaType> {
 public:
     typedef typename SchemaDocumentType::SchemaType SchemaType;
@@ -12417,7 +12417,7 @@ public:
     typedef typename EncodingType::Ch Ch;
     typedef GenericStringRef<Ch> StringRefType;
     typedef GenericValue<EncodingType, StateAllocator> ValueType;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     template <typename, typename, typename>
     friend class GenericSchemaNormalizer;
     typedef internal::SharedProperties<SchemaDocumentType> SharedPropertiesType;
@@ -12425,7 +12425,7 @@ public:
     typedef internal::ISchemaHandler<SchemaType> SchemaHandlerType;
     typedef internal::IJointSchemaHandler<SchemaType> JointSchemaHandlerType;
     typedef internal::IValidationErrorHandler<SchemaType> ErrorHandlerType;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     //! Constructor without output handler.
     /*!
@@ -12453,16 +12453,16 @@ public:
         valid_(true),
         flags_(kValidateDefaultFlags),
         depth_(0)
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	, warning_(kObjectType),
 	currentWarning_(),
 	relativePathRoot_(),
 	python_disabled_(false),
 	mode_(Context::kValidationMode),
 	schema_handler_(0), joint_schema_handler_(0)
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::GenericSchemaValidator");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::GenericSchemaValidator");
     }
 
     //! Constructor with output handler.
@@ -12492,31 +12492,31 @@ public:
         valid_(true),
         flags_(kValidateDefaultFlags),
         depth_(0)
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	, warning_(kObjectType),
 	currentWarning_(),
 	relativePathRoot_(),
 	python_disabled_(false),
 	mode_(Context::kValidationMode),
 	schema_handler_(0), joint_schema_handler_(0)
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::GenericSchemaValidator (output handler)");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::GenericSchemaValidator (output handler)");
     }
 
     //! Destructor.
     ~GenericSchemaValidator() {
         Reset();
-        RAPIDJSON_DELETE(ownStateAllocator_);
+        YGGDRASIL_RAPIDJSON_DELETE(ownStateAllocator_);
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     void ResetStack() {
         while (!schemaStack_.Empty())
             PopSchema();
         documentStack_.Clear();
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     //! Reset the internal states.
     void Reset() {
@@ -12524,9 +12524,9 @@ public:
             PopSchema();
         documentStack_.Clear();
         ResetError();
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	ResetWarning();
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     }
 
     //! Reset the error state.
@@ -12556,7 +12556,7 @@ public:
     ValueType& GetError() { return error_; }
     const ValueType& GetError() const { return error_; }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
     void SetRelativePathRoot(const Ch* str, SizeType len) {
       Ch c = '\0';
@@ -12602,7 +12602,7 @@ public:
     }
     void SetSchemaHandler(SchemaHandlerType* handler) {
       if (handler) {
-	RAPIDJSON_ASSERT(!schema_handler_);
+	YGGDRASIL_RAPIDJSON_ASSERT(!schema_handler_);
       } else {
 	ResetStack();
       }
@@ -12611,7 +12611,7 @@ public:
 
     void SetJointSchemaHandler(JointSchemaHandlerType* handler) {
       if (handler) {
-	RAPIDJSON_ASSERT(!joint_schema_handler_);
+	YGGDRASIL_RAPIDJSON_ASSERT(!joint_schema_handler_);
       } else {
 	ResetStack();
       }
@@ -12620,7 +12620,7 @@ public:
     }
 
     void SetMode(const typename SchemaType::Context::ValidatorMode mode) {
-      // RAPIDJSON_ASSERT(mode_ == Context::kValidationMode);
+      // YGGDRASIL_RAPIDJSON_ASSERT(mode_ == Context::kValidationMode);
       mode_ = mode;
     }
 
@@ -12669,7 +12669,7 @@ public:
       typedef typename ValueType::ConstMemberIterator MemberIter;
       if (!err)
 	err = &error_;
-      RAPIDJSON_ASSERT(err->IsObject());
+      YGGDRASIL_RAPIDJSON_ASSERT(err->IsObject());
       if ((!isSingular) && (!isWrapped) && (err->MemberCount() > 1))
 	out.SetArray();
       bool hasSingular = false, hasWrapped = false;
@@ -12761,8 +12761,8 @@ public:
       typedef typename ValueType::ConstValueIterator ValueIter;
       out.SetObject();
       internal::Stack<StateAllocator> msg_stack(stateAllocator_, kDefaultDocumentStackCapacity);
-      RAPIDJSON_ASSERT(err->IsObject());
-      RAPIDJSON_ASSERT(out.IsObject());
+      YGGDRASIL_RAPIDJSON_ASSERT(err->IsObject());
+      YGGDRASIL_RAPIDJSON_ASSERT(out.IsObject());
       MemberIter code = err->FindMember(GetErrorCodeString());
       if (code == err->MemberEnd())
 	return false;
@@ -12785,7 +12785,7 @@ public:
 	  CheckErrorReplace_(nonTypeError, &(iRef->value), allocator);
 	}
       }
-      const RAPIDJSON_ERROR_CHARTYPE* msg = GetValidateError_En((ValidateErrorCode)(code->value.GetInt()));
+      const YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE* msg = GetValidateError_En((ValidateErrorCode)(code->value.GetInt()));
       SizeType msg_len = internal::StrLen(msg);
       SizeType start = 0;
       SizeType len = 0;
@@ -12793,7 +12793,7 @@ public:
       Writer<StringBuffer> w(sb);
       for (SizeType i = 0; i < msg_len; i++) {
 	*msg_stack.template Push<Ch>() = msg[i];
-	if (msg[i] == (RAPIDJSON_ERROR_CHARTYPE)'%') {
+	if (msg[i] == (YGGDRASIL_RAPIDJSON_ERROR_CHARTYPE)'%') {
 	  i++;
 	  start = i;
 	  while ((i < msg_len) && !((msg[i] == ' ') ||
@@ -12916,13 +12916,13 @@ public:
 	err = &warning_;
       return GetErrorMsg(out, allocator, err);
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     //! Gets the JSON pointer pointed to the invalid schema.
     //  If reporting all errors, the stack will be empty.
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     PointerType GetInvalidSchemaPointer() const {
         return schemaStack_.Empty() ? PointerType() : CurrentSchema().GetPointer();
     }
@@ -12932,9 +12932,9 @@ public:
     const Ch* GetInvalidSchemaKeyword() const {
         if (!schemaStack_.Empty()) return CurrentContext().invalidKeyword;
         if (GetContinueOnErrors() && !error_.ObjectEmpty()) return static_cast<const Ch*>(GetErrorsString());
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (!warning_.ObjectEmpty()) return (const Ch*)GetWarningsString();
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         return 0;
     }
 
@@ -12943,17 +12943,17 @@ public:
     ValidateErrorCode GetInvalidSchemaCode() const {
         if (!schemaStack_.Empty()) return CurrentContext().invalidCode;
         if (GetContinueOnErrors() && !error_.ObjectEmpty()) return kValidateErrors;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (!warning_.ObjectEmpty()) return kValidateWarnings;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         return kValidateErrorNone;
     }
 
     //! Gets the JSON pointer pointed to the invalid value.
     //  If reporting all errors, the stack will be empty.
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     PointerType GetInvalidDocumentPointer() const {
         if (documentStack_.Empty()) {
             return PointerType();
@@ -13005,7 +13005,7 @@ public:
         AddNumberError(kValidateErrorMinLength,
             ValueType(str, length, GetStateAllocator()).Move(), SValue(expected).Move());
     }
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     void DoesNotMatch(const Ch* str, SizeType length,
 		      const Ch* str_exp, SizeType length_exp) {
         currentError_.SetObject();
@@ -13013,13 +13013,13 @@ public:
 	currentError_.AddMember(GetExpectedString(), ValueType(str_exp, length_exp, GetStateAllocator()).Move(), GetStateAllocator());
         AddCurrentError(kValidateErrorPattern);
     }
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     void DoesNotMatch(const Ch* str, SizeType length) {
         currentError_.SetObject();
         currentError_.AddMember(GetActualString(), ValueType(str, length, GetStateAllocator()).Move(), GetStateAllocator());
         AddCurrentError(kValidateErrorPattern);
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     void DisallowedItem(SizeType index) {
         currentError_.SetObject();
@@ -13066,7 +13066,7 @@ public:
         AddCurrentError(kValidateErrorRequired);
         return true;
     }
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual bool EndMissingPropertiesShared(const SValue&, const SValue&) {
         return EndMissingProperties();
     }
@@ -13079,15 +13079,15 @@ public:
     }
     ValidateErrorCode SharedNormalizationError(ISchemaValidator* subvalidator) {
       ValueType sharedError(static_cast<GenericSchemaValidator*>(subvalidator)->GetError(), GetStateAllocator(), true);
-      RAPIDJSON_ASSERT(sharedError.IsObject() && (sharedError.MemberCount() == 1));
+      YGGDRASIL_RAPIDJSON_ASSERT(sharedError.IsObject() && (sharedError.MemberCount() == 1));
       typename ValueType::ConstMemberIterator m = sharedError.MemberBegin();
-      RAPIDJSON_ASSERT(m->value.IsObject());
+      YGGDRASIL_RAPIDJSON_ASSERT(m->value.IsObject());
       typename ValueType::ConstMemberIterator vcode = m->value.FindMember(GetErrorCodeString());
-      RAPIDJSON_ASSERT(vcode != m->value.MemberEnd());
+      YGGDRASIL_RAPIDJSON_ASSERT(vcode != m->value.MemberEnd());
       MergeError(sharedError);
       return static_cast<ValidateErrorCode>(vcode->value.GetUint());
     }
-#ifdef RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#ifdef YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     void GenericError(const char* str) {
       std::cerr << "GenericError: " << str << std::endl;
       currentError_.SetObject();
@@ -13098,7 +13098,7 @@ public:
 			      GetStateAllocator());
       AddCurrentError(kValidateErrorGeneric);
     }
-#endif // RAPIDJSON_YGGDRASIL_DEBUG_NORMALIZATION
+#endif // YGGDRASIL_RAPIDJSON_DEBUG_NORMALIZATION
     void IncompatibleSchemas(const typename SchemaType::ValueType& key, const SValue& expected, const SValue& actual, bool existingValues) {
       if (!existingValues)
 	currentError_.SetObject();
@@ -13139,7 +13139,7 @@ public:
 	currentError_.AddMember(GetMissingString(), ValueType(name, GetStateAllocator()).Move(), GetStateAllocator());
         AddCurrentError(kValidateErrorMissingSubschema);
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     void PropertyViolations(ISchemaValidator** subvalidators, SizeType count) {
         for (SizeType i = 0; i < count; ++i)
             MergeError(static_cast<GenericSchemaValidator*>(subvalidators[i])->GetError());
@@ -13189,12 +13189,12 @@ public:
         return true;
     }
 
-#ifndef RAPIDJSON_YGGDRASIL
+#ifdef DISABLE_YGGDRASIL_RAPIDJSON
     void DisallowedValue(const ValidateErrorCode code = kValidateErrorEnum) {
         currentError_.SetObject();
         AddCurrentError(code);
     }
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
     void StartDisallowedTypeKey(bool actual) {
       if (!actual)
 	currentError_.SetObject();
@@ -13212,7 +13212,7 @@ public:
       dst->value.PushBack(ValueType(expectedType, GetStateAllocator()).Move(), GetStateAllocator());
     }
     void EndDisallowedTypeKey(bool) {}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     void StartDisallowedType() {
         currentError_.SetArray();
     }
@@ -13227,7 +13227,7 @@ public:
         AddCurrentError(kValidateErrorType);
     }
   // SUBTYPE
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     void StartDisallowedSubTypeKey(bool actual) {
       if (!actual)
 	currentError_.SetObject();
@@ -13258,7 +13258,7 @@ public:
         currentError_ = error;
         AddCurrentError(kValidateErrorSubType);
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     void NotAllOf(ISchemaValidator** subvalidators, SizeType count) {
         // Treat allOf like oneOf and anyOf to match https://rapidjson.org/md_doc_schema.html#allOf-anyOf-oneOf
         AddErrorArray(kValidateErrorAllOf, subvalidators, count);
@@ -13293,7 +13293,7 @@ public:
         AddCurrentError(kValidateErrorWriteOnly);
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
   void MissingRequiredSchemaProperty(const typename SchemaType::ValueType& name) {
     currentError_.SetObject();
     currentError_.AddMember(GetMissingString(),
@@ -13410,13 +13410,13 @@ public:
   }
   ValidateErrorCode NotSingularItem(ISchemaValidator** subvalidator) {
     error_.CopyFrom(static_cast<GenericSchemaValidator*>(subvalidator[0])->GetError(), GetStateAllocator(), true);
-    RAPIDJSON_ASSERT(error_.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(error_.IsObject());
     ValidateErrorCode vcode = kValidateErrors;
     if (error_.MemberCount() == 1) {
       typename ValueType::ConstMemberIterator m = error_.MemberBegin();
-      RAPIDJSON_ASSERT(m->value.IsObject());
+      YGGDRASIL_RAPIDJSON_ASSERT(m->value.IsObject());
       typename ValueType::ConstMemberIterator m_vcode = m->value.FindMember(GetErrorCodeString());
-      RAPIDJSON_ASSERT(m_vcode != m->value.MemberEnd());
+      YGGDRASIL_RAPIDJSON_ASSERT(m_vcode != m->value.MemberEnd());
       vcode = static_cast<ValidateErrorCode>(m_vcode->value.GetUint());
     }
     error_.AddMember(GetSingularString(),
@@ -13427,13 +13427,13 @@ public:
   }
   ValidateErrorCode NotWrappedItem(ISchemaValidator** subvalidator) {
     error_.CopyFrom(static_cast<GenericSchemaValidator*>(subvalidator[0])->GetError(), GetStateAllocator(), true);
-    RAPIDJSON_ASSERT(error_.IsObject());
+    YGGDRASIL_RAPIDJSON_ASSERT(error_.IsObject());
     ValidateErrorCode vcode = kValidateErrors;
     if (error_.MemberCount() == 1) {
       typename ValueType::ConstMemberIterator m = error_.MemberBegin();
-      RAPIDJSON_ASSERT(m->value.IsObject());
+      YGGDRASIL_RAPIDJSON_ASSERT(m->value.IsObject());
       typename ValueType::ConstMemberIterator m_vcode = m->value.FindMember(GetErrorCodeString());
-      RAPIDJSON_ASSERT(m_vcode != m->value.MemberEnd());
+      YGGDRASIL_RAPIDJSON_ASSERT(m_vcode != m->value.MemberEnd());
       vcode = static_cast<ValidateErrorCode>(m_vcode->value.GetUint());
     }
     error_.AddMember(GetWrappedString(),
@@ -13467,55 +13467,55 @@ public:
 			      GetStateAllocator());
     AddCurrentWarning(kDeprecatedWarning, false);
   }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
   
 
-#define RAPIDJSON_STRING_(name, ...) \
+#define YGGDRASIL_RAPIDJSON_STRING_(name, ...) \
     static const StringRefType& Get##name##String() {\
         static const Ch s[] = { __VA_ARGS__, '\0' };\
         static const StringRefType v(s, static_cast<SizeType>(sizeof(s) / sizeof(Ch) - 1)); \
         return v;\
     }
 
-    RAPIDJSON_STRING_(InstanceRef, 'i', 'n', 's', 't', 'a', 'n', 'c', 'e', 'R', 'e', 'f')
-    RAPIDJSON_STRING_(SchemaRef, 's', 'c', 'h', 'e', 'm', 'a', 'R', 'e', 'f')
-    RAPIDJSON_STRING_(Expected, 'e', 'x', 'p', 'e', 'c', 't', 'e', 'd')
-    RAPIDJSON_STRING_(Actual, 'a', 'c', 't', 'u', 'a', 'l')
-    RAPIDJSON_STRING_(Disallowed, 'd', 'i', 's', 'a', 'l', 'l', 'o', 'w', 'e', 'd')
-    RAPIDJSON_STRING_(Missing, 'm', 'i', 's', 's', 'i', 'n', 'g')
-    RAPIDJSON_STRING_(Errors, 'e', 'r', 'r', 'o', 'r', 's')
-    RAPIDJSON_STRING_(ErrorCode, 'e', 'r', 'r', 'o', 'r', 'C', 'o', 'd', 'e')
-    RAPIDJSON_STRING_(ErrorMessage, 'e', 'r', 'r', 'o', 'r', 'M', 'e', 's', 's', 'a', 'g', 'e')
-    RAPIDJSON_STRING_(Duplicates, 'd', 'u', 'p', 'l', 'i', 'c', 'a', 't', 'e', 's')
-    RAPIDJSON_STRING_(Matches, 'm', 'a', 't', 'c', 'h', 'e', 's')
-#ifdef RAPIDJSON_YGGDRASIL
-    RAPIDJSON_STRING_(SchemaIteratorRef, 's', 'c', 'h', 'e', 'm', 'a', 'I', 't', 'e', 'r', 'a', 't', 'o', 'r', 'R', 'e', 'f')
-    RAPIDJSON_STRING_(SchemaHandlerRef, 's', 'c', 'h', 'e', 'm', 'a', 'H', 'a', 'n', 'd', 'l', 'e', 'r', 'R', 'e', 'f')
-    RAPIDJSON_STRING_(Circular, 'c', 'i', 'r', 'c', 'u', 'l', 'a', 'r')
-    RAPIDJSON_STRING_(Conflicting, 'c', 'o', 'n', 'f', 'l', 'i', 'c', 't', 'i', 'n', 'g')
-    RAPIDJSON_STRING_(Type, 't', 'y', 'p', 'e')
-    RAPIDJSON_STRING_(Warning, 'w', 'a', 'r', 'n', 'i', 'n', 'g')
-    RAPIDJSON_STRING_(Warnings, 'w', 'a', 'r', 'n', 'i', 'n', 'g', 's')
-    RAPIDJSON_STRING_(Singular, 's', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
-    RAPIDJSON_STRING_(Wrapped, 'w', 'r', 'a', 'p', 'p', 'e', 'd')
-    RAPIDJSON_STRING_(Message, 'm', 'e', 's', 's', 'a', 'g', 'e')
-    RAPIDJSON_STRING_(Property, 'p', 'r', 'o', 'p', 'e', 'r', 't', 'y')
-#endif //RAPIDJSON_YGGDRASIL
+    YGGDRASIL_RAPIDJSON_STRING_(InstanceRef, 'i', 'n', 's', 't', 'a', 'n', 'c', 'e', 'R', 'e', 'f')
+    YGGDRASIL_RAPIDJSON_STRING_(SchemaRef, 's', 'c', 'h', 'e', 'm', 'a', 'R', 'e', 'f')
+    YGGDRASIL_RAPIDJSON_STRING_(Expected, 'e', 'x', 'p', 'e', 'c', 't', 'e', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(Actual, 'a', 'c', 't', 'u', 'a', 'l')
+    YGGDRASIL_RAPIDJSON_STRING_(Disallowed, 'd', 'i', 's', 'a', 'l', 'l', 'o', 'w', 'e', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(Missing, 'm', 'i', 's', 's', 'i', 'n', 'g')
+    YGGDRASIL_RAPIDJSON_STRING_(Errors, 'e', 'r', 'r', 'o', 'r', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(ErrorCode, 'e', 'r', 'r', 'o', 'r', 'C', 'o', 'd', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(ErrorMessage, 'e', 'r', 'r', 'o', 'r', 'M', 'e', 's', 's', 'a', 'g', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Duplicates, 'd', 'u', 'p', 'l', 'i', 'c', 'a', 't', 'e', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(Matches, 'm', 'a', 't', 'c', 'h', 'e', 's')
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+    YGGDRASIL_RAPIDJSON_STRING_(SchemaIteratorRef, 's', 'c', 'h', 'e', 'm', 'a', 'I', 't', 'e', 'r', 'a', 't', 'o', 'r', 'R', 'e', 'f')
+    YGGDRASIL_RAPIDJSON_STRING_(SchemaHandlerRef, 's', 'c', 'h', 'e', 'm', 'a', 'H', 'a', 'n', 'd', 'l', 'e', 'r', 'R', 'e', 'f')
+    YGGDRASIL_RAPIDJSON_STRING_(Circular, 'c', 'i', 'r', 'c', 'u', 'l', 'a', 'r')
+    YGGDRASIL_RAPIDJSON_STRING_(Conflicting, 'c', 'o', 'n', 'f', 'l', 'i', 'c', 't', 'i', 'n', 'g')
+    YGGDRASIL_RAPIDJSON_STRING_(Type, 't', 'y', 'p', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Warning, 'w', 'a', 'r', 'n', 'i', 'n', 'g')
+    YGGDRASIL_RAPIDJSON_STRING_(Warnings, 'w', 'a', 'r', 'n', 'i', 'n', 'g', 's')
+    YGGDRASIL_RAPIDJSON_STRING_(Singular, 's', 'i', 'n', 'g', 'u', 'l', 'a', 'r')
+    YGGDRASIL_RAPIDJSON_STRING_(Wrapped, 'w', 'r', 'a', 'p', 'p', 'e', 'd')
+    YGGDRASIL_RAPIDJSON_STRING_(Message, 'm', 'e', 's', 's', 'a', 'g', 'e')
+    YGGDRASIL_RAPIDJSON_STRING_(Property, 'p', 'r', 'o', 'p', 'e', 'r', 't', 'y')
+#endif //DISABLE_YGGDRASIL_RAPIDJSON
 
-#undef RAPIDJSON_STRING_
+#undef YGGDRASIL_RAPIDJSON_STRING_
 
-#define RAPIDJSON_SCHEMA_HANDLE_BEGIN_(method, arg1)\
+#define YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_BEGIN_(method, arg1)\
     if (!valid_) return false; \
     if ((!BeginValue() && !GetContinueOnErrors()) || (!CurrentSchema().method arg1 && !GetContinueOnErrors())) {\
         *documentStack_.template Push<Ch>() = '\0';\
         documentStack_.template Pop<Ch>(1);\
-        RAPIDJSON_SCHEMA_PRINT(InvalidDocument, documentStack_.template Bottom<Ch>());\
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(InvalidDocument, documentStack_.template Bottom<Ch>());\
         valid_ = false;\
         return valid_;\
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
-#define RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(method, arg2)\
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#define YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(method, arg2)\
     for (Context* context = schemaStack_.template Bottom<Context>(); context != schemaStack_.template End<Context>(); context++) {\
         if (context->hasher)\
             static_cast<HasherType*>(context->hasher)->method arg2;\
@@ -13529,8 +13529,8 @@ public:
 	    for (SizeType i_ = 0; i_ < context->otherValidatorCount; i_++)\
 	        static_cast<GenericSchemaValidator*>(context->otherValidators[i_])->method arg2;\
     }
-#else // RAPIDJSON_YGGDRASIL
-#define RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(method, arg2)\
+#else // DISABLE_YGGDRASIL_RAPIDJSON
+#define YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(method, arg2)\
     for (Context* context = schemaStack_.template Bottom<Context>(); context != schemaStack_.template End<Context>(); context++) {\
         if (context->hasher)\
             static_cast<HasherType*>(context->hasher)->method arg2;\
@@ -13541,48 +13541,48 @@ public:
             for (SizeType i_ = 0; i_ < context->patternPropertiesValidatorCount; i_++)\
                 static_cast<GenericSchemaValidator*>(context->patternPropertiesValidators[i_])->method arg2;\
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-#define RAPIDJSON_SCHEMA_HANDLE_END_(method, arg2)\
+#define YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_END_(method, arg2)\
     valid_ = (EndValue() || GetContinueOnErrors()) && (!outputHandler_ || outputHandler_->method arg2);\
     return valid_;
 
-#define RAPIDJSON_SCHEMA_HANDLE_VALUE_(method, arg1, arg2) \
-    RAPIDJSON_SCHEMA_HANDLE_BEGIN_   (method, arg1);\
-    RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(method, arg2);\
-    RAPIDJSON_SCHEMA_HANDLE_END_     (method, arg2)
+#define YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_(method, arg1, arg2) \
+    YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_BEGIN_   (method, arg1);\
+    YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(method, arg2);\
+    YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_END_     (method, arg2)
 
-    bool Null()             { RAPIDJSON_SCHEMA_HANDLE_VALUE_(Null,   (CurrentContext()), ( )); }
-    bool Bool(bool b)       { RAPIDJSON_SCHEMA_HANDLE_VALUE_(Bool,   (CurrentContext(), b), (b)); }
-    bool Int(int i)         { RAPIDJSON_SCHEMA_HANDLE_VALUE_(Int,    (CurrentContext(), i), (i)); }
-    bool Uint(unsigned u)   { RAPIDJSON_SCHEMA_HANDLE_VALUE_(Uint,   (CurrentContext(), u), (u)); }
-    bool Int64(int64_t i)   { RAPIDJSON_SCHEMA_HANDLE_VALUE_(Int64,  (CurrentContext(), i), (i)); }
-    bool Uint64(uint64_t u) { RAPIDJSON_SCHEMA_HANDLE_VALUE_(Uint64, (CurrentContext(), u), (u)); }
-    bool Double(double d)   { RAPIDJSON_SCHEMA_HANDLE_VALUE_(Double, (CurrentContext(), d), (d)); }
+    bool Null()             { YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_(Null,   (CurrentContext()), ( )); }
+    bool Bool(bool b)       { YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_(Bool,   (CurrentContext(), b), (b)); }
+    bool Int(int i)         { YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_(Int,    (CurrentContext(), i), (i)); }
+    bool Uint(unsigned u)   { YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_(Uint,   (CurrentContext(), u), (u)); }
+    bool Int64(int64_t i)   { YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_(Int64,  (CurrentContext(), i), (i)); }
+    bool Uint64(uint64_t u) { YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_(Uint64, (CurrentContext(), u), (u)); }
+    bool Double(double d)   { YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_(Double, (CurrentContext(), d), (d)); }
     bool RawNumber(const Ch* str, SizeType length, bool copy)
-                                    { RAPIDJSON_SCHEMA_HANDLE_VALUE_(String, (CurrentContext(), str, length, copy), (str, length, copy)); }
+                                    { YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_(String, (CurrentContext(), str, length, copy), (str, length, copy)); }
     bool String(const Ch* str, SizeType length, bool copy)
-                                    { RAPIDJSON_SCHEMA_HANDLE_VALUE_(String, (CurrentContext(), str, length, copy), (str, length, copy)); }
+                                    { YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_(String, (CurrentContext(), str, length, copy), (str, length, copy)); }
 
-#ifdef RAPIDJSON_YGGDRASIL
-#define RAPIDJSON_SCHEMA_HANDLE_END_YGG_(method, arg1, arg2)		\
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#define YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_END_YGG_(method, arg1, arg2)		\
     if (internal::HasYggdrasilMethodImpl<OutputHandler,ValueType>::Value) { \
-      RAPIDJSON_SCHEMA_HANDLE_END_(Yggdrasil ## method, arg1);		\
+      YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_END_(Yggdrasil ## method, arg1);		\
     } else {								\
-      RAPIDJSON_SCHEMA_HANDLE_END_(method, arg2);			\
+      YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_END_(method, arg2);			\
     }
   
   template <typename YggSchemaValueType>
   bool YggdrasilString(const Ch* str, SizeType length, bool copy, YggSchemaValueType& schema)
   {
-    RAPIDJSON_SCHEMA_HANDLE_BEGIN_(YggdrasilString, (CurrentContext(), str, length, copy, schema));
-    RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(YggdrasilString, (str, length, copy, schema));
-    RAPIDJSON_SCHEMA_HANDLE_END_YGG_(String, (str, length, copy, schema), (str, length, copy));
+    YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_BEGIN_(YggdrasilString, (CurrentContext(), str, length, copy, schema));
+    YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(YggdrasilString, (str, length, copy, schema));
+    YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_END_YGG_(String, (str, length, copy, schema), (str, length, copy));
   }
   template <typename YggSchemaValueType>
   bool YggdrasilStartObject(YggSchemaValueType& schema) {
-    RAPIDJSON_SCHEMA_HANDLE_BEGIN_(YggdrasilStartObject, (CurrentContext(), schema));
-    RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(YggdrasilStartObject, (schema));
+    YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_BEGIN_(YggdrasilStartObject, (CurrentContext(), schema));
+    YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(YggdrasilStartObject, (schema));
     if (internal::HasYggdrasilMethodImpl<OutputHandler,ValueType>::Value)
       return valid_ = !outputHandler_ || outputHandler_->YggdrasilStartObject(schema);
     else
@@ -13590,71 +13590,71 @@ public:
   }
   bool YggdrasilEndObject(SizeType memberCount) {
     if (!valid_) return false;
-    RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(YggdrasilEndObject, (memberCount));
+    YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(YggdrasilEndObject, (memberCount));
     if (!CurrentSchema().YggdrasilEndObject(CurrentContext(), memberCount) && !GetContinueOnErrors()) return valid_ = false;
-    RAPIDJSON_SCHEMA_HANDLE_END_YGG_(EndObject, (memberCount), (memberCount));
+    YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_END_YGG_(EndObject, (memberCount), (memberCount));
   }
 
  
-#undef RAPIDJSON_SCHEMA_HANDLE_END_YGG_
-#endif // RAPIDJSON_YGGDRASIL
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_END_YGG_
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     bool StartObject() {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::StartObject");
-        RAPIDJSON_SCHEMA_HANDLE_BEGIN_(StartObject, (CurrentContext()));
-        RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(StartObject, ());
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::StartObject");
+        YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_BEGIN_(StartObject, (CurrentContext()));
+        YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(StartObject, ());
         valid_ = !outputHandler_ || outputHandler_->StartObject();
         return valid_;
     }
     
     bool Key(const Ch* str, SizeType len, bool copy) {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::Key", str);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::Key", str);
         if (!valid_) return false;
         AppendToken(str, len);
         if (!CurrentSchema().Key(CurrentContext(), str, len, copy) && !GetContinueOnErrors()) {
             valid_ = false;
             return valid_;
         }
-        RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(Key, (str, len, copy));
+        YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(Key, (str, len, copy));
         valid_ = !outputHandler_ || outputHandler_->Key(str, len, copy);
         return valid_;
     }
     
     bool EndObject(SizeType memberCount) {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::EndObject");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::EndObject");
         if (!valid_) return false;
-        RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(EndObject, (memberCount));
+        YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(EndObject, (memberCount));
         if (!CurrentSchema().EndObject(CurrentContext(), memberCount) && !GetContinueOnErrors()) { 
             valid_ = false; 
             return valid_; 
         }
-        RAPIDJSON_SCHEMA_HANDLE_END_(EndObject, (memberCount));
+        YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_END_(EndObject, (memberCount));
     }
 
     bool StartArray() {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::StartArray");
-        RAPIDJSON_SCHEMA_HANDLE_BEGIN_(StartArray, (CurrentContext()));
-        RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(StartArray, ());
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::StartArray");
+        YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_BEGIN_(StartArray, (CurrentContext()));
+        YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(StartArray, ());
         valid_ = !outputHandler_ || outputHandler_->StartArray();
         return valid_;
     }
     
     bool EndArray(SizeType elementCount) {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::EndArray");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::EndArray");
         if (!valid_) return false;
-        RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(EndArray, (elementCount));
+        YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_(EndArray, (elementCount));
         if (!CurrentSchema().EndArray(CurrentContext(), elementCount) && !GetContinueOnErrors()) {
             valid_ = false;
             return valid_;
         }
-        RAPIDJSON_SCHEMA_HANDLE_END_(EndArray, (elementCount));
+        YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_END_(EndArray, (elementCount));
     }
   
-#undef RAPIDJSON_SCHEMA_HANDLE_BEGIN_
-#undef RAPIDJSON_SCHEMA_HANDLE_PARALLEL_
-#undef RAPIDJSON_SCHEMA_HANDLE_VALUE_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_BEGIN_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_PARALLEL_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_HANDLE_VALUE_
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     //////////////////////////
     // SchemaAccept methods
     //////////////////////////
@@ -13680,16 +13680,16 @@ public:
     }
 
     // Implementation of ISchemaIterator<SchemaType>
-#define RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_(method, arg1)\
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_(method, arg1)\
     if (!valid_) return false; \
     if ((!BeginValue() && !GetContinueOnErrors()) || (!CurrentSchema().method arg1 && !GetContinueOnErrors())) {\
         *documentStack_.template Push<Ch>() = '\0';\
         documentStack_.template Pop<Ch>(1);\
-        RAPIDJSON_SCHEMA_PRINT(InvalidDocument, documentStack_.template Bottom<Ch>());\
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(InvalidDocument, documentStack_.template Bottom<Ch>());\
         valid_ = false;\
         return valid_;\
     }
-#define RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_(method, arg2)\
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_(method, arg2)\
     for (Context* context = schemaStack_.template Bottom<Context>(); context != schemaStack_.template End<Context>(); context++) {\
         if (context->validators)\
             for (SizeType i_ = 0; i_ < context->validatorCount; i_++)\
@@ -13704,7 +13704,7 @@ public:
 	        if (context->otherValidators[i_])\
 	            static_cast<GenericSchemaValidator*>(context->otherValidators[i_])->method arg2;\
     }
-#define RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_(method, arg2)\
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_(method, arg2)\
     valid_ = (EndValue() || GetContinueOnErrors());\
     return valid_;
 
@@ -13746,27 +13746,27 @@ public:
   //   not1 vs core2 
   //   not1 vs not2  true->false
     virtual bool IterSchema() {
-      RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_(IterSchema, (CurrentContext(), this));
-      RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_(IterSchema, ());
-      RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_(IterSchema, ());
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_(IterSchema, (CurrentContext(), this));
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_(IterSchema, ());
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_(IterSchema, ());
     }
 
-#define RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(method, arg1)\
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(method, arg1)\
     if (!valid_) return false; \
     if ((!CurrentSchema().method arg1 && !GetContinueOnErrors())) {\
         *documentStack_.template Push<Ch>() = '\0';\
         documentStack_.template Pop<Ch>(1);\
-        RAPIDJSON_SCHEMA_PRINT(InvalidDocument, documentStack_.template Bottom<Ch>());\
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(InvalidDocument, documentStack_.template Bottom<Ch>());\
         valid_ = false;\
         return valid_;\
     }
-#define RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(method, arg2)
-#define RAPIDJSON_SCHEMA_ITER_HANDLE_END_(method, arg2)\
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(method, arg2)
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_END_(method, arg2)\
     return valid_;
   
     virtual bool IterSchemaStartObject() {
-      RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(IterSchemaStartObject, (CurrentContext()));
-      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaStartObject, ());
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(IterSchemaStartObject, (CurrentContext()));
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaStartObject, ());
       return valid_;
     }
     virtual bool IterSchemaKey(const Ch* str, SizeType len, bool isPattern=false) {
@@ -13776,7 +13776,7 @@ public:
 	valid_ = false;
 	return valid_;
       }
-      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaKey, (str, len, isPattern));
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaKey, (str, len, isPattern));
       return valid_;
     }
     virtual bool IterSchemaAdditionalProperties() {
@@ -13787,21 +13787,21 @@ public:
 	valid_ = false;
 	return valid_;
       }
-      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaAdditionalProperties, ());
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaAdditionalProperties, ());
       return valid_;
     }
     virtual bool IterSchemaEndObject() {
       if (!valid_) return false;
-      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaEndObject, ());
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaEndObject, ());
       if (!CurrentSchema().IterSchemaEndObject(CurrentContext()) && !GetContinueOnErrors()) { 
 	valid_ = false; 
 	return valid_; 
       }
-      RAPIDJSON_SCHEMA_ITER_HANDLE_END_(IterSchemaEndObject, ());
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_END_(IterSchemaEndObject, ());
     }
     virtual bool IterSchemaStartArray() {
-      RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(IterSchemaStartArray, (CurrentContext()));
-      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaStartArray, ());
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(IterSchemaStartArray, (CurrentContext()));
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaStartArray, ());
       return valid_;
     }
     virtual bool IterSchemaAdditionalItems() {
@@ -13812,26 +13812,26 @@ public:
 	valid_ = false;
 	return valid_;
       }
-      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaAdditionalItems, ());
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaAdditionalItems, ());
       return valid_;
     }
     virtual bool IterSchemaEndArray() {
       if (!valid_) return false;
-      RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaEndArray, ());
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_(IterSchemaEndArray, ());
       if (!CurrentSchema().IterSchemaEndArray(CurrentContext()) && !GetContinueOnErrors()) {
 	valid_ = false;
 	return valid_;
       }
-      RAPIDJSON_SCHEMA_ITER_HANDLE_END_(IterSchemaEndArray, ());
+      YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_END_(IterSchemaEndArray, ());
     }
     // End implementation of ISchemaIterator<SchemaType>
   
     // Implementation of ISchemaHandler<SchemaType>
-#define RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(method, arg1)\
-    RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(method, arg1)
-#define RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(method, arg2)\
-    RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_(method, arg2)
-#define RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(method, arg2)\
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(method, arg1)\
+    YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_(method, arg1)
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(method, arg2)\
+    YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_(method, arg2)
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(method, arg2)\
     return valid_;
 
     // virtual const typename SchemaType::ValueType& GetSchemaHandlerError() const {
@@ -13861,62 +13861,62 @@ public:
     }
   
     virtual bool SchemaStart(const SchemaType& s, typename SchemaType::Context& rhs_context) {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaStart");
-	RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_(SchemaStart, (CurrentContext(), s, rhs_context));
-        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaStart, (s, rhs_context));
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaStart");
+	YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_(SchemaStart, (CurrentContext(), s, rhs_context));
+        YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaStart, (s, rhs_context));
         return valid_;
     }
     virtual bool SchemaEnd() {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaEnd");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaEnd");
         if (!valid_) return false;
-        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaEnd, ());
+        YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaEnd, ());
         if (!CurrentSchema().SchemaEnd(CurrentContext()) && !GetContinueOnErrors()) { 
             valid_ = false; 
             return valid_; 
         }
-	RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_(SchemaEnd, ());
+	YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_(SchemaEnd, ());
     }
-#define RAPIDJSON_SCHEMA_ACCEPT_HANDLE_VALUE_(method, arg1, arg2) \
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(method, arg1);\
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(method, arg2);\
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(method, arg2)
-#define RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(method)\
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_VALUE_(method, arg1, arg2) \
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(method, arg1);\
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(method, arg2);\
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(method, arg2)
+#define YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(method)\
     virtual bool Schema ## method(const SchemaType& s) {\
-        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_VALUE_(Schema ## method, (CurrentContext(), s), (s));\
+        YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_VALUE_(Schema ## method, (CurrentContext(), s), (s));\
     }
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Null)
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Boolean)
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(String)
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Number)
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Integer)
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Encoding)
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Scalar)
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(NDArray)
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Python)
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Geometry)
-    RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Schema)
-#undef RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_
-#undef RAPIDJSON_SCHEMA_ACCEPT_HANDLE_VALUE_
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Null)
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Boolean)
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(String)
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Number)
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Integer)
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Encoding)
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Scalar)
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(NDArray)
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Python)
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Geometry)
+    YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_(Schema)
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_METHOD_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_VALUE_
     
     virtual bool SchemaStartObject(const SchemaType& s) {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaStartObject");
-        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(SchemaStartObject, (CurrentContext(), s));
-        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaStartObject, (s));
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaStartObject");
+        YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(SchemaStartObject, (CurrentContext(), s));
+        YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaStartObject, (s));
         return valid_;
     }
     virtual bool SchemaKey(const Ch* str, SizeType len, bool isPattern=false) {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaKey", str);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaKey", str);
         if (!valid_) return false;
         AppendToken(str, len);
         if (!CurrentSchema().SchemaKey(CurrentContext(), str, len, isPattern) && !GetContinueOnErrors()) {
             valid_ = false;
             return valid_;
         }
-        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaKey, (str, len, isPattern));
+        YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaKey, (str, len, isPattern));
         return valid_;
     }
     virtual bool SchemaAdditionalProperties() {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaAdditionalProperties");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaAdditionalProperties");
         if (!valid_) return false;
         AppendToken(SchemaType::GetAdditionalPropertiesString().GetString(),
 		    SchemaType::GetAdditionalPropertiesString().GetStringLength());
@@ -13924,27 +13924,27 @@ public:
             valid_ = false;
             return valid_;
         }
-        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaAdditionalProperties, ());
+        YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaAdditionalProperties, ());
         return valid_;
     }
     virtual bool SchemaEndObject(SizeType memberCount, const bool additionalProperties=false) {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaEndObject");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaEndObject");
         if (!valid_) return false;
-        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaEndObject, (memberCount, additionalProperties));
+        YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaEndObject, (memberCount, additionalProperties));
         if (!CurrentSchema().SchemaEndObject(CurrentContext(), memberCount, additionalProperties) && !GetContinueOnErrors()) { 
             valid_ = false; 
             return valid_; 
         }
-	RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(SchemaEndObject, (memberCount, additionalProperties));
+	YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(SchemaEndObject, (memberCount, additionalProperties));
     }
     virtual bool SchemaStartArray(const SchemaType& s) {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaStartArray");
-	RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(SchemaStartArray, (CurrentContext(), s));
-	RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaStartArray, (s));
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaStartArray");
+	YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_(SchemaStartArray, (CurrentContext(), s));
+	YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaStartArray, (s));
         return valid_;
     }
     virtual bool SchemaAdditionalItems() {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaAdditionalItems");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaAdditionalItems");
         if (!valid_) return false;
         AppendToken(SchemaType::GetAdditionalItemsString().GetString(),
 		    SchemaType::GetAdditionalItemsString().GetStringLength());
@@ -13952,39 +13952,39 @@ public:
             valid_ = false;
             return valid_;
         }
-        RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaAdditionalItems, ());
+        YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaAdditionalItems, ());
         return valid_;
     }
     virtual bool SchemaEndArray(SizeType elementCount, const bool additionalItems=false) {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaEndArray");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::SchemaEndArray");
         if (!valid_) return false;
-	RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaEndArray, (elementCount, additionalItems));
+	YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_(SchemaEndArray, (elementCount, additionalItems));
         if (!CurrentSchema().SchemaEndArray(CurrentContext(), elementCount, additionalItems) && !GetContinueOnErrors()) {
             valid_ = false;
             return valid_;
         }
-	RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(SchemaEndArray, (elementCount, additionalItems));
+	YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_(SchemaEndArray, (elementCount, additionalItems));
     }
     
-#undef RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_
-#undef RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_
-#undef RAPIDJSON_SCHEMA_ITER_HANDLE_END_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_BEGIN_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_PARALLEL_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ITER_HANDLE_END_
     
-#undef RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_
-#undef RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_
-#undef RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_BEGIN_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_PARALLEL_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ITER_TOP_HANDLE_END_
   
-#undef RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_
-#undef RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_
-#undef RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_BEGIN_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_PARALLEL_
+#undef YGGDRASIL_RAPIDJSON_SCHEMA_ACCEPT_HANDLE_END_
     // End implementation of ISchemaHandler<SchemaType>
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     // Implementation of ISchemaStateFactory<SchemaType>
     virtual ISchemaValidator* CreateSchemaValidator(const SchemaType& root, const bool inheritContinueOnErrors
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 						    , PointerType
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 						    ) {
         *documentStack_.template Push<Ch>() = '\0';
         documentStack_.template Pop<Ch>(1);
@@ -13992,7 +13992,7 @@ public:
         depth_ + 1,
         &GetStateAllocator());
         sv->SetValidateFlags(inheritContinueOnErrors ? GetValidateFlags() : GetValidateFlags() & ~static_cast<unsigned>(kValidateContinueOnErrorFlag));
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (python_disabled_)
 	  static_cast<GenericSchemaValidator*>(sv)->DisablePython();
 	if (relativePathRoot_.IsString())
@@ -14004,20 +14004,20 @@ public:
 	  static_cast<GenericSchemaValidator*>(sv)->SetJointSchemaHandler(joint_schema_handler_->CreateJointSchemaHandler());
 	if (mode_)
 	  static_cast<GenericSchemaValidator*>(sv)->SetMode(mode_);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         return sv;
     }
 
     virtual void DestroySchemaValidator(ISchemaValidator* validator) {
         GenericSchemaValidator* v = static_cast<GenericSchemaValidator*>(validator);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (schema_handler_ && v->schema_handler_) {
 	  schema_handler_->DestroySchemaHandler(v->schema_handler_);
 	  v->schema_handler_ = nullptr;
 	}
 	if (joint_schema_handler_ && v->joint_schema_handler_)
 	  joint_schema_handler_->DestroyJointSchemaHandler(v->joint_schema_handler_);
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         v->~GenericSchemaValidator();
         StateAllocator::Free(v);
     }
@@ -14045,7 +14045,7 @@ public:
     }
     // End of implementation of ISchemaStateFactory<SchemaType>
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     //! Compare against another schema
     bool Compare(GenericSchemaValidator<SchemaDocumentType, OutputHandler, StateAllocator>& rhs) {
       typename Context::ValidatorMode prev_mode = rhs.mode_;
@@ -14079,7 +14079,7 @@ public:
       PopSchema();
       return out;
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 private:
     typedef typename SchemaType::Context Context;
@@ -14108,23 +14108,23 @@ private:
         valid_(true),
         flags_(kValidateDefaultFlags),
         depth_(depth)
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	, warning_(kObjectType),
 	currentWarning_(),
 	relativePathRoot_(),
 	python_disabled_(false),
 	mode_(Context::kValidationMode),
 	schema_handler_(0), joint_schema_handler_(0)
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::GenericSchemaValidator (internal)", basePath && basePathSize ? basePath : "");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::GenericSchemaValidator (internal)", basePath && basePathSize ? basePath : "");
         if (basePath && basePathSize)
             memcpy(documentStack_.template Push<char>(basePathSize), basePath, basePathSize);
     }
 
     StateAllocator& GetStateAllocator() {
         if (!stateAllocator_)
-            stateAllocator_ = ownStateAllocator_ = RAPIDJSON_NEW(StateAllocator)();
+            stateAllocator_ = ownStateAllocator_ = YGGDRASIL_RAPIDJSON_NEW(StateAllocator)();
         return *stateAllocator_;
     }
 
@@ -14132,11 +14132,11 @@ private:
         return flags_ & kValidateContinueOnErrorFlag;
     }
   
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     bool BeginValue() {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::BeginValue");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::BeginValue");
         if (schemaStack_.Empty())
             PushSchema(root_);
         else {
@@ -14148,17 +14148,17 @@ private:
 
             SizeType count = CurrentContext().patternPropertiesSchemaCount;
             const SchemaType** sa = CurrentContext().patternPropertiesSchemas;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    PointerType prevValuePointer = CurrentContext().valuePointer;
 	    PointerType* pa = CurrentContext().patternPropertiesPointers;
 	    SizeType countOther = CurrentContext().otherSchemaCount;
 	    const SchemaType** saOther = CurrentContext().otherSchemas;
 	    PointerType* paOther = CurrentContext().otherPointers;
 	    typename Context::OtherValidatorType otherValidatorType = CurrentContext().valueOtherValidatorType;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             typename Context::PatternValidatorType patternValidatorType = CurrentContext().valuePatternValidatorType;
             bool valueUniqueness = CurrentContext().valueUniqueness;
-            RAPIDJSON_ASSERT(CurrentContext().valueSchema);
+            YGGDRASIL_RAPIDJSON_ASSERT(CurrentContext().valueSchema);
             PushSchema(*CurrentContext().valueSchema);
 
             if (count > 0) {
@@ -14167,36 +14167,36 @@ private:
                 SizeType& validatorCount = CurrentContext().patternPropertiesValidatorCount;
                 va = static_cast<ISchemaValidator**>(MallocState(sizeof(ISchemaValidator*) * count));
                 std::memset(va, 0, sizeof(ISchemaValidator*) * count);
-#ifdef RAPIDJSON_YGGDRASIL
-		RAPIDJSON_ASSERT(pa);
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+		YGGDRASIL_RAPIDJSON_ASSERT(pa);
                 for (SizeType i = 0; i < count; i++)
 		    va[validatorCount++] = CreateSchemaValidator(*sa[i], true, pa[i]);  // Inherit continueOnError
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
                 for (SizeType i = 0; i < count; i++)
 		    va[validatorCount++] = CreateSchemaValidator(*sa[i], true);  // Inherit continueOnError
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
             }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    if (countOther > 0) {
                 CurrentContext().objectOtherValidatorType = otherValidatorType;
                 ISchemaValidator**& va = CurrentContext().otherValidators;
                 SizeType& validatorCount = CurrentContext().otherValidatorCount;
                 va = static_cast<ISchemaValidator**>(MallocState(sizeof(ISchemaValidator*) * countOther));
                 std::memset(va, 0, sizeof(ISchemaValidator*) * countOther);
-		RAPIDJSON_ASSERT(paOther);
+		YGGDRASIL_RAPIDJSON_ASSERT(paOther);
                 for (SizeType i = 0; i < countOther; i++)
 		    va[validatorCount++] = CreateSchemaValidator(*saOther[i], true, paOther[i]);  // Inherit continueOnError
 	    }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
             CurrentContext().arrayUniqueness = valueUniqueness;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	    CurrentContext().valuePointer = prevValuePointer;
 	    CurrentContext().schemaPointerAbs = prevValuePointer;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         }
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	CurrentContext().mode = mode_;
 	CurrentContext().schema_handler = schema_handler_;
 	CurrentContext().joint_schema_handler = joint_schema_handler_;
@@ -14206,15 +14206,15 @@ private:
 						      relativePathRoot_.GetStringLength());
 	if (IsSchemaIterator())
 	  CurrentContext().schema_iterator = this;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         return true;
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     bool EndValue() {
-        RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::EndValue");
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "GenericSchemaValidator::EndValue");
         if (!CurrentSchema().EndValue(CurrentContext()) && !GetContinueOnErrors())
             return false;
 
@@ -14222,7 +14222,7 @@ private:
         schemaDocument_->GetPointer(&CurrentSchema()).StringifyUriFragment(sb);
         *documentStack_.template Push<Ch>() = '\0';
         documentStack_.template Pop<Ch>(1);
-        RAPIDJSON_SCHEMA_PRINT(ValidatorPointers, sb.GetString(), documentStack_.template Bottom<Ch>(), depth_);
+        YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(ValidatorPointers, sb.GetString(), documentStack_.template Bottom<Ch>(), depth_);
         void* hasher = CurrentContext().hasher;
         uint64_t h = hasher && CurrentContext().arrayUniqueness ? static_cast<HasherType*>(hasher)->GetHashCode() : 0;
         
@@ -14243,7 +14243,7 @@ private:
                             a->PushBack(h, GetStateAllocator());
                             while (!documentStack_.Empty() && *documentStack_.template Pop<Ch>(1) != '/');
                         }
-                        RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorUniqueItems);
+                        YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorUniqueItems);
                     }
                 a->PushBack(h, GetStateAllocator());
             }
@@ -14273,9 +14273,9 @@ private:
         }
     }
 
-    RAPIDJSON_FORCEINLINE void PushSchema(const SchemaType& schema) { new (schemaStack_.template Push<Context>()) Context(*this, *this, &schema, flags_); }
+    YGGDRASIL_RAPIDJSON_FORCEINLINE void PushSchema(const SchemaType& schema) { new (schemaStack_.template Push<Context>()) Context(*this, *this, &schema, flags_); }
     
-    RAPIDJSON_FORCEINLINE void PopSchema() {
+    YGGDRASIL_RAPIDJSON_FORCEINLINE void PopSchema() {
         Context* c = schemaStack_.template Pop<Context>(1);
         if (HashCodeArray* a = static_cast<HashCodeArray*>(c->arrayElementHashCodes)) {
             a->~HashCodeArray();
@@ -14284,7 +14284,7 @@ private:
         c->~Context();
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual void GetSchemaLocation(GenericStringBuffer<EncodingType>& sb,
 				   const bool parent = false,
 				   PointerType schema = PointerType()) const {
@@ -14321,15 +14321,15 @@ private:
 			     GetStateAllocator());
 	result.AddMember(GetSchemaHandlerRefString(), handlerRef, GetStateAllocator());
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     void AddErrorInstanceLocation(ValueType& result, bool parent) {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (IsSchemaIterator() || IsSchemaHandler()) {
 	  AddErrorSchemaIteratorLocation(result, parent);
 	  return;
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         GenericStringBuffer<EncodingType> sb;
         PointerType instancePointer = GetInvalidDocumentPointer();
         ((parent && instancePointer.GetTokenCount() > 0)
@@ -14341,13 +14341,13 @@ private:
     }
 
     void AddErrorSchemaLocation(ValueType& result, PointerType schema = PointerType()) {
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 	if (IsSchemaIterator() || IsSchemaHandler()) {
-	  RAPIDJSON_ASSERT(schema.GetTokenCount() == 0);
+	  YGGDRASIL_RAPIDJSON_ASSERT(schema.GetTokenCount() == 0);
 	  AddErrorSchemaHandlerLocation(result);
 	  return;
 	}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         GenericStringBuffer<EncodingType> sb;
         SizeType len = CurrentSchema().GetURI().GetStringLength();
         if (len) memcpy(sb.Push(len), CurrentSchema().GetURI().GetString(), len * sizeof(Ch));
@@ -14358,7 +14358,7 @@ private:
         result.AddMember(GetSchemaRefString(), schemaRef, GetStateAllocator());
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     void AddErrorSchemaLocation(const StringRefType& key,
 				ValueType& result,
 				PointerType schema = PointerType()) {
@@ -14368,14 +14368,14 @@ private:
             GetStateAllocator());
         result.AddMember(key, schemaRef, GetStateAllocator());
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     void AddErrorCode(ValueType& result, const ValidateErrorCode code) {
         result.AddMember(GetErrorCodeString(), code, GetStateAllocator());
     }
 
     void AddError(ValueType& keyword, ValueType& error) {
-        RAPIDJSON_ASSERT(error_.IsObject());
+        YGGDRASIL_RAPIDJSON_ASSERT(error_.IsObject());
         typename ValueType::MemberIterator member = error_.FindMember(keyword);
         if (member == error_.MemberEnd())
             error_.AddMember(keyword, error, GetStateAllocator());
@@ -14426,10 +14426,10 @@ private:
     Context& CurrentContext() { return *schemaStack_.template Top<Context>(); }
     const Context& CurrentContext() const { return *schemaStack_.template Top<Context>(); }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     //! Support for warnings
     void AddWarning(const ValueType& keyword, const ValueType& warning) {
-      RAPIDJSON_ASSERT(warning_.IsObject());
+      YGGDRASIL_RAPIDJSON_ASSERT(warning_.IsObject());
       typename ValueType::MemberIterator member = warning_.FindMember(keyword);
       if (member == warning_.MemberEnd())
 	warning_.AddMember(keyword, ValueType(warning, GetStateAllocator()).Move(), GetStateAllocator());
@@ -14453,7 +14453,7 @@ private:
     void AddWarningArray(ISchemaValidator** subvalidators, SizeType count) {
       for (SizeType i = 0; i < count; ++i) {
 	const ValueType& iwarnings = static_cast<GenericSchemaValidator*>(subvalidators[i])->GetWarning();
-	RAPIDJSON_ASSERT(iwarnings.IsObject());
+	YGGDRASIL_RAPIDJSON_ASSERT(iwarnings.IsObject());
 	for (typename ValueType::ConstMemberIterator it = iwarnings.MemberBegin(); it != iwarnings.MemberEnd(); ++it) {
 	  if (it->value.IsArray()) {
 	    for (typename ValueType::ConstValueIterator iit = it->value.Begin(); iit != it->value.End(); ++iit)
@@ -14465,7 +14465,7 @@ private:
       }
     }
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     static const size_t kDefaultSchemaStackCapacity = 1024;
     static const size_t kDefaultDocumentStackCapacity = 256;
@@ -14482,7 +14482,7 @@ private:
     bool valid_;
     unsigned flags_;
     unsigned depth_;
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     ValueType warning_;
     ValueType currentWarning_;
     ValueType relativePathRoot_;
@@ -14490,7 +14490,7 @@ private:
     typename Context::ValidatorMode mode_;
     SchemaHandlerType* schema_handler_;
     JointSchemaHandlerType* joint_schema_handler_;
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 };
 
 typedef GenericSchemaValidator<SchemaDocument> SchemaValidator;
@@ -14573,7 +14573,7 @@ private:
     bool isValid_;
 };
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
 /////////////////////////////////////////////////////////////////////
 // GenericSchemaNormalizer
@@ -14819,7 +14819,7 @@ typedef GenericSchemaNormalizer<SchemaDocument> SchemaNormalizer;
 // SchemaEncoder
 //
 //! Handler to encode schema from an object
-template<typename Encoding, typename Allocator = RAPIDJSON_DEFAULT_ALLOCATOR, typename StackAllocator = RAPIDJSON_DEFAULT_STACK_ALLOCATOR>
+template<typename Encoding, typename Allocator = YGGDRASIL_RAPIDJSON_DEFAULT_ALLOCATOR, typename StackAllocator = YGGDRASIL_RAPIDJSON_DEFAULT_STACK_ALLOCATOR>
 class GenericSchemaEncoder {
 public:
   typedef typename Encoding::Ch Ch;
@@ -14878,7 +14878,7 @@ public:
   bool YggdrasilString(const Ch*, SizeType, bool, YggSchemaValueType& schema) {
     if (minimal_) {
       const typename YggSchemaValueType::ConstMemberIterator v = schema.FindMember(ValueType::GetTypeString());
-      RAPIDJSON_ASSERT(v != schema.MemberEnd());
+      YGGDRASIL_RAPIDJSON_ASSERT(v != schema.MemberEnd());
       if (v == schema.MemberEnd()) return false;
       typename YggSchemaValueType::ValueType minimal_schema(kObjectType);
       typename YggSchemaValueType::AllocatorType allocator;
@@ -14888,7 +14888,7 @@ public:
       }
       if (v->value == YggSchemaValueType::GetScalarString()) {
 	const typename YggSchemaValueType::ConstMemberIterator m_subtype = schema.FindMember(YggSchemaValueType::GetSubTypeString());
-	RAPIDJSON_ASSERT(m_subtype != schema.MemberEnd());
+	YGGDRASIL_RAPIDJSON_ASSERT(m_subtype != schema.MemberEnd());
 	if (m_subtype == schema.MemberEnd()) return false;
 	if (m_subtype->value == YggSchemaValueType::GetStringSubTypeString()) {
 	  if (!minimal_schema.RemoveMember(YggSchemaValueType::GetPrecisionString()))
@@ -15036,28 +15036,28 @@ class GenericSchemaComparer :
   typedef typename EncodingType::Ch Ch;
 
 public:
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA(key, expected, actual)		\
+#define YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(key, expected, actual)		\
       {									\
 	context.error_handler.IncompatibleSchemas(key, expected, actual); \
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
       }
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(key, expected, actual)	\
+#define YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(key, expected, actual)	\
       {									\
 	context.error_handler.IncompatibleSchemas(key, expected, actual, true); \
-	RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
+	YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kIncompatibleSchemas);		\
       }
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, a, b)	\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a).Move(), SValue(b).Move())
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(key, a, b)	\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a.GetString(), a.GetStringLength()).Move(), SValue(b.GetString(), b.GetStringLength()).Move())
-#define RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(key, a, b)	\
-      RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, (bool)(a), (bool)(b))
+#define YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, a, b)	\
+      YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a).Move(), SValue(b).Move())
+#define YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(key, a, b)	\
+      YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(key, SValue(a.GetString(), a.GetStringLength()).Move(), SValue(b.GetString(), b.GetStringLength()).Move())
+#define YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL(key, a, b)	\
+      YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP(key, (bool)(a), (bool)(b))
 #define CHECK_INCOMPATIBLE_IF_SET(key, err, def)	\
       if (lhs.key != def && rhs.key != def && lhs.key != rhs.key)	\
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), SValue(lhs.key).Move(), SValue(rhs.key).Move())
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), SValue(lhs.key).Move(), SValue(rhs.key).Move())
 #define CHECK_INCOMPATIBLE_IF_PRESENT(key, err) \
       if (!lhs.key.IsNull() && !rhs.key.IsNull() && lhs.key != rhs.key)	\
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), lhs.key, rhs.key)
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(Get ## err ## String(), lhs.key, rhs.key)
   bool Start(Context& context, const SchemaType& lhs, const SchemaType& rhs) {
       bool native_scalar = false;
       bool lhs_any = (lhs.type_ == ((1 << kTotalSchemaType) - 1));
@@ -15077,14 +15077,14 @@ public:
 	} else {
 	  lhs.DisallowedTypeKey(context);
 	  rhs.DisallowedTypeKey(context, true);
-	  RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+	  YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
 	}
       }
       if ((!native_scalar) && (!(rhs_any || lhs_any))
 	  && (!(lhs.subtype_ & rhs.subtype_))) {
 	lhs.DisallowedSubTypeKey(context);
 	rhs.DisallowedSubTypeKey(context, true);
-	RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetSubTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP(GetSubTypeString(), SValue(kNullType).Move(), SValue(kNullType).Move());
       }
       // Enum
       if (lhs.enumCount_ || rhs.enumCount_) {
@@ -15094,7 +15094,7 @@ public:
 	      goto foundEnum;
 	  }
 	}
-	RAPIDJSON_INCOMPATIBLE_SCHEMA(GetEnumString(), lhs.enumValues_, rhs.enumValues_);
+	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA(GetEnumString(), lhs.enumValues_, rhs.enumValues_);
       foundEnum:;
       }
       return true;
@@ -15102,11 +15102,11 @@ public:
 
 #undef CHECK_INCOMPATIBLE_IF_PRESENT
 #undef CHECK_INCOMPATIBLE_IF_SET
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_STR
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP
-#undef RAPIDJSON_INCOMPATIBLE_SCHEMA
+#undef YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_BOOL
+#undef YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_STR
+#undef YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_WRAP
+#undef YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_COMP
+#undef YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA
 
 };
 typedef GenericSchemaComparer<SchemaDocument> SchemaComparer;
@@ -15162,9 +15162,9 @@ bool GenericDocument<Encoding,Allocator,StackAllocator>::EncodeSchema(const Valu
   return true;
 }
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-RAPIDJSON_NAMESPACE_END
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_DIAG_POP
 
-#endif // RAPIDJSON_SCHEMA_H_
+#endif // YGGDRASIL_RAPIDJSON_SCHEMA_H_

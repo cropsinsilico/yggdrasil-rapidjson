@@ -12,8 +12,8 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
 
-#ifndef RAPIDJSON_WRITER_H_
-#define RAPIDJSON_WRITER_H_
+#ifndef YGGDRASIL_RAPIDJSON_WRITER_H_
+#define YGGDRASIL_RAPIDJSON_WRITER_H_
 
 #include "stream.h"
 #include "internal/clzll.h"
@@ -24,35 +24,35 @@
 #include "internal/itoa.h"
 #include "stringbuffer.h"
 #include <new>      // placement new
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #include "base64.h"
 #include "precision.h"
 #include "rapidjson.h"
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-#if defined(RAPIDJSON_SIMD) && defined(_MSC_VER)
+#if defined(YGGDRASIL_RAPIDJSON_SIMD) && defined(_MSC_VER)
 #include <intrin.h>
 #pragma intrinsic(_BitScanForward)
 #endif
-#ifdef RAPIDJSON_SSE42
+#ifdef YGGDRASIL_RAPIDJSON_SSE42
 #include <nmmintrin.h>
-#elif defined(RAPIDJSON_SSE2)
+#elif defined(YGGDRASIL_RAPIDJSON_SSE2)
 #include <emmintrin.h>
-#elif defined(RAPIDJSON_NEON)
+#elif defined(YGGDRASIL_RAPIDJSON_NEON)
 #include <arm_neon.h>
 #endif
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(padded)
-RAPIDJSON_DIAG_OFF(unreachable-code)
-RAPIDJSON_DIAG_OFF(c++98-compat)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(padded)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(unreachable-code)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(c++98-compat)
 #elif defined(_MSC_VER)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(4127) // conditional expression is constant
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(4127) // conditional expression is constant
 #endif
 
-RAPIDJSON_NAMESPACE_BEGIN
+YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 
 template<typename OutputStream, typename SourceEncoding, typename TargetEncoding, typename StackAllocator, unsigned writeFlags>
 class Base64Writer;
@@ -61,14 +61,14 @@ class Base64Writer;
 ///////////////////////////////////////////////////////////////////////////////
 // WriteFlag
 
-/*! \def RAPIDJSON_WRITE_DEFAULT_FLAGS 
-    \ingroup RAPIDJSON_CONFIG
+/*! \def YGGDRASIL_RAPIDJSON_WRITE_DEFAULT_FLAGS 
+    \ingroup YGGDRASIL_RAPIDJSON_CONFIG
     \brief User-defined kWriteDefaultFlags definition.
 
     User can define this as any \c WriteFlag combinations.
 */
-#ifndef RAPIDJSON_WRITE_DEFAULT_FLAGS
-#define RAPIDJSON_WRITE_DEFAULT_FLAGS kWriteNoFlags
+#ifndef YGGDRASIL_RAPIDJSON_WRITE_DEFAULT_FLAGS
+#define YGGDRASIL_RAPIDJSON_WRITE_DEFAULT_FLAGS kWriteNoFlags
 #endif
 
 //! Combination of writeFlags
@@ -77,7 +77,7 @@ enum WriteFlag {
     kWriteValidateEncodingFlag = 1, //!< Validate encoding of JSON strings.
     kWriteNanAndInfFlag = 2,        //!< Allow writing of Infinity, -Infinity and NaN.
     kWriteNanAndInfNullFlag = 4,    //!< Allow writing of Infinity, -Infinity and NaN as null.
-    kWriteDefaultFlags = RAPIDJSON_WRITE_DEFAULT_FLAGS  //!< Default write flags. Can be customized by defining RAPIDJSON_WRITE_DEFAULT_FLAGS
+    kWriteDefaultFlags = YGGDRASIL_RAPIDJSON_WRITE_DEFAULT_FLAGS  //!< Default write flags. Can be customized by defining YGGDRASIL_RAPIDJSON_WRITE_DEFAULT_FLAGS
 };
 
 //! JSON writer
@@ -110,29 +110,29 @@ public:
     */
     explicit
     Writer(OutputStream& os, StackAllocator* stackAllocator = 0, size_t levelDepth = kDefaultLevelDepth) :
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         w64p_(0), yggdrasilMode_(0),
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         os_(&os), level_stack_(stackAllocator, levelDepth * sizeof(Level)), maxDecimalPlaces_(kDefaultMaxDecimalPlaces), hasRoot_(false) {}
 
     explicit
     Writer(StackAllocator* allocator = 0, size_t levelDepth = kDefaultLevelDepth) :
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         w64p_(0), yggdrasilMode_(0),
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         os_(0), level_stack_(allocator, levelDepth * sizeof(Level)), maxDecimalPlaces_(kDefaultMaxDecimalPlaces), hasRoot_(false) {}
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
     Writer(Writer&& rhs) :
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
         w64p_(0), yggdrasilMode_(0),
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
         os_(rhs.os_), level_stack_(std::move(rhs.level_stack_)), maxDecimalPlaces_(rhs.maxDecimalPlaces_), hasRoot_(rhs.hasRoot_) {
         rhs.os_ = 0;
     }
 #endif
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual ~Writer() {
       if (yggdrasilMode_)
 	delete yggdrasilMode_;
@@ -157,10 +157,10 @@ public:
     };
 
     Base64Writer<OutputStream,SourceEncoding,TargetEncoding,StackAllocator,writeFlags>* w64_() {
-      RAPIDJSON_ASSERT(w64p_);
+      YGGDRASIL_RAPIDJSON_ASSERT(w64p_);
       return w64p_->w_;
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     //! Reset the writer with a new stream.
     /*!
@@ -223,7 +223,7 @@ public:
         maxDecimalPlaces_ = maxDecimalPlaces;
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     //! Sets the mode used to write yggdrasil extension types
     /*! 
       If true, yggdrasil extension types will be written in a readable form
@@ -237,7 +237,7 @@ public:
 	if (readable)
 	  yggdrasilMode_ = new JSONCoreWrapper<Writer<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> >(*this);
     }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     /*!@name Implementation of Handler
         \see Handler
@@ -259,20 +259,20 @@ public:
     bool Double_(double d)       { Prefix(kNumberType); return EndValue(WriteDouble(d)); }
 
     bool RawNumber_(const Ch* str, SizeType length, bool copy = false) {
-        RAPIDJSON_ASSERT(str != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(str != 0);
         (void)copy;
         Prefix(kNumberType);
         return EndValue(WriteString(str, length));
     }
 
     bool String_(const Ch* str, SizeType length, bool copy = false) {
-        RAPIDJSON_ASSERT(str != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(str != 0);
         (void)copy;
         Prefix(kStringType);
         return EndValue(WriteString(str, length));
     }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     bool String(const std::basic_string<Ch>& str) {
         return String(str.data(), SizeType(str.size()));
     }
@@ -286,7 +286,7 @@ public:
 
     bool Key(const Ch* str, SizeType length, bool copy = false) { return String(str, length, copy); }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     bool Key(const std::basic_string<Ch>& str)
     {
       return Key(str.data(), SizeType(str.size()));
@@ -295,9 +295,9 @@ public:
 
     bool EndObject_(SizeType memberCount = 0) {
         (void)memberCount;
-        RAPIDJSON_ASSERT(level_stack_.GetSize() >= sizeof(Level)); // not inside an Object
-        RAPIDJSON_ASSERT(!level_stack_.template Top<Level>()->inArray); // currently inside an Array, not Object
-        RAPIDJSON_ASSERT(0 == level_stack_.template Top<Level>()->valueCount % 2); // Object has a Key without a Value
+        YGGDRASIL_RAPIDJSON_ASSERT(level_stack_.GetSize() >= sizeof(Level)); // not inside an Object
+        YGGDRASIL_RAPIDJSON_ASSERT(!level_stack_.template Top<Level>()->inArray); // currently inside an Array, not Object
+        YGGDRASIL_RAPIDJSON_ASSERT(0 == level_stack_.template Top<Level>()->valueCount % 2); // Object has a Key without a Value
         level_stack_.template Pop<Level>(1);
         return EndValue(WriteEndObject());
     }
@@ -310,8 +310,8 @@ public:
 
     bool EndArray_(SizeType elementCount = 0) {
         (void)elementCount;
-        RAPIDJSON_ASSERT(level_stack_.GetSize() >= sizeof(Level));
-        RAPIDJSON_ASSERT(level_stack_.template Top<Level>()->inArray);
+        YGGDRASIL_RAPIDJSON_ASSERT(level_stack_.GetSize() >= sizeof(Level));
+        YGGDRASIL_RAPIDJSON_ASSERT(level_stack_.template Top<Level>()->inArray);
         level_stack_.template Pop<Level>(1);
         return EndValue(WriteEndArray());
     }
@@ -325,38 +325,38 @@ public:
     bool Key(const Ch* const& str) { return Key(str, internal::StrLen(str)); }
 
 
-#ifdef RAPIDJSON_YGGDRASIL
-#define RAPIDJSON_WRAP_BASE64_(method, arg1)	\
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#define YGGDRASIL_RAPIDJSON_WRAP_BASE64_(method, arg1)	\
   if (w64p_) return w64_()->method arg1;	\
   return method ## _ arg1
-#else // RAPIDJSON_YGGDRASIL
-#define RAPIDJSON_WRAP_BASE64_(method, arg1)	\
+#else // DISABLE_YGGDRASIL_RAPIDJSON
+#define YGGDRASIL_RAPIDJSON_WRAP_BASE64_(method, arg1)	\
   return method ## _ arg1
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-  bool Null()                 { RAPIDJSON_WRAP_BASE64_(Null, ()); }
-  bool Bool(bool b)           { RAPIDJSON_WRAP_BASE64_(Bool, (b)); }
-  bool Int(int i)             { RAPIDJSON_WRAP_BASE64_(Int, (i)); }
-  bool Uint(unsigned u)       { RAPIDJSON_WRAP_BASE64_(Uint, (u)); }
-  bool Int64(int64_t i64)     { RAPIDJSON_WRAP_BASE64_(Int64, (i64)); }
-  bool Uint64(uint64_t u64)   { RAPIDJSON_WRAP_BASE64_(Uint64, (u64)); }
-  bool Double(double d)       { RAPIDJSON_WRAP_BASE64_(Double, (d)); }
+  bool Null()                 { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Null, ()); }
+  bool Bool(bool b)           { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Bool, (b)); }
+  bool Int(int i)             { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Int, (i)); }
+  bool Uint(unsigned u)       { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Uint, (u)); }
+  bool Int64(int64_t i64)     { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Int64, (i64)); }
+  bool Uint64(uint64_t u64)   { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Uint64, (u64)); }
+  bool Double(double d)       { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Double, (d)); }
   bool RawNumber(const Ch* str, SizeType length, bool copy = false)
-  { RAPIDJSON_WRAP_BASE64_(RawNumber, (str, length, copy)); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(RawNumber, (str, length, copy)); }
   bool String(const Ch* str, SizeType length, bool copy = false)
-  { RAPIDJSON_WRAP_BASE64_(String, (str, length, copy)); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(String, (str, length, copy)); }
   bool StartObject()
-  { RAPIDJSON_WRAP_BASE64_(StartObject, ()); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(StartObject, ()); }
   bool EndObject(SizeType memberCount = 0)
-  { RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount)); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount)); }
   bool StartArray()
-  { RAPIDJSON_WRAP_BASE64_(StartArray, ()); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(StartArray, ()); }
   bool EndArray(SizeType elementCount = 0)
-  { RAPIDJSON_WRAP_BASE64_(EndArray, (elementCount)); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(EndArray, (elementCount)); }
 
-#undef RAPIDJSON_WRAP_BASE64_
+#undef YGGDRASIL_RAPIDJSON_WRAP_BASE64_
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
   Base64Pair* w64p_;
   JSONCoreWrapper<Writer<OutputStream, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> >* yggdrasilMode_;
 
@@ -377,13 +377,13 @@ private:
     PutUnsafe(*os_, '\"');
     if (!WriteRawValue(ygg, len_ygg)) return false;
     // Schema
-    RAPIDJSON_ASSERT(schema.IsSchema() || !(schema.IsYggdrasil()));
+    YGGDRASIL_RAPIDJSON_ASSERT(schema.IsSchema() || !(schema.IsYggdrasil()));
     if (!w64_()->WriteSchema(schema)) return false;
     if (!WriteRawValue(ygg, len_ygg)) return false;
     return true;
   }
   bool WriteYggdrasilSuffix() {
-    RAPIDJSON_ASSERT(w64p_);
+    YGGDRASIL_RAPIDJSON_ASSERT(w64p_);
     if (w64p_->level_ > 0) {
       w64p_->level_--;
       return true;
@@ -400,9 +400,9 @@ private:
   }
 public:
   template <typename SchemaValueType>
-  RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
   YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType& schema) {
-    RAPIDJSON_ASSERT(str != 0);
+    YGGDRASIL_RAPIDJSON_ASSERT(str != 0);
     if (yggdrasilMode_) {
       return yggdrasilMode_->YggdrasilString(str, length, copy, schema);
     } else {
@@ -415,7 +415,7 @@ public:
     return true;
   }
   template <typename SchemaValueType>
-  RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
   YggdrasilStartObject(SchemaValueType& schema) {
     if (yggdrasilMode_) {
       return yggdrasilMode_->YggdrasilStartObject(schema);
@@ -432,7 +432,7 @@ public:
       return WriteYggdrasilSuffix();
     }
   }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     //@}
 
@@ -445,7 +445,7 @@ public:
         \param type Type of the root of json.
     */
     bool RawValue(const Ch* json, size_t length, Type type) {
-        RAPIDJSON_ASSERT(json != 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(json != 0);
         Prefix(type);
         return EndValue(WriteRawValue(json, length));
     }
@@ -580,7 +580,7 @@ protected:
             if (!TargetEncoding::supportUnicode && static_cast<unsigned>(c) >= 0x80) {
                 // Unicode escaping
                 unsigned codepoint;
-                if (RAPIDJSON_UNLIKELY(!SourceEncoding::Decode(is, &codepoint)))
+                if (YGGDRASIL_RAPIDJSON_UNLIKELY(!SourceEncoding::Decode(is, &codepoint)))
                     return false;
                 PutUnsafe(*os_, '\\');
                 PutUnsafe(*os_, 'u');
@@ -591,7 +591,7 @@ protected:
                     PutUnsafe(*os_, hexDigits[(codepoint      ) & 15]);
                 }
                 else {
-                    RAPIDJSON_ASSERT(codepoint >= 0x010000 && codepoint <= 0x10FFFF);
+                    YGGDRASIL_RAPIDJSON_ASSERT(codepoint >= 0x010000 && codepoint <= 0x10FFFF);
                     // Surrogate pair
                     unsigned s = codepoint - 0x010000;
                     unsigned lead = (s >> 10) + 0xD800;
@@ -608,7 +608,7 @@ protected:
                     PutUnsafe(*os_, hexDigits[(trail      ) & 15]);                    
                 }
             }
-            else if ((sizeof(Ch) == 1 || static_cast<unsigned>(c) < 256) && RAPIDJSON_UNLIKELY(escape[static_cast<unsigned char>(c)]))  {
+            else if ((sizeof(Ch) == 1 || static_cast<unsigned>(c) < 256) && YGGDRASIL_RAPIDJSON_UNLIKELY(escape[static_cast<unsigned char>(c)]))  {
                 is.Take();
                 PutUnsafe(*os_, '\\');
                 PutUnsafe(*os_, static_cast<typename OutputStream::Ch>(escape[static_cast<unsigned char>(c)]));
@@ -619,7 +619,7 @@ protected:
                     PutUnsafe(*os_, hexDigits[static_cast<unsigned char>(c) & 0xF]);
                 }
             }
-            else if (RAPIDJSON_UNLIKELY(!(writeFlags & kWriteValidateEncodingFlag ? 
+            else if (YGGDRASIL_RAPIDJSON_UNLIKELY(!(writeFlags & kWriteValidateEncodingFlag ? 
                 Transcoder<SourceEncoding, TargetEncoding>::Validate(is, *os_) :
                 Transcoder<SourceEncoding, TargetEncoding>::TranscodeUnsafe(is, *os_))))
                 return false;
@@ -629,7 +629,7 @@ protected:
     }
 
     bool ScanWriteUnescapedString(GenericStringStream<SourceEncoding>& is, size_t length) {
-        return RAPIDJSON_LIKELY(is.Tell() < length);
+        return YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length);
     }
 
     bool WriteStartObject() { os_->Put('{'); return true; }
@@ -640,9 +640,9 @@ protected:
     bool WriteRawValue(const Ch* json, size_t length) {
         PutReserve(*os_, length);
         GenericStringStream<SourceEncoding> is(json);
-        while (RAPIDJSON_LIKELY(is.Tell() < length)) {
-            RAPIDJSON_ASSERT(is.Peek() != '\0');
-            if (RAPIDJSON_UNLIKELY(!(writeFlags & kWriteValidateEncodingFlag ? 
+        while (YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length)) {
+            YGGDRASIL_RAPIDJSON_ASSERT(is.Peek() != '\0');
+            if (YGGDRASIL_RAPIDJSON_UNLIKELY(!(writeFlags & kWriteValidateEncodingFlag ? 
                 Transcoder<SourceEncoding, TargetEncoding>::Validate(is, *os_) :
                 Transcoder<SourceEncoding, TargetEncoding>::TranscodeUnsafe(is, *os_))))
                 return false;
@@ -650,12 +650,12 @@ protected:
         return true;
     }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     virtual
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     void Prefix(Type type) {
         (void)type;
-        if (RAPIDJSON_LIKELY(level_stack_.GetSize() != 0)) { // this value is not at root
+        if (YGGDRASIL_RAPIDJSON_LIKELY(level_stack_.GetSize() != 0)) { // this value is not at root
             Level* level = level_stack_.template Top<Level>();
             if (level->valueCount > 0) {
                 if (level->inArray) 
@@ -664,18 +664,18 @@ protected:
                     os_->Put((level->valueCount % 2 == 0) ? ',' : ':');
             }
             if (!level->inArray && level->valueCount % 2 == 0)
-                RAPIDJSON_ASSERT(type == kStringType);  // if it's in object, then even number should be a name
+                YGGDRASIL_RAPIDJSON_ASSERT(type == kStringType);  // if it's in object, then even number should be a name
             level->valueCount++;
         }
         else {
-            RAPIDJSON_ASSERT(!hasRoot_);    // Should only has one and only one root.
+            YGGDRASIL_RAPIDJSON_ASSERT(!hasRoot_);    // Should only has one and only one root.
             hasRoot_ = true;
         }
     }
 
     // Flush the value if it is the top level one.
     bool EndValue(bool ret) {
-        if (RAPIDJSON_UNLIKELY(level_stack_.Empty()))   // end of json text
+        if (YGGDRASIL_RAPIDJSON_UNLIKELY(level_stack_.Empty()))   // end of json text
             Flush();
         return ret;
     }
@@ -728,7 +728,7 @@ inline bool Writer<StringBuffer>::WriteUint64(uint64_t u) {
 template<>
 inline bool Writer<StringBuffer>::WriteDouble(double d) {
     if (internal::Double(d).IsNanOrInf()) {
-        // Note: This code path can only be reached if (RAPIDJSON_WRITE_DEFAULT_FLAGS & kWriteNanAndInfFlag).
+        // Note: This code path can only be reached if (YGGDRASIL_RAPIDJSON_WRITE_DEFAULT_FLAGS & kWriteNanAndInfFlag).
         if (!(kWriteDefaultFlags & kWriteNanAndInfFlag))
             return false;
         if (kWriteDefaultFlags & kWriteNanAndInfNullFlag) {
@@ -758,13 +758,13 @@ inline bool Writer<StringBuffer>::WriteDouble(double d) {
     return true;
 }
 
-#if defined(RAPIDJSON_SSE2) || defined(RAPIDJSON_SSE42)
+#if defined(YGGDRASIL_RAPIDJSON_SSE2) || defined(YGGDRASIL_RAPIDJSON_SSE42)
 template<>
 inline bool Writer<StringBuffer>::ScanWriteUnescapedString(StringStream& is, size_t length) {
     if (length < 16)
-        return RAPIDJSON_LIKELY(is.Tell() < length);
+        return YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length);
 
-    if (!RAPIDJSON_LIKELY(is.Tell() < length))
+    if (!YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length))
         return false;
 
     const char* p = is.src_;
@@ -777,7 +777,7 @@ inline bool Writer<StringBuffer>::ScanWriteUnescapedString(StringStream& is, siz
     while (p != nextAligned)
         if (*p < 0x20 || *p == '\"' || *p == '\\') {
             is.src_ = p;
-            return RAPIDJSON_LIKELY(is.Tell() < length);
+            return YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length);
         }
         else
             os_->PutUnsafe(*p++);
@@ -797,7 +797,7 @@ inline bool Writer<StringBuffer>::ScanWriteUnescapedString(StringStream& is, siz
         const __m128i t3 = _mm_cmpeq_epi8(_mm_max_epu8(s, sp), sp); // s < 0x20 <=> max(s, 0x1F) == 0x1F
         const __m128i x = _mm_or_si128(_mm_or_si128(t1, t2), t3);
         unsigned short r = static_cast<unsigned short>(_mm_movemask_epi8(x));
-        if (RAPIDJSON_UNLIKELY(r != 0)) {   // some of characters is escaped
+        if (YGGDRASIL_RAPIDJSON_UNLIKELY(r != 0)) {   // some of characters is escaped
             SizeType len;
 #ifdef _MSC_VER         // Find the index of first escaped
             unsigned long offset;
@@ -817,15 +817,15 @@ inline bool Writer<StringBuffer>::ScanWriteUnescapedString(StringStream& is, siz
     }
 
     is.src_ = p;
-    return RAPIDJSON_LIKELY(is.Tell() < length);
+    return YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length);
 }
-#elif defined(RAPIDJSON_NEON)
+#elif defined(YGGDRASIL_RAPIDJSON_NEON)
 template<>
 inline bool Writer<StringBuffer>::ScanWriteUnescapedString(StringStream& is, size_t length) {
     if (length < 16)
-        return RAPIDJSON_LIKELY(is.Tell() < length);
+        return YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length);
 
-    if (!RAPIDJSON_LIKELY(is.Tell() < length))
+    if (!YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length))
         return false;
 
     const char* p = is.src_;
@@ -838,7 +838,7 @@ inline bool Writer<StringBuffer>::ScanWriteUnescapedString(StringStream& is, siz
     while (p != nextAligned)
         if (*p < 0x20 || *p == '\"' || *p == '\\') {
             is.src_ = p;
-            return RAPIDJSON_LIKELY(is.Tell() < length);
+            return YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length);
         }
         else
             os_->PutUnsafe(*p++);
@@ -873,7 +873,7 @@ inline bool Writer<StringBuffer>::ScanWriteUnescapedString(StringStream& is, siz
             len = lz >> 3;
             escaped = true;
         }
-        if (RAPIDJSON_UNLIKELY(escaped)) {   // some of characters is escaped
+        if (YGGDRASIL_RAPIDJSON_UNLIKELY(escaped)) {   // some of characters is escaped
             char* q = reinterpret_cast<char*>(os_->PushUnsafe(len));
             for (size_t i = 0; i < len; i++)
                 q[i] = p[i];
@@ -885,12 +885,12 @@ inline bool Writer<StringBuffer>::ScanWriteUnescapedString(StringStream& is, siz
     }
 
     is.src_ = p;
-    return RAPIDJSON_LIKELY(is.Tell() < length);
+    return YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length);
 }
-#endif // RAPIDJSON_NEON
+#endif // YGGDRASIL_RAPIDJSON_NEON
 
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 template<typename OutputStream, typename SourceEncoding = UTF8<>, typename TargetEncoding = UTF8<>, typename StackAllocator = CrtAllocator, unsigned writeFlags = kWriteDefaultFlags>
 class Base64Writer : public Writer<Base64OutputStreamWrapper<OutputStream>, SourceEncoding, TargetEncoding, StackAllocator, writeFlags> {
 public:
@@ -900,38 +900,38 @@ public:
   Base64Writer(Base64OutputStreamWrapper<OutputStream>& os) :
     Writer<Base64OutputStreamWrapper<OutputStream>, SourceEncoding, TargetEncoding, StackAllocator, writeFlags>(os) {}
 
-#define RAPIDJSON_WRAP_BASE64_(method, arg1)	\
+#define YGGDRASIL_RAPIDJSON_WRAP_BASE64_(method, arg1)	\
   return this->method ## _ arg1
   
-  bool Null()                 { RAPIDJSON_WRAP_BASE64_(Null, ()); }
-  bool Bool(bool b)           { RAPIDJSON_WRAP_BASE64_(Bool, (b)); }
-  bool Int(int i)             { RAPIDJSON_WRAP_BASE64_(Int, (i)); }
-  bool Uint(unsigned u)       { RAPIDJSON_WRAP_BASE64_(Uint, (u)); }
-  bool Int64(int64_t i64)     { RAPIDJSON_WRAP_BASE64_(Int64, (i64)); }
-  bool Uint64(uint64_t u64)   { RAPIDJSON_WRAP_BASE64_(Uint64, (u64)); }
-  bool Double(double d)       { RAPIDJSON_WRAP_BASE64_(Double, (d)); }
+  bool Null()                 { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Null, ()); }
+  bool Bool(bool b)           { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Bool, (b)); }
+  bool Int(int i)             { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Int, (i)); }
+  bool Uint(unsigned u)       { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Uint, (u)); }
+  bool Int64(int64_t i64)     { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Int64, (i64)); }
+  bool Uint64(uint64_t u64)   { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Uint64, (u64)); }
+  bool Double(double d)       { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(Double, (d)); }
   bool RawNumber(const Ch* str, SizeType length, bool copy = false)
-  { RAPIDJSON_WRAP_BASE64_(RawNumber, (str, length, copy)); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(RawNumber, (str, length, copy)); }
   bool String(const Ch* str, SizeType length, bool copy = false)
-  { RAPIDJSON_WRAP_BASE64_(String, (str, length, copy)); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(String, (str, length, copy)); }
   bool StartObject()
-  { RAPIDJSON_WRAP_BASE64_(StartObject, ()); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(StartObject, ()); }
   bool EndObject(SizeType memberCount = 0)
-  { RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount)); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount)); }
   bool StartArray()
-  { RAPIDJSON_WRAP_BASE64_(StartArray, ()); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(StartArray, ()); }
   bool EndArray(SizeType elementCount = 0)
-  { RAPIDJSON_WRAP_BASE64_(EndArray, (elementCount)); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(EndArray, (elementCount)); }
   template <typename SchemaValueType>
-  RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
   YggdrasilString(const Ch* str, SizeType length, bool copy, SchemaValueType&)
-  { RAPIDJSON_WRAP_BASE64_(String, (str, length, copy)); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(String, (str, length, copy)); }
   template <typename SchemaValueType>
-  RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
+  YGGDRASIL_RAPIDJSON_DISABLEIF_RETURN((internal::HasYggdrasilMethod<OutputStream, SchemaValueType>), (bool))
   YggdrasilStartObject(SchemaValueType&)
-  { RAPIDJSON_WRAP_BASE64_(StartObject, ()); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(StartObject, ()); }
   bool YggdrasilEndObject(SizeType memberCount = 0)
-  { RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount)); }
+  { YGGDRASIL_RAPIDJSON_WRAP_BASE64_(EndObject, (memberCount)); }
 
   template <typename ValueType>
   bool WriteSchema(ValueType& schema) {
@@ -945,7 +945,7 @@ public:
   bool WriteRawBytes(const Ch* json, size_t length) {
     PutReserve(*this->os_, length);
     GenericStringStream<SourceEncoding> is(json);
-    while (RAPIDJSON_LIKELY(is.Tell() < length)) {
+    while (YGGDRASIL_RAPIDJSON_LIKELY(is.Tell() < length)) {
       // Do this directly instead of via the transcoder as the base64
       // encoding will handle any set of bytes, even those that cannot be
       // decoded via the source encoding
@@ -955,16 +955,16 @@ public:
     return true;
   }
 
-#undef RAPIDJSON_WRAP_BASE64_
+#undef YGGDRASIL_RAPIDJSON_WRAP_BASE64_
   
 };
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
-RAPIDJSON_NAMESPACE_END
+YGGDRASIL_RAPIDJSON_NAMESPACE_END
 
 #if defined(_MSC_VER) || defined(__clang__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
-#endif // RAPIDJSON_RAPIDJSON_H_
+#endif // YGGDRASIL_RAPIDJSON_WRITER_H_
