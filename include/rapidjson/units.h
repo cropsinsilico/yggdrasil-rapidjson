@@ -282,7 +282,8 @@ namespace units {
       if (match == cache_.end()) {
         std::vector<T2>* new_entry = (std::vector<T2>*)malloc(sizeof(std::vector<T2*>));
 	YGGDRASIL_RAPIDJSON_ASSERT(new_entry);
-	new_entry[0] = std::vector<T2>();
+        new (new_entry) std::vector<T2>();
+	// new_entry[0] = std::vector<T2>();
         for (typename std::vector<T>::const_iterator it = base_.begin(); it != base_.end(); it++)
           new_entry->push_back(it->template transcode<typename T2::EncodingType>());
 	cache_[idx] = (void*)(new_entry);

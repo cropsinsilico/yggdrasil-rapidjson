@@ -179,7 +179,7 @@ template <typename T> struct RemoveSfinaeTag<SfinaeTag&(*)(T)> { typedef T Type;
         <YGGDRASIL_RAPIDJSON_REMOVEFPTR_(cond), \
          YGGDRASIL_RAPIDJSON_REMOVEFPTR_(returntype)>::Type
 
-#ifndef DISABLE_YGGDRASIL_YGGDRASIL_RAPIDJSON
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 // https://stackoverflow.com/questions/257288/templated-check-for-the-existence-of-a-class-member-function
 template<typename Type, typename ValueType>  //, typename SchemaType>
 class HasYggdrasilMethodImpl
