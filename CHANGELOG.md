@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJSON version is used with the addition of a EXTEN version after the PATCH version (i.e. MAJOR.MINOR.PATCH.EXTEN) to indicate the YggdrasilRapidJSON version. The EXTEN version will restart at 0 when/if RapidJSON increments their version.
 
+
+## 1.1.0.1 - 2025-11-12
+
+This update primarily serves to repackage the source code to allow for compatibility in side-by-side installation with rapidjson at request of conda-forge team. This is accomplished by
+* Updating the namespace from `rapidjson` to `yggdrasil_rapidjson`
+* Updating the directory containing headers from `rapidjson` to `yggdrasil_rapidjson`
+* Updating the primary header from `rapidjson.h` to `yggdrasil_rapidjson.h`
+* Updating macros that start with `RAPIDJSON_` to start with `YGGDRASIL_RAPIDJSON_`
+
+
 ## 1.1.0.0 - 2025-09-24
 
 ### Features
