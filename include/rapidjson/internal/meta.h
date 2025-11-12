@@ -35,6 +35,7 @@ YGGDRASIL_RAPIDJSON_DIAG_OFF(6334)
 #include <cstdarg>
 #include <limits>
 #include <vector>
+#include <complex>
 #endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 //@cond YGGDRASIL_RAPIDJSON_INTERNAL

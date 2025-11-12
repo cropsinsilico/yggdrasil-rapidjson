@@ -38,8 +38,8 @@ def process_directory(fdir, ext=None, new='yggdrasil_rapidjson',
         (f'using namespace {old}', f'using namespace {new_standin}'),
         (f'{old}::', f'{new_standin}::'),
         # Includes
-        (f'#include "{old}', f'#include "{new}'),
-        (f'#include <{old}', f'#include <{new}'),
+        # (f'#include "{old}', f'#include "{new}'),
+        # (f'#include <{old}', f'#include <{new}'),
         # Restore existing uses of new packages
         (new_standin, new),
         (new_standin.upper(), new.upper()),

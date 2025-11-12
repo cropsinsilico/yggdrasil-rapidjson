@@ -106,6 +106,7 @@ jobs:
         python-install: [conda]
         python-version: [3.11]
         with-yggdrasil: [true]
+        configuration: [Debug]
       fail-fast: false
     defaults:
       run:

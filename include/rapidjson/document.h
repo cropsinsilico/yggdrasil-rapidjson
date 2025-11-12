@@ -3917,8 +3917,8 @@ public:
     if (flag == kGetVarArgsFlag && !parent)
       return false;
     std::string schema_type(schema["type"].GetString());
-#define BASE_(method_set, method_chk, method_get, type)		\
-    type tmp;							\
+#define BASE_(method_set, method_chk, method_get, type, val0)   \
+    type tmp = val0;                                            \
     if (flag == kSetVarArgsFlag) {				\
       if (!method_chk)						\
 	return false;						\
@@ -3930,11 +3930,11 @@ public:
     if (flag == kGetVarArgsFlag) {				\
       const_cast<ValueType*>(this)->method_get;			\
     }
-#define BASE_STD_(method, type)			\
-    BASE_(Get ## method(), Is ## method(), Set ## method(tmp), type)
-#define BASE_STD_SCALAR_(method, type)					\
+#define BASE_STD_(method, type, val0)                                   \
+    BASE_(Get ## method(), Is ## method(), Set ## method(tmp), type, val0)
+#define BASE_STD_SCALAR_(method, type, val0)                            \
     BASE_(Get ## method(), (Is ## method() || IsScalar<type>()),	\
-	  Set ## method(tmp), type)
+	  Set ## method(tmp), type, val0)
 #define CASE_STRING_							\
     const char* tmp = NULL;						\
     size_t tmp_len = 0;							\
@@ -3989,35 +3989,35 @@ public:
       return true;
     }
     else if (schema_type == "null") {
-      BASE_(NULL, IsNull(), SetNull(), void*)
+      BASE_(NULL, IsNull(), SetNull(), void*, nullptr)
     }
     else if (schema_type == "boolean") {
-      BASE_STD_(Bool, bool)
+      BASE_STD_(Bool, bool, false)
     }
     else if (schema_type == std::string("integer")) {
-      BASE_STD_SCALAR_(Int, int);
+      BASE_STD_SCALAR_(Int, int, 0);
     }
     else if (schema_type == std::string("number")) {
-      BASE_STD_SCALAR_(Double, double)
+      BASE_STD_SCALAR_(Double, double, 0.0)
     }
     // else if (schema_type == std::string("integer") ||
     // 	     schema_type == std::string("number")) {
     //   if (flag & kSetVarArgsFlag) {
     //     if (IsInt()) {
-    // 	  BASE_STD_(Int, int)
+    // 	  BASE_STD_(Int, int, 0)
     //     } else if (IsUint()) {
-    // 	  BASE_STD_(Uint, unsigned)
+    // 	  BASE_STD_(Uint, unsigned, 0)
     //     } else if (IsInt64()) {
-    // 	  BASE_STD_(Int64, int64_t)
+    // 	  BASE_STD_(Int64, int64_t, 0)
     //     } else if (IsUint64()) {
-    // 	  BASE_STD_(Uint64, uint64_t)
+    // 	  BASE_STD_(Uint64, uint64_t, 0)
     // 	} else if (schema_type == std::string("number") && IsDouble()) {
-    // 	  BASE_STD_(Double, double)
+    // 	  BASE_STD_(Double, double, 0.0)
     //     }
     //   } else if (schema_type == std::string("number")) {
-    // 	BASE_STD_(Double, double)
+    // 	BASE_STD_(Double, double, 0.0)
     //   } else {
-    // 	BASE_STD_(Int, int)
+    // 	BASE_STD_(Int, int, 0)
     //   }
     // }
     else if (schema_type == std::string("string")) {
@@ -4448,6 +4448,7 @@ public:
     }
 #undef BASE_STD_
 #undef BASE_
+#undef BASE_STD_SCALAR_
     return true;
   }
   

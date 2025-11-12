@@ -14,7 +14,7 @@ build:
 
 requirements:
   build:
-    - cmake
+    - cmake >=3.15
     - ninja
     - numpy
     - if: build_platform != target_platform
@@ -54,7 +54,7 @@ tests:
         - ${{ stdlib('c') }}
         - ${{ compiler('c') }}
         - ${{ compiler('cxx') }}
-        - cmake
+        - cmake >=3.15
         - ninja
     files:
       source:
