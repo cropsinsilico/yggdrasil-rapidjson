@@ -22,6 +22,7 @@ set(LIB_VERSION_STRING "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_PATCH_VE
 
 PROJECT(YggdrasilRapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES C CXX)
 set(PROJECT_NAME_LOWER "yggdrasil_rapidjson")
+set(PROJECT_INCLUDE_DIR "include/rapidjson")
 
 if(POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
     cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python
@@ -29,12 +30,15 @@ endif()
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 
+option(YGGDRASIL_RAPIDJSON_NEST_HEADERS "Nest the headers during install under the package name (in addition to the directly containing the headers)" ON)
 option(DISABLE_YGGDRASIL_RAPIDJSON "Build without yggdrasil extensions" OFF)
 option(YGGDRASIL_PYGIL_NO_MANAGEMENT "Disable any handling of the Python GIL" OFF)
 option(YGGDRASIL_DISABLE_PYTHON_C_API "Disable the Python C API" OFF)
 option(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA "Re-create the metaschema" OFF)
 option(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL "Re-create the metaschema and the full_schema.yaml file" OFF)
 option(YGGDRASIL_RAPIDJSON_SCHEMA_TESTS "Build tests using the yggdrasil schema" OFF)
+
+
 
 set(INTERFACE_COMPILATION_OPTIONS -D_USE_MATH_DEFINES)
 set(INTERFACE_INCLUDE_DIRECTORIES)
@@ -137,7 +141,7 @@ if(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA)
         set(YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS "${YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS} --create-full-schema")
     endif()
     exec_program(${Python3_EXECUTABLE}
-                 ARGS "${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py ${CMAKE_CURRENT_SOURCE_DIR}/include/rapidjson/metaschema.h ${YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS}")
+                 ARGS "${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_INCLUDE_DIR}/metaschema.h ${YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS}")
 endif()
 
 # compile in release with debug info mode by default
@@ -348,11 +352,19 @@ endif()
 
 add_library(${PROJECT_NAME} INTERFACE)
 
-target_include_directories(
-    ${PROJECT_NAME} INTERFACE
-    $<INSTALL_INTERFACE:include/${PROJECT_NAME_LOWER}>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-)
+if (YGGDRASIL_RAPIDJSON_NEST_HEADERS)
+    target_include_directories(
+        ${PROJECT_NAME} INTERFACE
+        $<INSTALL_INTERFACE:include/${PROJECT_NAME_LOWER}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    )
+else()
+    target_include_directories(
+        ${PROJECT_NAME} INTERFACE
+        $<INSTALL_INTERFACE:include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    )
+endif()
 target_compile_options(
     ${PROJECT_NAME} INTERFACE ${INTERFACE_COMPILATION_OPTIONS}
 )
@@ -383,9 +395,19 @@ install(FILES readme.md
         DESTINATION "${DOC_INSTALL_DIR}"
         COMPONENT doc)
 
-install(DIRECTORY include/rapidjson
-    DESTINATION "${INCLUDE_INSTALL_DIR}/${PROJECT_NAME_LOWER}"
-    COMPONENT dev)
+if (YGGDRASIL_RAPIDJSON_NEST_HEADERS)
+    install(
+        DIRECTORY ${PROJECT_INCLUDE_DIR}
+        DESTINATION "${INCLUDE_INSTALL_DIR}/${PROJECT_NAME_LOWER}"
+        COMPONENT dev
+    )
+else()
+    install(
+        DIRECTORY "${PROJECT_INCLUDE_DIR}"
+        DESTINATION "${INCLUDE_INSTALL_DIR}"
+        COMPONENT dev
+    )
+endif()
 
 install(DIRECTORY example/
     DESTINATION "${DOC_INSTALL_DIR}/examples"
