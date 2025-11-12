@@ -183,3 +183,16 @@ jobs:
           file: build/coverage/coverage.info
           # directory: build/Testing/CoverageInfo
           functionalities: gcov
+
+  all_tests_passed:
+    runs-on: ubuntu-latest
+    name: All tests passed
+    needs: [build_pip, build_conda]
+    if: always()
+    steps:
+      - name: All tests ok
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+      - name: Some tests failed
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
