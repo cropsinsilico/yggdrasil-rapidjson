@@ -13,14 +13,14 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/internal/dtoa.h"
+#include "yggdrasil_rapidjson/internal/dtoa.h"
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(type-limits)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(type-limits)
 #endif
 
-using namespace rapidjson::internal;
+using namespace yggdrasil_rapidjson::internal;
 
 TEST(dtoa, normal) {
     char buffer[30];
@@ -95,5 +95,5 @@ TEST(dtoa, maxDecimalPlaces) {
 
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

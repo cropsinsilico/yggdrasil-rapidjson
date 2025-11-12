@@ -2,18 +2,18 @@
 
 // The example validates JSON text from stdin with a JSON schema specified in the argument.
 
-#define RAPIDJSON_HAS_STDSTRING 1
+#define YGGDRASIL_RAPIDJSON_HAS_STDSTRING 1
 
-#include "rapidjson/error/en.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/schema.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/prettywriter.h"
+#include "yggdrasil_rapidjson/error/en.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/schema.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/prettywriter.h"
 #include <string>
 #include <iostream>
 #include <sstream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 typedef GenericValue<UTF8<>, CrtAllocator > ValueType;
 

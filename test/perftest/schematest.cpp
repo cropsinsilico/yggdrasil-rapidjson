@@ -1,19 +1,19 @@
 #include "perftest.h"
 
-#if TEST_RAPIDJSON
+#if TEST_YGGDRASIL_RAPIDJSON
 
-#include "rapidjson/schema.h"
+#include "yggdrasil_rapidjson/schema.h"
 #include <ctime>
 #include <string>
 #include <vector>
 
 #define ARRAY_SIZE(a) sizeof(a) / sizeof(a[0])
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
-RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
 #if defined(__GNUC__) && __GNUC__ >= 7
-RAPIDJSON_DIAG_OFF(format-overflow)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(format-overflow)
 #endif
 
 template <typename Allocator>
@@ -28,7 +28,8 @@ static char* ReadFile(const char* filename, Allocator& allocator) {
     char buffer[1024];
     FILE *fp = 0;
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
-        snprintf(buffer, 1024, "%s%s", paths[i], filename);
+        if (snprintf(buffer, 1024, "%s%s", paths[i], filename) < 0)
+            return 0;
         fp = fopen(buffer, "rb");
         if (fp)
             break;
@@ -47,7 +48,7 @@ static char* ReadFile(const char* filename, Allocator& allocator) {
     return json;
 }
 
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 
 class Schema : public PerfTest {
 public:
@@ -92,7 +93,10 @@ public:
 
         for (size_t i = 0; i < ARRAY_SIZE(filenames); i++) {
             char filename[FILENAME_MAX];
-            snprintf(filename, FILENAME_MAX, "jsonschema/tests/draft4/%s", filenames[i]);
+            if (snprintf(filename, FILENAME_MAX, "jsonschema/tests/draft4/%s", filenames[i]) < 0) {
+                printf("error formatting file name");
+                return;
+            }
             char* json = ReadFile(filename, jsonAllocator);
             if (!json) {
                 printf("json test suite file %s not found", filename);

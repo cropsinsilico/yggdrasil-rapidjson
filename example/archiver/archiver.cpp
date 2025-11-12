@@ -1,11 +1,11 @@
 #include "archiver.h"
 #include <cassert>
 #include <stack>
-#include "rapidjson/document.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/prettywriter.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 struct JsonReaderStackItem {
     enum State {

@@ -1,11 +1,11 @@
 // Hello World example
 // This example shows basic usage of DOM-style API.
 
-#include "rapidjson/document.h"     // rapidjson's DOM-style API
-#include "rapidjson/prettywriter.h" // for stringify JSON
+#include "yggdrasil_rapidjson/document.h"     // rapidjson's DOM-style API
+#include "yggdrasil_rapidjson/prettywriter.h" // for stringify JSON
 #include <cstdio>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 int main(int, char*[]) {

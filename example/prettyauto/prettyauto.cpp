@@ -2,18 +2,18 @@
 // This example can handle UTF-8/UTF-16LE/UTF-16BE/UTF-32LE/UTF-32BE.
 // The input firstly convert to UTF8, and then write to the original encoding with pretty formatting.
 
-#include "rapidjson/reader.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/filewritestream.h"
-#include "rapidjson/encodedstream.h"    // NEW
-#include "rapidjson/error/en.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/prettywriter.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/filewritestream.h"
+#include "yggdrasil_rapidjson/encodedstream.h"    // NEW
+#include "yggdrasil_rapidjson/error/en.h"
 #ifdef _WIN32
 #include <fcntl.h>
 #include <io.h>
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 int main(int, char*[]) {
 #ifdef _WIN32

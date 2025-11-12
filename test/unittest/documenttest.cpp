@@ -13,21 +13,21 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/encodedstream.h"
-#include "rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/writer.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/encodedstream.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
 #include <sstream>
 #include <algorithm>
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(c++98-compat)
-RAPIDJSON_DIAG_OFF(missing-variable-declarations)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(c++98-compat)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(missing-variable-declarations)
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 template <typename DocumentType>
 void ParseCheck(DocumentType& doc) {
@@ -74,7 +74,7 @@ void ParseCheck(DocumentType& doc) {
     for (SizeType j = 0; j < 4; j++)
         EXPECT_EQ(j + 1, a[j].GetUint());
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     EXPECT_TRUE(doc.HasMember("s_int"));
     const ValueType& s_int = doc["s_int"];
     EXPECT_TRUE(s_int.IsYggdrasil());
@@ -104,17 +104,17 @@ void ParseCheck(DocumentType& doc) {
     //    {2, 3},
     //    {3, 0},
     //    {2, 0}};
-    // rapidjson::Ply ply0(vertices, faces, edges);
+    // yggdrasil_rapidjson::Ply ply0(vertices, faces, edges);
     // EXPECT_TRUE(doc.HasMember("ply"));
     // const ValueType& ply = doc["ply"];
     // EXPECT_TRUE(ply.IsYggdrasil());
     // EXPECT_TRUE(ply.IsPly());
     // EXPECT_EQ(ply0, ply.GetPly());
-    // rapidjson::Ply cpy;
+    // yggdrasil_rapidjson::Ply cpy;
     // ply.GetPly(cpy);
     // EXPECT_EQ(ply0, cpy);
     
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     
 }
 
@@ -123,11 +123,11 @@ void ParseTest() {
     typedef GenericDocument<UTF8<>, Allocator, StackAllocator> DocumentType;
     DocumentType doc;
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     const char* json = " { \"hello\" : \"world\", \"t\" : true , \"f\" : false, \"n\": null, \"i\":123, \"pi\": 3.1416, \"a\":[1, 2, 3, 4], \"s_int\": \"-YGG-eyJ0eXBlIjoic2NhbGFyIiwgInN1YnR5cGUiOiJpbnQiLCAicHJlY2lzaW9uIjo0fQ==-YGG-AQAAAA==-YGG-\", \"ply\": \"-YGG-eyJ0eXBlIjoicGx5In0=-YGG-cGx5CmZvcm1hdCBhc2NpaSAxLjAKZWxlbWVudCB2ZXJ0ZXggOApwcm9wZXJ0eSBmbG9hdCB4CnByb3BlcnR5IGZsb2F0IHkKcHJvcGVydHkgZmxvYXQgegplbGVtZW50IGZhY2UgMgpwcm9wZXJ0eSBsaXN0IHVjaGFyIGludCB2ZXJ0ZXhfaW5kZXgKZWxlbWVudCBlZGdlIDUKcHJvcGVydHkgaW50IHZlcnRleDEKcHJvcGVydHkgaW50IHZlcnRleDIKZW5kX2hlYWRlcgowIDAgMAowIDAgMQowIDEgMQowIDEgMAoxIDAgMAoxIDAgMQoxIDEgMQoxIDEgMAozIDMgMCAxCjMgMyAwIDIKMCAxCjEgMgoyIDMKMyAwCjIgMAo=-YGG-\" } ";
 #else
     const char* json = " { \"hello\" : \"world\", \"t\" : true , \"f\" : false, \"n\": null, \"i\":123, \"pi\": 3.1416, \"a\":[1, 2, 3, 4] } ";
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     doc.Parse(json);
     ParseCheck(doc);
@@ -148,7 +148,7 @@ void ParseTest() {
     buffer = reinterpret_cast<char*>(malloc(length * 2));
     memcpy(buffer, json, length);
     memset(buffer + length, 'X', length);
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     std::string s2(buffer, length); // backup buffer
 #endif
     doc.SetNull();
@@ -156,7 +156,7 @@ void ParseTest() {
     free(buffer);
     ParseCheck(doc);
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     // Parse(std::string)
     doc.SetNull();
     doc.Parse(s2);
@@ -234,7 +234,7 @@ TEST(Document, Parse_Encoding) {
     char* buffer = reinterpret_cast<char*>(malloc(length * 2));
     memcpy(buffer, json, length);
     memset(buffer + length, 'X', length);
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     std::string s2(buffer, length); // backup buffer
 #endif
     doc.SetNull();
@@ -245,7 +245,7 @@ TEST(Document, Parse_Encoding) {
         printf("Error: %d at %zu\n", static_cast<int>(doc.GetParseError()), doc.GetErrorOffset());
     EXPECT_EQ(0, StrCmp(doc[L"hello"].GetString(), L"world"));
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     // Parse<unsigned, SourceEncoding>(std::string)
     doc.SetNull();
 
@@ -460,7 +460,7 @@ TEST(Document, UTF16_Document) {
     EXPECT_EQ(0, memcmp(L"Wed Oct 30 17:13:20 +0000 2012", s.GetString(), (s.GetStringLength() + 1) * sizeof(wchar_t)));
 }
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
 #if 0 // Many old compiler does not support these. Turn it off temporaily.
 
@@ -706,7 +706,7 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
 }
 #endif
 
-#endif // RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
 // Issue 22: Memory corruption via operator=
 // Fixed by making unimplemented assignment operator private.
@@ -716,7 +716,7 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
 //  d1 = d2;
 //}
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 // Tests for getting setting from arguments
 #define SET_GET_(get_args, set_args)		\
   Document d;					\
@@ -1158,7 +1158,7 @@ TEST(VarArgs, PythonFunction) {
   Document s;
   s.Parse("{\"type\": \"function\"}");
   PyObject* a = import_python_class("example_python", "example_function");
-  RAPIDJSON_ASSERT(a);
+  YGGDRASIL_RAPIDJSON_ASSERT(a);
   PyObject* b = NULL;
   SET_GET_((&s, a), (&s, &b));
   EXPECT_EQ(PyObject_RichCompareBool(a, b, Py_EQ), 1);
@@ -1169,7 +1169,7 @@ TEST(VarArgs, PythonClass) {
   Document s;
   s.Parse("{\"type\": \"class\"}");
   PyObject* a = import_python_class("example_python", "ExampleClass");
-  RAPIDJSON_ASSERT(a);
+  YGGDRASIL_RAPIDJSON_ASSERT(a);
   PyObject* b = NULL;
   SET_GET_((&s, a), (&s, &b));
   EXPECT_EQ(PyObject_RichCompareBool(a, b, Py_EQ), 1);
@@ -1180,7 +1180,7 @@ TEST(VarArgs, PythonInstance) {
   Document s;
   s.Parse("{\"type\": \"instance\"}");
   CREATE_PYTHON_INSTANCE(ExampleClass, a)
-  RAPIDJSON_ASSERT(a);
+  YGGDRASIL_RAPIDJSON_ASSERT(a);
   PyObject* b = NULL;
   SET_GET_((&s, a), (&s, &b));
   EXPECT_EQ(PyObject_RichCompareBool(a, b, Py_EQ), 1);
@@ -1381,8 +1381,8 @@ TEST(VarArgs, AnyRealloc) {
   EXPECT_EQ(a, *b);
   delete b;
 }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

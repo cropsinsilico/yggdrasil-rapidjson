@@ -18,32 +18,32 @@
 // __SSE2__ and __SSE4_2__ are recognized by gcc, clang, and the Intel compiler.
 // We use -march=native with gmake to enable -msse2 and -msse4.2, if supported.
 #if defined(__SSE4_2__)
-#  define RAPIDJSON_SSE42
+#  define YGGDRASIL_RAPIDJSON_SSE42
 #elif defined(__SSE2__)
-#  define RAPIDJSON_SSE2
+#  define YGGDRASIL_RAPIDJSON_SSE2
 #elif defined(__ARM_NEON)
-#  define RAPIDJSON_NEON
+#  define YGGDRASIL_RAPIDJSON_NEON
 #endif
 
-#define RAPIDJSON_NAMESPACE rapidjson_simd
+#define YGGDRASIL_RAPIDJSON_NAMESPACE yggdrasil_rapidjson_simd
 
 #include "unittest.h"
 
-#include "rapidjson/reader.h"
-#include "rapidjson/writer.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/writer.h"
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
 #endif
 
-using namespace rapidjson_simd;
+using namespace yggdrasil_rapidjson_simd;
 
-#ifdef RAPIDJSON_SSE2
+#ifdef YGGDRASIL_RAPIDJSON_SSE2
 #define SIMD_SUFFIX(name) name##_SSE2
-#elif defined(RAPIDJSON_SSE42)
+#elif defined(YGGDRASIL_RAPIDJSON_SSE42)
 #define SIMD_SUFFIX(name) name##_SSE42
-#elif defined(RAPIDJSON_NEON)
+#elif defined(YGGDRASIL_RAPIDJSON_NEON)
 #define SIMD_SUFFIX(name) name##_NEON
 #else
 #define SIMD_SUFFIX(name) name
@@ -215,5 +215,5 @@ TEST(SIMD, SIMD_SUFFIX(ScanWriteUnescapedString)) {
 }
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

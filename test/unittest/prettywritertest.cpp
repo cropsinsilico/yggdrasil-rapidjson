@@ -13,17 +13,17 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/reader.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/filewritestream.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/prettywriter.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/filewritestream.h"
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(c++98-compat)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(c++98-compat)
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 static const char kJson[] = "{\"hello\":\"world\",\"t\":true,\"f\":false,\"n\":null,\"i\":123,\"pi\":3.1416,\"a\":[1,2,3,-1],\"u64\":1234567890123456789,\"i64\":-1234567890123456789}";
 static const char kPrettyJson[] =
@@ -112,7 +112,7 @@ TEST(PrettyWriter, String) {
     EXPECT_STREQ("[\n    \"Hello\\n\"\n]", buffer.GetString());
 }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
 TEST(PrettyWriter, String_STDSTRING) {
     StringBuffer buffer;
     PrettyWriter<StringBuffer> writer(buffer);
@@ -316,7 +316,7 @@ TEST(PrettyWriter, Issue_889) {
 }
 
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
 static PrettyWriter<StringBuffer> WriterGen(StringBuffer &target) {
     PrettyWriter<StringBuffer> writer(target);
@@ -369,5 +369,5 @@ TEST(PrettyWriter, Issue_1336) {
 }
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

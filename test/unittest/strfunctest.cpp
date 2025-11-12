@@ -13,10 +13,10 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/internal/strfunc.h"
+#include "yggdrasil_rapidjson/internal/strfunc.h"
 
-using namespace rapidjson;
-using namespace rapidjson::internal;
+using namespace yggdrasil_rapidjson;
+using namespace yggdrasil_rapidjson::internal;
 
 TEST(StrFunc, CountStringCodePoint) {
     SizeType count;

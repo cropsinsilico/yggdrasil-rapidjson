@@ -13,10 +13,10 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/document.h"
-#include "rapidjson/cursorstreamwrapper.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/cursorstreamwrapper.h"
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 // static const char json[] = "{\"string\"\n\n:\"my string\",\"array\"\n:[\"1\", \"2\", \"3\"]}";
 

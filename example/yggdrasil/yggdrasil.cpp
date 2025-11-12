@@ -1,14 +1,14 @@
 // Hello World example w/ Yggdrasil extension types
 // This example shows basic usage of DOM-style API for the yggdrasil types.
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
-#include "rapidjson/document.h"     // rapidjson's DOM-style API
-#include "rapidjson/prettywriter.h" // for stringify JSON
-#include "rapidjson/internal/meta.h" // values_eq for floating point comparison
+#include "yggdrasil_rapidjson/document.h"     // rapidjson's DOM-style API
+#include "yggdrasil_rapidjson/prettywriter.h" // for stringify JSON
+#include "yggdrasil_rapidjson/internal/meta.h" // values_eq for floating point comparison
 #include <cstdio>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 int main(int, char*[]) {
@@ -89,11 +89,9 @@ int main(int, char*[]) {
     {
       assert(document["uint8"].IsScalar());
       assert(document["uint8"].IsScalar<uint8_t>()); // Check type
-      uint8_t x = document["uint8"].GetScalar<uint8_t>();
-      assert(x == 25);
+      assert(document["uint8"].GetScalar<uint8_t>() == 25);
       // Get scalar converted to higher precision
-      uint32_t y = document["uint8"].GetScalar<uint32_t>();
-      assert(y == 25);
+      assert(document["uint8"].GetScalar<uint32_t>() == 25);
     }
     
     // ND Arrays
@@ -103,8 +101,7 @@ int main(int, char*[]) {
       assert(document["Array2D"].IsNDArray<float>()); // Check type
       assert(!document["Array2D"].IsNDArray<uint8_t>());
       assert(document["Array2D"].GetNDim() == 2);
-      const Value& shape = document["Array2D"].GetShape();
-      assert(shape[0] == 8);
+      assert(document["Array2D"].GetShape()[0] == 8);
       assert(document["Array2D"].GetNElements() == (8 * 3));
       float dest_stack[8][3];
       document["Array2D"].GetNDArray(dest_stack);
@@ -112,6 +109,7 @@ int main(int, char*[]) {
       // Can also get the array in a version allocated on heap
       float* dest_heap = document["Array2D"].GetNDArray<float>(document.GetAllocator());
       assert(internal::values_eq(dest_heap[6 * 3 + 2], (float)1.0));
+      document.GetAllocator().Free(dest_heap);
     }
     {
       // Array on heap
@@ -119,8 +117,7 @@ int main(int, char*[]) {
       assert(document["Array3D"].IsNDArray<float>()); // Check type
       assert(!document["Array3D"].IsNDArray<uint8_t>());
       assert(document["Array3D"].GetNDim() == 3);
-      const Value& shape = document["Array3D"].GetShape();
-      assert(shape[0] == 2);
+      assert(document["Array3D"].GetShape()[0] == 2);
       SizeType nelements = 2 * 3 * 3;
       assert(document["Array3D"].GetNElements() == nelements);
       float dest_stack[2][3][3];
@@ -129,6 +126,8 @@ int main(int, char*[]) {
       // Can also get the array in a version allocated on heap
       float* dest_heap = document["Array3D"].GetNDArray<float>(document.GetAllocator());
       assert(internal::values_eq(dest_heap[nelements - 1], (float)0.85));
+      document.GetAllocator().Free(dest_heap);
+      UNUSED(nelements);
     }
 
     // Scalars/arrays with units
@@ -146,8 +145,7 @@ int main(int, char*[]) {
       assert(document["ArrayUnits"].IsNDArray<float>()); // Check type
       assert(!document["ArrayUnits"].IsNDArray<uint8_t>());
       assert(document["ArrayUnits"].GetNDim() == 2);
-      const Value& shape = document["ArrayUnits"].GetShape();
-      assert(shape[0] == 8);
+      assert(document["ArrayUnits"].GetShape()[0] == 8);
       assert(document["ArrayUnits"].GetNElements() == (8 * 3));
       float dest_stack[8][3];
       document["ArrayUnits"].GetNDArray(dest_stack);
@@ -163,8 +161,7 @@ int main(int, char*[]) {
     {
       assert(document["Encoded"].IsScalar());
       assert(document["Encoded"].HasEncoding());
-      const Value& encoding = document["Encoded"].GetEncoding();
-      assert(std::strcmp(encoding.GetString(), "UCS4") == 0);
+      assert(std::strcmp(document["Encoded"].GetEncoding().GetString(), "UCS4") == 0);
     }
     
     ////////////////////////////////////////////////////////////////////////////
@@ -189,10 +186,10 @@ int main(int, char*[]) {
     return 0;
 }
 
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
 
 int main(int, char*[]) {
   return 0;
 }
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON

@@ -21,10 +21,10 @@
 #include <windows.h>
 #endif
 
-#include "rapidjson/document.h"
+#include "yggdrasil_rapidjson/document.h"
 #undef GetObject
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 TEST(Platform, GetObject) {
     Document doc;

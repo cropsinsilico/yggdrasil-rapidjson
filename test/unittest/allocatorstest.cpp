@@ -14,14 +14,14 @@
 
 #include "unittest.h"
 
-#include "rapidjson/allocators.h"
+#include "yggdrasil_rapidjson/allocators.h"
 
 #include <map>
 #include <string>
 #include <utility>
 #include <functional>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 template <typename Allocator>
 void TestAllocator(Allocator& a) {
@@ -85,7 +85,7 @@ private:
 
 template <typename Allocator>
 void TestStdAllocator(const Allocator& a) {
-#if RAPIDJSON_HAS_CXX17
+#if YGGDRASIL_RAPIDJSON_HAS_CXX17
     typedef StdAllocator<bool, Allocator> BoolAllocator;
 #else
     typedef StdAllocator<void, Allocator> VoidAllocator;
@@ -143,7 +143,7 @@ void TestStdAllocator(const Allocator& a) {
 
     typedef StdAllocator<char, Allocator> CharAllocator;
     typedef std::basic_string<char, std::char_traits<char>, CharAllocator> String;
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     String s(CharAllocator{a});
 #else
     CharAllocator ca(a);
@@ -156,7 +156,7 @@ void TestStdAllocator(const Allocator& a) {
 
     typedef StdAllocator<std::pair<const int, bool>, Allocator> MapAllocator;
     typedef std::map<int, bool, std::less<int>, MapAllocator> Map;
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     Map map(std::less<int>(), MapAllocator{a});
 #else
     MapAllocator ma(a);
@@ -188,7 +188,7 @@ TEST(Allocator, CrtAllocator) {
 }
 
 TEST(Allocator, MemoryPoolAllocator) {
-    const size_t capacity = RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY;
+    const size_t capacity = YGGDRASIL_RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY;
     MemoryPoolAllocator<> a(capacity);
 
     a.Clear(); // noop
@@ -244,7 +244,7 @@ TEST(Allocator, MemoryPoolAllocator) {
         a.Clear();
         const size_t bufSize = 1024;
         char *buffer = static_cast<char *>(a.Malloc(bufSize));
-        RAPIDJSON_ASSERT(bufSize % sizeof(void*) == 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(bufSize % sizeof(void*) == 0);
         MemoryPoolAllocator<> unaligned_a(buffer + 1, bufSize - 1);
         EXPECT_TRUE(unaligned_a.Capacity() > 0 && unaligned_a.Capacity() <= bufSize - sizeof(void*));
         EXPECT_EQ(unaligned_a.Size(), 0u);
@@ -256,19 +256,19 @@ TEST(Allocator, MemoryPoolAllocator) {
 
 TEST(Allocator, Alignment) {
     if (sizeof(size_t) >= 8) {
-        EXPECT_EQ(RAPIDJSON_UINT64_C2(0x00000000, 0x00000000), RAPIDJSON_ALIGN(0));
+        EXPECT_EQ(YGGDRASIL_RAPIDJSON_UINT64_C2(0x00000000, 0x00000000), YGGDRASIL_RAPIDJSON_ALIGN(0));
         for (uint64_t i = 1; i < 8; i++) {
-            EXPECT_EQ(RAPIDJSON_UINT64_C2(0x00000000, 0x00000008), RAPIDJSON_ALIGN(i));
-            EXPECT_EQ(RAPIDJSON_UINT64_C2(0x00000000, 0x00000010), RAPIDJSON_ALIGN(RAPIDJSON_UINT64_C2(0x00000000, 0x00000008) + i));
-            EXPECT_EQ(RAPIDJSON_UINT64_C2(0x00000001, 0x00000000), RAPIDJSON_ALIGN(RAPIDJSON_UINT64_C2(0x00000000, 0xFFFFFFF8) + i));
-            EXPECT_EQ(RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFF8), RAPIDJSON_ALIGN(RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFF0) + i));
+            EXPECT_EQ(YGGDRASIL_RAPIDJSON_UINT64_C2(0x00000000, 0x00000008), YGGDRASIL_RAPIDJSON_ALIGN(i));
+            EXPECT_EQ(YGGDRASIL_RAPIDJSON_UINT64_C2(0x00000000, 0x00000010), YGGDRASIL_RAPIDJSON_ALIGN(YGGDRASIL_RAPIDJSON_UINT64_C2(0x00000000, 0x00000008) + i));
+            EXPECT_EQ(YGGDRASIL_RAPIDJSON_UINT64_C2(0x00000001, 0x00000000), YGGDRASIL_RAPIDJSON_ALIGN(YGGDRASIL_RAPIDJSON_UINT64_C2(0x00000000, 0xFFFFFFF8) + i));
+            EXPECT_EQ(YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFF8), YGGDRASIL_RAPIDJSON_ALIGN(YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFF0) + i));
         }
     }
 
-    EXPECT_EQ(0u, RAPIDJSON_ALIGN(0u));
+    EXPECT_EQ(0u, YGGDRASIL_RAPIDJSON_ALIGN(0u));
     for (uint32_t i = 1; i < 8; i++) {
-        EXPECT_EQ(8u, RAPIDJSON_ALIGN(i));
-        EXPECT_EQ(0xFFFFFFF8u, RAPIDJSON_ALIGN(0xFFFFFFF0u + i));
+        EXPECT_EQ(8u, YGGDRASIL_RAPIDJSON_ALIGN(i));
+        EXPECT_EQ(0xFFFFFFF8u, YGGDRASIL_RAPIDJSON_ALIGN(0xFFFFFFF0u + i));
     }
 }
 

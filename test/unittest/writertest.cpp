@@ -14,18 +14,18 @@
 
 #include "unittest.h"
 
-#include "rapidjson/document.h"
-#include "rapidjson/reader.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/memorybuffer.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/writer.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/memorybuffer.h"
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(c++98-compat)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(c++98-compat)
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 TEST(Writer, Compact) {
     StringStream s("{ \"hello\" : \"world\", \"t\" : true , \"f\" : false, \"n\": null, \"i\":123, \"pi\": 3.1416, \"a\":[1, 2, 3] } ");
@@ -90,7 +90,7 @@ TEST(Writer, String) {
     TEST_ROUNDTRIP("[\"Hello\\u0000World\"]");
     TEST_ROUNDTRIP("[\"\\\"\\\\/\\b\\f\\n\\r\\t\"]");
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -139,7 +139,7 @@ TEST(Writer, Double) {
 
 }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 // json -> parse -> document -> writer -> json
 #define TEST_YGG_ROUNDTRIP(json) \
     { \
@@ -240,7 +240,7 @@ TEST(ReadableWriter, Ply) {
 TEST(ReadableWriter, ObjWavefront) {
   TEST_READABLE_ROUNDTRIP("\"-YGG-eyJ0eXBlIjoib2JqIn0=-YGG-diAwIDAgMAp2IDAgMCAxCnYgMCAxIDEKdiAwIDEgMAp2IDEgMCAwCnYgMSAwIDEKdiAxIDEgMQp2IDEgMSAwCmYgNCAxIDIKZiA0IDEgMwpsIDEgMgpsIDIgMwpsIDMgNApsIDQgMQpsIDMgMQoK-YGG-\"", "\"v 0 0 0\\nv 0 0 1\\nv 0 1 1\\nv 0 1 0\\nv 1 0 0\\nv 1 0 1\\nv 1 1 1\\nv 1 1 0\\nf 4 1 2\\nf 4 1 3\\nl 1 2\\nl 2 3\\nl 3 4\\nl 4 1\\nl 3 1\\n\\n\"");
 }
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 // UTF8 -> TargetEncoding -> UTF8
 template <typename TargetEncoding>
@@ -716,7 +716,7 @@ TEST(Write, RawValue_Issue1152) {
     }
 }
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 static Writer<StringBuffer> WriterGen(StringBuffer &target) {
     Writer<StringBuffer> writer(target);
     writer.StartObject();
@@ -735,5 +735,5 @@ TEST(Writer, MoveCtor) {
 #endif
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

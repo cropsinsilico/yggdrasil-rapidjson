@@ -13,47 +13,47 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/document.h"
-#ifdef RAPIDJSON_YGGDRASIL
-#include "rapidjson/prettywriter.h"
-#endif // RAPIDJSON_YGGDRASIL
+#include "yggdrasil_rapidjson/document.h"
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#include "yggdrasil_rapidjson/prettywriter.h"
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 #include <algorithm>
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(c++98-compat)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(c++98-compat)
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 TEST(Value, Size) {
     if (sizeof(SizeType) == 4) {
-#ifdef RAPIDJSON_YGGDRASIL
-#if RAPIDJSON_48BITPOINTER_OPTIMIZATION
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#if YGGDRASIL_RAPIDJSON_48BITPOINTER_OPTIMIZATION
         EXPECT_EQ(24u, sizeof(Value));
-#elif RAPIDJSON_64BIT
+#elif YGGDRASIL_RAPIDJSON_64BIT
         EXPECT_EQ(32u, sizeof(Value));
 #else
         EXPECT_EQ(24u, sizeof(Value));
 #endif
-#else // RAPIDJSON_YGGDRASIL
-#if RAPIDJSON_48BITPOINTER_OPTIMIZATION
+#else // DISABLE_YGGDRASIL_RAPIDJSON
+#if YGGDRASIL_RAPIDJSON_48BITPOINTER_OPTIMIZATION
         EXPECT_EQ(16u, sizeof(Value));
-#elif RAPIDJSON_64BIT
+#elif YGGDRASIL_RAPIDJSON_64BIT
         EXPECT_EQ(24u, sizeof(Value));
 #else
         EXPECT_EQ(16u, sizeof(Value));
 #endif
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
     }
 }
 
-#ifdef RAPIDJSON_YGGDRASIL
-#if RAPIDJSON_HAS_CXX11
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define TEMPLATE_CXX11 template
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define TEMPLATE_CXX11
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
 
 #define YGGDRASIL_VECTOR_TEST(type, value)		\
   {							\
@@ -64,7 +64,7 @@ TEST(Value, Size) {
     EXPECT_TRUE(vv.Is<std::vector<type> >());		\
     EXPECT_EQ(vv.Get<std::vector<type> >(), x_vect);	\
   }
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
 #define YGGDRASIL_MAP_TEST(type, value)				\
   {								\
     Value vv;							\
@@ -77,9 +77,9 @@ TEST(Value, Size) {
     EXPECT_TRUE((vv.Is<std::map<std::string, type> >()));	\
     EXPECT_EQ((vv.Get<std::map<std::string, type> >()), x_map);	\
   }
-#else // RAPIDJSON_HAS_STDSTRING
+#else // YGGDRASIL_RAPIDJSON_HAS_STDSTRING
 #define YGGDRASIL_MAP_TEST(type, value)
-#endif // RAPIDJSON_HAS_STDSTRING
+#endif // YGGDRASIL_RAPIDJSON_HAS_STDSTRING
 #define YGGDRASIL_STD_CONT_TEST(type, value)	\
   YGGDRASIL_VECTOR_TEST(type, value)		\
   YGGDRASIL_MAP_TEST(type, value)
@@ -170,7 +170,7 @@ TEST(Value, Size) {
   }
 #else
 #define YGGDRASIL_SCALAR_UNIT_TEST(type, value) {}
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 TEST(Value, DefaultConstructor) {
     Value x;
@@ -186,7 +186,7 @@ TEST(Value, DefaultConstructor) {
 //  Value y = x;
 //}
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
 #if 0 // Many old compiler does not support these. Turn it off temporaily.
 
@@ -253,7 +253,7 @@ TEST(Value, MoveConstructor) {
     EXPECT_EQ(4u, z.Size());
 }
 
-#endif // RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
 TEST(Value, AssignmentOperator) {
     Value x(1234);
@@ -281,7 +281,7 @@ TEST(Value, AssignmentOperator) {
     EXPECT_TRUE(y.IsString());
     EXPECT_EQ(y.GetString(),mstr);
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
     // C++11 move assignment
     x = Value("World");
     EXPECT_TRUE(x.IsString());
@@ -295,7 +295,7 @@ TEST(Value, AssignmentOperator) {
     y = std::move(Value().SetInt(1234));
     EXPECT_TRUE(y.IsInt());
     EXPECT_EQ(1234, y);
-#endif // RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 }
 
 template <typename A, typename B> 
@@ -324,7 +324,7 @@ TEST(Value, EqualtoOperator) {
         .AddMember("i", 123, allocator)
         .AddMember("pi", 3.14, allocator)
         .AddMember("a", Value(kArrayType).Move().PushBack(1, allocator).PushBack(2, allocator).PushBack(3, allocator), allocator);
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     x.AddMember("s_uint8", (uint8_t)1, allocator)
       .AddMember("s_uint16", (uint16_t)1, allocator)
       .AddMember("s_uint32", (uint32_t)1, allocator)
@@ -341,7 +341,7 @@ TEST(Value, EqualtoOperator) {
     x.AddMember("s_ldouble", (long double)1, allocator)
       .AddMember("s_lcomplex", std::complex<long double>(1, 2), allocator);
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     // Test templated operator==() and operator!=()
     TestEqual(x["hello"], "world");
@@ -356,7 +356,7 @@ TEST(Value, EqualtoOperator) {
     TestEqual(x["i"], 123);
     TestEqual(x["pi"], 3.14);
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     TestEqual(x["s_uint8"], (uint8_t)1);
     TestEqual(x["s_uint16"], (uint16_t)1);
     TestEqual(x["s_uint32"], (uint32_t)1);
@@ -373,7 +373,7 @@ TEST(Value, EqualtoOperator) {
     TestEqual(x["s_ldouble"], (long double)1);
     TestEqual(x["s_lcomplex"], std::complex<long double>(1, 2));
 #endif // YGGDRASIL_LONG_DOUBLE_AVAILABLE
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     // Test operator==() (including different allocators)
     CrtAllocator crtAllocator;
@@ -415,8 +415,8 @@ TEST(Value, EqualtoOperator) {
     TestEqual(x, y);
 
     // Issue #129: compare Uint64
-    x.SetUint64(RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFF0));
-    y.SetUint64(RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF));
+    x.SetUint64(YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFF0));
+    y.SetUint64(YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF));
     TestUnequal(x, y);
 }
 
@@ -616,7 +616,7 @@ TEST(Value, Int) {
 
 #ifdef _MSC_VER
     // long as int on MSC platforms
-    RAPIDJSON_STATIC_ASSERT(sizeof(long) == sizeof(int));
+    YGGDRASIL_RAPIDJSON_STATIC_ASSERT(sizeof(long) == sizeof(int));
     z.SetInt(2222);
     EXPECT_TRUE(z.Is<long>());
     EXPECT_EQ(2222l, z.Get<long>());
@@ -675,7 +675,7 @@ TEST(Value, Uint) {
 
 #ifdef _MSC_VER
     // unsigned long as unsigned on MSC platforms
-    RAPIDJSON_STATIC_ASSERT(sizeof(unsigned long) == sizeof(unsigned));
+    YGGDRASIL_RAPIDJSON_STATIC_ASSERT(sizeof(unsigned long) == sizeof(unsigned));
     z.SetUint(2222);
     EXPECT_TRUE(z.Is<unsigned long>());
     EXPECT_EQ(2222ul, z.Get<unsigned long>());
@@ -738,7 +738,7 @@ TEST(Value, Int64) {
     EXPECT_FALSE(z.IsInt());
     EXPECT_NEAR(-2147483649.0, z.GetDouble(), 0.0);
 
-    int64_t i = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 00000000));
+    int64_t i = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 00000000));
     z.SetInt64(i);
     EXPECT_DOUBLE_EQ(-9223372036854775808.0, z.GetDouble());
 
@@ -792,7 +792,7 @@ TEST(Value, Uint64) {
     EXPECT_FALSE(z.IsUint());
     EXPECT_TRUE(z.IsInt64());
 
-    uint64_t u = RAPIDJSON_UINT64_C2(0x80000000, 0x00000000);
+    uint64_t u = YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0x00000000);
     z.SetUint64(u);    // 2^63 cannot cast as int64
     EXPECT_FALSE(z.IsInt64());
     EXPECT_EQ(u, z.GetUint64()); // Issue 48
@@ -885,15 +885,15 @@ TEST(Value, IsLosslessDouble) {
     EXPECT_TRUE(Value(12.34).IsLosslessDouble());
     EXPECT_TRUE(Value(-123).IsLosslessDouble());
     EXPECT_TRUE(Value(2147483648u).IsLosslessDouble());
-    EXPECT_TRUE(Value(-static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x40000000, 0x00000000))).IsLosslessDouble());
+    EXPECT_TRUE(Value(-static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x40000000, 0x00000000))).IsLosslessDouble());
 #if !(defined(_MSC_VER) && _MSC_VER < 1800) // VC2010 has problem
-    EXPECT_TRUE(Value(RAPIDJSON_UINT64_C2(0xA0000000, 0x00000000)).IsLosslessDouble());
+    EXPECT_TRUE(Value(YGGDRASIL_RAPIDJSON_UINT64_C2(0xA0000000, 0x00000000)).IsLosslessDouble());
 #endif
 
-    EXPECT_FALSE(Value(static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x7FFFFFFF, 0xFFFFFFFF))).IsLosslessDouble()); // INT64_MAX
-    EXPECT_FALSE(Value(-static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x7FFFFFFF, 0xFFFFFFFF))).IsLosslessDouble()); // -INT64_MAX
-    EXPECT_TRUE(Value(-static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x7FFFFFFF, 0xFFFFFFFF)) - 1).IsLosslessDouble()); // INT64_MIN
-    EXPECT_FALSE(Value(RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF)).IsLosslessDouble()); // UINT64_MAX
+    EXPECT_FALSE(Value(static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x7FFFFFFF, 0xFFFFFFFF))).IsLosslessDouble()); // INT64_MAX
+    EXPECT_FALSE(Value(-static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x7FFFFFFF, 0xFFFFFFFF))).IsLosslessDouble()); // -INT64_MAX
+    EXPECT_TRUE(Value(-static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x7FFFFFFF, 0xFFFFFFFF)) - 1).IsLosslessDouble()); // INT64_MIN
+    EXPECT_FALSE(Value(YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF)).IsLosslessDouble()); // UINT64_MAX
 
     EXPECT_TRUE(Value(3.4028234e38f).IsLosslessDouble()); // FLT_MAX
     EXPECT_TRUE(Value(-3.4028234e38f).IsLosslessDouble()); // -FLT_MAX
@@ -1017,7 +1017,7 @@ TEST(Value, String) {
     EXPECT_STREQ(cstr, z.Get<const char*>());
     EXPECT_STREQ("Apple", z.Set<const char*>("Apple").Get<const char*>());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     {
         std::string str = "Hello World";
         str[5] = '\0';
@@ -1061,7 +1061,7 @@ TEST(Value, String) {
         vs0.Set(std::string("Orange"), allocator);
         EXPECT_EQ(std::string("Orange"), vs0.Get<std::string>());
     }
-#endif // RAPIDJSON_HAS_STDSTRING
+#endif // YGGDRASIL_RAPIDJSON_HAS_STDSTRING
 }
 
 // Issue 226: Value of string type should not point to NULL
@@ -1140,7 +1140,7 @@ static void TestArray(T& x, Allocator& allocator) {
     EXPECT_TRUE(y[4].IsString());
     EXPECT_STREQ("foo", y[4].GetString());
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
     // PushBack(GenericValue&&, Allocator&);
     {
         Value y2(kArrayType);
@@ -1263,7 +1263,7 @@ static void TestArray(T& x, Allocator& allocator) {
     }
 }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
 TEST(Value, ScalarUInt) {
   Value::AllocatorType allocator;
@@ -1693,12 +1693,12 @@ YGGDRASIL_ND_ARRAY_SUBARRAY3(Uint, 1, uint8_t, 12u, 1u);
   VERTICES_3D_COLOR_W(zero)						\
   FACES_3D(zero)
 
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define C_ARR(...) {__VA_ARGS__}
 #define C_ARR1(x) {x}
 #define ADD_ELEMENT_STR1(name, ...) obj.add_element(name, std::vector<std::string>{__VA_ARGS__})
 #define ADD_ELEMENT_STR2(name, ...) obj.add_element(name, std::vector<std::string>{__VA_ARGS__})
-#else // RAPIDJSON_HAS_CXX11
+#else // YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define C_ARR(...) internal::pack_vector_(__VA_ARGS__)
 #define C_ARR1(x) internal::pack_vector__(1, x)
 #define ADD_ELEMENT_STR1(name, x)		\
@@ -1714,7 +1714,7 @@ YGGDRASIL_ND_ARRAY_SUBARRAY3(Uint, 1, uint8_t, 12u, 1u);
     names.push_back(y);				\
     obj.add_element(name, names);		\
   }
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
 #define CHECK_AREAS(x, zero)					\
   {								\
     std::vector<double> areas = x.areas();			\
@@ -1728,24 +1728,24 @@ TEST(Value, ObjWavefront) {
   Value::AllocatorType allocator;
   ARRAYS_3D(0);
   ARRAYS_3D(1);
-  rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
+  yggdrasil_rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
   std::cout << obj.as_string("\t") << std::endl;
-  rapidjson::Document doc;
-  rapidjson::Value x(obj, allocator);
+  yggdrasil_rapidjson::Document doc;
+  yggdrasil_rapidjson::Value x(obj, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.IsObjWavefront());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(x.GetObjString(), x.GetYggType());
   CHECK_AREAS(obj, 1)
-  rapidjson::ObjWavefront cpy;
+  yggdrasil_rapidjson::ObjWavefront cpy;
   x.GetObjWavefront(cpy);
   EXPECT_EQ(obj, cpy);
-  rapidjson::ObjWavefront obj_faces(vertices_1, faces_1);
+  yggdrasil_rapidjson::ObjWavefront obj_faces(vertices_1, faces_1);
   std::vector<std::vector<double> > mesh = obj.mesh();
-  rapidjson::ObjWavefront cpy_mesh(mesh, true);
+  yggdrasil_rapidjson::ObjWavefront cpy_mesh(mesh, true);
   EXPECT_EQ(obj_faces, cpy_mesh);
-  rapidjson::Ply ply(vertices_0, faces_0, edges_0);
-  rapidjson::Ply cpy_ply;
+  yggdrasil_rapidjson::Ply ply(vertices_0, faces_0, edges_0);
+  yggdrasil_rapidjson::Ply cpy_ply;
   x.GetPly(cpy_ply);
   EXPECT_EQ(ply, cpy_ply);
   CHECK_AREAS(ply, 0)
@@ -2013,8 +2013,8 @@ TEST(Value, ObjWavefront) {
   // obj.add_element("usemtl", "wood");
   // obj.add_element("f", C_ARR(ObjRefVertex(1, 2, 0), ObjRefVertex(2, 2, 0),
   // 			     ObjRefVertex(3, 3, 0), ObjRefVertex(4, 4, 0)));
-  rapidjson::Value x2(obj, allocator);
-  rapidjson::ObjWavefront cpy2;
+  yggdrasil_rapidjson::Value x2(obj, allocator);
+  yggdrasil_rapidjson::ObjWavefront cpy2;
   x2.GetObjWavefront(cpy2);
   EXPECT_EQ(obj, cpy2);
 }
@@ -2022,14 +2022,14 @@ TEST(Value, ObjWavefront) {
 TEST(Value, ObjWavefrontW) {
   Value::AllocatorType allocator;
   ARRAYS_3D_W(1);
-  rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
-  rapidjson::Document doc;
-  rapidjson::Value x(obj, allocator);
+  yggdrasil_rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
+  yggdrasil_rapidjson::Document doc;
+  yggdrasil_rapidjson::Value x(obj, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.IsObjWavefront());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(x.GetObjString(), x.GetYggType());
-  rapidjson::ObjWavefront cpy;
+  yggdrasil_rapidjson::ObjWavefront cpy;
   x.GetObjWavefront(cpy);
   EXPECT_EQ(obj, cpy);
   CHECK_AREAS(obj, 1)
@@ -2038,14 +2038,14 @@ TEST(Value, ObjWavefrontW) {
 TEST(Value, ObjWavefrontColor) {
   Value::AllocatorType allocator;
   ARRAYS_3D_COLOR(1);
-  rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
-  rapidjson::Document doc;
-  rapidjson::Value x(obj, allocator);
+  yggdrasil_rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
+  yggdrasil_rapidjson::Document doc;
+  yggdrasil_rapidjson::Value x(obj, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.IsObjWavefront());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(x.GetObjString(), x.GetYggType());
-  rapidjson::ObjWavefront cpy;
+  yggdrasil_rapidjson::ObjWavefront cpy;
   x.GetObjWavefront(cpy);
   EXPECT_EQ(obj, cpy);
   CHECK_AREAS(obj, 1)
@@ -2054,14 +2054,14 @@ TEST(Value, ObjWavefrontColor) {
 TEST(Value, ObjWavefrontColorW) {
   Value::AllocatorType allocator;
   ARRAYS_3D_COLOR_W(1);
-  rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
-  rapidjson::Document doc;
-  rapidjson::Value x(obj, allocator);
+  yggdrasil_rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
+  yggdrasil_rapidjson::Document doc;
+  yggdrasil_rapidjson::Value x(obj, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.IsObjWavefront());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(x.GetObjString(), x.GetYggType());
-  rapidjson::ObjWavefront cpy;
+  yggdrasil_rapidjson::ObjWavefront cpy;
   x.GetObjWavefront(cpy);
   EXPECT_EQ(obj, cpy);
   CHECK_AREAS(obj, 1)
@@ -2071,23 +2071,23 @@ TEST(Value, Ply) {
   Value::AllocatorType allocator;
   ARRAYS_3D(0);
   ARRAYS_3D(1);
-  rapidjson::Ply ply(vertices_0, faces_0, edges_0);
+  yggdrasil_rapidjson::Ply ply(vertices_0, faces_0, edges_0);
   std::cout << ply.as_string("\t") << std::endl;
-  rapidjson::Document doc;
-  rapidjson::Value x(ply, allocator);
+  yggdrasil_rapidjson::Document doc;
+  yggdrasil_rapidjson::Value x(ply, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_EQ(kStringType, x.GetType());
   EXPECT_EQ(x.GetPlyString(), x.GetYggType());
   CHECK_AREAS(ply, 0)
-  rapidjson::Ply cpy = rapidjson::Ply();
+  yggdrasil_rapidjson::Ply cpy = yggdrasil_rapidjson::Ply();
   x.GetPly(cpy);
   EXPECT_EQ(ply, cpy);
-  rapidjson::Ply ply_faces(vertices_0, faces_0);
+  yggdrasil_rapidjson::Ply ply_faces(vertices_0, faces_0);
   std::vector<std::vector<double> > mesh = ply.mesh();
-  rapidjson::Ply cpy_mesh(mesh, true);
+  yggdrasil_rapidjson::Ply cpy_mesh(mesh, true);
   EXPECT_EQ(ply_faces, cpy_mesh);
-  rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
-  rapidjson::ObjWavefront cpy_obj;
+  yggdrasil_rapidjson::ObjWavefront obj(vertices_1, faces_1, edges_1);
+  yggdrasil_rapidjson::ObjWavefront cpy_obj;
   x.GetObjWavefront(cpy_obj);
   EXPECT_EQ(obj, cpy_obj);
   CHECK_AREAS(obj, 1)
@@ -2098,7 +2098,7 @@ TEST(Value, Ply) {
 TEST(Value, PythonFunction) {
   Value::AllocatorType allocator;
   PyObject* pyfunc = import_python_class("example_python", "example_function");
-  RAPIDJSON_ASSERT(pyfunc);
+  YGGDRASIL_RAPIDJSON_ASSERT(pyfunc);
   Value y(pyfunc, allocator);
   EXPECT_TRUE(y.IsPythonFunction());
   EXPECT_EQ(kStringType, y.GetType());
@@ -2111,7 +2111,7 @@ TEST(Value, PythonFunction) {
 TEST(Value, PythonClass) {
   Value::AllocatorType allocator;
   PyObject* pyclass = import_python_class("example_python", "ExampleClass");
-  RAPIDJSON_ASSERT(pyclass);
+  YGGDRASIL_RAPIDJSON_ASSERT(pyclass);
   Value x(pyclass, allocator);
   EXPECT_TRUE(x.IsYggdrasil());
   EXPECT_TRUE(x.HasSchema());
@@ -2158,7 +2158,7 @@ TEST(Value, Schema) {
   EXPECT_EQ(a.GetObject(), x.GetSchema());
 }
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 TEST(Value, Array) {
     Value::AllocatorType allocator;
@@ -2184,7 +2184,7 @@ TEST(Value, Array) {
 
     // Working in gcc without C++11, but VS2013 cannot compile. To be diagnosed.
     // http://en.wikipedia.org/wiki/Erase-remove_idiom
-#if RAPIDJSON_HAS_CXX11
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11
     x.Clear();
     for (int i = 0; i < 10; i++)
         if (i % 2 == 0)
@@ -2197,7 +2197,7 @@ TEST(Value, Array) {
     EXPECT_EQ(5u, x.Size());
     for (int i = 0; i < 5; i++)
         EXPECT_EQ(i * 2, x[static_cast<SizeType>(i)]);
-#endif // RAPIDJSON_HAS_CXX11
+#endif // YGGDRASIL_RAPIDJSON_HAS_CXX11
 
     // SetArray()
     Value z;
@@ -2277,7 +2277,7 @@ TEST(Value, ArrayHelper) {
     }
 }
 
-#if RAPIDJSON_HAS_CXX11_RANGE_FOR
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RANGE_FOR
 TEST(Value, ArrayHelperRangeFor) {
     Value::AllocatorType allocator;
     Value x(kArrayType);
@@ -2355,7 +2355,7 @@ static void TestObject(T& x, Allocator& allocator) {
         EXPECT_EQ(2u, o.MemberCount());
     }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     {
         // AddMember(StringRefType, const std::string&, Allocator)
         Value o(kObjectType);
@@ -2368,7 +2368,7 @@ static void TestObject(T& x, Allocator& allocator) {
     }
 #endif
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
     // AddMember(GenericValue&&, ...) variants
     {
         Value o(kObjectType);
@@ -2397,7 +2397,7 @@ static void TestObject(T& x, Allocator& allocator) {
     EXPECT_TRUE(y.HasMember("A"));
     EXPECT_TRUE(y.HasMember("B"));
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     EXPECT_TRUE(x.HasMember(std::string("A")));
 #endif
 
@@ -2424,7 +2424,7 @@ static void TestObject(T& x, Allocator& allocator) {
     EXPECT_STREQ("Banana", y["B"].GetString());
     EXPECT_STREQ("CherryD", y[C0D].GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     EXPECT_STREQ("Apple", x["A"].GetString());
     EXPECT_STREQ("Apple", y[std::string("A")].GetString());
 #endif
@@ -2652,7 +2652,7 @@ TEST(Value, ObjectHelper) {
     }
 }
 
-#if RAPIDJSON_HAS_CXX11_RANGE_FOR
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RANGE_FOR
 TEST(Value, ObjectHelperRangeFor) {
     Value::AllocatorType allocator;
     Value x(kObjectType);
@@ -2773,9 +2773,9 @@ TEST(Value, BigNestedObject) {
 // Issue 18: Error removing last element of object
 // http://code.google.com/p/rapidjson/issues/detail?id=18
 TEST(Value, RemoveLastElement) {
-    rapidjson::Document doc;
-    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
-    rapidjson::Value objVal(rapidjson::kObjectType);
+    yggdrasil_rapidjson::Document doc;
+    yggdrasil_rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+    yggdrasil_rapidjson::Value objVal(yggdrasil_rapidjson::kObjectType);
     objVal.AddMember("var1", 123, allocator);
     objVal.AddMember("var2", "444", allocator);
     objVal.AddMember("var3", 555, allocator);
@@ -2797,10 +2797,10 @@ TEST(Document, CrtAllocator) {
 }
 
 static void TestShortStringOptimization(const char* str) {
-    const rapidjson::SizeType len = static_cast<rapidjson::SizeType>(strlen(str));
+    const yggdrasil_rapidjson::SizeType len = static_cast<yggdrasil_rapidjson::SizeType>(strlen(str));
 
-    rapidjson::Document doc;
-    rapidjson::Value val;
+    yggdrasil_rapidjson::Document doc;
+    yggdrasil_rapidjson::Value val;
     val.SetString(str, len, doc.GetAllocator());
 
     EXPECT_EQ(val.GetStringLength(), len);
@@ -2867,7 +2867,7 @@ struct ValueIntComparer {
     }
 };
 
-#if RAPIDJSON_HAS_CXX11_RVALUE_REFS
+#if YGGDRASIL_RAPIDJSON_HAS_CXX11_RVALUE_REFS
 TEST(Value, Sorting) {
     Value::AllocatorType allocator;
     Value a(kArrayType);
@@ -2951,5 +2951,5 @@ TEST(Value, SSOMemoryOverlapTest) {
 }
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

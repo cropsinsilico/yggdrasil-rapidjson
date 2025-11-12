@@ -17,10 +17,10 @@
 #if TEST_MISC
 
 #define __STDC_FORMAT_MACROS
-#include "rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
 
 #define protected public
-#include "rapidjson/writer.h"
+#include "yggdrasil_rapidjson/writer.h"
 #undef private
 
 class Misc : public PerfTest {
@@ -416,7 +416,7 @@ private:
 };
 
 template<>
-bool Writer1<rapidjson::StringBuffer>::WriteUint(unsigned u) {
+bool Writer1<yggdrasil_rapidjson::StringBuffer>::WriteUint(unsigned u) {
     char buffer[10];
     char* p = buffer;
     do {
@@ -589,28 +589,28 @@ private:
 };
 
 template<>
-inline bool Writer3<rapidjson::StringBuffer>::WriteUint(unsigned u) {
+inline bool Writer3<yggdrasil_rapidjson::StringBuffer>::WriteUint(unsigned u) {
     unsigned digit = CountDecimalDigit_fast(u);
     WriteUintReverse(os_->Push(digit) + digit, u);
     return true;
 }
 
 template<>
-inline bool Writer3<rapidjson::InsituStringStream>::WriteUint(unsigned u) {
+inline bool Writer3<yggdrasil_rapidjson::InsituStringStream>::WriteUint(unsigned u) {
     unsigned digit = CountDecimalDigit_fast(u);
     WriteUintReverse(os_->Push(digit) + digit, u);
     return true;
 }
 
 template<>
-inline bool Writer3<rapidjson::StringBuffer>::WriteUint64(uint64_t u) {
+inline bool Writer3<yggdrasil_rapidjson::StringBuffer>::WriteUint64(uint64_t u) {
     unsigned digit = CountDecimalDigit64_fast(u);
     WriteUint64Reverse(os_->Push(digit) + digit, u);
     return true;
 }
 
 template<>
-inline bool Writer3<rapidjson::InsituStringStream>::WriteUint64(uint64_t u) {
+inline bool Writer3<yggdrasil_rapidjson::InsituStringStream>::WriteUint64(uint64_t u) {
     unsigned digit = CountDecimalDigit64_fast(u);
     WriteUint64Reverse(os_->Push(digit) + digit, u);
     return true;
@@ -731,28 +731,28 @@ private:
 };
 
 template<>
-inline bool Writer4<rapidjson::StringBuffer>::WriteUint(unsigned u) {
+inline bool Writer4<yggdrasil_rapidjson::StringBuffer>::WriteUint(unsigned u) {
     unsigned digit = CountDecimalDigit_fast(u);
     WriteUintReverse(os_->Push(digit) + digit, u);
     return true;
 }
 
 template<>
-inline bool Writer4<rapidjson::InsituStringStream>::WriteUint(unsigned u) {
+inline bool Writer4<yggdrasil_rapidjson::InsituStringStream>::WriteUint(unsigned u) {
     unsigned digit = CountDecimalDigit_fast(u);
     WriteUintReverse(os_->Push(digit) + digit, u);
     return true;
 }
 
 template<>
-inline bool Writer4<rapidjson::StringBuffer>::WriteUint64(uint64_t u) {
+inline bool Writer4<yggdrasil_rapidjson::StringBuffer>::WriteUint64(uint64_t u) {
     unsigned digit = CountDecimalDigit64_fast(u);
     WriteUint64Reverse(os_->Push(digit) + digit, u);
     return true;
 }
 
 template<>
-inline bool Writer4<rapidjson::InsituStringStream>::WriteUint64(uint64_t u) {
+inline bool Writer4<yggdrasil_rapidjson::InsituStringStream>::WriteUint64(uint64_t u) {
     unsigned digit = CountDecimalDigit64_fast(u);
     WriteUint64Reverse(os_->Push(digit) + digit, u);
     return true;
@@ -760,7 +760,7 @@ inline bool Writer4<rapidjson::InsituStringStream>::WriteUint64(uint64_t u) {
 
 template <typename Writer>
 void itoa_Writer_StringBufferVerify() {
-    rapidjson::StringBuffer sb;
+    yggdrasil_rapidjson::StringBuffer sb;
     Writer writer(sb);
     for (size_t j = 0; j < randvalCount; j++) {
         char buffer[32];
@@ -778,7 +778,7 @@ void itoa_Writer_InsituStringStreamVerify() {
         char buffer[32];
         snprintf(buffer, 32, "%d", randval[j]);
         char buffer2[32];
-        rapidjson::InsituStringStream ss(buffer2);
+        yggdrasil_rapidjson::InsituStringStream ss(buffer2);
         writer.Reset(ss);
         char* begin = ss.PutBegin();
         writer.WriteInt(randval[j]);
@@ -792,7 +792,7 @@ template <typename Writer>
 void itoa_Writer_StringBuffer() {
     size_t length = 0;
 
-    rapidjson::StringBuffer sb;
+    yggdrasil_rapidjson::StringBuffer sb;
     Writer writer(sb);
 
     for (size_t i = 0; i < kItoaTrialCount; i++) {
@@ -813,7 +813,7 @@ void itoa_Writer_InsituStringStream() {
     Writer writer;
     for (size_t i = 0; i < kItoaTrialCount; i++) {
         for (size_t j = 0; j < randvalCount; j++) {
-            rapidjson::InsituStringStream ss(buffer);
+            yggdrasil_rapidjson::InsituStringStream ss(buffer);
             writer.Reset(ss);
             char* begin = ss.PutBegin();
             writer.WriteInt(randval[j]);
@@ -825,7 +825,7 @@ void itoa_Writer_InsituStringStream() {
 
 template <typename Writer>
 void itoa64_Writer_StringBufferVerify() {
-    rapidjson::StringBuffer sb;
+    yggdrasil_rapidjson::StringBuffer sb;
     Writer writer(sb);
     for (size_t j = 0; j < randvalCount; j++) {
         char buffer[32];
@@ -845,7 +845,7 @@ void itoa64_Writer_InsituStringStreamVerify() {
         int64_t x = randval[j] * randval[j];
         snprintf(buffer, 32, "%" PRIi64, x);
         char buffer2[32];
-        rapidjson::InsituStringStream ss(buffer2);
+        yggdrasil_rapidjson::InsituStringStream ss(buffer2);
         writer.Reset(ss);
         char* begin = ss.PutBegin();
         writer.WriteInt64(x);
@@ -859,7 +859,7 @@ template <typename Writer>
 void itoa64_Writer_StringBuffer() {
     size_t length = 0;
 
-    rapidjson::StringBuffer sb;
+    yggdrasil_rapidjson::StringBuffer sb;
     Writer writer(sb);
 
     for (size_t i = 0; i < kItoaTrialCount; i++) {
@@ -880,7 +880,7 @@ void itoa64_Writer_InsituStringStream() {
     Writer writer;
     for (size_t i = 0; i < kItoaTrialCount; i++) {
         for (size_t j = 0; j < randvalCount; j++) {
-            rapidjson::InsituStringStream ss(buffer);
+            yggdrasil_rapidjson::InsituStringStream ss(buffer);
             writer.Reset(ss);
             char* begin = ss.PutBegin();
             writer.WriteInt64(randval[j] * randval[j]);
@@ -896,7 +896,7 @@ void itoa64_Writer_InsituStringStream() {
 namespace rapidjson {
 
 template<>
-bool rapidjson::Writer<InsituStringStream>::WriteInt(int i) {
+bool yggdrasil_rapidjson::Writer<InsituStringStream>::WriteInt(int i) {
     char *buffer = os_->Push(11);
     const char* end = internal::i32toa(i, buffer);
     os_->Pop(11 - (end - buffer));
@@ -929,46 +929,46 @@ bool Writer<InsituStringStream>::WriteUint64(uint64_t u) {
 
 } // namespace rapidjson
 
-TEST_F(Misc, itoa_Writer_StringBufferVerify) { itoa_Writer_StringBufferVerify<rapidjson::Writer<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa_Writer1_StringBufferVerify) { itoa_Writer_StringBufferVerify<Writer1<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa_Writer2_StringBufferVerify) { itoa_Writer_StringBufferVerify<Writer2<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa_Writer3_StringBufferVerify) { itoa_Writer_StringBufferVerify<Writer3<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa_Writer4_StringBufferVerify) { itoa_Writer_StringBufferVerify<Writer4<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa_Writer_InsituStringStreamVerify) { itoa_Writer_InsituStringStreamVerify<rapidjson::Writer<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa_Writer1_InsituStringStreamVerify) { itoa_Writer_InsituStringStreamVerify<Writer1<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa_Writer2_InsituStringStreamVerify) { itoa_Writer_InsituStringStreamVerify<Writer2<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa_Writer3_InsituStringStreamVerify) { itoa_Writer_InsituStringStreamVerify<Writer3<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa_Writer4_InsituStringStreamVerify) { itoa_Writer_InsituStringStreamVerify<Writer4<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa_Writer_StringBuffer) { itoa_Writer_StringBuffer<rapidjson::Writer<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa_Writer1_StringBuffer) { itoa_Writer_StringBuffer<Writer1<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa_Writer2_StringBuffer) { itoa_Writer_StringBuffer<Writer2<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa_Writer3_StringBuffer) { itoa_Writer_StringBuffer<Writer3<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa_Writer4_StringBuffer) { itoa_Writer_StringBuffer<Writer4<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa_Writer_InsituStringStream) { itoa_Writer_InsituStringStream<rapidjson::Writer<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa_Writer1_InsituStringStream) { itoa_Writer_InsituStringStream<Writer1<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa_Writer2_InsituStringStream) { itoa_Writer_InsituStringStream<Writer2<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa_Writer3_InsituStringStream) { itoa_Writer_InsituStringStream<Writer3<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa_Writer4_InsituStringStream) { itoa_Writer_InsituStringStream<Writer4<rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa_Writer_StringBufferVerify) { itoa_Writer_StringBufferVerify<yggdrasil_rapidjson::Writer<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa_Writer1_StringBufferVerify) { itoa_Writer_StringBufferVerify<Writer1<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa_Writer2_StringBufferVerify) { itoa_Writer_StringBufferVerify<Writer2<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa_Writer3_StringBufferVerify) { itoa_Writer_StringBufferVerify<Writer3<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa_Writer4_StringBufferVerify) { itoa_Writer_StringBufferVerify<Writer4<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa_Writer_InsituStringStreamVerify) { itoa_Writer_InsituStringStreamVerify<yggdrasil_rapidjson::Writer<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa_Writer1_InsituStringStreamVerify) { itoa_Writer_InsituStringStreamVerify<Writer1<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa_Writer2_InsituStringStreamVerify) { itoa_Writer_InsituStringStreamVerify<Writer2<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa_Writer3_InsituStringStreamVerify) { itoa_Writer_InsituStringStreamVerify<Writer3<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa_Writer4_InsituStringStreamVerify) { itoa_Writer_InsituStringStreamVerify<Writer4<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa_Writer_StringBuffer) { itoa_Writer_StringBuffer<yggdrasil_rapidjson::Writer<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa_Writer1_StringBuffer) { itoa_Writer_StringBuffer<Writer1<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa_Writer2_StringBuffer) { itoa_Writer_StringBuffer<Writer2<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa_Writer3_StringBuffer) { itoa_Writer_StringBuffer<Writer3<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa_Writer4_StringBuffer) { itoa_Writer_StringBuffer<Writer4<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa_Writer_InsituStringStream) { itoa_Writer_InsituStringStream<yggdrasil_rapidjson::Writer<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa_Writer1_InsituStringStream) { itoa_Writer_InsituStringStream<Writer1<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa_Writer2_InsituStringStream) { itoa_Writer_InsituStringStream<Writer2<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa_Writer3_InsituStringStream) { itoa_Writer_InsituStringStream<Writer3<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa_Writer4_InsituStringStream) { itoa_Writer_InsituStringStream<Writer4<yggdrasil_rapidjson::InsituStringStream> >(); }
 
-TEST_F(Misc, itoa64_Writer_StringBufferVerify) { itoa64_Writer_StringBufferVerify<rapidjson::Writer<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa64_Writer1_StringBufferVerify) { itoa64_Writer_StringBufferVerify<Writer1<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa64_Writer2_StringBufferVerify) { itoa64_Writer_StringBufferVerify<Writer2<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa64_Writer3_StringBufferVerify) { itoa64_Writer_StringBufferVerify<Writer3<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa64_Writer4_StringBufferVerify) { itoa64_Writer_StringBufferVerify<Writer4<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa64_Writer_InsituStringStreamVerify) { itoa64_Writer_InsituStringStreamVerify<rapidjson::Writer<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa64_Writer1_InsituStringStreamVerify) { itoa64_Writer_InsituStringStreamVerify<Writer1<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa64_Writer2_InsituStringStreamVerify) { itoa64_Writer_InsituStringStreamVerify<Writer2<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa64_Writer3_InsituStringStreamVerify) { itoa64_Writer_InsituStringStreamVerify<Writer3<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa64_Writer4_InsituStringStreamVerify) { itoa64_Writer_InsituStringStreamVerify<Writer4<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa64_Writer_StringBuffer) { itoa64_Writer_StringBuffer<rapidjson::Writer<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa64_Writer1_StringBuffer) { itoa64_Writer_StringBuffer<Writer1<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa64_Writer2_StringBuffer) { itoa64_Writer_StringBuffer<Writer2<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa64_Writer3_StringBuffer) { itoa64_Writer_StringBuffer<Writer3<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa64_Writer4_StringBuffer) { itoa64_Writer_StringBuffer<Writer4<rapidjson::StringBuffer> >(); }
-TEST_F(Misc, itoa64_Writer_InsituStringStream) { itoa64_Writer_InsituStringStream<rapidjson::Writer<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa64_Writer1_InsituStringStream) { itoa64_Writer_InsituStringStream<Writer1<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa64_Writer2_InsituStringStream) { itoa64_Writer_InsituStringStream<Writer2<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa64_Writer3_InsituStringStream) { itoa64_Writer_InsituStringStream<Writer3<rapidjson::InsituStringStream> >(); }
-TEST_F(Misc, itoa64_Writer4_InsituStringStream) { itoa64_Writer_InsituStringStream<Writer4<rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa64_Writer_StringBufferVerify) { itoa64_Writer_StringBufferVerify<yggdrasil_rapidjson::Writer<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa64_Writer1_StringBufferVerify) { itoa64_Writer_StringBufferVerify<Writer1<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa64_Writer2_StringBufferVerify) { itoa64_Writer_StringBufferVerify<Writer2<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa64_Writer3_StringBufferVerify) { itoa64_Writer_StringBufferVerify<Writer3<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa64_Writer4_StringBufferVerify) { itoa64_Writer_StringBufferVerify<Writer4<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa64_Writer_InsituStringStreamVerify) { itoa64_Writer_InsituStringStreamVerify<yggdrasil_rapidjson::Writer<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa64_Writer1_InsituStringStreamVerify) { itoa64_Writer_InsituStringStreamVerify<Writer1<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa64_Writer2_InsituStringStreamVerify) { itoa64_Writer_InsituStringStreamVerify<Writer2<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa64_Writer3_InsituStringStreamVerify) { itoa64_Writer_InsituStringStreamVerify<Writer3<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa64_Writer4_InsituStringStreamVerify) { itoa64_Writer_InsituStringStreamVerify<Writer4<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa64_Writer_StringBuffer) { itoa64_Writer_StringBuffer<yggdrasil_rapidjson::Writer<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa64_Writer1_StringBuffer) { itoa64_Writer_StringBuffer<Writer1<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa64_Writer2_StringBuffer) { itoa64_Writer_StringBuffer<Writer2<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa64_Writer3_StringBuffer) { itoa64_Writer_StringBuffer<Writer3<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa64_Writer4_StringBuffer) { itoa64_Writer_StringBuffer<Writer4<yggdrasil_rapidjson::StringBuffer> >(); }
+TEST_F(Misc, itoa64_Writer_InsituStringStream) { itoa64_Writer_InsituStringStream<yggdrasil_rapidjson::Writer<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa64_Writer1_InsituStringStream) { itoa64_Writer_InsituStringStream<Writer1<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa64_Writer2_InsituStringStream) { itoa64_Writer_InsituStringStream<Writer2<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa64_Writer3_InsituStringStream) { itoa64_Writer_InsituStringStream<Writer3<yggdrasil_rapidjson::InsituStringStream> >(); }
+TEST_F(Misc, itoa64_Writer4_InsituStringStream) { itoa64_Writer_InsituStringStream<Writer4<yggdrasil_rapidjson::InsituStringStream> >(); }
 
 #endif // TEST_MISC

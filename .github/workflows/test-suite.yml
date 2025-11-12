@@ -17,11 +17,18 @@ jobs:
         python-install: [pip]
         python-version: ["3.11"]
         with-yggdrasil: [true]
+        configuration: [Debug]
         include:
           - os: ubuntu-latest
             python-install: pip
             python-version: "3.11"
             with-yggdrasil: false
+            configuration: Debug
+          - os: ubuntu-latest
+            python-install: pip
+            python-version: "3.11"
+            with-yggdrasil: true
+            configuration: Release
       fail-fast: false
     steps:
       - name: Check out repository code
@@ -70,27 +77,27 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_YGGDRASIL=OFF
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON
       - name: (WINDOWS) Configure w/ yggdrasil
         if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=$env:pythonLocation -DRAPIDJSON_YGGDRASIL_TESTS=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DPython3_ROOT_DIR=$env:pythonLocation -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON
       - name: (UNIX) Configure w/ yggdrasil
         if: matrix.os != 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DPython3_ROOT_DIR=${pythonLocation} -DRAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF -DRAPIDJSON_YGGDRASIL_TESTS=ON -DRAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DPython3_ROOT_DIR=${pythonLocation} -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
       - name: Build
         run: |
           cd build
-          cmake --build . --config Debug
+          cmake --build . --config ${{ matrix.configuration }}
       - name: Test
         run: |
           cd build
-          ctest -C Debug --output-on-failure --verbose
+          ctest -C ${{ matrix.configuration }} --output-on-failure --verbose
   build_conda:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -99,6 +106,7 @@ jobs:
         python-install: [conda]
         python-version: [3.11]
         with-yggdrasil: [true]
+        configuration: [Debug]
       fail-fast: false
     defaults:
       run:
@@ -128,7 +136,6 @@ jobs:
           channel-priority: strict
           miniforge-version: latest
           use-mamba: true
-          conda-remove-defaults: true
           python-version: ${{ matrix.python-version }}
       - name: Install packages not current on conda-forge (gcovr)
         run: |
@@ -146,27 +153,27 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_YGGDRASIL=OFF
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON
       - name: (WINDOWS) Configure w/ yggdrasil
         if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON
       - name: (UNIX) Configure w/ yggdrasil
         if: matrix.os != 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DRAPIDJSON_ENABLE_COVERAGE=ON -DRAPIDJSON_YGGDRASIL_TESTS=ON -DRAPIDJSON_CREATE_METASCHEMA=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA=ON
       - name: Build
         run: |
           cd build
-          cmake --build . --config Debug
+          cmake --build . --config ${{ matrix.configuration }}
       - name: Test
         run: |
           cd build
-          ctest -C Debug --output-on-failure --verbose
+          ctest -C ${{ matrix.configuration }} --output-on-failure --verbose
       - name: Upload coverage report
         uses: codecov/codecov-action@v1
         with:
@@ -175,3 +182,16 @@ jobs:
           file: build/coverage/coverage.info
           # directory: build/Testing/CoverageInfo
           functionalities: gcov
+
+  all_tests_passed:
+    runs-on: ubuntu-latest
+    name: All tests passed
+    needs: [build_pip, build_conda]
+    if: always()
+    steps:
+      - name: All tests ok
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+      - name: Some tests failed
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1

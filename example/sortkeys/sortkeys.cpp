@@ -1,11 +1,11 @@
-#include "rapidjson/document.h"
-#include "rapidjson/filewritestream.h"
-#include <rapidjson/prettywriter.h>
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/filewritestream.h"
+#include <yggdrasil_rapidjson/prettywriter.h>
 
 #include <algorithm>
 #include <iostream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 static void printIt(const Value &doc) {

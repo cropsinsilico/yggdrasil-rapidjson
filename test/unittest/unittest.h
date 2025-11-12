@@ -117,33 +117,33 @@ public:
 #pragma GCC diagnostic pop
 #endif
 
-// Not using noexcept for testing RAPIDJSON_ASSERT()
-#define RAPIDJSON_HAS_CXX11_NOEXCEPT 0
+// Not using noexcept for testing YGGDRASIL_RAPIDJSON_ASSERT()
+#define YGGDRASIL_RAPIDJSON_HAS_CXX11_NOEXCEPT 0
 
-#ifndef RAPIDJSON_ASSERT
-#define RAPIDJSON_ASSERT(x) (!(x) ? throw AssertException(RAPIDJSON_STRINGIFY(x)) : (void)0u)
-#ifndef RAPIDJSON_ASSERT_THROWS
-#define RAPIDJSON_ASSERT_THROWS
+#ifndef YGGDRASIL_RAPIDJSON_ASSERT
+#define YGGDRASIL_RAPIDJSON_ASSERT(x) (!(x) ? throw AssertException(YGGDRASIL_RAPIDJSON_STRINGIFY(x)) : (void)0u)
+#ifndef YGGDRASIL_RAPIDJSON_ASSERT_THROWS
+#define YGGDRASIL_RAPIDJSON_ASSERT_THROWS
 #endif
 #endif
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
 #define INIT_PYTHON()							\
   {									\
-    rapidjson::initialize_python("test");				\
+    yggdrasil_rapidjson::initialize_python("test");				\
     PyObject* path = PySys_GetObject("path");				\
-    RAPIDJSON_ASSERT(path);						\
+    YGGDRASIL_RAPIDJSON_ASSERT(path);						\
     const char* datadir = std::getenv("DATADIR");			\
-    RAPIDJSON_ASSERT(datadir);						\
+    YGGDRASIL_RAPIDJSON_ASSERT(datadir);						\
     PyObject* example_dir = PyUnicode_FromString(datadir);		\
-    RAPIDJSON_ASSERT(example_dir);					\
+    YGGDRASIL_RAPIDJSON_ASSERT(example_dir);					\
     PyList_Append(path, example_dir);					\
     Py_DECREF(example_dir);						\
   }
 #define FINALIZE_PYTHON()			\
   {						\
-    rapidjson::finalize_python("test");		\
+    yggdrasil_rapidjson::finalize_python("test");		\
   }
 #endif // YGGDRASIL_DISABLE_PYTHON_C_API
 #define DISPLAY_STRING_ALLOC(name, value)		\
@@ -155,7 +155,7 @@ public:
     Value v2(value, allocator);						\
     container.SetArray();						\
     container.PushBack(v2, allocator);					\
-    RAPIDJSON_ASSERT(container.Accept(writer));				\
+    YGGDRASIL_RAPIDJSON_ASSERT(container.Accept(writer));				\
     std::cerr << name << ": " << buffer.GetString() << std::endl;	\
   }
 #define DISPLAY_STRING(name, value)			\
@@ -167,7 +167,7 @@ public:
     Value v2 value;							\
     container.SetArray();						\
     container.PushBack(v2, allocator);					\
-    RAPIDJSON_ASSERT(container.Accept(writer));				\
+    YGGDRASIL_RAPIDJSON_ASSERT(container.Accept(writer));				\
     std::cerr << name << ": " << buffer.GetString() << std::endl;	\
   }
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API
@@ -175,32 +175,32 @@ public:
   PyObject* var = NULL;							\
   {									\
     PyObject* pyclass = import_python_class("example_python", #cls);	\
-    RAPIDJSON_ASSERT(pyclass);						\
+    YGGDRASIL_RAPIDJSON_ASSERT(pyclass);						\
     PyObject* pyargs_list = PyList_New(0);				\
-    RAPIDJSON_ASSERT(pyargs_list);					\
+    YGGDRASIL_RAPIDJSON_ASSERT(pyargs_list);					\
     PyObject* pyargs_item1 = PyUnicode_FromString("hello");		\
     PyObject* pyargs_item2 = PyFloat_FromDouble(0.5);			\
-    RAPIDJSON_ASSERT(PyList_Append(pyargs_list, pyargs_item1) == 0);	\
-    RAPIDJSON_ASSERT(PyList_Append(pyargs_list, pyargs_item2) == 0);	\
+    YGGDRASIL_RAPIDJSON_ASSERT(PyList_Append(pyargs_list, pyargs_item1) == 0);	\
+    YGGDRASIL_RAPIDJSON_ASSERT(PyList_Append(pyargs_list, pyargs_item2) == 0);	\
     PyObject* pyargs = PyList_AsTuple(pyargs_list);			\
-    RAPIDJSON_ASSERT(pyargs);						\
+    YGGDRASIL_RAPIDJSON_ASSERT(pyargs);						\
     Py_DECREF(pyargs_list);						\
     Py_DECREF(pyargs_item1);						\
     Py_DECREF(pyargs_item2);						\
     PyObject* pykwargs = PyDict_New();					\
-    RAPIDJSON_ASSERT(pykwargs);						\
+    YGGDRASIL_RAPIDJSON_ASSERT(pykwargs);						\
     PyObject* pykwargs_key1 = PyUnicode_FromString("a");		\
     PyObject* pykwargs_key2 = PyUnicode_FromString("b");		\
     PyObject* pykwargs_val1 = PyUnicode_FromString("world");		\
     PyObject* pykwargs_val2 = PyLong_FromLong(1);			\
-    RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, pykwargs_key1, pykwargs_val1) == 0); \
-    RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, pykwargs_key2, pykwargs_val2) == 0); \
+    YGGDRASIL_RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, pykwargs_key1, pykwargs_val1) == 0); \
+    YGGDRASIL_RAPIDJSON_ASSERT(PyDict_SetItem(pykwargs, pykwargs_key2, pykwargs_val2) == 0); \
     Py_DECREF(pykwargs_key1);						\
     Py_DECREF(pykwargs_key2);						\
     Py_DECREF(pykwargs_val1);						\
     Py_DECREF(pykwargs_val2);						\
     var = PyObject_Call(pyclass, pyargs, pykwargs);			\
-    RAPIDJSON_ASSERT(var);						\
+    YGGDRASIL_RAPIDJSON_ASSERT(var);						\
     Py_DECREF(pyclass);							\
     Py_DECREF(pyargs);							\
     Py_DECREF(pykwargs);						\
@@ -230,7 +230,7 @@ public:
   "\"schema\","							\
   "\"uint\","							\
   "\"unicode\"]"
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 class Random {
 public:

@@ -1,8 +1,8 @@
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/writer.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
 #include <iostream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 int main() {

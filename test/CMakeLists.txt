@@ -25,9 +25,9 @@ if(GTESTSRC_FOUND)
 endif()
 
 if(TEST_LIBRARIES)
-    option(RAPIDJSON_ENABLE_COVERAGE "Enable coverage reporting" OFF)
+    option(YGGDRASIL_RAPIDJSON_ENABLE_COVERAGE "Enable coverage reporting" OFF)
     set(COVERAGE_DIR ${CMAKE_BINARY_DIR}/coverage)
-    if(RAPIDJSON_ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang|ARMClang")
+    if(YGGDRASIL_RAPIDJSON_ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang|ARMClang")
         
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
@@ -64,14 +64,18 @@ if(TEST_LIBRARIES)
             --merge-mode-functions=separate
         )
     else()
-        set(RAPIDJSON_ENABLE_COVERAGE OFF)
+        set(YGGDRASIL_RAPIDJSON_ENABLE_COVERAGE OFF)
     endif()
 
     add_custom_target(tests ALL)
-    add_subdirectory(perftest)
-    add_subdirectory(unittest)
+    if(YGGDRASIL_RAPIDJSON_BUILD_PERFTESTS)
+        add_subdirectory(perftest)
+    endif()
+    if(YGGDRASIL_RAPIDJSON_BUILD_UNITTESTS)
+        add_subdirectory(unittest)
+    endif()
     
-    if(RAPIDJSON_ENABLE_COVERAGE)
+    if(YGGDRASIL_RAPIDJSON_ENABLE_COVERAGE)
         # setup_target_for_coverage_gcovr_html(
         #     NAME coverage
         #     EXECUTABLE ctest

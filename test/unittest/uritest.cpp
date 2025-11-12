@@ -12,22 +12,22 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-#define RAPIDJSON_SCHEMA_VERBOSE 0
-#define RAPIDJSON_HAS_STDSTRING 1
+#define YGGDRASIL_RAPIDJSON_SCHEMA_VERBOSE 0
+#define YGGDRASIL_RAPIDJSON_HAS_STDSTRING 1
 
 #include "unittest.h"
-#include "rapidjson/document.h"
-#include "rapidjson/uri.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/uri.h"
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(variadic-macros)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(variadic-macros)
 #elif defined(_MSC_VER)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(4822) // local class member function does not have a body
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(4822) // local class member function does not have a body
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 TEST(Uri, DefaultConstructor) {
     typedef GenericUri<Value> UriType;
@@ -263,7 +263,7 @@ TEST(Uri, Parse_UTF16) {
     EXPECT_TRUE(StrCmp(u.GetBaseString(), L"http:/") == 0);
 }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
 TEST(Uri, Parse_Std) {
     typedef GenericUri<Value, MemoryPoolAllocator<> > UriType;
     MemoryPoolAllocator<CrtAllocator> allocator;
@@ -721,5 +721,5 @@ TEST(Uri, Issue1899) {
 }
 
 #if defined(_MSC_VER) || defined(__clang__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

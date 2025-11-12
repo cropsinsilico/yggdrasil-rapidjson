@@ -1,12 +1,12 @@
 // Serialize example
 // This example shows writing JSON string with writer directly.
 
-#include "rapidjson/prettywriter.h" // for stringify JSON
+#include "yggdrasil_rapidjson/prettywriter.h" // for stringify JSON
 #include <cstdio>
 #include <string>
 #include <vector>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 class Person {
 public:
@@ -25,7 +25,7 @@ protected:
     void Serialize(Writer& writer) const {
         // This base class just write out name-value pairs, without wrapping within an object.
         writer.String("name");
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
         writer.String(name_);
 #else
         writer.String(name_.c_str(), static_cast<SizeType>(name_.length())); // Supplying length of string is faster.
@@ -52,7 +52,7 @@ public:
         writer.StartObject();
         
         writer.String("school");
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
         writer.String(school_);
 #else
         writer.String(school_.c_str(), static_cast<SizeType>(school_.length()));

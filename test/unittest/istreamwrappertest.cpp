@@ -14,18 +14,18 @@
 
 #include "unittest.h"
 
-#include "rapidjson/istreamwrapper.h"
-#include "rapidjson/encodedstream.h"
-#include "rapidjson/document.h"
+#include "yggdrasil_rapidjson/istreamwrapper.h"
+#include "yggdrasil_rapidjson/encodedstream.h"
+#include "yggdrasil_rapidjson/document.h"
 #include <sstream>
 #include <fstream>
 
 #if defined(_MSC_VER) && !defined(__clang__)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(4702) // unreachable code
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(4702) // unreachable code
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 template <typename StringStreamType>
@@ -177,5 +177,5 @@ TEST(IStreamWrapper, wfstream) {
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

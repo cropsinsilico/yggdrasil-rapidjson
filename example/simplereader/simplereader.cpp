@@ -1,7 +1,7 @@
-#include "rapidjson/reader.h"
+#include "yggdrasil_rapidjson/reader.h"
 #include <iostream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 struct MyHandler {

@@ -14,28 +14,28 @@
 
 #include "unittest.h"
 
-#include "rapidjson/reader.h"
-#include "rapidjson/internal/dtoa.h"
-#include "rapidjson/internal/itoa.h"
-#include "rapidjson/memorystream.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/internal/dtoa.h"
+#include "yggdrasil_rapidjson/internal/itoa.h"
+#include "yggdrasil_rapidjson/memorystream.h"
 
 #include <limits>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
-RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
 #ifdef __GNUC__
-RAPIDJSON_DIAG_OFF(effc++)
-RAPIDJSON_DIAG_OFF(float-equal)
-RAPIDJSON_DIAG_OFF(missing-noreturn)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(float-equal)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(missing-noreturn)
 #if __GNUC__ >= 7
-RAPIDJSON_DIAG_OFF(dangling-else)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(dangling-else)
 #endif
 #endif // __GNUC__
 
 #ifdef __clang__
-RAPIDJSON_DIAG_OFF(variadic-macros)
-RAPIDJSON_DIAG_OFF(c++98-compat-pedantic)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(variadic-macros)
+YGGDRASIL_RAPIDJSON_DIAG_OFF(c++98-compat-pedantic)
 #endif
 
 template<bool expect>
@@ -129,11 +129,11 @@ TEST(Reader, ParseNumber_Integer) {
     TEST_INTEGER(ParseIntHandler, "-123", -123);
     TEST_INTEGER(ParseIntHandler, "-2147483648", static_cast<int32_t>(0x80000000));     // -2^31 (min of int)
 
-    TEST_INTEGER(ParseUint64Handler, "4294967296", RAPIDJSON_UINT64_C2(1, 0));   // 2^32 (max of unsigned + 1, force to use uint64_t)
-    TEST_INTEGER(ParseUint64Handler, "18446744073709551615", RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF));   // 2^64 - 1 (max of uint64_t)
+    TEST_INTEGER(ParseUint64Handler, "4294967296", YGGDRASIL_RAPIDJSON_UINT64_C2(1, 0));   // 2^32 (max of unsigned + 1, force to use uint64_t)
+    TEST_INTEGER(ParseUint64Handler, "18446744073709551615", YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0xFFFFFFFF));   // 2^64 - 1 (max of uint64_t)
 
-    TEST_INTEGER(ParseInt64Handler, "-2147483649", static_cast<int64_t>(RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0x7FFFFFFF)));   // -2^31 -1 (min of int - 1, force to use int64_t)
-    TEST_INTEGER(ParseInt64Handler, "-9223372036854775808", static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0x00000000)));       // -2^63 (min of int64_t)
+    TEST_INTEGER(ParseInt64Handler, "-2147483649", static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFF, 0x7FFFFFFF)));   // -2^31 -1 (min of int - 1, force to use int64_t)
+    TEST_INTEGER(ParseInt64Handler, "-9223372036854775808", static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0x00000000)));       // -2^63 (min of int64_t)
 
     // Random test for uint32_t/int32_t
     {
@@ -1343,10 +1343,10 @@ public:
     Ch Take() { return *src_++; }
     size_t Tell() const { return static_cast<size_t>(src_ - head_); }
 
-    Ch* PutBegin() { RAPIDJSON_ASSERT(false); return 0; }
-    void Put(Ch) { RAPIDJSON_ASSERT(false); }
-    void Flush() { RAPIDJSON_ASSERT(false); }
-    size_t PutEnd(Ch*) { RAPIDJSON_ASSERT(false); return 0; }
+    Ch* PutBegin() { YGGDRASIL_RAPIDJSON_ASSERT(false); return 0; }
+    void Put(Ch) { YGGDRASIL_RAPIDJSON_ASSERT(false); }
+    void Flush() { YGGDRASIL_RAPIDJSON_ASSERT(false); }
+    size_t PutEnd(Ch*) { YGGDRASIL_RAPIDJSON_ASSERT(false); return 0; }
 
 private:
     // Prohibit copy constructor & assignment operator.
@@ -1527,40 +1527,40 @@ struct IterativeParsingReaderHandler {
     IterativeParsingReaderHandler() : LogCount(0) {
     }
 
-    bool Null() { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_NULL; return true; }
+    bool Null() { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_NULL; return true; }
 
-    bool Bool(bool) { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_BOOL; return true; }
+    bool Bool(bool) { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_BOOL; return true; }
 
-    bool Int(int) { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_INT; return true; }
+    bool Int(int) { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_INT; return true; }
 
-    bool Uint(unsigned) { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_INT; return true; }
+    bool Uint(unsigned) { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_INT; return true; }
 
-    bool Int64(int64_t) { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_INT64; return true; }
+    bool Int64(int64_t) { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_INT64; return true; }
 
-    bool Uint64(uint64_t) { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_UINT64; return true; }
+    bool Uint64(uint64_t) { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_UINT64; return true; }
 
-    bool Double(double) { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_DOUBLE; return true; }
+    bool Double(double) { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_DOUBLE; return true; }
 
-    bool RawNumber(const Ch*, SizeType, bool) { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_STRING; return true; }
+    bool RawNumber(const Ch*, SizeType, bool) { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_STRING; return true; }
 
-    bool String(const Ch*, SizeType, bool) { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_STRING; return true; }
+    bool String(const Ch*, SizeType, bool) { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_STRING; return true; }
 
-    bool StartObject() { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_STARTOBJECT; return true; }
+    bool StartObject() { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_STARTOBJECT; return true; }
 
-    bool Key (const Ch*, SizeType, bool) { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_KEY; return true; }
+    bool Key (const Ch*, SizeType, bool) { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_KEY; return true; }
 
     bool EndObject(SizeType c) {
-        RAPIDJSON_ASSERT(LogCount < LogCapacity);
-        RAPIDJSON_ASSERT((static_cast<uint32_t>(c) & 0xF0000000) == 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity);
+        YGGDRASIL_RAPIDJSON_ASSERT((static_cast<uint32_t>(c) & 0xF0000000) == 0);
         Logs[LogCount++] = LOG_ENDOBJECT | static_cast<uint32_t>(c);
         return true;
     }
 
-    bool StartArray() { RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_STARTARRAY; return true; }
+    bool StartArray() { YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity); Logs[LogCount++] = LOG_STARTARRAY; return true; }
 
     bool EndArray(SizeType c) {
-        RAPIDJSON_ASSERT(LogCount < LogCapacity);
-        RAPIDJSON_ASSERT((static_cast<uint32_t>(c) & 0xF0000000) == 0);
+        YGGDRASIL_RAPIDJSON_ASSERT(LogCount < LogCapacity);
+        YGGDRASIL_RAPIDJSON_ASSERT((static_cast<uint32_t>(c) & 0xF0000000) == 0);
         Logs[LogCount++] = LOG_ENDARRAY | static_cast<uint32_t>(c);
         return true;
     }
@@ -2389,4 +2389,4 @@ TEST(Reader, EscapedApostrophe) {
     }
 }
 
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP

@@ -1,25 +1,25 @@
 // Reading a message JSON with Reader (SAX-style API).
 // The JSON should be an object with key-string pairs.
 
-#include "rapidjson/reader.h"
-#include "rapidjson/error/en.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/error/en.h"
 #include <iostream>
 #include <string>
 #include <map>
 
 using namespace std;
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 typedef map<string, string> MessageMap;
 
 #if defined(__GNUC__)
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
 #endif
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(switch-enum)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(switch-enum)
 #endif
 
 struct MessageHandler
@@ -65,11 +65,11 @@ struct MessageHandler
 };
 
 #if defined(__GNUC__)
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
 static void ParseMessages(const char* json, MessageMap& messages) {

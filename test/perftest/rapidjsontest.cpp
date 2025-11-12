@@ -14,31 +14,31 @@
 
 #include "perftest.h"
 
-#if TEST_RAPIDJSON
+#if TEST_YGGDRASIL_RAPIDJSON
 
-#include "rapidjson/rapidjson.h"
-#include "rapidjson/document.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/istreamwrapper.h"
-#include "rapidjson/encodedstream.h"
-#include "rapidjson/memorystream.h"
+#include "yggdrasil_rapidjson/yggdrasil_rapidjson.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/prettywriter.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/istreamwrapper.h"
+#include "yggdrasil_rapidjson/encodedstream.h"
+#include "yggdrasil_rapidjson/memorystream.h"
 
 #include <fstream>
 #include <vector>
 
-#ifdef RAPIDJSON_SSE2
+#ifdef YGGDRASIL_RAPIDJSON_SSE2
 #define SIMD_SUFFIX(name) name##_SSE2
-#elif defined(RAPIDJSON_SSE42)
+#elif defined(YGGDRASIL_RAPIDJSON_SSE42)
 #define SIMD_SUFFIX(name) name##_SSE42
-#elif defined(RAPIDJSON_NEON)
+#elif defined(YGGDRASIL_RAPIDJSON_NEON)
 #define SIMD_SUFFIX(name) name##_NEON
 #else
 #define SIMD_SUFFIX(name) name
 #endif
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 class RapidJson : public PerfTest {
 public:
@@ -230,7 +230,7 @@ TEST_F(RapidJson, SIMD_SUFFIX(DocumentParseLength_MemoryPoolAllocator)) {
     }
 }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
 TEST_F(RapidJson, SIMD_SUFFIX(DocumentParseStdString_MemoryPoolAllocator)) {
     const std::string s(json_, length_);
     for (size_t i = 0; i < kTrialCount; i++) {
@@ -311,8 +311,8 @@ TEST_F(RapidJson, DocumentTraverse) {
 }
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(effc++)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
 #endif
 
 struct ValueCounter : public BaseReaderHandler<> {
@@ -325,7 +325,7 @@ struct ValueCounter : public BaseReaderHandler<> {
 };
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif
 
 TEST_F(RapidJson, DocumentAccept) {
@@ -427,7 +427,7 @@ TEST_F(RapidJson, internal_Pow10) {
 
 TEST_F(RapidJson, SkipWhitespace_Basic) {
     for (size_t i = 0; i < kTrialCount; i++) {
-        rapidjson::StringStream s(whitespace_);
+        yggdrasil_rapidjson::StringStream s(whitespace_);
         while (s.Peek() == ' ' || s.Peek() == '\n' || s.Peek() == '\r' || s.Peek() == '\t')
             s.Take();
         ASSERT_EQ('[', s.Peek());
@@ -436,8 +436,8 @@ TEST_F(RapidJson, SkipWhitespace_Basic) {
 
 TEST_F(RapidJson, SIMD_SUFFIX(SkipWhitespace)) {
     for (size_t i = 0; i < kTrialCount; i++) {
-        rapidjson::StringStream s(whitespace_);
-        rapidjson::SkipWhitespace(s);
+        yggdrasil_rapidjson::StringStream s(whitespace_);
+        yggdrasil_rapidjson::SkipWhitespace(s);
         ASSERT_EQ('[', s.Peek());
     }
 }
@@ -561,4 +561,4 @@ TEST_F(RapidJson, StringBuffer) {
         sb.Put(i & 0x7f);
 }
 
-#endif // TEST_RAPIDJSON
+#endif // TEST_YGGDRASIL_RAPIDJSON

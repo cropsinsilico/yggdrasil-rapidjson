@@ -13,13 +13,13 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/internal/clzll.h"
+#include "yggdrasil_rapidjson/internal/clzll.h"
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
 #endif
 
-using namespace rapidjson::internal;
+using namespace yggdrasil_rapidjson::internal;
 
 TEST(clzll, normal) {
     EXPECT_EQ(clzll(1), 63U);
@@ -30,5 +30,5 @@ TEST(clzll, normal) {
 }
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

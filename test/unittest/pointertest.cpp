@@ -13,17 +13,17 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/pointer.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/ostreamwrapper.h"
-#ifdef RAPIDJSON_YGGDRASIL
-#include "rapidjson/prettywriter.h"
-#endif // RAPIDJSON_YGGDRASIL
+#include "yggdrasil_rapidjson/pointer.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/ostreamwrapper.h"
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+#include "yggdrasil_rapidjson/prettywriter.h"
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 #include <sstream>
 #include <map>
 #include <algorithm>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 static const char kJson[] = "{\n"
 "    \"foo\":[\"bar\", \"baz\"],\n"
@@ -69,7 +69,7 @@ TEST(Pointer, Parse) {
         EXPECT_EQ(kPointerInvalidIndex, p.GetTokens()[0].index);
     }
 
-    #if RAPIDJSON_HAS_STDSTRING
+    #if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     {
         Pointer p(std::string("/foo"));
         EXPECT_TRUE(p.IsValid());
@@ -588,7 +588,7 @@ TEST(Pointer, Append) {
         EXPECT_TRUE(Pointer("/foo/1234/") == q);
     }
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     {
         Pointer p;
         Pointer q = p.Append(std::string("foo"));
@@ -753,11 +753,11 @@ TEST(Pointer, GetWithDefault) {
     EXPECT_EQ(0x87654321, Pointer("/foo/uint").GetWithDefault(d, 0x87654321, a).GetUint());
     EXPECT_EQ(0x87654321, Pointer("/foo/uint").GetWithDefault(d, 0x12345678, a).GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     EXPECT_EQ(i64, Pointer("/foo/int64").GetWithDefault(d, i64, a).GetInt64());
     EXPECT_EQ(i64, Pointer("/foo/int64").GetWithDefault(d, i64 + 1, a).GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     EXPECT_EQ(u64, Pointer("/foo/uint64").GetWithDefault(d, u64, a).GetUint64());
     EXPECT_EQ(u64, Pointer("/foo/uint64").GetWithDefault(d, u64 - 1, a).GetUint64());
 
@@ -779,7 +779,7 @@ TEST(Pointer, GetWithDefault) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, "/foo/world")->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     EXPECT_STREQ("C++", Pointer("/foo/C++").GetWithDefault(d, std::string("C++"), a).GetString());
 #endif
 }
@@ -805,11 +805,11 @@ TEST(Pointer, GetWithDefault_NoAllocator) {
     EXPECT_EQ(0x87654321, Pointer("/foo/uint").GetWithDefault(d, 0x87654321).GetUint());
     EXPECT_EQ(0x87654321, Pointer("/foo/uint").GetWithDefault(d, 0x12345678).GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     EXPECT_EQ(i64, Pointer("/foo/int64").GetWithDefault(d, i64).GetInt64());
     EXPECT_EQ(i64, Pointer("/foo/int64").GetWithDefault(d, i64 + 1).GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     EXPECT_EQ(u64, Pointer("/foo/uint64").GetWithDefault(d, u64).GetUint64());
     EXPECT_EQ(u64, Pointer("/foo/uint64").GetWithDefault(d, u64 - 1).GetUint64());
 
@@ -831,7 +831,7 @@ TEST(Pointer, GetWithDefault_NoAllocator) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, "/foo/world")->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     EXPECT_STREQ("C++", Pointer("/foo/C++").GetWithDefault(d, std::string("C++")).GetString());
 #endif
 }
@@ -863,11 +863,11 @@ TEST(Pointer, Set) {
     Pointer("/foo/uint").Set(d, 0x87654321, a);
     EXPECT_EQ(0x87654321, GetValueByPointer(d, "/foo/uint")->GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     Pointer("/foo/int64").Set(d, i64, a);
     EXPECT_EQ(i64, GetValueByPointer(d, "/foo/int64")->GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     Pointer("/foo/uint64").Set(d, u64, a);
     EXPECT_EQ(u64, GetValueByPointer(d, "/foo/uint64")->GetUint64());
 
@@ -890,7 +890,7 @@ TEST(Pointer, Set) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, "/foo/world")->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     Pointer("/foo/c++").Set(d, std::string("C++"), a);
     EXPECT_STREQ("C++", GetValueByPointer(d, "/foo/c++")->GetString());
 #endif
@@ -922,11 +922,11 @@ TEST(Pointer, Set_NoAllocator) {
     Pointer("/foo/uint").Set(d, 0x87654321);
     EXPECT_EQ(0x87654321, GetValueByPointer(d, "/foo/uint")->GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     Pointer("/foo/int64").Set(d, i64);
     EXPECT_EQ(i64, GetValueByPointer(d, "/foo/int64")->GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     Pointer("/foo/uint64").Set(d, u64);
     EXPECT_EQ(u64, GetValueByPointer(d, "/foo/uint64")->GetUint64());
 
@@ -949,7 +949,7 @@ TEST(Pointer, Set_NoAllocator) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, "/foo/world")->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     Pointer("/foo/c++").Set(d, std::string("C++"));
     EXPECT_STREQ("C++", GetValueByPointer(d, "/foo/c++")->GetString());
 #endif
@@ -1093,11 +1093,11 @@ TEST(Pointer, GetValueByPointerWithDefault_Pointer) {
     EXPECT_EQ(0x87654321, GetValueByPointerWithDefault(d, Pointer("/foo/uint"), 0x87654321, a).GetUint());
     EXPECT_EQ(0x87654321, GetValueByPointerWithDefault(d, Pointer("/foo/uint"), 0x12345678, a).GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     EXPECT_EQ(i64, GetValueByPointerWithDefault(d, Pointer("/foo/int64"), i64, a).GetInt64());
     EXPECT_EQ(i64, GetValueByPointerWithDefault(d, Pointer("/foo/int64"), i64 + 1, a).GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     EXPECT_EQ(u64, GetValueByPointerWithDefault(d, Pointer("/foo/uint64"), u64, a).GetUint64());
     EXPECT_EQ(u64, GetValueByPointerWithDefault(d, Pointer("/foo/uint64"), u64 - 1, a).GetUint64());
 
@@ -1119,7 +1119,7 @@ TEST(Pointer, GetValueByPointerWithDefault_Pointer) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, Pointer("/foo/world"))->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     EXPECT_STREQ("C++", GetValueByPointerWithDefault(d, Pointer("/foo/C++"), std::string("C++"), a).GetString());
 #endif
 }
@@ -1146,11 +1146,11 @@ TEST(Pointer, GetValueByPointerWithDefault_String) {
     EXPECT_EQ(0x87654321, GetValueByPointerWithDefault(d, "/foo/uint", 0x87654321, a).GetUint());
     EXPECT_EQ(0x87654321, GetValueByPointerWithDefault(d, "/foo/uint", 0x12345678, a).GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     EXPECT_EQ(i64, GetValueByPointerWithDefault(d, "/foo/int64", i64, a).GetInt64());
     EXPECT_EQ(i64, GetValueByPointerWithDefault(d, "/foo/int64", i64 + 1, a).GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     EXPECT_EQ(u64, GetValueByPointerWithDefault(d, "/foo/uint64", u64, a).GetUint64());
     EXPECT_EQ(u64, GetValueByPointerWithDefault(d, "/foo/uint64", u64 - 1, a).GetUint64());
 
@@ -1172,7 +1172,7 @@ TEST(Pointer, GetValueByPointerWithDefault_String) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, "/foo/world")->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     EXPECT_STREQ("C++", GetValueByPointerWithDefault(d, "/foo/C++", std::string("C++"), a).GetString());
 #endif
 }
@@ -1198,11 +1198,11 @@ TEST(Pointer, GetValueByPointerWithDefault_Pointer_NoAllocator) {
     EXPECT_EQ(0x87654321, GetValueByPointerWithDefault(d, Pointer("/foo/uint"), 0x87654321).GetUint());
     EXPECT_EQ(0x87654321, GetValueByPointerWithDefault(d, Pointer("/foo/uint"), 0x12345678).GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     EXPECT_EQ(i64, GetValueByPointerWithDefault(d, Pointer("/foo/int64"), i64).GetInt64());
     EXPECT_EQ(i64, GetValueByPointerWithDefault(d, Pointer("/foo/int64"), i64 + 1).GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     EXPECT_EQ(u64, GetValueByPointerWithDefault(d, Pointer("/foo/uint64"), u64).GetUint64());
     EXPECT_EQ(u64, GetValueByPointerWithDefault(d, Pointer("/foo/uint64"), u64 - 1).GetUint64());
 
@@ -1224,7 +1224,7 @@ TEST(Pointer, GetValueByPointerWithDefault_Pointer_NoAllocator) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, Pointer("/foo/world"))->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     EXPECT_STREQ("C++", GetValueByPointerWithDefault(d, Pointer("/foo/C++"), std::string("C++")).GetString());
 #endif
 }
@@ -1250,11 +1250,11 @@ TEST(Pointer, GetValueByPointerWithDefault_String_NoAllocator) {
     EXPECT_EQ(0x87654321, GetValueByPointerWithDefault(d, "/foo/uint", 0x87654321).GetUint());
     EXPECT_EQ(0x87654321, GetValueByPointerWithDefault(d, "/foo/uint", 0x12345678).GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     EXPECT_EQ(i64, GetValueByPointerWithDefault(d, "/foo/int64", i64).GetInt64());
     EXPECT_EQ(i64, GetValueByPointerWithDefault(d, "/foo/int64", i64 + 1).GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     EXPECT_EQ(u64, GetValueByPointerWithDefault(d, "/foo/uint64", u64).GetUint64());
     EXPECT_EQ(u64, GetValueByPointerWithDefault(d, "/foo/uint64", u64 - 1).GetUint64());
 
@@ -1276,7 +1276,7 @@ TEST(Pointer, GetValueByPointerWithDefault_String_NoAllocator) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, "/foo/world")->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     EXPECT_STREQ("C++", GetValueByPointerWithDefault(d, Pointer("/foo/C++"), std::string("C++")).GetString());
 #endif
 }
@@ -1305,11 +1305,11 @@ TEST(Pointer, SetValueByPointer_Pointer) {
     SetValueByPointer(d, Pointer("/foo/uint"), 0x87654321, a);
     EXPECT_EQ(0x87654321, GetValueByPointer(d, "/foo/uint")->GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     SetValueByPointer(d, Pointer("/foo/int64"), i64, a);
     EXPECT_EQ(i64, GetValueByPointer(d, "/foo/int64")->GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     SetValueByPointer(d, Pointer("/foo/uint64"), u64, a);
     EXPECT_EQ(u64, GetValueByPointer(d, "/foo/uint64")->GetUint64());
 
@@ -1332,7 +1332,7 @@ TEST(Pointer, SetValueByPointer_Pointer) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, "/foo/world")->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     SetValueByPointer(d, Pointer("/foo/c++"), std::string("C++"), a);
     EXPECT_STREQ("C++", GetValueByPointer(d, "/foo/c++")->GetString());
 #endif
@@ -1362,11 +1362,11 @@ TEST(Pointer, SetValueByPointer_String) {
     SetValueByPointer(d, "/foo/uint", 0x87654321, a);
     EXPECT_EQ(0x87654321, GetValueByPointer(d, "/foo/uint")->GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     SetValueByPointer(d, "/foo/int64", i64, a);
     EXPECT_EQ(i64, GetValueByPointer(d, "/foo/int64")->GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     SetValueByPointer(d, "/foo/uint64", u64, a);
     EXPECT_EQ(u64, GetValueByPointer(d, "/foo/uint64")->GetUint64());
 
@@ -1389,7 +1389,7 @@ TEST(Pointer, SetValueByPointer_String) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, "/foo/world")->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     SetValueByPointer(d, "/foo/c++", std::string("C++"), a);
     EXPECT_STREQ("C++", GetValueByPointer(d, "/foo/c++")->GetString());
 #endif
@@ -1418,11 +1418,11 @@ TEST(Pointer, SetValueByPointer_Pointer_NoAllocator) {
     SetValueByPointer(d, Pointer("/foo/uint"), 0x87654321);
     EXPECT_EQ(0x87654321, GetValueByPointer(d, "/foo/uint")->GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     SetValueByPointer(d, Pointer("/foo/int64"), i64);
     EXPECT_EQ(i64, GetValueByPointer(d, "/foo/int64")->GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     SetValueByPointer(d, Pointer("/foo/uint64"), u64);
     EXPECT_EQ(u64, GetValueByPointer(d, "/foo/uint64")->GetUint64());
 
@@ -1445,7 +1445,7 @@ TEST(Pointer, SetValueByPointer_Pointer_NoAllocator) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, "/foo/world")->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     SetValueByPointer(d, Pointer("/foo/c++"), std::string("C++"));
     EXPECT_STREQ("C++", GetValueByPointer(d, "/foo/c++")->GetString());
 #endif
@@ -1474,11 +1474,11 @@ TEST(Pointer, SetValueByPointer_String_NoAllocator) {
     SetValueByPointer(d, "/foo/uint", 0x87654321);
     EXPECT_EQ(0x87654321, GetValueByPointer(d, "/foo/uint")->GetUint());
 
-    const int64_t i64 = static_cast<int64_t>(RAPIDJSON_UINT64_C2(0x80000000, 0));
+    const int64_t i64 = static_cast<int64_t>(YGGDRASIL_RAPIDJSON_UINT64_C2(0x80000000, 0));
     SetValueByPointer(d, "/foo/int64", i64);
     EXPECT_EQ(i64, GetValueByPointer(d, "/foo/int64")->GetInt64());
 
-    const uint64_t u64 = RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
+    const uint64_t u64 = YGGDRASIL_RAPIDJSON_UINT64_C2(0xFFFFFFFFF, 0xFFFFFFFFF);
     SetValueByPointer(d, "/foo/uint64", u64);
     EXPECT_EQ(u64, GetValueByPointer(d, "/foo/uint64")->GetUint64());
 
@@ -1501,7 +1501,7 @@ TEST(Pointer, SetValueByPointer_String_NoAllocator) {
     }
     EXPECT_STREQ("World", GetValueByPointer(d, "/foo/world")->GetString());
 
-#if RAPIDJSON_HAS_STDSTRING
+#if YGGDRASIL_RAPIDJSON_HAS_STDSTRING
     SetValueByPointer(d, "/foo/c++", std::string("C++"));
     EXPECT_STREQ("C++", GetValueByPointer(d, "/foo/c++")->GetString());
 #endif
@@ -1698,13 +1698,13 @@ public:
     static void Free(void *_p) { return free(_p); }
 };
 
-typedef rapidjson::GenericDocument<
-            rapidjson::UTF8<>,
-            rapidjson::MemoryPoolAllocator< MyAllocator >,
+typedef yggdrasil_rapidjson::GenericDocument<
+            yggdrasil_rapidjson::UTF8<>,
+            yggdrasil_rapidjson::MemoryPoolAllocator< MyAllocator >,
             MyAllocator
         > Document;
 
-typedef rapidjson::GenericPointer<
+typedef yggdrasil_rapidjson::GenericPointer<
             ::myjson::Document::ValueType,
             MyAllocator
         > Pointer;
@@ -1716,7 +1716,7 @@ typedef ::myjson::Document::ValueType Value;
 TEST(Pointer, Issue483) {
     std::string mystr, path;
     myjson::Document document;
-    myjson::Value value(rapidjson::kStringType);
+    myjson::Value value(yggdrasil_rapidjson::kStringType);
     value.SetString(mystr.c_str(), static_cast<SizeType>(mystr.length()), document.GetAllocator());
     myjson::Pointer(path.c_str()).Set(document, value, document.GetAllocator());
 }
@@ -1732,7 +1732,7 @@ TEST(Pointer, Issue1899) {
     EXPECT_TRUE(PointerType("/foo/1234/") == q);
 }
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
 TEST(Pointer, PartialCompare) {
   Pointer p("#/foo");
@@ -1803,4 +1803,4 @@ TEST(Pointer, GetFromUnfinalized) {
   EXPECT_EQ(Value(3u), *Pointer("/c").GetFromUnfinalized(d));
 }
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON

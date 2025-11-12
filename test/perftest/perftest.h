@@ -15,7 +15,7 @@
 #ifndef PERFTEST_H_
 #define PERFTEST_H_
 
-#define TEST_RAPIDJSON  1
+#define TEST_YGGDRASIL_RAPIDJSON  1
 #define TEST_PLATFORM   0
 #define TEST_MISC       0
 
@@ -26,14 +26,14 @@
 // We use -march=native with gmake to enable -msse2 and -msse4.2, if supported.
 // Likewise, __ARM_NEON is used to detect Neon.
 #if defined(__SSE4_2__)
-#  define RAPIDJSON_SSE42
+#  define YGGDRASIL_RAPIDJSON_SSE42
 #elif defined(__SSE2__)
-#  define RAPIDJSON_SSE2
+#  define YGGDRASIL_RAPIDJSON_SSE2
 #elif defined(__ARM_NEON)
-#  define RAPIDJSON_NEON
+#  define YGGDRASIL_RAPIDJSON_NEON
 #endif
 
-#define RAPIDJSON_HAS_STDSTRING 1
+#define YGGDRASIL_RAPIDJSON_HAS_STDSTRING 1
 
 ////////////////////////////////////////////////////////////////////////////////
 // Google Test

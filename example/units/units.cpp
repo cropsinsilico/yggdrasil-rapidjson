@@ -1,11 +1,11 @@
 // Example of using Yggdrasil units
 
-#ifdef RAPIDJSON_YGGDRASIL
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
-#include "rapidjson/units.h"         // Units
-#include "rapidjson/internal/meta.h" // values_eq for floating point comparison
+#include "yggdrasil_rapidjson/units.h"         // Units
+#include "yggdrasil_rapidjson/internal/meta.h" // values_eq for floating point comparison
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 using namespace std;
 
 int main(int, char*[]) {
@@ -126,10 +126,10 @@ int main(int, char*[]) {
     return 0;
 }
 
-#else // RAPIDJSON_YGGDRASIL
+#else // DISABLE_YGGDRASIL_RAPIDJSON
 
 int main(int, char*[]) {
   return 0;
 }
 
-#endif // RAPIDJSON_YGGDRASIL
+#endif // DISABLE_YGGDRASIL_RAPIDJSON

@@ -14,23 +14,23 @@
 
 #include "unittest.h"
 
-#include "rapidjson/internal/strtod.h"
+#include "yggdrasil_rapidjson/internal/strtod.h"
 
 #ifdef __clang__
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(unreachable-code)
+YGGDRASIL_RAPIDJSON_DIAG_PUSH
+YGGDRASIL_RAPIDJSON_DIAG_OFF(unreachable-code)
 #endif
 
 #define BIGINTEGER_LITERAL(s) BigInteger(s, sizeof(s) - 1)
 
-using namespace rapidjson::internal;
+using namespace yggdrasil_rapidjson::internal;
 
 TEST(Strtod, CheckApproximationCase) {
     static const int kSignificandSize = 52;
     static const int kExponentBias = 0x3FF;
-    static const uint64_t kExponentMask = RAPIDJSON_UINT64_C2(0x7FF00000, 0x00000000);
-    static const uint64_t kSignificandMask = RAPIDJSON_UINT64_C2(0x000FFFFF, 0xFFFFFFFF);
-    static const uint64_t kHiddenBit = RAPIDJSON_UINT64_C2(0x00100000, 0x00000000);
+    static const uint64_t kExponentMask = YGGDRASIL_RAPIDJSON_UINT64_C2(0x7FF00000, 0x00000000);
+    static const uint64_t kSignificandMask = YGGDRASIL_RAPIDJSON_UINT64_C2(0x000FFFFF, 0xFFFFFFFF);
+    static const uint64_t kHiddenBit = YGGDRASIL_RAPIDJSON_UINT64_C2(0x00100000, 0x00000000);
 
     // http://www.exploringbinary.com/using-integers-to-check-a-floating-point-approximation/
     // Let b = 0x1.465a72e467d88p-149
@@ -44,7 +44,7 @@ TEST(Strtod, CheckApproximationCase) {
     const uint64_t bInt = (u.u & kSignificandMask) | kHiddenBit;
     const int bExp = static_cast<int>(((u.u & kExponentMask) >> kSignificandSize) - kExponentBias - kSignificandSize);
     EXPECT_DOUBLE_EQ(1.7864e-45, b);
-    EXPECT_EQ(RAPIDJSON_UINT64_C2(0x001465a7, 0x2e467d88), bInt);
+    EXPECT_EQ(YGGDRASIL_RAPIDJSON_UINT64_C2(0x001465a7, 0x2e467d88), bInt);
     EXPECT_EQ(-201, bExp);
 
     // Let d = 17864 x 10-49
@@ -128,5 +128,5 @@ TEST(Strtod, CheckApproximationCase) {
 }
 
 #ifdef __clang__
-RAPIDJSON_DIAG_POP
+YGGDRASIL_RAPIDJSON_DIAG_POP
 #endif

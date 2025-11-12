@@ -1,10 +1,10 @@
-#include "rapidjson/document.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/pointer.h"
-#include "rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/pointer.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
 #include <iostream>
 
-using namespace rapidjson;
+using namespace yggdrasil_rapidjson;
 
 void traverse(const Value& v, const Pointer& p) {
     StringBuffer sb;

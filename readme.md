@@ -24,7 +24,7 @@
 
 ## Installation
 
-Like RapidJSON, YggdrasilRapidJSON is a header-only C++ library. Just copy the `include/rapidjson` folder to system or project's include path.
+Like RapidJSON, YggdrasilRapidJSON is a header-only C++ library. Just copy the `include/yggdrasil_rapidjson` folder to system or project's include path.
 
 Alternatively, YggdrasilRapidJSON can also be installed from conda-forge via:
 * conda install -c conda-forge yggdrasil-rapidjson
