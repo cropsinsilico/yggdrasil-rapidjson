@@ -34,7 +34,8 @@ jobs:
       - name: Set up miniconda test environment
         uses: conda-incubator/setup-miniconda@v3
         with:
-          activate-environment: base
+          activate-environment: ""
+          auto-activate-base: true
           auto-update-conda: true
           channels: conda-forge
           channel-priority: strict
