@@ -3309,7 +3309,9 @@ static char* ReadFile(const char* filename, Allocator& allocator) {
     char buffer[1024];
     FILE *fp = 0;
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
-        snprintf(buffer, 1024, "%s%s", paths[i], filename);
+        int ret = snprintf(buffer, 1024, "%s%s", paths[i], filename);
+        if (ret < 0)
+            return 0;
         fp = fopen(buffer, "rb");
         if (fp)
             break;
