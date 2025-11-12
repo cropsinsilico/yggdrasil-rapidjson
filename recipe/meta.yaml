@@ -32,10 +32,10 @@ test:
   commands:
     - test -f $PREFIX/lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfig.cmake  # [unix]
     - test -f $PREFIX/lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake  # [unix]
-    - test -f $PREFIX/include/yggdrasil_rapidjson/rapidjson/rapidjson.h  # [unix]
+    - test -f $PREFIX/include/yggdrasil_rapidjson/yggdrasil_rapidjson.h  # [unix]
     - if not exist %LIBRARY_PREFIX%\\cmake\\YggdrasilRapidJSONConfig.cmake exit 1  # [win]
     - if not exist %LIBRARY_PREFIX%\\cmake\\YggdrasilRapidJSONConfigVersion.cmake exit 1  # [win]
-    - if not exist %LIBRARY_PREFIX%\\include\\yggdrasil_rapidjson\\rapidjson\\rapidjson.h exit 1  # [win]
+    - if not exist %LIBRARY_PREFIX%\\include\\yggdrasil_rapidjson\\yggdrasil_rapidjson.h exit 1  # [win]
   source_files:
     - example
   requires:

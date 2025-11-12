@@ -43,7 +43,7 @@ tests:
             - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfig.cmake
             - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake
       include:
-        - yggdrasil_rapidjson/rapidjson/rapidjson.h
+        - yggdrasil_rapidjson/yggdrasil_rapidjson.h
   - script:
       - if: unix
         then: tests/run_test.sh
