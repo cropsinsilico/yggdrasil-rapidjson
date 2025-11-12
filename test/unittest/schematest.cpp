@@ -3517,7 +3517,10 @@ TEST(SchemaValidator, TestSuite) {
 
     for (size_t i = 0; i < sizeof(filenames) / sizeof(filenames[0]); i++) {
         char filename[FILENAME_MAX];
-        snprintf(filename, FILENAME_MAX, "jsonschema/tests/draft4/%s", filenames[i]);
+        if (snprintf(filename, FILENAME_MAX, "jsonschema/tests/draft4/%s", filenames[i]) < 0) {
+            printf("error formatting file name");
+            ADD_FAILURE();
+        }
         char* json = ReadFile(filename, jsonAllocator);
         if (!json) {
             printf("json test suite file %s not found", filename);

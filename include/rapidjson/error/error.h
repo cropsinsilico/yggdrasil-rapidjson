@@ -193,7 +193,7 @@ enum ValidateErrorCode {
     kValidateErrorAllOf,                       //!< Property did not match all of the sub-schemas specified by 'allOf'.
     kValidateErrorAnyOf,                       //!< Property did not match any of the sub-schemas specified by 'anyOf'.
     kValidateErrorNot,                         //!< Property matched the sub-schema specified by 'not'.
-#ifndef DISABLE_YGGDRASIL_RJ
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
     kValidateErrorRequiredSchema,              //!< Schema is missing a required property.
     kValidateErrorSubType,                     //!< Property has a subtype that is not allowed by the schema.
     kValidateErrorPrecision,                   //!< Property has a precision that is not allowed by the schema.
@@ -216,7 +216,7 @@ enum ValidateErrorCode {
     kIncompatibleSchemas,                      //!< Incompatible schema property `%property`: %expected vs %actual.
     kValidateErrorMissingSubschema,            //!< Subschema is missing from one of the two schemas.
     kValidateErrorSubschemas,                  //!< Object has one or more invalid subschemas.
-#endif // DISABLE_YGGDRASIL_RJ
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     kValidateErrorReadOnly,                    //!< Property is read-only but has been provided when validation is for writing
     kValidateErrorWriteOnly                    //!< Property is write-only but has been provided when validation is for reading
