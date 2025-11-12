@@ -9,7 +9,7 @@
 
 #ifdef YGGDRASIL_DISABLE_PYTHON_C_API
 
-#include "rapidjson.h"
+#include "yggdrasil_rapidjson.h"
 #include <iostream>
 
 YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
@@ -43,7 +43,7 @@ YGGDRASIL_RAPIDJSON_NAMESPACE_END
 #ifdef WIN32
 #include <stdlib.h>
 #endif // WIN32
-#include "rapidjson.h"
+#include "yggdrasil_rapidjson.h"
 #include "encodings.h"
 
 #ifdef YGGDRASIL_RAPIDJSON_CHECK_PYREFS

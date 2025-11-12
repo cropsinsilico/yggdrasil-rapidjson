@@ -18,11 +18,11 @@
 #define YGGDRASIL_RAPIDJSON_HAS_STDSTRING 1
 
 #include "unittest.h"
-#include "rapidjson/schema.h"
-#include "rapidjson/units.h"
-#include "rapidjson/encodings.h"
-#include "rapidjson/error/error.h"
-#include "rapidjson/error/en.h"
+#include "yggdrasil_rapidjson/schema.h"
+#include "yggdrasil_rapidjson/units.h"
+#include "yggdrasil_rapidjson/encodings.h"
+#include "yggdrasil_rapidjson/error/error.h"
+#include "yggdrasil_rapidjson/error/en.h"
 
 #ifdef __clang__
 YGGDRASIL_RAPIDJSON_DIAG_PUSH

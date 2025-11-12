@@ -27,7 +27,7 @@
 #ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #include "base64.h"
 #include "precision.h"
-#include "rapidjson.h"
+#include "yggdrasil_rapidjson.h"
 #endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 #if defined(YGGDRASIL_RAPIDJSON_SIMD) && defined(_MSC_VER)

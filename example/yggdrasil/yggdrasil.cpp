@@ -3,9 +3,9 @@
 
 #ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
-#include "rapidjson/document.h"     // rapidjson's DOM-style API
-#include "rapidjson/prettywriter.h" // for stringify JSON
-#include "rapidjson/internal/meta.h" // values_eq for floating point comparison
+#include "yggdrasil_rapidjson/document.h"     // rapidjson's DOM-style API
+#include "yggdrasil_rapidjson/prettywriter.h" // for stringify JSON
+#include "yggdrasil_rapidjson/internal/meta.h" // values_eq for floating point comparison
 #include <cstdio>
 
 using namespace yggdrasil_rapidjson;

@@ -22,12 +22,12 @@
 
 // include lots of RapidJSON files
 
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/filewritestream.h"
-#include "rapidjson/encodedstream.h"
-#include "rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/writer.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/filewritestream.h"
+#include "yggdrasil_rapidjson/encodedstream.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
 
 static const char json[] = "{\"hello\":\"world\",\"t\":true,\"f\":false,\"n\":null,\"i\":123,\"pi\":3.1416,\"a\":[1,2,3,4]}";
 

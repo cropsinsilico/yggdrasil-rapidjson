@@ -84,14 +84,14 @@ YGGDRASIL_RAPIDJSON_DIAG_OFF(effc++)
        throw ParseException(parseErrorCode, #parseErrorCode, offset)
 
     #include <stdexcept>               // std::runtime_error
-    #include "rapidjson/error/error.h" // yggdrasil_rapidjson::ParseResult
+    #include "yggdrasil_rapidjson/error/error.h" // yggdrasil_rapidjson::ParseResult
 
     struct ParseException : std::runtime_error, yggdrasil_rapidjson::ParseResult {
       ParseException(yggdrasil_rapidjson::ParseErrorCode code, const char* msg, size_t offset)
         : std::runtime_error(msg), ParseResult(code, offset) {}
     };
 
-    #include "rapidjson/reader.h"
+    #include "yggdrasil_rapidjson/reader.h"
     \endcode
 
     \see YGGDRASIL_RAPIDJSON_PARSE_ERROR, yggdrasil_rapidjson::GenericReader::Parse

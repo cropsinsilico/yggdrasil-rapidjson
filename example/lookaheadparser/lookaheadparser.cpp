@@ -1,5 +1,5 @@
-#include "rapidjson/reader.h"
-#include "rapidjson/document.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/document.h"
 #include <iostream>
 
 YGGDRASIL_RAPIDJSON_DIAG_PUSH

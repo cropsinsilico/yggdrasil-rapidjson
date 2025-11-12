@@ -14,10 +14,10 @@
 
 #include "unittest.h"
 
-#include "rapidjson/reader.h"
-#include "rapidjson/internal/dtoa.h"
-#include "rapidjson/internal/itoa.h"
-#include "rapidjson/memorystream.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/internal/dtoa.h"
+#include "yggdrasil_rapidjson/internal/itoa.h"
+#include "yggdrasil_rapidjson/memorystream.h"
 
 #include <limits>
 

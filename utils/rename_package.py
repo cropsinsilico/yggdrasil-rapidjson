@@ -38,8 +38,9 @@ def process_directory(fdir, ext=None, new='yggdrasil_rapidjson',
         (f'using namespace {old}', f'using namespace {new_standin}'),
         (f'{old}::', f'{new_standin}::'),
         # Includes
-        # (f'#include "{old}', f'#include "{new}'),
-        # (f'#include <{old}', f'#include <{new}'),
+        (f'#include "{old}', f'#include "{new_standin}'),
+        (f'#include <{old}', f'#include <{new_standin}'),
+        (f'/{old}.h', f'/{new_standin}.h'),
         # Restore existing uses of new packages
         (new_standin, new),
         (new_standin.upper(), new.upper()),
@@ -64,12 +65,25 @@ if __name__ == "__main__":
         "--new", default='yggdrasil_rapidjson',
         help='New package name')
     args = parser.parse_args()
-    process_directory(args.directory, ext=args.ext,
-                      new=args.new, old=args.old)
-    # include/rapidjson/ --ext=.h
-    # include/rapidjson/internal --ext=.h
-    # include/rapidjson/error --ext=.h
-    # test/unittest/ --ext=.h
-    # test/unittest/ --ext=.cpp
-    # test/perftest/ --ext=.h
-    # test/perftest/ --ext=.cpp
+    if args.directory == 'all':
+        pairs = [
+            ('include/rapidjson', '.h'),
+            ('include/rapidjson/internal', '.h'),
+            ('include/rapidjson/error', '.h'),
+            ('include/yggdrasil_rapidjson', '.h'),
+            ('include/yggdrasil_rapidjson/internal', '.h'),
+            ('include/yggdrasil_rapidjson/error', '.h'),
+            ('test/unittest', '.h'),
+            ('test/unittest', '.cpp'),
+            ('test/perftest', '.h'),
+            ('test/perftest', '.cpp'),
+            ('example', '.cpp'),
+            ('example/*', '.cpp'),
+            ('example/*', '.h'),
+        ]
+        for args.directory, args.ext in pairs:
+            process_directory(args.directory, ext=args.ext,
+                              new=args.new, old=args.old)
+    else:
+        process_directory(args.directory, ext=args.ext,
+                          new=args.new, old=args.old)

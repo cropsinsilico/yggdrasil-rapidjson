@@ -13,9 +13,9 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/document.h"
+#include "yggdrasil_rapidjson/document.h"
 #ifndef DISABLE_YGGDRASIL_RAPIDJSON
-#include "rapidjson/prettywriter.h"
+#include "yggdrasil_rapidjson/prettywriter.h"
 #endif // DISABLE_YGGDRASIL_RAPIDJSON
 #include <algorithm>
 

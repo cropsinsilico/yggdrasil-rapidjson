@@ -1,11 +1,11 @@
 // JSON pretty formatting example
 // This example can only handle UTF-8. For handling other encodings, see prettyauto example.
 
-#include "rapidjson/reader.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/filewritestream.h"
-#include "rapidjson/error/en.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/prettywriter.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/filewritestream.h"
+#include "yggdrasil_rapidjson/error/en.h"
 
 using namespace yggdrasil_rapidjson;
 

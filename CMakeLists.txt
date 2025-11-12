@@ -22,7 +22,7 @@ set(LIB_VERSION_STRING "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_PATCH_VE
 
 PROJECT(YggdrasilRapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES C CXX)
 set(PROJECT_NAME_LOWER "yggdrasil_rapidjson")
-set(PROJECT_INCLUDE_DIR "include/rapidjson")
+set(PROJECT_INCLUDE_DIR "include/yggdrasil_rapidjson")
 
 if(POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
     cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python
@@ -30,7 +30,7 @@ endif()
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 
-option(YGGDRASIL_RAPIDJSON_NEST_HEADERS "Nest the headers during install under the package name (in addition to the directly containing the headers)" ON)
+option(YGGDRASIL_RAPIDJSON_NEST_HEADERS "Nest the headers during install under the package name (in addition to the directly containing the headers)" OFF)
 option(DISABLE_YGGDRASIL_RAPIDJSON "Build without yggdrasil extensions" OFF)
 option(YGGDRASIL_PYGIL_NO_MANAGEMENT "Disable any handling of the Python GIL" OFF)
 option(YGGDRASIL_DISABLE_PYTHON_C_API "Disable the Python C API" OFF)

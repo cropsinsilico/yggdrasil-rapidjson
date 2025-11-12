@@ -13,8 +13,8 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/writer.h"
 
 #ifdef __clang__
 YGGDRASIL_RAPIDJSON_DIAG_PUSH

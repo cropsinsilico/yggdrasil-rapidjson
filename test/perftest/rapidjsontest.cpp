@@ -16,14 +16,14 @@
 
 #if TEST_YGGDRASIL_RAPIDJSON
 
-#include "rapidjson/rapidjson.h"
-#include "rapidjson/document.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/istreamwrapper.h"
-#include "rapidjson/encodedstream.h"
-#include "rapidjson/memorystream.h"
+#include "yggdrasil_rapidjson/yggdrasil_rapidjson.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/prettywriter.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/istreamwrapper.h"
+#include "yggdrasil_rapidjson/encodedstream.h"
+#include "yggdrasil_rapidjson/memorystream.h"
 
 #include <fstream>
 #include <vector>

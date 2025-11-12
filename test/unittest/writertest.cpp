@@ -14,11 +14,11 @@
 
 #include "unittest.h"
 
-#include "rapidjson/document.h"
-#include "rapidjson/reader.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/memorybuffer.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/writer.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/memorybuffer.h"
 
 #ifdef __clang__
 YGGDRASIL_RAPIDJSON_DIAG_PUSH

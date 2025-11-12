@@ -2,7 +2,7 @@
 
 #if TEST_YGGDRASIL_RAPIDJSON
 
-#include "rapidjson/schema.h"
+#include "yggdrasil_rapidjson/schema.h"
 #include <ctime>
 #include <string>
 #include <vector>

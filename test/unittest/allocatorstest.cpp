@@ -14,7 +14,7 @@
 
 #include "unittest.h"
 
-#include "rapidjson/allocators.h"
+#include "yggdrasil_rapidjson/allocators.h"
 
 #include <map>
 #include <string>

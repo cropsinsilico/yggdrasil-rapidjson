@@ -16,9 +16,9 @@
 #define YGGDRASIL_RAPIDJSON_FORCE_IMPORT_ARRAY
 #endif // DISABLE_YGGDRASIL_RAPIDJSON
 #include "unittest.h"
-#include "rapidjson/rapidjson.h"
+#include "yggdrasil_rapidjson/yggdrasil_rapidjson.h"
 #ifndef DISABLE_YGGDRASIL_RAPIDJSON
-#include "rapidjson/pyrj.h"
+#include "yggdrasil_rapidjson/pyrj.h"
 #endif // DISABLE_YGGDRASIL_RAPIDJSON
 
 #ifdef __clang__

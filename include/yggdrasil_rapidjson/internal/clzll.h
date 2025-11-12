@@ -15,7 +15,7 @@
 #ifndef YGGDRASIL_RAPIDJSON_CLZLL_H_
 #define YGGDRASIL_RAPIDJSON_CLZLL_H_
 
-#include "../rapidjson.h"
+#include "../yggdrasil_rapidjson.h"
 
 #if defined(_MSC_VER) && !defined(UNDER_CE)
 #include <intrin.h>

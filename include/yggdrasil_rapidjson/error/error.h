@@ -15,7 +15,7 @@
 #ifndef YGGDRASIL_RAPIDJSON_ERROR_ERROR_H_
 #define YGGDRASIL_RAPIDJSON_ERROR_ERROR_H_
 
-#include "../rapidjson.h"
+#include "../yggdrasil_rapidjson.h"
 
 #ifdef __clang__
 YGGDRASIL_RAPIDJSON_DIAG_PUSH

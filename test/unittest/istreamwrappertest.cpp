@@ -14,9 +14,9 @@
 
 #include "unittest.h"
 
-#include "rapidjson/istreamwrapper.h"
-#include "rapidjson/encodedstream.h"
-#include "rapidjson/document.h"
+#include "yggdrasil_rapidjson/istreamwrapper.h"
+#include "yggdrasil_rapidjson/encodedstream.h"
+#include "yggdrasil_rapidjson/document.h"
 #include <sstream>
 #include <fstream>
 

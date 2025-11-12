@@ -13,7 +13,7 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/internal/regex.h"
+#include "yggdrasil_rapidjson/internal/regex.h"
 
 using namespace yggdrasil_rapidjson::internal;
 

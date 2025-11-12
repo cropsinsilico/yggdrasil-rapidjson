@@ -29,8 +29,8 @@
 
 #include "unittest.h"
 
-#include "rapidjson/reader.h"
-#include "rapidjson/writer.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/writer.h"
 
 #ifdef __GNUC__
 YGGDRASIL_RAPIDJSON_DIAG_PUSH

@@ -13,8 +13,8 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/document.h"
-#include "rapidjson/cursorstreamwrapper.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/cursorstreamwrapper.h"
 
 using namespace yggdrasil_rapidjson;
 

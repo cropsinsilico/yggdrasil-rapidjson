@@ -14,7 +14,7 @@
 
 #include "unittest.h"
 
-#include "rapidjson/internal/strtod.h"
+#include "yggdrasil_rapidjson/internal/strtod.h"
 
 #ifdef __clang__
 YGGDRASIL_RAPIDJSON_DIAG_PUSH

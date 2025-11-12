@@ -17,10 +17,10 @@
 #if TEST_MISC
 
 #define __STDC_FORMAT_MACROS
-#include "rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
 
 #define protected public
-#include "rapidjson/writer.h"
+#include "yggdrasil_rapidjson/writer.h"
 #undef private
 
 class Misc : public PerfTest {

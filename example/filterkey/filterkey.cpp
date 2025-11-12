@@ -4,11 +4,11 @@
 // During parsing, specified key will be filtered using a SAX handler.
 // It re-output the JSON content to stdout without whitespace.
 
-#include "rapidjson/reader.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/filewritestream.h"
-#include "rapidjson/error/en.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/writer.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/filewritestream.h"
+#include "yggdrasil_rapidjson/error/en.h"
 #include <stack>
 
 using namespace yggdrasil_rapidjson;

@@ -1,8 +1,8 @@
 // Reading a message JSON with Reader (SAX-style API).
 // The JSON should be an object with key-string pairs.
 
-#include "rapidjson/reader.h"
-#include "rapidjson/error/en.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/error/en.h"
 #include <iostream>
 #include <string>
 #include <map>

@@ -110,7 +110,7 @@
     #define YGGDRASIL_RAPIDJSON_NAMESPACE my::rapidjson
     #define YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN namespace my { namespace rapidjson {
     #define YGGDRASIL_RAPIDJSON_NAMESPACE_END   } }
-    #include "rapidjson/..."
+    #include "yggdrasil_rapidjson/..."
     \endcode
 
     \see rapidjson
@@ -415,7 +415,7 @@
     \code
     #define YGGDRASIL_RAPIDJSON_NO_SIZETYPEDEFINE
     namespace rapidjson { typedef ::std::size_t SizeType; }
-    #include "rapidjson/..."
+    #include "yggdrasil_rapidjson/..."
     \endcode
 
     \see yggdrasil_rapidjson::SizeType

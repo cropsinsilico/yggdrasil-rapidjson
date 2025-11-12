@@ -16,8 +16,8 @@
 #define YGGDRASIL_RAPIDJSON_HAS_STDSTRING 1
 
 #include "unittest.h"
-#include "rapidjson/document.h"
-#include "rapidjson/uri.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/uri.h"
 
 #ifdef __clang__
 YGGDRASIL_RAPIDJSON_DIAG_PUSH

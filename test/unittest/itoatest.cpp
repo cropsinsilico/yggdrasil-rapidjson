@@ -13,7 +13,7 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/internal/itoa.h"
+#include "yggdrasil_rapidjson/internal/itoa.h"
 
 #ifdef __GNUC__
 YGGDRASIL_RAPIDJSON_DIAG_PUSH

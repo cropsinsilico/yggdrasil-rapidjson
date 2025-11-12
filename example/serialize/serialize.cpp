@@ -1,7 +1,7 @@
 // Serialize example
 // This example shows writing JSON string with writer directly.
 
-#include "rapidjson/prettywriter.h" // for stringify JSON
+#include "yggdrasil_rapidjson/prettywriter.h" // for stringify JSON
 #include <cstdio>
 #include <string>
 #include <vector>

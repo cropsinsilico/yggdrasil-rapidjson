@@ -12,7 +12,7 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-#include "rapidjson.h"
+#include "yggdrasil_rapidjson.h"
 
 #ifndef YGGDRASIL_RAPIDJSON_STREAM_H_
 #define YGGDRASIL_RAPIDJSON_STREAM_H_

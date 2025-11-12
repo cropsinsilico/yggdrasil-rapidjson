@@ -15,7 +15,7 @@
 #ifndef YGGDRASIL_RAPIDJSON_ENCODINGS_H_
 #define YGGDRASIL_RAPIDJSON_ENCODINGS_H_
 
-#include "rapidjson.h"
+#include "yggdrasil_rapidjson.h"
 
 #ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #include "internal/meta.h"

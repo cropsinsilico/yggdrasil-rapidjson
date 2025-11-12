@@ -15,7 +15,7 @@
 #ifndef YGGDRASIL_RAPIDJSON_BIGINTEGER_H_
 #define YGGDRASIL_RAPIDJSON_BIGINTEGER_H_
 
-#include "../rapidjson.h"
+#include "../yggdrasil_rapidjson.h"
 
 #if defined(_MSC_VER) && !defined(__INTEL_COMPILER) && defined(_M_AMD64)
 #include <intrin.h> // for _umul128

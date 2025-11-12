@@ -14,7 +14,7 @@
 
 #include "unittest.h"
 
-#include "rapidjson/document.h"
+#include "yggdrasil_rapidjson/document.h"
 
 using namespace yggdrasil_rapidjson;
 

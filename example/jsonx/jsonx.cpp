@@ -5,11 +5,11 @@
 // and convert to JSONx format to stdout.
 // Need compile with -D__STDC_FORMAT_MACROS for defining PRId64 and PRIu64 macros.
 
-#include "rapidjson/reader.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/filewritestream.h"
-#include "rapidjson/error/en.h"
+#include "yggdrasil_rapidjson/reader.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/filewritestream.h"
+#include "yggdrasil_rapidjson/error/en.h"
 #include <cstdio>
 
 using namespace yggdrasil_rapidjson;

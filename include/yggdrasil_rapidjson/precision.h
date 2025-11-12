@@ -4,7 +4,7 @@
 /*! \file precision.h */
 
 #include "internal/meta.h"
-#include "rapidjson.h"
+#include "yggdrasil_rapidjson.h"
 #include <iostream>
 #include <cfloat>
 #include <typeinfo>

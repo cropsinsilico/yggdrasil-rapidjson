@@ -15,7 +15,7 @@
 #ifndef YGGDRASIL_RAPIDJSON_IEEE754_
 #define YGGDRASIL_RAPIDJSON_IEEE754_
 
-#include "../rapidjson.h"
+#include "../yggdrasil_rapidjson.h"
 
 YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 namespace internal {

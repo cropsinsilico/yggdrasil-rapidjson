@@ -14,7 +14,7 @@
 
 #include "unittest.h"
 
-#include "rapidjson/internal/biginteger.h"
+#include "yggdrasil_rapidjson/internal/biginteger.h"
 
 using namespace yggdrasil_rapidjson::internal;
 

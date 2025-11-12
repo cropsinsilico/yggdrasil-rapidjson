@@ -21,7 +21,7 @@
 #include <windows.h>
 #endif
 
-#include "rapidjson/document.h"
+#include "yggdrasil_rapidjson/document.h"
 #undef GetObject
 
 using namespace yggdrasil_rapidjson;

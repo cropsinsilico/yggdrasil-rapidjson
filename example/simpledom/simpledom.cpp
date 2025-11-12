@@ -1,9 +1,9 @@
 // JSON simple example
 // This example does not handle errors.
 
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/writer.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
 #include <iostream>
 
 using namespace yggdrasil_rapidjson;

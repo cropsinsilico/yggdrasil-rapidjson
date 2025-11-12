@@ -19,7 +19,7 @@
 #ifndef YGGDRASIL_RAPIDJSON_DIYFP_H_
 #define YGGDRASIL_RAPIDJSON_DIYFP_H_
 
-#include "../rapidjson.h"
+#include "../yggdrasil_rapidjson.h"
 #include "clzll.h"
 #include <limits>
 

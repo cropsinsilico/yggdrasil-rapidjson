@@ -2,8 +2,8 @@
 
 #ifndef DISABLE_YGGDRASIL_RAPIDJSON
 
-#include "rapidjson/units.h"         // Units
-#include "rapidjson/internal/meta.h" // values_eq for floating point comparison
+#include "yggdrasil_rapidjson/units.h"         // Units
+#include "yggdrasil_rapidjson/internal/meta.h" // values_eq for floating point comparison
 
 using namespace yggdrasil_rapidjson;
 using namespace std;

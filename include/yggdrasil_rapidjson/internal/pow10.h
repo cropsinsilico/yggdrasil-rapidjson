@@ -15,7 +15,7 @@
 #ifndef YGGDRASIL_RAPIDJSON_POW10_
 #define YGGDRASIL_RAPIDJSON_POW10_
 
-#include "../rapidjson.h"
+#include "../yggdrasil_rapidjson.h"
 
 YGGDRASIL_RAPIDJSON_NAMESPACE_BEGIN
 namespace internal {

@@ -4,10 +4,10 @@
 // Temporarily disable for clang (older version) due to incompatibility with libstdc++
 #if (__cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1700)) && !defined(__clang__)
 
-#include "rapidjson/document.h"
-#include "rapidjson/error/en.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/ostreamwrapper.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/error/en.h"
+#include "yggdrasil_rapidjson/writer.h"
+#include "yggdrasil_rapidjson/ostreamwrapper.h"
 #include <condition_variable>
 #include <iostream>
 #include <mutex>

@@ -13,11 +13,11 @@
 // specific language governing permissions and limitations under the License.
 
 #include "unittest.h"
-#include "rapidjson/pointer.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/ostreamwrapper.h"
+#include "yggdrasil_rapidjson/pointer.h"
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/ostreamwrapper.h"
 #ifndef DISABLE_YGGDRASIL_RAPIDJSON
-#include "rapidjson/prettywriter.h"
+#include "yggdrasil_rapidjson/prettywriter.h"
 #endif // DISABLE_YGGDRASIL_RAPIDJSON
 #include <sstream>
 #include <map>

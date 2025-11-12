@@ -16,7 +16,7 @@
 
 // Using forward declared types here.
 
-#include "rapidjson/fwd.h"
+#include "yggdrasil_rapidjson/fwd.h"
 
 #ifdef __GNUC__
 YGGDRASIL_RAPIDJSON_DIAG_PUSH
@@ -90,15 +90,15 @@ struct Foo {
 
 // Using type definitions here.
 
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/filewritestream.h"
-#include "rapidjson/memorybuffer.h"
-#include "rapidjson/memorystream.h"
-#include "rapidjson/document.h" // -> reader.h
-#include "rapidjson/writer.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/schema.h"   // -> pointer.h
+#include "yggdrasil_rapidjson/stringbuffer.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/filewritestream.h"
+#include "yggdrasil_rapidjson/memorybuffer.h"
+#include "yggdrasil_rapidjson/memorystream.h"
+#include "yggdrasil_rapidjson/document.h" // -> reader.h
+#include "yggdrasil_rapidjson/writer.h"
+#include "yggdrasil_rapidjson/prettywriter.h"
+#include "yggdrasil_rapidjson/schema.h"   // -> pointer.h
 
 typedef Transcoder<UTF8<>, UTF8<> > TranscoderUtf8ToUtf8;
 typedef BaseReaderHandler<UTF8<>, void> BaseReaderHandlerUtf8Void;

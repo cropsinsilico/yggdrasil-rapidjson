@@ -15,7 +15,7 @@
 #ifndef YGGDRASIL_RAPIDJSON_INTERNAL_SWAP_H_
 #define YGGDRASIL_RAPIDJSON_INTERNAL_SWAP_H_
 
-#include "../rapidjson.h"
+#include "../yggdrasil_rapidjson.h"
 
 #if defined(__clang__)
 YGGDRASIL_RAPIDJSON_DIAG_PUSH

@@ -5,11 +5,11 @@
 // And finally the filtered events are used to populate a Document.
 // As an example, the document is written to standard output.
 
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/filewritestream.h"
-#include "rapidjson/error/en.h"
+#include "yggdrasil_rapidjson/document.h"
+#include "yggdrasil_rapidjson/writer.h"
+#include "yggdrasil_rapidjson/filereadstream.h"
+#include "yggdrasil_rapidjson/filewritestream.h"
+#include "yggdrasil_rapidjson/error/en.h"
 #include <stack>
 
 using namespace yggdrasil_rapidjson;

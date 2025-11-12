@@ -15,7 +15,7 @@
 #ifndef YGGDRASIL_RAPIDJSON_ALLOCATORS_H_
 #define YGGDRASIL_RAPIDJSON_ALLOCATORS_H_
 
-#include "rapidjson.h"
+#include "yggdrasil_rapidjson.h"
 #include "internal/meta.h"
 
 #include <memory>

@@ -7,7 +7,7 @@
 #include "internal/meta.h"
 #include "internal/strfunc.h"
 #include "precision.h"
-#include "rapidjson.h"
+#include "yggdrasil_rapidjson.h"
 #include <wchar.h>
 #include <locale.h>
 #include <map>

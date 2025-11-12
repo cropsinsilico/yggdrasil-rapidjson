@@ -6,7 +6,7 @@
  * See README for more details.
  */
 
-#include "rapidjson.h"
+#include "yggdrasil_rapidjson.h"
 
 #ifndef BASE64_H_
 #define BASE64_H_
