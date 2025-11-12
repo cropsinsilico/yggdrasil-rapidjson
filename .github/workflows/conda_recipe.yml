@@ -34,13 +34,11 @@ jobs:
       - name: Set up miniconda test environment
         uses: conda-incubator/setup-miniconda@v3
         with:
-          activate-environment: ""
-          auto-activate-base: true
+          activate-environment: base
           auto-update-conda: true
           channels: conda-forge
           channel-priority: strict
           miniforge-version: latest
-          conda-remove-defaults: true
       - name: Install conda-build
         if: matrix.builder == 'conda'
         run: |

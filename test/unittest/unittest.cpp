@@ -37,7 +37,7 @@ AssertException::~AssertException() throw() {}
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
 
-    std::cout << "RapidJSON v" << YGGDRASIL_RAPIDJSON_VERSION_STRING << std::endl;
+    std::cout << "YggdrasilRapidJSON v" << YGGDRASIL_RAPIDJSON_VERSION_STRING << std::endl;
 
 #ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API

@@ -136,7 +136,6 @@ jobs:
           channel-priority: strict
           miniforge-version: latest
           use-mamba: true
-          conda-remove-defaults: true
           python-version: ${{ matrix.python-version }}
       - name: Install packages not current on conda-forge (gcovr)
         run: |
