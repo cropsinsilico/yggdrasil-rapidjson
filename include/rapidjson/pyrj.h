@@ -53,25 +53,25 @@ YGGDRASIL_RAPIDJSON_NAMESPACE_END
 #ifndef _Py_GetRefTotal
 #undef Py_INCREF
 #undef Py_DECREF
-static Py_ssize_t _rapidjson_pyref_count = 0;
+static Py_ssize_t _yggdrasil_rapidjson_pyref_count = 0;
 #define _Py_GetRefTotal()			\
-  _rapidjson_pyref_count
+  _yggdrasil_rapidjson_pyref_count
 static inline
-void _rapidjson_Py_INCREF(PyObject *op) {
+void _yggdrasil_rapidjson_Py_INCREF(PyObject *op) {
   Py_INCREF(op);
-  _rapidjson_pyref_count++;
+  _yggdrasil_rapidjson_pyref_count++;
 }
 static inline
-void _rapidjson_Py_DECREF(PyObject *op) {
-  _rapidjson_pyref_count--;
+void _yggdrasil_rapidjson_Py_DECREF(PyObject *op) {
+  _yggdrasil_rapidjson_pyref_count--;
 #if defined(Py_REF_DEBUG) // && !defined(Py_LIMITED_API)
   Py_DECREF(__FILE__, __LINE__, _PyObject_CAST(op));
 #else
   Py_DECREF(op);
 #endif
 }
-#define Py_INCREF(op) _rapidjson_Py_INCREF(_PyObject_CAST(op))
-#define Py_DECREF(op) _rapidjson_Py_DECREF(_PyObject_CAST(op))
+#define Py_INCREF(op) _yggdrasil_rapidjson_Py_INCREF(_PyObject_CAST(op))
+#define Py_DECREF(op) _yggdrasil_rapidjson_Py_DECREF(_PyObject_CAST(op))
 #endif
 #endif // YGGDRASIL_RAPIDJSON_CHECK_PYREFS
 

@@ -28,7 +28,8 @@ static char* ReadFile(const char* filename, Allocator& allocator) {
     char buffer[1024];
     FILE *fp = 0;
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
-        snprintf(buffer, 1024, "%s%s", paths[i], filename);
+        if (snprintf(buffer, 1024, "%s%s", paths[i], filename) < 0)
+            return 0;
         fp = fopen(buffer, "rb");
         if (fp)
             break;
@@ -92,7 +93,10 @@ public:
 
         for (size_t i = 0; i < ARRAY_SIZE(filenames); i++) {
             char filename[FILENAME_MAX];
-            snprintf(filename, FILENAME_MAX, "jsonschema/tests/draft4/%s", filenames[i]);
+            if (snprintf(filename, FILENAME_MAX, "jsonschema/tests/draft4/%s", filenames[i]) < 0) {
+                printf("error formatting file name");
+                return;
+            }
             char* json = ReadFile(filename, jsonAllocator);
             if (!json) {
                 printf("json test suite file %s not found", filename);
