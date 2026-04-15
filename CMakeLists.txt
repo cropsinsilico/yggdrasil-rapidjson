@@ -106,14 +106,15 @@ else()
         APPEND INTERFACE_COMPILATION_OPTIONS
         -DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
     )
-    list(
-        APPEND INTERFACE_INCLUDE_DIRECTORIES
-        ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
-    )
-    list(
-        APPEND INTERFACE_LIBRARIES
-        ${Python3_LIBRARIES}
-    )
+    # list(
+    #     APPEND INTERFACE_INCLUDE_DIRECTORIES
+    #     ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
+    # )
+    # list(
+    #     APPEND INTERFACE_LIBRARIES
+    #     ${Python3_LIBRARIES}
+    # )
+    list(APPEND INTERFACE_LIBRARIES Python3::Python Python3::NumPy)
 
     # Set environment variables required for embedding Python
     set(YGGDRASIL_RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Python3_EXECUTABLE}")
@@ -321,9 +322,15 @@ SET(CMAKE_INSTALL_DIR "${_CMAKE_INSTALL_DIR}" CACHE PATH "The directory cmake fi
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-include_directories(${INTERFACE_INCLUDE_DIRECTORIES})
-add_definitions(${INTERFACE_COMPILATION_OPTIONS})
-link_libraries(${INTERFACE_LIBRARIES})
+if (INTERFACE_INCLUDE_DIRECTORIES)
+    include_directories(${INTERFACE_INCLUDE_DIRECTORIES})
+endif()
+if (INTERFACE_COMPILATION_OPTIONS)
+    add_definitions(${INTERFACE_COMPILATION_OPTIONS})
+endif()
+if (INTERFACE_LIBRARIES)
+    link_libraries(${INTERFACE_LIBRARIES})
+endif()
 
 if(YGGDRASIL_RAPIDJSON_BUILD_DOC)
     add_subdirectory(doc)
@@ -365,15 +372,21 @@ else()
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     )
 endif()
-target_compile_options(
-    ${PROJECT_NAME} INTERFACE ${INTERFACE_COMPILATION_OPTIONS}
-)
-target_include_directories(
-    ${PROJECT_NAME} INTERFACE ${INTERFACE_INCLUDE_DIRECTORIES}
-)
-target_link_libraries(
-    ${PROJECT_NAME} INTERFACE ${INTERFACE_LIBRARIES}
-)
+if (INTERFACE_COMPILATION_OPTIONS)
+    target_compile_options(
+        ${PROJECT_NAME} INTERFACE ${INTERFACE_COMPILATION_OPTIONS}
+    )
+endif()
+if (INTERFACE_INCLUDE_DIRECTORIES)
+    target_include_directories(
+        ${PROJECT_NAME} INTERFACE ${INTERFACE_INCLUDE_DIRECTORIES}
+    )
+endif()
+if (INTERFACE_LIBRARIES)
+    target_link_libraries(
+        ${PROJECT_NAME} INTERFACE ${INTERFACE_LIBRARIES}
+    )
+endif()
 
 # ===============================
 # Install
