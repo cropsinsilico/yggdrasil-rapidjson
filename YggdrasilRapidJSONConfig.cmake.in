@@ -1,30 +1,6 @@
 @PACKAGE_INIT@
 
-include(CMakeFindDependencyMacro)
-if(NOT Python3_ROOT_DIR)
-    set(CONDA_PREFIX "$ENV{CONDA_PREFIX}")
-    if(CONDA_PREFIX)
-        message(STATUS "CONDA_PREFIX = ${CONDA_PREFIX}")
-        set(Python3_ROOT_DIR "${CONDA_PREFIX}")
-    elseif(Python3_EXECUTABLE)
-        exec_program(${Python3_EXECUTABLE}
-	             ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
-		     OUTPUT_VARIABLE PYTHON_ROOT
-		     RETURN_VALUE ROOT_NOT_FOUND)
-        if(ROOT_NOT_FOUND)
- 	        message(FATAL_ERROR "Python root not found")
-        endif()
-	set(Python3_ROOT_DIR "${RETURN_VALUE}")
-    endif()
-endif()
-find_dependency(Python3 COMPONENTS Interpreter Development NumPy)
-
-
 include ("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@-targets.cmake")
-
-file(READ "${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@-targets.cmake" file_contents)
-message(STATUS "Targets contents:")
-message(STATUS "${file_contents}")
 
 ################################################################################
 # @PROJECT_NAME@ source dir
@@ -48,14 +24,7 @@ get_target_property(
   @PROJECT_NAME@_INCLUDE_DIR
   @PROJECT_NAME@ INTERFACE_INCLUDE_DIRECTORIES
 )
-if (@PROJECT_NAME@_INCLUDE_DIR)
-  list(GET @PROJECT_NAME@_INCLUDE_DIR 1 @PROJECT_NAME@_INCLUDE_DIR)
-endif()
-
-list(APPEND @PROJECT_NAME@_INCLUDE_DIR
-     ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-
-message(STATUS "@PROJECT_NAME@_INCLUDE_DIR = ${@PROJECT_NAME@_INCLUDE_DIR}")
+list(GET @PROJECT_NAME@_INCLUDE_DIR 1 @PROJECT_NAME@_INCLUDE_DIR)
 
 set_and_check(
   @PROJECT_NAME@_INCLUDE_DIRS "${@PROJECT_NAME@_INCLUDE_DIR}"

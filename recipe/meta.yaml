@@ -15,7 +15,7 @@ requirements:
   build:
     - cmake >=3.15
     - ninja
-    - numpy
+    - numpy                                  # [build_platform != target_platform]
     - python                                 # [build_platform != target_platform]
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
     - {{ stdlib('c') }}
