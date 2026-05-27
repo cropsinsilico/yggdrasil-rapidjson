@@ -37,10 +37,12 @@ tests:
           then:
             - Library/cmake/YggdrasilRapidJSONConfig.cmake
             - Library/cmake/YggdrasilRapidJSONConfigVersion.cmake
+            - Library/cmake/YggdrasilRapidJSONMacros.cmake
         - if: unix
           then:
             - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfig.cmake
             - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake
+            - lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONMacros.cmake
       include:
         - yggdrasil_rapidjson/yggdrasil_rapidjson.h
   - script:

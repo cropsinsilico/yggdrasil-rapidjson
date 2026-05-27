@@ -3,13 +3,21 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJSON version is used with the addition of a EXTEN version after the PATCH version (i.e. MAJOR.MINOR.PATCH.EXTEN) to indicate the YggdrasilRapidJSON version. The EXTEN version will restart at 0 when/if RapidJSON increments their version.
 
-## 1.1.0.X - XXXX-XX-XX
+## 1.1.0.2 - 2026-05-XX
 
 ### Bug fixes
 * Fix bug in schema comparison where null encoding was not compatible with encoding
 
 ### Maintenance
 * Update conda recipes to match the version submitted to conda-forge
+* Fix bug in conda recipe where build prefix was hard coded in the generated YggdrasilJSON-targets.cmake file during cross-compilation
+* Updated package name in pkgconfig template
+* Move options that can be supplied downstream to YggdrasilRapidJSONMacros.cmake for use in CMakeLists.txt and YggdrasilRapidJSONConfig.cmake.in
+* Update minimum cmake in examples
+
+### Features
+* Added methods for populating pre-allocated ND arrays
+
 
 ## 1.1.0.1 - 2025-11-12
 

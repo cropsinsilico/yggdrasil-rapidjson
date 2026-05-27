@@ -6334,6 +6334,21 @@ public:
 
   // 1D array access
   template <typename T>
+  void Get1DArray(T*& data, const SizeType& nelements,
+		  const UnitsType data_units = UnitsType(),
+		  YGGDRASIL_RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
+    AllocatorType allocator; // temporary
+    units::GenericQuantityArray<T, EncodingType> x;
+    GetArrayQuantity(&x, allocator, data_units);
+    YGGDRASIL_RAPIDJSON_ASSERT(nelements >= x.nelements());
+    YGGDRASIL_RAPIDJSON_ASSERT(data);
+    for (SizeType i = 0; i < nelements; i++) {
+      if (i >= x.nelements())
+        break;
+      data[i] = x.value()[i];
+    }
+  }
+  template <typename T>
   void Get1DArray(T*& data, SizeType& nelements, Allocator& allocator,
 		  const UnitsType data_units = UnitsType(),
 		  YGGDRASIL_RAPIDJSON_DISABLEIF((internal::IsSame<T, Ch>))) const {
@@ -6363,6 +6378,12 @@ public:
 		const Ch* units_str) const {
     return Get1DArray<T>(nelements, allocator, UnitsType(units_str)); }
   // 1D string array access
+  void Get1DArray(Ch*& data, const SizeType& nelements,
+                  const SizeType& precision) const {
+    const SizeType ndim = 1;
+    const SizeType* shape = &nelements;
+    GetNDArray(data, shape, ndim, precision);
+  }
   void Get1DArray(Ch*& data, SizeType& nelements, SizeType& precision,
 		  Allocator& allocator) const {
     SizeType ndim = 0;

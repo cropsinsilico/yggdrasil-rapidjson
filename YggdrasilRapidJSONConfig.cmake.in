@@ -1,6 +1,7 @@
 @PACKAGE_INIT@
 
 include ("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@-targets.cmake")
+include ("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Macros.cmake")
 
 ################################################################################
 # @PROJECT_NAME@ source dir
@@ -24,7 +25,28 @@ get_target_property(
   @PROJECT_NAME@_INCLUDE_DIR
   @PROJECT_NAME@ INTERFACE_INCLUDE_DIRECTORIES
 )
-list(GET @PROJECT_NAME@_INCLUDE_DIR 1 @PROJECT_NAME@_INCLUDE_DIR)
+list(GET @PROJECT_NAME@_INCLUDE_DIR 0 @PROJECT_NAME@_INCLUDE_DIR)
+
+set(INTERFACE_LIBRARIES)
+set(INTERFACE_COMPILATION_OPTIONS)
+
+if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
+  include(CMakeFindDependencyMacro)
+  find_dependency(Python3 COMPONENTS Interpreter Development NumPy)
+endif()
+
+yggdrasil_options_config(INTERFACE)
+
+if(INTERFACE_LIBRARIES)
+  target_link_libraries(
+    @PROJECT_NAME@ INTERFACE ${INTERFACE_LIBRARIES}
+  )
+endif()
+if(INTERFACE_COMPILATION_OPTIONS)
+  target_compile_options(
+    @PROJECT_NAME@ INTERFACE ${INTERFACE_COMPILATION_OPTIONS}
+  )
+endif()
 
 set_and_check(
   @PROJECT_NAME@_INCLUDE_DIRS "${@PROJECT_NAME@_INCLUDE_DIR}"
