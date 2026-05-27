@@ -1,5 +1,5 @@
 {% set name = "yggdrasil-rapidjson" %}
-{% set version = "1.1.0.1" %}
+{% set version = "1.1.0.2" %}
 
 package:
   name: {{ name|lower }}
@@ -15,7 +15,7 @@ requirements:
   build:
     - cmake >=3.15
     - ninja
-    - numpy
+    - numpy                                  # [build_platform != target_platform]
     - python                                 # [build_platform != target_platform]
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
     - {{ stdlib('c') }}
@@ -32,9 +32,11 @@ test:
   commands:
     - test -f $PREFIX/lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfig.cmake  # [unix]
     - test -f $PREFIX/lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONConfigVersion.cmake  # [unix]
+    - test -f $PREFIX/lib/cmake/YggdrasilRapidJSON/YggdrasilRapidJSONMacros.cmake  # [unix]
     - test -f $PREFIX/include/yggdrasil_rapidjson/yggdrasil_rapidjson.h  # [unix]
     - if not exist %LIBRARY_PREFIX%\\cmake\\YggdrasilRapidJSONConfig.cmake exit 1  # [win]
     - if not exist %LIBRARY_PREFIX%\\cmake\\YggdrasilRapidJSONConfigVersion.cmake exit 1  # [win]
+    - if not exist %LIBRARY_PREFIX%\\cmake\\YggdrasilRapidJSONMacros.cmake exit 1  # [win]
     - if not exist %LIBRARY_PREFIX%\\include\\yggdrasil_rapidjson\\yggdrasil_rapidjson.h exit 1  # [win]
   source_files:
     - example

@@ -5049,6 +5049,22 @@ TEST(SchemaEncoder, Array) {
 		   "  ]"
 		   "}");
 }
+TEST(SchemaEncoder, ArrayDuplicateItems) {
+  VALIDATE_ENCODED("[1, 2]",
+		   "{"
+		   "  \"type\":\"array\","
+		   "  \"items\": ["
+		   "    {\"type\": \"integer\"},"
+		   "    {\"type\": \"integer\"}"
+		   "  ]"
+		   "}",
+		   "{"
+		   "  \"type\":\"array\","
+		   "  \"items\": {"
+		   "    \"type\": \"integer\""
+		   "  }"
+		   "}");
+}
 TEST(SchemaEncoder, Object) {
   VALIDATE_ENCODED("{\"a\": 1, \"b\": \"hello\"}",
 		   "{"
@@ -5465,6 +5481,20 @@ TEST(SchemaCompare, Encoding) {
 	  "  \"precision\": 8,"
 	  "  \"encoding\": \"UTF8\""
 	  "}");
+  COMPARE("{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"string\","
+	  "  \"precision\": 8,"
+	  "  \"encoding\": \"UTF8\","
+          "  \"allowWrapped\": true"
+	  "}",
+	  "{"
+	  "  \"type\": \"scalar\","
+	  "  \"subtype\": \"string\","
+	  "  \"precision\": 8,"
+	  "  \"encoding\": \"UTF8\","
+          "  \"allowWrapped\": true"
+	  "}");
   INVALID_COMPARE("{"
 		  "  \"type\": \"scalar\","
 		  "  \"subtype\": \"string\","
@@ -5480,7 +5510,7 @@ TEST(SchemaCompare, Encoding) {
 		  "    \"errorCode\": 45,"
 		  "    \"schemaIteratorRef\": \"#\", \"schemaHandlerRef\": \"#\","
 		  "    \"property\": \"encoding\","
-		  "    \"expected\": \"UTF8\", \"actual\": \"null\""
+		  "    \"expected\": \"UTF8\", \"actual\": \"ASCII\""
 		  "}}");
 }
 #ifndef YGGDRASIL_DISABLE_PYTHON_C_API

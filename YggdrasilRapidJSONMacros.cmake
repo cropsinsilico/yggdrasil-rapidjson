@@ -1,0 +1,48 @@
+macro(yggdrasil_options)
+  option(DISABLE_YGGDRASIL_RAPIDJSON "Build without yggdrasil extensions" OFF)
+  option(YGGDRASIL_PYGIL_NO_MANAGEMENT "Disable any handling of the Python GIL" OFF)
+  option(YGGDRASIL_DISABLE_PYTHON_C_API "Disable the Python C API" OFF)
+  option(YGGDRASIL_RAPIDJSON_DISABLE_STDSTRING "Disable the use of the C++ std::string library" OFF)
+  option(YGGDRASIL_RAPIDJSON_USE_MEMBERSMAP "Enable the use of the C++ std::map library" OFF)
+endmacro()
+
+macro(yggdrasil_options_config OUTPUT_PREFIX)
+  if(DISABLE_YGGDRASIL_RAPIDJSON)
+    list(
+      APPEND ${OUTPUT_PREFIX}_COMPILATION_OPTIONS
+      -DDISABLE_YGGDRASIL_RAPIDJSON
+      -DYGGDRASIL_DISABLE_PYTHON_C_API
+    )
+    set(YGGDRASIL_PYGIL_NO_MANAGEMENT OFF)
+    set(YGGDRASIL_DISABLE_PYTHON_C_API ON)
+  else()
+    if (YGGDRASIL_PYGIL_NO_MANAGEMENT)
+      list(
+        APPEND ${OUTPUT_PREFIX}_COMPILATION_OPTIONS
+        -DYGGDRASIL_PYGIL_NO_MANAGEMENT
+      )
+    endif()
+    if(YGGDRASIL_DISABLE_PYTHON_C_API)
+      list(
+        APPEND ${OUTPUT_PREFIX}_COMPILATION_OPTIONS
+        -DYGGDRASIL_DISABLE_PYTHON_C_API
+      )
+    else()
+      list(
+          APPEND ${OUTPUT_PREFIX}_LIBRARIES
+          Python3::Python Python3::NumPy
+      )
+      list(
+          APPEND ${OUTPUT_PREFIX}_COMPILATION_OPTIONS
+          -DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
+      )
+    endif()
+  endif()
+  if(NOT YGGDRASIL_RAPIDJSON_DISABLE_STDSTRING)
+    list(APPEND ${OUTPUT_PREFIX}_COMPILATION_OPTIONS -DYGGDRASIL_RAPIDJSON_HAS_STDSTRING)
+  endif()
+  if(YGGDRASIL_RAPIDJSON_USE_MEMBERSMAP)
+    list(APPEND ${OUTPUT_PREFIX}_COMPILATION_OPTIONS -DYGGDRASIL_RAPIDJSON_USE_MEMBERSMAP=1)
+  endif()
+
+endmacro()

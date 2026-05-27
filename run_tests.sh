@@ -10,7 +10,6 @@ fi
 cd build
 
 cmake .. \
-      -DYGGDRASIL_RAPIDJSON_HAS_STDSTRING:BOOL=ON \
       -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS:BOOL=ON \
       -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL:BOOL=ON \
       -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE:BOOL=OFF \
@@ -28,6 +27,7 @@ cmake .. \
 
 # Tests
 cmake --build . --target=tests -- -j 8
+cmake --install . --prefix "${INSTALL_DIR}"
 ctest -R unittest --stop-on-failure
 # ctest -R perftest --stop-on-failure
 
@@ -38,7 +38,6 @@ ctest -R unittest --stop-on-failure
 
 # Install
 # cmake --install .
-# cmake --install . --prefix "${INSTALL_DIR}"
 
 
 # # cmake --build . -- -j 8

@@ -3,5 +3,5 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 Name: @PROJECT_NAME@
 Description: A header-only C++ library for JSON operation extended for use with yggdrasil
 Version: @PROJECT_VERSION@
-URL: https://github.com/cropsinsilico/rapidjson
+URL: https://github.com/cropsinsilico/yggdrasil_rapidjson
 Cflags: -I${includedir}

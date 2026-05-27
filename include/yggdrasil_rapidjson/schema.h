@@ -5295,7 +5295,8 @@ public:
 	      allowWrappedSchema_.schemas = static_cast<const Schema**>(allocator_->Malloc(allowWrappedSchema_.count * sizeof(const Schema*)));
 	      memset(allowWrappedSchema_.schemas, 0, sizeof(Schema*)* allowWrappedSchema_.count);
 	      schemaDocument->CreateSchema(&allowWrappedSchema_.schemas[0], p, value, document, id_, &wrappedFlagItem);
-	      schemaDocument->CreateSchema(&allowWrappedSchema_.schemas[1], q, valueCont, document, id_, &wrappedFlagCont, this, wrappedKey);
+              // Don't pass q since the key will be added
+	      schemaDocument->CreateSchema(&allowWrappedSchema_.schemas[1], p, valueCont, document, id_, &wrappedFlagCont, this, wrappedKey);
 	      allowWrappedSchema_.begin = validatorCount_;
 	      validatorCount_ += allowWrappedSchema_.count;
 	      singularPtr_ = q;
@@ -6552,6 +6553,20 @@ public:
     const PointerType& GetPointer() const {
         return pointer_;
     }
+
+#ifndef DISABLE_YGGDRASIL_RAPIDJSON
+  void GetSchemaLocation(GenericStringBuffer<EncodingType>& sb,
+                         const bool parent = false,
+                         PointerType context = PointerType()) const {
+        SizeType len = GetURI().GetStringLength();
+        if (len) memcpy(sb.Push(len), GetURI().GetString(), len * sizeof(Ch));
+        if (!context.GetTokenCount())
+          context = GetPointer();
+	((parent && context.GetTokenCount() > 0)
+	 ? PointerType(context.GetTokens(), context.GetTokenCount() - 1)
+	 : context).StringifyUriFragment(sb);
+    }
+#endif // DISABLE_YGGDRASIL_RAPIDJSON
 
     bool BeginValue(Context& context) const {
         YGGDRASIL_RAPIDJSON_SCHEMA_PRINT(Method, "Schema::BeginValue");
@@ -8052,9 +8067,13 @@ protected:
     else if (subtype == GetUintSubTypeString()   ) return kYggUintSchemaSubType;
     else if (subtype == GetFloatSubTypeString()  ) return kYggFloatSchemaSubType;
     else if (subtype == GetComplexSubTypeString()) return kYggComplexSchemaSubType;
-    else if (subtype == GetStringSubTypeString() ) return kYggStringSchemaSubType;
-    else if (subtype == GetBytesString()         ) return kYggStringSchemaSubType;
     else if (subtype == GetAnyString()           ) return kYggTotalSchemaSubType;
+    else if (subtype == GetStringSubTypeString() ||
+             subtype == GetBytesString()         ) {
+      if (encoding)
+        encoding[0] = kYggASCIISchemaEncodingType;
+      return kYggStringSchemaSubType;
+    }
     else if (subtype == GetUnicodeString()       ) {
       if (encoding)
 	encoding[0] = kYggUCS4SchemaEncodingType;
@@ -11272,12 +11291,13 @@ public:
     }
     bool CompareEncoding(Context& context, const SchemaType& it_schema) const {
       SCHEMA_LHS_RHS;
-      if (lhs.encoding_ != rhs.encoding_) {
-	const ValueType& lhs_encoding = EncodingType2String(lhs.encoding_);
-	const ValueType& rhs_encoding = EncodingType2String(rhs.encoding_);
-	YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetEncodingString(), lhs_encoding, rhs_encoding);
-      }
-      return true;
+      if (lhs.encoding_ == kYggNullSchemaEncodingType ||
+          rhs.encoding_ == kYggNullSchemaEncodingType ||
+          lhs.encoding_ == rhs.encoding_)
+        return true;
+      const ValueType& lhs_encoding = EncodingType2String(lhs.encoding_);
+      const ValueType& rhs_encoding = EncodingType2String(rhs.encoding_);
+      YGGDRASIL_RAPIDJSON_INCOMPATIBLE_SCHEMA_STR(GetEncodingString(), lhs_encoding, rhs_encoding);
     }
     bool CompareScalar(Context& context, const SchemaType& it_schema) const {
       SCHEMA_LHS_RHS;
@@ -14288,13 +14308,9 @@ private:
     virtual void GetSchemaLocation(GenericStringBuffer<EncodingType>& sb,
 				   const bool parent = false,
 				   PointerType schema = PointerType()) const {
-        SizeType len = CurrentSchema().GetURI().GetStringLength();
-        if (len) memcpy(sb.Push(len), CurrentSchema().GetURI().GetString(), len * sizeof(Ch));
 	if (!schema.GetTokenCount())
 	  schema = GetInvalidSchemaPointer();
-	((parent && schema.GetTokenCount() > 0)
-	 ? PointerType(schema.GetTokens(), schema.GetTokenCount() - 1)
-	 : schema).StringifyUriFragment(sb);
+        CurrentSchema().GetSchemaLocation(sb, parent, schema);
     }
     void AddErrorSchemaIteratorLocation(ValueType& result, bool parent=false) {
         GenericStringBuffer<EncodingType> sb;
@@ -14872,6 +14888,20 @@ public:
   }
   bool EndArray(SizeType elementCount) {
     if (!document_.EndArray(elementCount)) return false;
+    if (minimal_ && elementCount > 1) {
+      ValueType& items = *(document_.StackTop());
+      ValueType& first = items[0];
+      bool allMatch = true;
+      for (SizeType i = 1; i < items.Size(); i++) {
+        if (items[i] != first) {
+          allMatch = false;
+          break;
+        }
+      }
+      if (allMatch) {
+        first.Swap(items);
+      }
+    }
     return EndValue(2); // type & items
   }
   template <typename YggSchemaValueType>

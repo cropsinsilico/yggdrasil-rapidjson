@@ -30,36 +30,28 @@ endif()
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/YggdrasilRapidJSONMacros.cmake)
+yggdrasil_options()
+
 option(YGGDRASIL_RAPIDJSON_NEST_HEADERS "Nest the headers during install under the package name (in addition to the directly containing the headers)" OFF)
-option(DISABLE_YGGDRASIL_RAPIDJSON "Build without yggdrasil extensions" OFF)
-option(YGGDRASIL_PYGIL_NO_MANAGEMENT "Disable any handling of the Python GIL" OFF)
-option(YGGDRASIL_DISABLE_PYTHON_C_API "Disable the Python C API" OFF)
 option(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA "Re-create the metaschema" OFF)
 option(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL "Re-create the metaschema and the full_schema.yaml file" OFF)
 option(YGGDRASIL_RAPIDJSON_SCHEMA_TESTS "Build tests using the yggdrasil schema" OFF)
 
-
-
 set(INTERFACE_COMPILATION_OPTIONS -D_USE_MATH_DEFINES)
 set(INTERFACE_INCLUDE_DIRECTORIES)
 set(INTERFACE_LIBRARIES)
+set(LOCAL_COMPILATION_OPTIONS)
+set(LOCAL_INCLUDE_DIRECTORIES)
+set(LOCAL_LIBRARIES)
 
 if(DISABLE_YGGDRASIL_RAPIDJSON)
-  list(APPEND INTERFACE_COMPILATION_OPTIONS -DDISABLE_YGGDRASIL_RAPIDJSON)
-  set(YGGDRASIL_PYGIL_NO_MANAGEMENT OFF)
-  set(YGGDRASIL_DISABLE_PYTHON_C_API OFF)
   set(RAPIDJSON_CREATE_METASCHEMA OFF)
   set(RAPIDJSON_CREATE_METASCHEMA_FULL OFF)
   set(RAPIDJSON_YGGDRASIL_TESTS OFF)
 endif()
 
-if (YGGDRASIL_PYGIL_NO_MANAGEMENT)
-    add_definitions(-DYGGDRASIL_PYGIL_NO_MANAGEMENT)
-endif()
-
-if(YGGDRASIL_DISABLE_PYTHON_C_API)
-    add_definitions(-DYGGDRASIL_DISABLE_PYTHON_C_API)
-else()
+if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
     # needed on GitHub Actions CI: actions/setup-python does not touch registry/frameworks on Windows/macOS
     # this mirrors PythonInterp behavior which did not consult registry/frameworks first
     if (NOT DEFINED Python_FIND_REGISTRY)
@@ -68,52 +60,51 @@ else()
     if (NOT DEFINED Python_FIND_FRAMEWORK)
         set(Python_FIND_FRAMEWORK "LAST")
     endif ()
+    if(NOT Python3_EXECUTABLE)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+    endif()
 
     message(STATUS "Python executable is ${Python3_EXECUTABLE}")
-    if(NOT Python3_ROOT_DIR)
-        set(CONDA_PREFIX "$ENV{CONDA_PREFIX}")
-        if(CONDA_PREFIX)
-            message(STATUS "CONDA_PREFIX = ${CONDA_PREFIX}")
-            set(Python3_ROOT_DIR "${CONDA_PREFIX}")
-        else()
-            if(Python3_EXECUTABLE)
-                exec_program(${Python3_EXECUTABLE}
-	                     ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
-		             OUTPUT_VARIABLE PYTHON_ROOT
-		             RETURN_VALUE ROOT_NOT_FOUND)
-                if(ROOT_NOT_FOUND)
-     	            message(FATAL_ERROR "Python root not found")
-                endif()
-	        set(Python3_ROOT_DIR "${RETURN_VALUE}")
-            endif()
-         endif()
+    set(CONDA_PREFIX "$ENV{CONDA_PREFIX}")
+    message(STATUS "CONDA_PREFIX = ${CONDA_PREFIX}")
+    if(FOR_CONDA_RECIPE AND NOT CONDA_PREFIX)
+        message(FATAL_ERROR "CONDA_PREFIX is not set, but FOR_CONDA_RECIPE is")
+    endif()
+    if(CONDA_PREFIX AND NOT Python3_ROOT_DIR)
+        set(Python3_ROOT_DIR "${CONDA_PREFIX}")
+    endif()
+    if(Python3_EXECUTABLE AND NOT Python3_ROOT_DIR)
+      exec_program(
+        ${Python3_EXECUTABLE}
+        ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
+        OUTPUT_VARIABLE Python3_ROOT_DIR
+      )
+      message(STATUE "Evaluated Python3_ROOT_DIR = ${Python3_ROOT_DIR}")
+    endif()
+    if(Python3_EXECUTABLE AND NOT Python3_INCLUDE_DIR)
+      exec_program(
+        ${Python3_EXECUTABLE}
+        ARGS "-c \"import sysconfig; print(sysconfig.get_path('include'))\""
+        OUTPUT_VARIABLE Python3_INCLUDE_DIR
+      )
+      message(STATUS "Evaluated Python3_INCLUDE_DIR = ${Python3_INCLUDE_DIR}")
+    endif()
+    if(Python3_EXECUTABLE AND NOT Python3_NumPy_INCLUDE_DIR)
+      exec_program(
+        ${Python3_EXECUTABLE}
+        ARGS "-c \"import numpy; print(numpy.get_include())\""
+        OUTPUT_VARIABLE Python3_NumPy_INCLUDE_DIR
+      )
+      message(STATUS "Evaluated Python3_NumPy_INCLUDE_DIR = ${Python3_NumPy_INCLUDE_DIR}")
     endif()
     if(Python3_ROOT_DIR)
         message(STATUS "Python root directory is ${Python3_ROOT_DIR}")
     endif()
     find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
-    if(NOT Python3_NumPy_FOUND)
-        message(FATAL_ERROR "NumPy headers not found")
-    endif()
-    if(NOT Python3_FOUND)
-        message(FATAL_ERROR "Python libraries not found")
-    endif()
 
     # include_directories(
     #     SYSTEM ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
     # )
-    list(
-        APPEND INTERFACE_COMPILATION_OPTIONS
-        -DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
-    )
-    list(
-        APPEND INTERFACE_INCLUDE_DIRECTORIES
-        ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
-    )
-    list(
-        APPEND INTERFACE_LIBRARIES
-        ${Python3_LIBRARIES}
-    )
 
     # Set environment variables required for embedding Python
     set(YGGDRASIL_RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Python3_EXECUTABLE}")
@@ -124,6 +115,9 @@ else()
         set(YGGDRASIL_RAPIDJSON_PYTHON_ENV "${YGGDRASIL_RAPIDJSON_PYTHON_ENV};PYTHONHOME=${Python3_RUNTIME_LIBRARY_DIRS}")
     endif()
 endif()
+
+# Handle option dependencies and set compilation options for tests
+yggdrasil_options_config(LOCAL)
 
 # Generate the metaschema header file
 if(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL)
@@ -179,16 +173,6 @@ option(YGGDRASIL_RAPIDJSON_BUILD_ASAN "Build yggdrasil_rapidjson with address sa
 option(YGGDRASIL_RAPIDJSON_BUILD_UBSAN "Build yggdrasil_rapidjson with undefined behavior sanitizer (gcc/clang)" OFF)
 
 option(YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT "Build yggdrasil_rapidjson with -march or -mcpu options" ON)
-
-option(YGGDRASIL_RAPIDJSON_HAS_STDSTRING "" OFF)
-if(YGGDRASIL_RAPIDJSON_HAS_STDSTRING)
-    add_definitions(-DYGGDRASIL_RAPIDJSON_HAS_STDSTRING)
-endif()
-
-option(YGGDRASIL_RAPIDJSON_USE_MEMBERSMAP "" OFF)
-if(YGGDRASIL_RAPIDJSON_USE_MEMBERSMAP)
-    add_definitions(-DYGGDRASIL_RAPIDJSON_USE_MEMBERSMAP=1)
-endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
@@ -284,8 +268,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         endif()
     endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS=1)
-    add_definitions(-DNOMINMAX)
+    list(APPEND INTERFACE_COMPILATION_OPTIONS
+         -D_CRT_SECURE_NO_WARNINGS=1 -DNOMINMAX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /bigobj /Zm10")
     # CMake >= 3.10 should handle the above CMAKE_CXX_STANDARD fine, otherwise use /std:c++XX with MSVC >= 19.10
     if (YGGDRASIL_RAPIDJSON_BUILD_CXXMIN)
@@ -319,33 +303,6 @@ ELSEIF(WIN32)
 ENDIF()
 SET(CMAKE_INSTALL_DIR "${_CMAKE_INSTALL_DIR}" CACHE PATH "The directory cmake files are installed in")
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-include_directories(${INTERFACE_INCLUDE_DIRECTORIES})
-add_definitions(${INTERFACE_COMPILATION_OPTIONS})
-link_libraries(${INTERFACE_LIBRARIES})
-
-if(YGGDRASIL_RAPIDJSON_BUILD_DOC)
-    add_subdirectory(doc)
-endif()
-
-add_custom_target(travis_doc)
-add_custom_command(TARGET travis_doc
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/travis-doxygen.sh)
-
-if(YGGDRASIL_RAPIDJSON_BUILD_EXAMPLES)
-    add_subdirectory(example)
-endif()
-
-if(YGGDRASIL_RAPIDJSON_BUILD_TESTS)
-    if(MSVC11)
-        # required for VS2012 due to missing support for variadic templates
-        add_definitions(-D_VARIADIC_MAX=10)
-    endif(MSVC11)
-    add_subdirectory(test)
-    include(CTest)
-endif()
-
 # ===============================
 # Interface for export
 # ===============================
@@ -375,6 +332,44 @@ target_link_libraries(
     ${PROJECT_NAME} INTERFACE ${INTERFACE_LIBRARIES}
 )
 
+# Set after interface library created
+
+# include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(
+  # ${INTERFACE_INCLUDE_DIRECTORIES}
+  ${LOCAL_INCLUDE_DIRECTORIES}
+)
+add_definitions(
+  # ${INTERFACE_COMPILATION_OPTIONS}
+  ${LOCAL_COMPILATION_OPTIONS}
+)
+link_libraries(
+  # ${INTERFACE_LIBRARIES}
+  ${PROJECT_NAME}
+  ${LOCAL_LIBRARIES}
+)
+
+if(YGGDRASIL_RAPIDJSON_BUILD_DOC)
+    add_subdirectory(doc)
+endif()
+
+add_custom_target(travis_doc)
+add_custom_command(TARGET travis_doc POST_BUILD
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/travis-doxygen.sh)
+
+if(YGGDRASIL_RAPIDJSON_BUILD_EXAMPLES)
+    add_subdirectory(example)
+endif()
+
+if(YGGDRASIL_RAPIDJSON_BUILD_TESTS)
+    if(MSVC11)
+        # required for VS2012 due to missing support for variadic templates
+        add_definitions(-D_VARIADIC_MAX=10)
+    endif(MSVC11)
+    add_subdirectory(test)
+    include(CTest)
+endif()
+
 # ===============================
 # Install
 # ===============================
@@ -386,9 +381,11 @@ IF (UNIX OR CYGWIN)
   CONFIGURE_FILE (${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.pc.in
                   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc
                   @ONLY)
-  INSTALL (FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc
+  INSTALL(
+      FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc
       DESTINATION "${LIB_INSTALL_DIR}/pkgconfig"
-      COMPONENT pkgconfig)
+      COMPONENT pkgconfig
+  )
 ENDIF()
 
 install(FILES readme.md
@@ -451,6 +448,7 @@ configure_package_config_file(
 # Install files
 IF(CMAKE_INSTALL_DIR)
     INSTALL(FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Macros.cmake
         ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${PROJECT_NAME}Config.cmake
         ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${PROJECT_NAME}ConfigVersion.cmake
         DESTINATION "${CMAKE_INSTALL_DIR}"

@@ -8,6 +8,7 @@
 * Store scalars in standard yggdrasil data
 * Version yggdrasil storage format
 * Update yggdrasil data format to have human readable header
+* Add units as a type
 
 ### IN PROGRESS
 * Add docstrings to new methods
