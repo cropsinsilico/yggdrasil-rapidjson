@@ -3,7 +3,9 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJSON version is used with the addition of a EXTEN version after the PATCH version (i.e. MAJOR.MINOR.PATCH.EXTEN) to indicate the YggdrasilRapidJSON version. The EXTEN version will restart at 0 when/if RapidJSON increments their version.
 
-## 1.1.0.3 - XXXX-XX-XX
+## X.X.X.X - XXXX-XX-XX
+
+## 1.1.0.3 - 2026-05-29
 
 ### Maintenance
 * Added missing option for YGGDRASIL_RAPIDJSON_CHECK_PYREFS, YGGDRASIL_RAPIDJSON_PYTHON_WRAPPER, YGGDRASIL_RAPIDJSON_BUILD_ASAN, & YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT
