@@ -14,13 +14,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    endif()
 endif()
 
-set(LIB_MAJOR_VERSION "1")
-set(LIB_MINOR_VERSION "1")
-set(LIB_PATCH_VERSION "0")
-set(LIB_EXTEN_VERSION "1")
-set(LIB_VERSION_STRING "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_PATCH_VERSION}.${LIB_EXTEN_VERSION}")
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
+include(${CMAKE_CURRENT_SOURCE_DIR}/YggdrasilRapidJSONMacros.cmake)
+gitversion(LIB_VERSION_STRING "1.1.0.2")
 
 PROJECT(YggdrasilRapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES C CXX)
+set(PROJECT_NAME_UPPER "YGGDRASIL_RAPIDJSON")
 set(PROJECT_NAME_LOWER "yggdrasil_rapidjson")
 set(PROJECT_INCLUDE_DIR "include/yggdrasil_rapidjson")
 
@@ -31,18 +30,20 @@ endif()
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/YggdrasilRapidJSONMacros.cmake)
-yggdrasil_options()
+yggdrasil_rapidjson_options_create()
 
 option(YGGDRASIL_RAPIDJSON_NEST_HEADERS "Nest the headers during install under the package name (in addition to the directly containing the headers)" OFF)
 option(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA "Re-create the metaschema" OFF)
 option(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL "Re-create the metaschema and the full_schema.yaml file" OFF)
 option(YGGDRASIL_RAPIDJSON_SCHEMA_TESTS "Build tests using the yggdrasil schema" OFF)
 
-set(INTERFACE_COMPILATION_OPTIONS -D_USE_MATH_DEFINES)
-set(INTERFACE_INCLUDE_DIRECTORIES)
+set(INTERFACE_PUBLIC_COMPILE_FLAGS -D_USE_MATH_DEFINES)
+set(INTERFACE_PUBLIC_LINK_FLAGS)
+set(INTERFACE_INCLUDE_DIRS)
 set(INTERFACE_LIBRARIES)
-set(LOCAL_COMPILATION_OPTIONS)
-set(LOCAL_INCLUDE_DIRECTORIES)
+set(LOCAL_PUBLIC_COMPILE_FLAGS)
+set(LOCAL_PUBLIC_LINK_FLAGS)
+set(LOCAL_INCLUDE_DIRS)
 set(LOCAL_LIBRARIES)
 
 if(DISABLE_YGGDRASIL_RAPIDJSON)
@@ -117,7 +118,7 @@ if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
 endif()
 
 # Handle option dependencies and set compilation options for tests
-yggdrasil_options_config(LOCAL)
+yggdrasil_rapidjson_options_config(LOCAL)
 
 # Generate the metaschema header file
 if(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL)
@@ -169,11 +170,6 @@ if(YGGDRASIL_RAPIDJSON_BUILD_CXXMIN)
     set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 endif()
 
-option(YGGDRASIL_RAPIDJSON_BUILD_ASAN "Build yggdrasil_rapidjson with address sanitizer (gcc/clang)" OFF)
-option(YGGDRASIL_RAPIDJSON_BUILD_UBSAN "Build yggdrasil_rapidjson with undefined behavior sanitizer (gcc/clang)" OFF)
-
-option(YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT "Build yggdrasil_rapidjson with -march or -mcpu options" ON)
-
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
@@ -186,14 +182,6 @@ endif(CCACHE_FOUND)
 find_program(VALGRIND_FOUND valgrind)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if(YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT AND NOT CMAKE_CROSSCOMPILING)
-        if(CMAKE_SYSTEM_PROCESSOR STREQUAL "powerpc" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
-          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=native")
-        else()
-          #FIXME: x86 is -march=native, but doesn't mean every arch is this option. To keep original project's compatibility, I leave this except POWER.
-          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-        endif()
-    endif()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
     set(EXTRA_CXX_FLAGS -Weffc++ -Wswitch-default -Wfloat-equal -Wconversion -Wsign-conversion)
     if (YGGDRASIL_RAPIDJSON_BUILD_CXXMIN)
@@ -208,24 +196,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
     elseif (YGGDRASIL_RAPIDJSON_BUILD_CXX20 AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "8.0")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
-    endif()
-    if (YGGDRASIL_RAPIDJSON_BUILD_ASAN)
-        if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8.0")
-            message(FATAL_ERROR "GCC < 4.8 doesn't support the address sanitizer")
-        else()
-            add_compile_options(-fsanitize=address)
-            add_link_options(-fsanitize=address)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-        endif()
-    endif()
-    if (YGGDRASIL_RAPIDJSON_BUILD_UBSAN)
-        if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9.0")
-            message(FATAL_ERROR "GCC < 4.9 doesn't support the undefined behavior sanitizer")
-        else()
-            add_compile_options(-fsanitize=undefined)
-            add_link_options(-fsanitize=undefined)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
-        endif()
     endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if(NOT CMAKE_CROSSCOMPILING)
@@ -251,24 +221,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     elseif (YGGDRASIL_RAPIDJSON_BUILD_CXX20 AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "10.0")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
     endif()
-    if (YGGDRASIL_RAPIDJSON_BUILD_ASAN)
-        add_compile_options(-fsanitize=address)
-        add_link_options(-fsanitize=address)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-    endif()
-    if (YGGDRASIL_RAPIDJSON_BUILD_UBSAN)
-        if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-            add_compile_options(-fsanitize=undefined-trap -fsanitize-undefined-trap-on-error)
-            add_link_options(-fsanitize=undefined-trap -fsanitize-undefined-trap-on-error)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error")
-        else()
-            add_compile_options(-fsanitize=undefined)
-            add_link_options(-fsanitize=undefined)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
-        endif()
-    endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    list(APPEND INTERFACE_COMPILATION_OPTIONS
+    list(APPEND INTERFACE_PUBLIC_COMPILE_FLAGS
          -D_CRT_SECURE_NO_WARNINGS=1 -DNOMINMAX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /bigobj /Zm10")
     # CMake >= 3.10 should handle the above CMAKE_CXX_STANDARD fine, otherwise use /std:c++XX with MSVC >= 19.10
@@ -307,6 +261,14 @@ SET(CMAKE_INSTALL_DIR "${_CMAKE_INSTALL_DIR}" CACHE PATH "The directory cmake fi
 # Interface for export
 # ===============================
 
+# Version header
+generate_version_header(
+  ${PROJECT_NAME_UPPER}
+  ${PROJECT_VERSION}
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME_LOWER}/${PROJECT_NAME_LOWER}_version.h.in
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME_LOWER}/${PROJECT_NAME_LOWER}_version.h
+)
+
 add_library(${PROJECT_NAME} INTERFACE)
 
 if (YGGDRASIL_RAPIDJSON_NEST_HEADERS)
@@ -323,10 +285,13 @@ else()
     )
 endif()
 target_compile_options(
-    ${PROJECT_NAME} INTERFACE ${INTERFACE_COMPILATION_OPTIONS}
+    ${PROJECT_NAME} INTERFACE ${INTERFACE_PUBLIC_COMPILE_FLAGS}
+)
+target_link_options(
+    ${PROJECT_NAME} INTERFACE ${INTERFACE_PUBLIC_LINK_FLAGS}
 )
 target_include_directories(
-    ${PROJECT_NAME} INTERFACE ${INTERFACE_INCLUDE_DIRECTORIES}
+    ${PROJECT_NAME} INTERFACE ${INTERFACE_INCLUDE_DIRS}
 )
 target_link_libraries(
     ${PROJECT_NAME} INTERFACE ${INTERFACE_LIBRARIES}
@@ -334,20 +299,11 @@ target_link_libraries(
 
 # Set after interface library created
 
-# include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(
-  # ${INTERFACE_INCLUDE_DIRECTORIES}
-  ${LOCAL_INCLUDE_DIRECTORIES}
-)
-add_definitions(
-  # ${INTERFACE_COMPILATION_OPTIONS}
-  ${LOCAL_COMPILATION_OPTIONS}
-)
-link_libraries(
-  # ${INTERFACE_LIBRARIES}
-  ${PROJECT_NAME}
-  ${LOCAL_LIBRARIES}
-)
+list(APPEND EXTRA_CXX_FLAGS ${LOCAL_PUBLIC_COMPILE_FLAGS})
+add_compile_options(${LOCAL_PUBLIC_COMPILE_FLAGS})
+add_link_options(${LOCAL_PUBLIC_LINK_FLAGS})
+include_directories(${LOCAL_INCLUDE_DIRS})
+link_libraries(${PROJECT_NAME} ${LOCAL_LIBRARIES})
 
 if(YGGDRASIL_RAPIDJSON_BUILD_DOC)
     add_subdirectory(doc)

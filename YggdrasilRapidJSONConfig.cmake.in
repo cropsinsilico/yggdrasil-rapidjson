@@ -35,7 +35,7 @@ if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
   find_dependency(Python3 COMPONENTS Interpreter Development NumPy)
 endif()
 
-yggdrasil_options_config(INTERFACE)
+yggdrasil_rapidjson_options_config(INTERFACE)
 
 if(INTERFACE_LIBRARIES)
   target_link_libraries(
