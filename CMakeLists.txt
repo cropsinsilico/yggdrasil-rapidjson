@@ -14,13 +14,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    endif()
 endif()
 
-set(LIB_MAJOR_VERSION "1")
-set(LIB_MINOR_VERSION "1")
-set(LIB_PATCH_VERSION "0")
-set(LIB_EXTEN_VERSION "1")
-set(LIB_VERSION_STRING "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_PATCH_VERSION}.${LIB_EXTEN_VERSION}")
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
+include(${CMAKE_CURRENT_SOURCE_DIR}/YggdrasilRapidJSONMacros.cmake)
+gitversion(LIB_VERSION_STRING "1.1.0.2")
 
 PROJECT(YggdrasilRapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES C CXX)
+set(PROJECT_NAME_UPPER "YGGDRASIL_RAPIDJSON")
 set(PROJECT_NAME_LOWER "yggdrasil_rapidjson")
 set(PROJECT_INCLUDE_DIR "include/yggdrasil_rapidjson")
 
@@ -261,6 +260,14 @@ SET(CMAKE_INSTALL_DIR "${_CMAKE_INSTALL_DIR}" CACHE PATH "The directory cmake fi
 # ===============================
 # Interface for export
 # ===============================
+
+# Version header
+generate_version_header(
+  ${PROJECT_NAME_UPPER}
+  ${PROJECT_VERSION}
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME_LOWER}/${PROJECT_NAME_LOWER}_version.h.in
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME_LOWER}/${PROJECT_NAME_LOWER}_version.h
+)
 
 add_library(${PROJECT_NAME} INTERFACE)
 

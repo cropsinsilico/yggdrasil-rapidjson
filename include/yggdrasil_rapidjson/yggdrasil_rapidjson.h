@@ -41,53 +41,15 @@
 #ifndef DISABLE_YGGDRASIL_RAPIDJSON
 #include <complex>
 #endif // DISABLE_YGGDRASIL_RAPIDJSON
+#include "yggdrasil_rapidjson_version.h"
 
-///////////////////////////////////////////////////////////////////////////////
-// YGGDRASIL_RAPIDJSON_VERSION_STRING
-//
-// ALWAYS synchronize the following 3 macros with corresponding variables in /CMakeLists.txt.
-//
-
-//!@cond YGGDRASIL_RAPIDJSON_HIDDEN_FROM_DOXYGEN
-// token stringification
-#define YGGDRASIL_RAPIDJSON_STRINGIFY(x) YGGDRASIL_RAPIDJSON_DO_STRINGIFY(x)
-#define YGGDRASIL_RAPIDJSON_DO_STRINGIFY(x) #x
-
+//!@cond @MACRO_PREFIX@_HIDDEN_FROM_DOXYGEN
 // token concatenation
 #define YGGDRASIL_RAPIDJSON_JOIN(X, Y) YGGDRASIL_RAPIDJSON_DO_JOIN(X, Y)
 #define YGGDRASIL_RAPIDJSON_DO_JOIN(X, Y) YGGDRASIL_RAPIDJSON_DO_JOIN2(X, Y)
 #define YGGDRASIL_RAPIDJSON_DO_JOIN2(X, Y) X##Y
 //!@endcond
 
-/*! \def YGGDRASIL_RAPIDJSON_MAJOR_VERSION
-    \ingroup YGGDRASIL_RAPIDJSON_CONFIG
-    \brief Major version of RapidJSON in integer
-    that this version of YggdrasilRapidJSON is based on.
-*/
-/*! \def YGGDRASIL_RAPIDJSON_MINOR_VERSION
-    \ingroup YGGDRASIL_RAPIDJSON_CONFIG
-    \brief Minor version of RapidJSON in integer
-    that this version of YggdrasilRapidJSON is based on.
-*/
-/*! \def YGGDRASIL_RAPIDJSON_PATCH_VERSION
-    \ingroup YGGDRASIL_RAPIDJSON_CONFIG
-    \brief Patch version of RapidJSON in integer
-    that this version of YggdrasilRapidJSON is based on.
-*/
-/*! \def YGGDRASIL_RAPIDJSON_EXTEN_VERSION
-    \ingroup YGGDRASIL_RAPIDJSON_CONFIG
-    \brief Version of YggdrasilRapidJSON based on RapidJSON.
-*/
-/*! \def YGGDRASIL_RAPIDJSON_VERSION_STRING
-    \ingroup YGGDRASIL_RAPIDJSON_CONFIG
-    \brief Version of RapidJSON in "<major>.<minor>.<patch>.<exten>" string format.
-*/
-#define YGGDRASIL_RAPIDJSON_MAJOR_VERSION 1
-#define YGGDRASIL_RAPIDJSON_MINOR_VERSION 1
-#define YGGDRASIL_RAPIDJSON_PATCH_VERSION 0
-#define YGGDRASIL_RAPIDJSON_EXTEN_VERSION 1
-#define YGGDRASIL_RAPIDJSON_VERSION_STRING \
-    YGGDRASIL_RAPIDJSON_STRINGIFY(YGGDRASIL_RAPIDJSON_MAJOR_VERSION.YGGDRASIL_RAPIDJSON_MINOR_VERSION.YGGDRASIL_RAPIDJSON_PATCH_VERSION.YGGDRASIL_RAPIDJSON_EXTEN_VERSION)
 
 ///////////////////////////////////////////////////////////////////////////////
 // YGGDRASIL_RAPIDJSON_NAMESPACE_(BEGIN|END)

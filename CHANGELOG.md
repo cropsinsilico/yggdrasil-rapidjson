@@ -9,6 +9,7 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ### Maintenance
 * Added missing option for YGGDRASIL_RAPIDJSON_CHECK_PYREFS, YGGDRASIL_RAPIDJSON_PYTHON_WRAPPER, YGGDRASIL_RAPIDJSON_BUILD_ASAN, & YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT
+* Read version from git tags and use it to set the cmake project version and the header version, bumping if there are commits after the last tag
 
 ## 1.1.0.2 - 2026-05-28
 
