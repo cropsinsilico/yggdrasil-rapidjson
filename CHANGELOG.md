@@ -5,6 +5,8 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ## X.X.X.X - XXXX-XX-XX
 
+## 1.1.0.4 - 2026-05-XX
+
 ### Bug fixes
 * Fix bug where version could not be set in the conda recipe build since it is created from a tar instead of the git repo
 

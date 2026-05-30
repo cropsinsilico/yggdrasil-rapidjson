@@ -20,7 +20,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/YggdrasilRapidJSONMacros.cmake)
 set(YGGDRASIL_RAPIDJSON_VERSION "" CACHE STRING "Version to use instead of the git tag version")
 
 if(NOT YGGDRASIL_RAPIDJSON_VERSION)
-  gitversion(YGGDRASIL_RAPIDJSON_VERSION "1.1.0.2")
+  yggdrasil_rapidjson_gitversion(YGGDRASIL_RAPIDJSON_VERSION "1.1.0.2")
 endif()
 message(STATUS "YGGDRASIL_RAPIDJSON_VERSION = ${YGGDRASIL_RAPIDJSON_VERSION}")
 
@@ -268,7 +268,7 @@ SET(CMAKE_INSTALL_DIR "${_CMAKE_INSTALL_DIR}" CACHE PATH "The directory cmake fi
 # ===============================
 
 # Version header
-generate_version_header(
+yggdrasil_rapidjson_version_header(
   ${PROJECT_NAME_UPPER}
   ${PROJECT_VERSION}
   ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME_LOWER}/${PROJECT_NAME_LOWER}_version.h.in

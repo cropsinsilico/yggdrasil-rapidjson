@@ -148,7 +148,7 @@ macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
 
 endmacro()
 
-macro(gitversion OUTPUT_VARIABLE DEFAULT)
+macro(yggdrasil_rapidjson_gitversion OUTPUT_VARIABLE DEFAULT)
   find_package(Git)
   if(NOT Git_FOUND)
     message(STATUS "Failed to find Git cmake package, falling back to version ${DEFAULT}")
@@ -182,7 +182,7 @@ macro(gitversion OUTPUT_VARIABLE DEFAULT)
   endif()
 endmacro()
 
-function(generate_version_header MACRO_PREFIX VERSION_STRING SRC DST)
+function(yggdrasil_rapidjson_version_header MACRO_PREFIX VERSION_STRING SRC DST)
   set(rem ${VERSION_STRING})
   set(idx 0)
   set(parts)
