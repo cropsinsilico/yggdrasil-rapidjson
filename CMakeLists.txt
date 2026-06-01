@@ -305,9 +305,12 @@ target_link_libraries(
 
 # Set after interface library created
 
-list(APPEND EXTRA_CXX_FLAGS ${LOCAL_PUBLIC_COMPILE_FLAGS})
-add_compile_options(${LOCAL_PUBLIC_COMPILE_FLAGS})
-add_link_options(${LOCAL_PUBLIC_LINK_FLAGS})
+list(
+  APPEND EXTRA_CXX_FLAGS
+  ${LOCAL_PUBLIC_COMPILE_FLAGS} ${LOCAL_PUBLIC_CXX_FLAGS}
+)
+add_compile_options(${LOCAL_PUBLIC_COMPILE_FLAGS} ${LOCAL_PUBLIC_CXX_FLAGS})
+add_link_options(${LOCAL_PUBLIC_LINK_FLAGS} ${LOCAL_PUBLIC_CXX_LINK_FLAGS})
 include_directories(${LOCAL_INCLUDE_DIRS})
 link_libraries(${PROJECT_NAME} ${LOCAL_LIBRARIES})
 

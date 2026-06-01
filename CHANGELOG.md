@@ -9,6 +9,7 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ### Bug fixes
 * Fix bug where version could not be set in the conda recipe build since it is created from a tar instead of the git repo
+* Fix bug where asan flags were added to list that could be used for Fortran, but are only valid for C or CXX
 
 ## 1.1.0.3 - 2026-05-29
 
