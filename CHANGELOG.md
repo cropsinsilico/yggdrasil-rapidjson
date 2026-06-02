@@ -11,6 +11,11 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 * Fix bug where version could not be set in the conda recipe build since it is created from a tar instead of the git repo
 * Fix bug where asan flags were added to list that could be used for Fortran, but are only valid for C or CXX
 
+### Maintenance
+* Update names of flag/library lists set based on options to adhere to pattern of <PREFIX>_PUBLIC/PRIVATE_<SUFFIX>
+* Check for ASAN library and store it in <PREFIX>_ASAN_LIB when using clang ASAN/UBSAN so it can be used via DYLD_INSERT_LIBRARIES for Python tests
+* Added cmake macros yggdrasil_rapidjson_target_config and yggdrasil_rapidjson_global_config for adding option based flags to a target or the current scope (and subscopes)
+
 ## 1.1.0.3 - 2026-05-29
 
 ### Maintenance

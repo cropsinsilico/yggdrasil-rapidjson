@@ -27,6 +27,57 @@ macro(yggdrasil_rapidjson_options_create)
   option(YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT "Build yggdrasil_rapidjson with -march or -mcpu options" ON)
 endmacro()
 
+macro(yggdrasil_rapidjson_global_config LANGUAGE PREFIX)
+  add_compile_options(
+    ${${PREFIX}_PUBLIC_COMPILE_FLAGS}
+    ${${PREFIX}_PUBLIC_${LANGUAGE}_FLAGS}
+  )
+  add_link_options(
+    ${${PREFIX}_PUBLIC_LINK_FLAGS}
+    ${${PREFIX}_PUBLIC_${LANGUAGE}_LINK_FLAGS}
+  )
+  include_directories(${${PREFIX}_INCLUDE_DIRS})
+  link_libraries(${${PREFIX}_PUBLIC_LIBRARIES})
+endmacro()
+
+macro(yggdrasil_rapidjson_target_config TARGET TYPE PREFIX)
+  target_link_libraries(
+    ${TARGET} ${TYPE} ${${PREFIX}_PUBLIC_LIBRARIES}
+    "$<$<LINK_LANGUAGE:C>:${${PREFIX}_PUBLIC_C_LIBS}>"
+    "$<$<LINK_LANGUAGE:CXX>:${${PREFIX}_PUBLIC_CXX_LIBS}>"
+    "$<$<LINK_LANGUAGE:Fortran>:${${PREFIX}_PUBLIC_Fortran_LIBS}>"
+  )
+  target_include_directories(
+    ${TARGET} ${TYPE} ${${PREFIX}_INCLUDE_DIRS}
+  )
+  target_compile_options(
+    ${TARGET} ${TYPE} ${${PREFIX}_PUBLIC_COMPILE_FLAGS}
+    "$<$<COMPILE_LANGUAGE:C>:${${PREFIX}_PUBLIC_C_COMPILE_FLAGS}>"
+    "$<$<COMPILE_LANGUAGE:CXX>:${${PREFIX}_PUBLIC_CXX_COMPILE_FLAGS}>"
+    "$<$<COMPILE_LANGUAGE:Fortran>:${${PREFIX}_PUBLIC_Fortran_COMPILE_FLAGS}>"
+  )
+  target_link_options(
+    ${TARGET} ${TYPE} ${${PREFIX}_PUBLIC_LINK_FLAGS}
+    "$<$<LINK_LANGUAGE:C>:${${PREFIX}_PUBLIC_C_LINK_FLAGS}>"
+    "$<$<LINK_LANGUAGE:CXX>:${${PREFIX}_PUBLIC_CXX_LINK_FLAGS}>"
+    "$<$<LINK_LANGUAGE:Fortran>:${${PREFIX}_PUBLIC_Fortran_LINK_FLAGS}>"
+  )
+  if(NOT TYPE STREQUAL "INTERFACE")
+    target_link_libraries(
+      ${TARGET} ${TYPE} ${${PREFIX}_PRIVATE_LIBRARIES}
+    )
+    # target_include_directories(
+    #   ${TARGET} ${TYPE} ${${PREFIX}_INCLUDE_DIRS_PRIVATE}
+    # )
+    # target_compile_options(
+    #   ${TARGET} ${TYPE} ${${PREFIX}_PRIVATE_COMPILE_FLAGS}
+    # )
+    # target_link_options(
+    #   ${TARGET} ${TYPE} ${${PREFIX}_PRIVATE_LINK_FLAGS}
+    # )
+  endif()
+endmacro()
+
 macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
   if(DISABLE_YGGDRASIL_RAPIDJSON)
     list(
@@ -51,9 +102,9 @@ macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
       )
     else()
       if(NOT YGGDRASIL_RAPIDJSON_PYTHON_WRAPPER)
-        list(APPEND ${OUTPUT_PREFIX}_LIBRARIES Python3::Python)
+        list(APPEND ${OUTPUT_PREFIX}_PUBLIC_LIBRARIES Python3::Python)
       endif()
-      list(APPEND ${OUTPUT_PREFIX}_LIBRARIES Python3::NumPy)
+      list(APPEND ${OUTPUT_PREFIX}_PUBLIC_LIBRARIES Python3::NumPy)
       list(
           APPEND ${OUTPUT_PREFIX}_PUBLIC_COMPILE_FLAGS
           -DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
@@ -81,60 +132,57 @@ macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
       -DYGGDRASIL_RAPIDJSON_PYTHON_WRAPPER
     )
   endif()
-  if(YGGDRASIL_RAPIDJSON_BUILD_UBSAN)
+  if(YGGDRASIL_RAPIDJSON_BUILD_ASAN)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8.0")
         message(FATAL_ERROR "GCC < 4.8 doesn't support the address sanitizer")
       else()
 	list(APPEND ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS -fsanitize=address)
-	list(APPEND ${OUTPUT_PREFIX}_ASAN_LINK_FLAGS -fsanitize=address)
       endif()
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       list(APPEND ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS -fsanitize=address)
-      list(APPEND ${OUTPUT_PREFIX}_ASAN_LINK_FLAGS -fsanitize=address)
     else()
       message(FATAL_ERROR "ASAN unsupported by compiler ${CMAKE_CXX_COMPILER_ID}")
     endif()
   endif()
-  if(YGGDRASIL_RAPIDJSON_BUILD_ASAN)
+  if(YGGDRASIL_RAPIDJSON_BUILD_UBSAN)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9.0")
         message(FATAL_ERROR "GCC < 4.9 doesn't support the undefined behavior sanitizer")
       else()
         list(APPEND ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS -fsanitize=undefined)
-        list(APPEND ${OUTPUT_PREFIX}_ASAN_LINK_FLAGS -fsanitize=undefined)
       endif()
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
         list(APPEND ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error)
-        list(APPEND ${OUTPUT_PREFIX}_ASAN_LINK_FLAGS -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error)
       else()
         list(APPEND ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS -fsanitize=undefined)
-        list(APPEND ${OUTPUT_PREFIX}_ASAN_LINK_FLAGS -fsanitize=undefined)
       endif()
     else()
       message(FATAL_ERROR "UBSAN unsupported by compiler ${CMAKE_CXX_COMPILER_ID}")
     endif()
   endif()
-  if(${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS)
-    list(
-      APPEND ${OUTPUT_PREFIX}_PUBLIC_C_COMPILE_FLAGS
-      ${${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS}
+  if(YGGDRASIL_RAPIDJSON_BUILD_ASAN OR YGGDRASIL_RAPIDJSON_BUILD_UBSAN
+     AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libclang_rt.asan_osx_dynamic.dylib
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE ${OUTPUT_PREFIX}_ASAN_LIB
+      RESULT_VARIABLE ${OUTPUT_PREFIX}_ASAN_RESULT
     )
-    list(
-      APPEND ${OUTPUT_PREFIX}_PUBLIC_CXX_COMPILE_FLAGS
-      ${${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS}
-    )
+    if(${OUTPUT_PREFIX}_ASAN_RESULT)
+      set(${OUTPUT_PREFIX}_ASAN_LIB)
+    endif()
   endif()
-  if(${OUTPUT_PREFIX}_ASAN_LINK_FLAGS)
-    list(
-      APPEND ${OUTPUT_PREFIX}_PUBLIC_C_LINK_FLAGS
-      ${${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS}
-    )
-    list(
-      APPEND ${OUTPUT_PREFIX}_PUBLIC_CXX_LINK_FLAGS
-      ${${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS}
-    )
+  if(${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS)
+    # Compilation flags are same as link flags for ASAN & UBSAN
+    foreach(suffix PUBLIC_C_COMPILE_FLAGS PUBLIC_CXX_COMPILE_FLAGS
+            PUBLIC_C_LINK_FLAGS PUBLIC_CXX_LINK_FLAGS)
+      list(
+        APPEND ${OUTPUT_PREFIX}_${suffix}
+        ${${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS}
+      )
+    endforeach()
   endif()
 
   if(YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT
