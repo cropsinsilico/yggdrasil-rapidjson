@@ -27,54 +27,144 @@ macro(yggdrasil_rapidjson_options_create)
   option(YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT "Build yggdrasil_rapidjson with -march or -mcpu options" ON)
 endmacro()
 
+macro(yggdrasil_rapidjson_config_vars PREFIX)
+  foreach(suffix LIBRARIES INCLUDE_DIRS COMPILE_FLAGS LINK_FLAGS)
+    list(
+      APPEND ${PREFIX}_CONFIG_VARS
+      ${PREFIX}_${suffix}
+      ${PREFIX}_PUBLIC_${suffix}
+      ${PREFIX}_PRIVATE_${suffix}
+    )
+    set(suffix_lang ${suffix})
+    if(suffix STREQUAL "LIBRARIES")
+      set(suffix_lang "LIBS")
+    endif()
+    foreach(lang C CXX Fortran)
+      list(
+        APPEND ${PREFIX}_CONFIG_VARS
+        ${PREFIX}_PUBLIC_${lang}_${suffix_lang}
+        ${PREFIX}_PRIVATE_${lang}_${suffix_lang}
+      )
+    endforeach()
+  endforeach()
+endmacro()
+
+macro(yggdrasil_rapidjson_config_init PREFIX)
+  yggdrasil_rapidjson_config_vars(${PREFIX})
+  foreach(var IN LISTS ${PREFIX}_CONFIG_VARS)
+    set(${var})
+  endforeach()
+endmacro()
+
+macro(yggdrasil_rapidjson_config_show PREFIX LEVEL)
+  foreach(var IN LISTS ${PREFIX}_CONFIG_VARS)
+    message(${LEVEL} "${var} = ${${var}}")
+  endforeach()
+endmacro()
+
+macro(yggdrasil_rapidjson_config_accum PREFIX)
+  foreach(suffix LIBRARIES INCLUDE_DIRS COMPILE_FLAGS LINK_FLAGS)
+    set(${PREFIX}_ALL_PUBLIC_${suffix} ${${PREFIX}_PUBLIC_${suffix}}
+        ${${PREFIX}_${suffix}})
+    set(${PREFIX}_ALL_PRIVATE_${suffix} ${${PREFIX}_PRIVATE_${suffix}})
+    if(suffix STREQUAL "LIBRARIES" OR suffix STREQUAL "LINK_FLAGS")
+      set(gentype "LINK")
+    else()
+      set(gentype "COMPILE")
+    endif()
+    set(suffix_lang ${suffix})
+    if(suffix STREQUAL "LIBRARIES")
+      set(suffix_lang "LIBS")
+    endif()
+    foreach(lang C CXX Fortran)
+      set(kpublic ${PREFIX}_PUBLIC_${lang}_${suffix_lang})
+      set(kprivate ${PREFIX}_PRIVATE_${lang}_${suffix_lang})
+      if(${kpublic})
+        list(
+          APPEND ${PREFIX}_ALL_PUBLIC_${suffix}
+          "$<$<${gentype}_LANGUAGE:${lang}>:${${kpublic}}>"
+        )
+      endif()
+      if(${kprivate})
+        list(
+          APPEND ${PREFIX}_ALL_PRIVATE_${suffix}
+          "$<$<${gentype}_LANGUAGE:${lang}>:${${kprivate}}>"
+        )
+      endif()
+    endforeach()
+    message(DEBUG "${PREFIX}_ALL_PUBLIC_${suffix} = ${${PREFIX}_ALL_PUBLIC_${suffix}}")
+    message(DEBUG "${PREFIX}_ALL_PRIVATE_${suffix} = ${${PREFIX}_ALL_PRIVATE_${suffix}}")
+  endforeach()
+endmacro()
+
 macro(yggdrasil_rapidjson_global_config LANGUAGE PREFIX)
+  yggdrasil_rapidjson_config_show(${PREFIX} DEBUG)
   add_compile_options(
+    ${${PREFIX}_COMPILE_FLAGS}
     ${${PREFIX}_PUBLIC_COMPILE_FLAGS}
-    ${${PREFIX}_PUBLIC_${LANGUAGE}_FLAGS}
+    ${${PREFIX}_PUBLIC_${LANGUAGE}_COMPILE_FLAGS}
   )
   add_link_options(
+    ${${PREFIX}_LINK_FLAGS}
     ${${PREFIX}_PUBLIC_LINK_FLAGS}
     ${${PREFIX}_PUBLIC_${LANGUAGE}_LINK_FLAGS}
   )
-  include_directories(${${PREFIX}_INCLUDE_DIRS})
-  link_libraries(${${PREFIX}_PUBLIC_LIBRARIES})
+  include_directories(
+    ${${PREFIX}_INCLUDE_DIRS}
+    ${${PREFIX}_PUBLIC_INCLUDE_DIRS}
+    ${${PREFIX}_PUBLIC_${LANGUAGE}_INCLUDE_DIRS}
+  )
+  link_libraries(
+    ${${PREFIX}_LIBRARIES}
+    ${${PREFIX}_PUBLIC_LIBRARIES}
+    ${${PREFIX}_PUBLIC_${LANGUAGE}_LIBRARIES}
+  )
 endmacro()
 
 macro(yggdrasil_rapidjson_target_config TARGET TYPE PREFIX)
-  target_link_libraries(
-    ${TARGET} ${TYPE} ${${PREFIX}_PUBLIC_LIBRARIES}
-    "$<$<LINK_LANGUAGE:C>:${${PREFIX}_PUBLIC_C_LIBS}>"
-    "$<$<LINK_LANGUAGE:CXX>:${${PREFIX}_PUBLIC_CXX_LIBS}>"
-    "$<$<LINK_LANGUAGE:Fortran>:${${PREFIX}_PUBLIC_Fortran_LIBS}>"
-  )
-  target_include_directories(
-    ${TARGET} ${TYPE} ${${PREFIX}_INCLUDE_DIRS}
-  )
-  target_compile_options(
-    ${TARGET} ${TYPE} ${${PREFIX}_PUBLIC_COMPILE_FLAGS}
-    "$<$<COMPILE_LANGUAGE:C>:${${PREFIX}_PUBLIC_C_COMPILE_FLAGS}>"
-    "$<$<COMPILE_LANGUAGE:CXX>:${${PREFIX}_PUBLIC_CXX_COMPILE_FLAGS}>"
-    "$<$<COMPILE_LANGUAGE:Fortran>:${${PREFIX}_PUBLIC_Fortran_COMPILE_FLAGS}>"
-  )
-  target_link_options(
-    ${TARGET} ${TYPE} ${${PREFIX}_PUBLIC_LINK_FLAGS}
-    "$<$<LINK_LANGUAGE:C>:${${PREFIX}_PUBLIC_C_LINK_FLAGS}>"
-    "$<$<LINK_LANGUAGE:CXX>:${${PREFIX}_PUBLIC_CXX_LINK_FLAGS}>"
-    "$<$<LINK_LANGUAGE:Fortran>:${${PREFIX}_PUBLIC_Fortran_LINK_FLAGS}>"
-  )
-  if(NOT TYPE STREQUAL "INTERFACE")
+  yggdrasil_rapidjson_config_show(${PREFIX} DEBUG)
+  yggdrasil_rapidjson_config_accum(${PREFIX})
+  if(${PREFIX}_ALL_PUBLIC_LIBRARIES)
     target_link_libraries(
-      ${TARGET} ${TYPE} ${${PREFIX}_PRIVATE_LIBRARIES}
+      ${TARGET} ${TYPE} ${${PREFIX}_ALL_PUBLIC_LIBRARIES}
     )
-    # target_include_directories(
-    #   ${TARGET} ${TYPE} ${${PREFIX}_INCLUDE_DIRS_PRIVATE}
-    # )
-    # target_compile_options(
-    #   ${TARGET} ${TYPE} ${${PREFIX}_PRIVATE_COMPILE_FLAGS}
-    # )
-    # target_link_options(
-    #   ${TARGET} ${TYPE} ${${PREFIX}_PRIVATE_LINK_FLAGS}
-    # )
+  endif()
+  if(${PREFIX}_ALL_PUBLIC_INCLUDE_DIRS)
+    target_include_directories(
+      ${TARGET} ${TYPE} ${${PREFIX}_ALL_PUBLIC_INCLUDE_DIRS}
+    )
+  endif()
+  if(${PREFIX}_ALL_PUBLIC_COMPILE_FLAGS)
+    target_compile_options(
+      ${TARGET} ${TYPE} ${${PREFIX}_ALL_PUBLIC_COMPILE_FLAGS}
+    )
+  endif()
+  if(${PREFIX}_ALL_PUBLIC_LINK_FLAGS)
+    target_link_options(
+      ${TARGET} ${TYPE} ${${PREFIX}_ALL_PUBLIC_LINK_FLAGS}
+    )
+  endif()
+  if(NOT ("${TYPE}" STREQUAL "INTERFACE"))
+    if(${PREFIX}_ALL_PRIVATE_LIBRARIES)
+      target_link_libraries(
+        ${TARGET} PRIVATE ${${PREFIX}_ALL_PRIVATE_LIBRARIES}
+      )
+    endif()
+    if(${PREFIX}_ALL_PRIVATE_INCLUDE_DIRS)
+      target_include_directories(
+        ${TARGET} PRIVATE ${${PREFIX}_ALL_PRIVATE_INCLUDE_DIRS}
+      )
+    endif()
+    if(${PREFIX}_ALL_PRIVATE_COMPILE_FLAGS)
+      target_compile_options(
+        ${TARGET} PRIVATE ${${PREFIX}_ALL_PRIVATE_COMPILE_FLAGS}
+      )
+    endif()
+    if(${PREFIX}_ALL_PRIVATE_LINK_FLAGS)
+      target_link_options(
+        ${TARGET} PRIVATE ${${PREFIX}_ALL_PRIVATE_LINK_FLAGS}
+      )
+    endif()
   endif()
 endmacro()
 
