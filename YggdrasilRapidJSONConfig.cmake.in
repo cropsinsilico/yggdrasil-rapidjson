@@ -2,6 +2,7 @@
 
 include ("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@-targets.cmake")
 include ("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Macros.cmake")
+yggdrasil_rapidjson_options_create()
 
 ################################################################################
 # @PROJECT_NAME@ source dir

@@ -28,6 +28,16 @@ macro(yggdrasil_rapidjson_options_create)
 endmacro()
 
 macro(yggdrasil_rapidjson_config_vars PREFIX)
+  list(
+    APPEND ${PREFIX}_CONFIG_VARS
+    ${PREFIX}_ASAN_COMPILE_FLAGS
+  )
+  foreach(tool GNU Clang AppleClang MSVC)
+    list(
+      APPEND ${PREFIX}_CONFIG_VARS
+      ${PREFIX}_${tool}_ASAN_COMPILE_FLAGS
+    )
+  endforeach()
   foreach(suffix LIBRARIES INCLUDE_DIRS COMPILE_FLAGS LINK_FLAGS)
     list(
       APPEND ${PREFIX}_CONFIG_VARS
@@ -44,6 +54,13 @@ macro(yggdrasil_rapidjson_config_vars PREFIX)
         APPEND ${PREFIX}_CONFIG_VARS
         ${PREFIX}_PUBLIC_${lang}_${suffix_lang}
         ${PREFIX}_PRIVATE_${lang}_${suffix_lang}
+      )
+    endforeach()
+    foreach(tool GNU Clang AppleClang MSVC)
+      list(
+        APPEND ${PREFIX}_CONFIG_VARS
+        ${PREFIX}_PUBLIC_${tool}_${suffix_lang}
+        ${PREFIX}_PRIVATE_${tool}_${suffix_lang}
       )
     endforeach()
   endforeach()
@@ -92,22 +109,96 @@ macro(yggdrasil_rapidjson_config_accum PREFIX)
         )
       endif()
     endforeach()
+    foreach(tool GNU Clang AppleClang MSVC)
+      set(k ${PREFIX}_PUBLIC_${tool}_${suffix_lang})
+      if(NOT ${k})
+        continue()
+      endif()
+      set(langlist C CXX)
+      set(toollist ${tool})
+      if(tool STREQUAL "GNU")
+        list(APPEND langlist Fortran)
+      endif()
+      foreach(lang IN LISTS langlist)
+        list(
+          APPEND ${PREFIX}_ALL_PUBLIC_${suffix}
+          $<$<${gentype}_LANG_AND_ID:${lang},${tool}>:${${k}}>
+        )
+      endforeach()
+    endforeach()
     message(DEBUG "${PREFIX}_ALL_PUBLIC_${suffix} = ${${PREFIX}_ALL_PUBLIC_${suffix}}")
     message(DEBUG "${PREFIX}_ALL_PRIVATE_${suffix} = ${${PREFIX}_ALL_PRIVATE_${suffix}}")
   endforeach()
 endmacro()
 
+macro(yggdrasil_rapidjson_global_compiler_flags LANGUAGE)
+  # TODO: Some of these should be interface flags
+
+  find_program(CCACHE_FOUND ccache)
+  if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    if (CMAKE_${LANGUAGE}_COMPILER_ID MATCHES "Clang")
+      set(CMAKE_${LANGUAGE}_FLAGS "${CMAKE_${LANGUAGE}_FLAGS} -Qunused-arguments -fcolor-diagnostics")
+    endif()
+  endif(CCACHE_FOUND)
+
+  find_program(VALGRIND_FOUND valgrind)
+
+  if(CMAKE_${LANGUAGE}_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_${LANGUAGE}_FLAGS "${CMAKE_${LANGUAGE}_FLAGS} -Wall -Wextra -Werror")
+    set(EXTRA_${LANGUAGE}_FLAGS -Weffc++ -Wswitch-default -Wfloat-equal -Wconversion -Wsign-conversion)
+  elseif (CMAKE_${LANGUAGE}_COMPILER_ID MATCHES "Clang")
+    if(NOT CMAKE_CROSSCOMPILING)
+      if(CMAKE_SYSTEM_PROCESSOR STREQUAL "powerpc" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
+        set(CMAKE_${LANGUAGE}_FLAGS "${CMAKE_${LANGUAGE}_FLAGS} -mcpu=native")
+      else()
+        if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64" OR
+           CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+	  set(CMAKE_${LANGUAGE}_FLAGS "${CMAKE_${LANGUAGE}_FLAGS} -mcpu=apple-m1")
+	else()
+          #FIXME: x86 is -march=native, but doesn't mean every arch is this option. To keep original project's compatibility, I leave this except POWER.
+          set(CMAKE_${LANGUAGE}_FLAGS "${CMAKE_${LANGUAGE}_FLAGS} -march=native")
+        endif()
+      endif()
+    endif()
+    set(CMAKE_${LANGUAGE}_FLAGS "${CMAKE_${LANGUAGE}_FLAGS} -Wall -Wextra -Werror -Wno-missing-field-initializers")
+    set(EXTRA_${LANGUAGE}_FLAGS -Weffc++ -Wswitch-default -Wfloat-equal -Wconversion -Wimplicit-fallthrough)
+  elseif (CMAKE_${LANGUAGE}_COMPILER_ID STREQUAL "MSVC")
+    set(CMAKE_${LANGUAGE}_FLAGS "${CMAKE_${LANGUAGE}_FLAGS} /EHsc /bigobj /Zm10")
+    # CMake >= 3.10 should handle the above CMAKE_CXX_STANDARD fine, otherwise use /std:c++XX with MSVC >= 19.10
+    # Always compile with /WX
+    if(CMAKE_${LANGUAGE}_FLAGS MATCHES "/WX-")
+      string(REGEX REPLACE "/WX-" "/WX" CMAKE_${LANGUAGE}_FLAGS "${CMAKE_${LANGUAGE}_FLAGS}")
+    else()
+      set(CMAKE_${LANGUAGE}_FLAGS "${CMAKE_${LANGUAGE}_FLAGS} /WX")
+    endif()
+  elseif (CMAKE_${LANGUAGE}_COMPILER_ID MATCHES "XL")
+    set(CMAKE_${LANGUAGE}_FLAGS "${CMAKE_${LANGUAGE}_FLAGS} -qarch=auto")
+  endif()
+endmacro()
+
 macro(yggdrasil_rapidjson_global_config LANGUAGE PREFIX)
-  yggdrasil_rapidjson_config_show(${PREFIX} DEBUG)
+  yggdrasil_rapidjson_config_show(${PREFIX} STATUS)
+  set(global_compiler ${CMAKE_${LANGUAGE}_COMPILER_ID})
+  set(global_linker ${global_compiler})
+  list(
+    APPEND EXTRA_${LANGUAGE}_FLAGS
+    ${${PREFIX}_PUBLIC_COMPILE_FLAGS}
+    ${${PREFIX}_PUBLIC_${LANGUAGE}_COMPILE_FLAGS}
+    ${${PREFIX}_PUBLIC_${global_compiler}_COMPILE_FLAGS}
+  )
   add_compile_options(
     ${${PREFIX}_COMPILE_FLAGS}
     ${${PREFIX}_PUBLIC_COMPILE_FLAGS}
     ${${PREFIX}_PUBLIC_${LANGUAGE}_COMPILE_FLAGS}
+    ${${PREFIX}_PUBLIC_${global_compiler}_COMPILE_FLAGS}
   )
   add_link_options(
     ${${PREFIX}_LINK_FLAGS}
     ${${PREFIX}_PUBLIC_LINK_FLAGS}
     ${${PREFIX}_PUBLIC_${LANGUAGE}_LINK_FLAGS}
+    ${${PREFIX}_PUBLIC_${global_linker}_LINK_FLAGS}
   )
   include_directories(
     ${${PREFIX}_INCLUDE_DIRS}
@@ -223,34 +314,22 @@ macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
     )
   endif()
   if(YGGDRASIL_RAPIDJSON_BUILD_ASAN)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8.0")
-        message(FATAL_ERROR "GCC < 4.8 doesn't support the address sanitizer")
-      else()
-	list(APPEND ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS -fsanitize=address)
-      endif()
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      list(APPEND ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS -fsanitize=address)
-    else()
-      message(FATAL_ERROR "ASAN unsupported by compiler ${CMAKE_CXX_COMPILER_ID}")
-    endif()
+    foreach(tool GNU Clang AppleClang)
+      list(
+        APPEND ${OUTPUT_PREFIX}_${tool}_ASAN_COMPILE_FLAGS
+        -fsanitize=address
+      )
+    endforeach()
   endif()
   if(YGGDRASIL_RAPIDJSON_BUILD_UBSAN)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9.0")
-        message(FATAL_ERROR "GCC < 4.9 doesn't support the undefined behavior sanitizer")
-      else()
-        list(APPEND ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS -fsanitize=undefined)
-      endif()
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-        list(APPEND ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error)
-      else()
-        list(APPEND ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS -fsanitize=undefined)
-      endif()
-    else()
-      message(FATAL_ERROR "UBSAN unsupported by compiler ${CMAKE_CXX_COMPILER_ID}")
-    endif()
+    foreach(tool GNU Clang)
+      list(
+        APPEND ${OUTPUT_PREFIX}_${tool}_ASAN_COMPILE_FLAGS
+        -fsanitize=undefined
+      )
+    endforeach()
+    list(APPEND ${OUTPUT_PREFIX}_AppleClang_ASAN_COMPILE_FLAGS
+         -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error)
   endif()
   if(YGGDRASIL_RAPIDJSON_BUILD_ASAN OR YGGDRASIL_RAPIDJSON_BUILD_UBSAN
      AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -264,16 +343,18 @@ macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
       set(${OUTPUT_PREFIX}_ASAN_LIB)
     endif()
   endif()
-  if(${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS)
-    # Compilation flags are same as link flags for ASAN & UBSAN
-    foreach(suffix PUBLIC_C_COMPILE_FLAGS PUBLIC_CXX_COMPILE_FLAGS
-            PUBLIC_C_LINK_FLAGS PUBLIC_CXX_LINK_FLAGS)
-      list(
-        APPEND ${OUTPUT_PREFIX}_${suffix}
-        ${${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS}
-      )
-    endforeach()
-  endif()
+  set(
+    ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS
+    ${${OUTPUT_PREFIX}_${CMAKE_CXX_COMPILER_ID}_ASAN_COMPILE_FLAGS}
+  )
+  foreach(tool GNU Clang AppleClang MSVC)
+    set(k ${OUTPUT_PREFIX}_${tool}_ASAN_COMPILE_FLAGS)
+    if(${k})
+      foreach(suffix COMPILE_FLAGS LINK_FLAGS)
+        list(APPEND ${OUTPUT_PREFIX}_PUBLIC_${tool}_${suffix} ${${k}})
+      endforeach()
+    endif()
+  endforeach()
 
   if(YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT
      AND (NOT CMAKE_CROSSCOMPILING)
