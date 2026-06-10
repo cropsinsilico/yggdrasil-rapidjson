@@ -32,9 +32,10 @@ jobs:
       fail-fast: false
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: true
+          fetch-tags: true
       # - name: Patch gtest
       #   run: |
       #     cd thirdparty/gtest
@@ -113,9 +114,10 @@ jobs:
         shell: bash -l {0}
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: true
+          fetch-tags: true
       # - name: Patch gtest
       #   run: |
       #     cd thirdparty/gtest

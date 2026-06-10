@@ -16,9 +16,15 @@ endif()
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 include(${CMAKE_CURRENT_SOURCE_DIR}/YggdrasilRapidJSONMacros.cmake)
-gitversion(LIB_VERSION_STRING "1.1.0.2")
 
-PROJECT(YggdrasilRapidJSON VERSION "${LIB_VERSION_STRING}" LANGUAGES C CXX)
+set(YGGDRASIL_RAPIDJSON_VERSION "" CACHE STRING "Version to use instead of the git tag version")
+
+if(NOT YGGDRASIL_RAPIDJSON_VERSION)
+  yggdrasil_rapidjson_gitversion(YGGDRASIL_RAPIDJSON_VERSION "1.1.0.2")
+endif()
+message(STATUS "YGGDRASIL_RAPIDJSON_VERSION = ${YGGDRASIL_RAPIDJSON_VERSION}")
+
+PROJECT(YggdrasilRapidJSON VERSION "${YGGDRASIL_RAPIDJSON_VERSION}" LANGUAGES C CXX)
 set(PROJECT_NAME_UPPER "YGGDRASIL_RAPIDJSON")
 set(PROJECT_NAME_LOWER "yggdrasil_rapidjson")
 set(PROJECT_INCLUDE_DIR "include/yggdrasil_rapidjson")
@@ -36,15 +42,45 @@ option(YGGDRASIL_RAPIDJSON_NEST_HEADERS "Nest the headers during install under t
 option(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA "Re-create the metaschema" OFF)
 option(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL "Re-create the metaschema and the full_schema.yaml file" OFF)
 option(YGGDRASIL_RAPIDJSON_SCHEMA_TESTS "Build tests using the yggdrasil schema" OFF)
+option(YGGDRASIL_RAPIDJSON_BUILD_DOC "Build yggdrasil_rapidjson documentation." ON)
+option(YGGDRASIL_RAPIDJSON_BUILD_EXAMPLES "Build yggdrasil_rapidjson examples." ON)
+option(YGGDRASIL_RAPIDJSON_BUILD_TESTS "Build yggdrasil_rapidjson perftests and unittests." ON)
+option(YGGDRASIL_RAPIDJSON_BUILD_UNITTESTS "Build yggdrasil_rapidjson unittests." ON)
+option(YGGDRASIL_RAPIDJSON_BUILD_PERFTESTS "Build yggdrasil_rapidjson perftests." ON)
+option(YGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST
+    "Use gtest installation in `thirdparty/gtest` by default if available" OFF)
 
-set(INTERFACE_PUBLIC_COMPILE_FLAGS -D_USE_MATH_DEFINES)
-set(INTERFACE_PUBLIC_LINK_FLAGS)
-set(INTERFACE_INCLUDE_DIRS)
-set(INTERFACE_LIBRARIES)
-set(LOCAL_PUBLIC_COMPILE_FLAGS)
-set(LOCAL_PUBLIC_LINK_FLAGS)
-set(LOCAL_INCLUDE_DIRS)
-set(LOCAL_LIBRARIES)
+option(YGGDRASIL_RAPIDJSON_BUILD_CXXMIN "Build yggdrasil_rapidjson with minimum C++ standard" OFF)
+option(YGGDRASIL_RAPIDJSON_BUILD_CXX11 "Build yggdrasil_rapidjson with C++11" ON)
+option(YGGDRASIL_RAPIDJSON_BUILD_CXX17 "Build yggdrasil_rapidjson with C++17" OFF)
+option(YGGDRASIL_RAPIDJSON_BUILD_CXX20 "Build yggdrasil_rapidjson with C++20" OFF)
+if(YGGDRASIL_RAPIDJSON_BUILD_CXX11)
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+endif()
+if(YGGDRASIL_RAPIDJSON_BUILD_CXXMIN)
+    set(YGGDRASIL_RAPIDJSON_BUILD_CXX11 OFF)
+    set(YGGDRASIL_RAPIDJSON_BUILD_CXX17 OFF)
+    set(CMAKE_CXX_STANDARD 98)
+    set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+endif()
+
+yggdrasil_rapidjson_config_init(INTERFACE)
+yggdrasil_rapidjson_config_init(LOCAL)
+list(
+  APPEND INTERFACE_PUBLIC_COMPILE_FLAGS
+  -D_USE_MATH_DEFINES
+)
+if(WIN32)
+  list(
+    APPEND INTERFACE_PUBLIC_COMPILE_FLAGS
+    $<$<COMPILE_LANG_AND_ID:C,MSVC>:-D_CRT_SECURE_NO_WARNINGS=1;-DNOMINMAX;/EHsc;/bigobj>  # /EHsc /Zm10
+    $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:-D_CRT_SECURE_NO_WARNINGS=1;-DNOMINMAX;/EHsc;/bigobj>  # /EHsc /Zm10
+    $<$<COMPILE_LANG_AND_ID:C,GNU>:-Wa,-mbig-obj>
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wa,-mbig-obj>
+    $<$<COMPILE_LANG_AND_ID:Fortran,GNU>:-Wa,-mbig-obj>
+  )
+endif()
 
 if(DISABLE_YGGDRASIL_RAPIDJSON)
   set(RAPIDJSON_CREATE_METASCHEMA OFF)
@@ -68,9 +104,6 @@ if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
     message(STATUS "Python executable is ${Python3_EXECUTABLE}")
     set(CONDA_PREFIX "$ENV{CONDA_PREFIX}")
     message(STATUS "CONDA_PREFIX = ${CONDA_PREFIX}")
-    if(FOR_CONDA_RECIPE AND NOT CONDA_PREFIX)
-        message(FATAL_ERROR "CONDA_PREFIX is not set, but FOR_CONDA_RECIPE is")
-    endif()
     if(CONDA_PREFIX AND NOT Python3_ROOT_DIR)
         set(Python3_ROOT_DIR "${CONDA_PREFIX}")
     endif()
@@ -117,6 +150,14 @@ if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
     endif()
 endif()
 
+# compile in release with debug info mode by default
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif()
+
+# Build all binaries in a separate directory
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 # Handle option dependencies and set compilation options for tests
 yggdrasil_rapidjson_options_config(LOCAL)
 
@@ -139,51 +180,10 @@ if(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA)
                  ARGS "${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_INCLUDE_DIR}/metaschema.h ${YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS}")
 endif()
 
-# compile in release with debug info mode by default
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
-endif()
+yggdrasil_rapidjson_global_compiler_flags(CXX)
 
-# Build all binaries in a separate directory
-SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
-option(YGGDRASIL_RAPIDJSON_BUILD_DOC "Build yggdrasil_rapidjson documentation." ON)
-option(YGGDRASIL_RAPIDJSON_BUILD_EXAMPLES "Build yggdrasil_rapidjson examples." ON)
-option(YGGDRASIL_RAPIDJSON_BUILD_TESTS "Build yggdrasil_rapidjson perftests and unittests." ON)
-option(YGGDRASIL_RAPIDJSON_BUILD_UNITTESTS "Build yggdrasil_rapidjson unittests." ON)
-option(YGGDRASIL_RAPIDJSON_BUILD_PERFTESTS "Build yggdrasil_rapidjson perftests." ON)
-option(YGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST
-    "Use gtest installation in `thirdparty/gtest` by default if available" OFF)
-
-option(YGGDRASIL_RAPIDJSON_BUILD_CXXMIN "Build yggdrasil_rapidjson with minimum C++ standard" OFF)
-option(YGGDRASIL_RAPIDJSON_BUILD_CXX11 "Build yggdrasil_rapidjson with C++11" ON)
-option(YGGDRASIL_RAPIDJSON_BUILD_CXX17 "Build yggdrasil_rapidjson with C++17" OFF)
-option(YGGDRASIL_RAPIDJSON_BUILD_CXX20 "Build yggdrasil_rapidjson with C++20" OFF)
-if(YGGDRASIL_RAPIDJSON_BUILD_CXX11)
-    set(CMAKE_CXX_STANDARD 11)
-    set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-endif()
-if(YGGDRASIL_RAPIDJSON_BUILD_CXXMIN)
-    set(YGGDRASIL_RAPIDJSON_BUILD_CXX11 OFF)
-    set(YGGDRASIL_RAPIDJSON_BUILD_CXX17 OFF)
-    set(CMAKE_CXX_STANDARD 98)
-    set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-endif()
-
-find_program(CCACHE_FOUND ccache)
-if(CCACHE_FOUND)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qunused-arguments -fcolor-diagnostics")
-    endif()
-endif(CCACHE_FOUND)
-
-find_program(VALGRIND_FOUND valgrind)
-
+# Set flags based on CXX version options
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
-    set(EXTRA_CXX_FLAGS -Weffc++ -Wswitch-default -Wfloat-equal -Wconversion -Wsign-conversion)
     if (YGGDRASIL_RAPIDJSON_BUILD_CXXMIN)
        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++03 -Wc++0x-compat -Werror=unused-parameter")
     elseif (YGGDRASIL_RAPIDJSON_BUILD_CXX11 AND CMAKE_VERSION VERSION_LESS 3.1)
@@ -198,20 +198,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
     endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    if(NOT CMAKE_CROSSCOMPILING)
-      if(CMAKE_SYSTEM_PROCESSOR STREQUAL "powerpc" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=native")
-      else()
-        if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
-	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=apple-m1")
-	else()
-          #FIXME: x86 is -march=native, but doesn't mean every arch is this option. To keep original project's compatibility, I leave this except POWER.
-          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-        endif()
-      endif()
-    endif()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -Wno-missing-field-initializers")
-    set(EXTRA_CXX_FLAGS -Weffc++ -Wswitch-default -Wfloat-equal -Wconversion -Wimplicit-fallthrough)
     if (YGGDRASIL_RAPIDJSON_BUILD_CXXMIN)
        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++03 -Wc++0x-compat -Werror=unused-parameter")
     elseif (YGGDRASIL_RAPIDJSON_BUILD_CXX11 AND CMAKE_VERSION VERSION_LESS 3.1)
@@ -222,9 +208,6 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
     endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    list(APPEND INTERFACE_PUBLIC_COMPILE_FLAGS
-         -D_CRT_SECURE_NO_WARNINGS=1 -DNOMINMAX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /bigobj /Zm10")
     # CMake >= 3.10 should handle the above CMAKE_CXX_STANDARD fine, otherwise use /std:c++XX with MSVC >= 19.10
     if (YGGDRASIL_RAPIDJSON_BUILD_CXXMIN)
        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++03 /Wc++0x-compat")
@@ -235,14 +218,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     elseif (YGGDRASIL_RAPIDJSON_BUILD_CXX20 AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "19.29")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++20")
     endif()
-    # Always compile with /WX
-    if(CMAKE_CXX_FLAGS MATCHES "/WX-")
-        string(REGEX REPLACE "/WX-" "/WX" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    else()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX")
-    endif()
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qarch=auto")
 endif()
 
 #add extra search paths for libraries and includes
@@ -262,7 +237,7 @@ SET(CMAKE_INSTALL_DIR "${_CMAKE_INSTALL_DIR}" CACHE PATH "The directory cmake fi
 # ===============================
 
 # Version header
-generate_version_header(
+yggdrasil_rapidjson_version_header(
   ${PROJECT_NAME_UPPER}
   ${PROJECT_VERSION}
   ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME_LOWER}/${PROJECT_NAME_LOWER}_version.h.in
@@ -284,26 +259,11 @@ else()
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     )
 endif()
-target_compile_options(
-    ${PROJECT_NAME} INTERFACE ${INTERFACE_PUBLIC_COMPILE_FLAGS}
-)
-target_link_options(
-    ${PROJECT_NAME} INTERFACE ${INTERFACE_PUBLIC_LINK_FLAGS}
-)
-target_include_directories(
-    ${PROJECT_NAME} INTERFACE ${INTERFACE_INCLUDE_DIRS}
-)
-target_link_libraries(
-    ${PROJECT_NAME} INTERFACE ${INTERFACE_LIBRARIES}
-)
 
-# Set after interface library created
+yggdrasil_rapidjson_target_config(${PROJECT_NAME} INTERFACE INTERFACE)
 
-list(APPEND EXTRA_CXX_FLAGS ${LOCAL_PUBLIC_COMPILE_FLAGS})
-add_compile_options(${LOCAL_PUBLIC_COMPILE_FLAGS})
-add_link_options(${LOCAL_PUBLIC_LINK_FLAGS})
-include_directories(${LOCAL_INCLUDE_DIRS})
-link_libraries(${PROJECT_NAME} ${LOCAL_LIBRARIES})
+link_libraries(${PROJECT_NAME})
+yggdrasil_rapidjson_global_config(CXX LOCAL)
 
 if(YGGDRASIL_RAPIDJSON_BUILD_DOC)
     add_subdirectory(doc)

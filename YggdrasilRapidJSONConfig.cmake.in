@@ -2,6 +2,7 @@
 
 include ("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@-targets.cmake")
 include ("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Macros.cmake")
+yggdrasil_rapidjson_options_create()
 
 ################################################################################
 # @PROJECT_NAME@ source dir
@@ -27,26 +28,16 @@ get_target_property(
 )
 list(GET @PROJECT_NAME@_INCLUDE_DIR 0 @PROJECT_NAME@_INCLUDE_DIR)
 
-set(INTERFACE_LIBRARIES)
-set(INTERFACE_COMPILATION_OPTIONS)
-
 if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
   include(CMakeFindDependencyMacro)
   find_dependency(Python3 COMPONENTS Interpreter Development NumPy)
 endif()
 
-yggdrasil_rapidjson_options_config(INTERFACE)
-
-if(INTERFACE_LIBRARIES)
-  target_link_libraries(
-    @PROJECT_NAME@ INTERFACE ${INTERFACE_LIBRARIES}
-  )
-endif()
-if(INTERFACE_COMPILATION_OPTIONS)
-  target_compile_options(
-    @PROJECT_NAME@ INTERFACE ${INTERFACE_COMPILATION_OPTIONS}
-  )
-endif()
+yggdrasil_rapidjson_config_init(@PROJECT_NAME@_INTERFACE)
+yggdrasil_rapidjson_options_config(@PROJECT_NAME@_INTERFACE)
+yggdrasil_rapidjson_target_config(
+  @PROJECT_NAME@ INTERFACE @PROJECT_NAME@_INTERFACE
+)
 
 set_and_check(
   @PROJECT_NAME@_INCLUDE_DIRS "${@PROJECT_NAME@_INCLUDE_DIR}"

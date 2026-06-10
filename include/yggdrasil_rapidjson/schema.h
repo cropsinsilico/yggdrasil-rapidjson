@@ -8896,7 +8896,9 @@ protected:
     if (encoding_ == kYggNullSchemaEncodingType)
       return true;
     YggSchemaEncodingType encoding_code = GetEncodingType(*encoding_str);
-    if (encoding_ != encoding_code) {
+    if (encoding_ != encoding_code &&
+        !(encoding_ == kYggASCIISchemaEncodingType &&
+          encoding_code == kYggNullSchemaEncodingType)) {
       context.error_handler.IncorrectEncoding(*encoding_str, EncodingType2String(encoding_));
       YGGDRASIL_RAPIDJSON_INVALID_KEYWORD_RETURN(kValidateErrorEncoding);
     }

@@ -2366,7 +2366,7 @@ public:
 		     const size_t nvert=0, bool dec=false) const {
     YGGDRASIL_RAPIDJSON_ASSERT(!requires_double());
     if (requires_double()) return;
-    get_properties(out, dec);
+    get_properties(out, false, dec);
     if (nvert > 0) {
       for (size_t i = 0; i < out.size(); i++) {
 	if (out[i] < 0)
