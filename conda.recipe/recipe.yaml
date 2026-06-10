@@ -12,6 +12,8 @@ build:
   number: 0
 
 requirements:
+  run_exports:
+    - ${{ pin_subpackage('yggdrasil-rapidjson', exact=True) }}
   build:
     - cmake >=3.18
     - ninja
