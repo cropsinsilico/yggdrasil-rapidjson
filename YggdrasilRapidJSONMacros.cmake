@@ -179,7 +179,7 @@ macro(yggdrasil_rapidjson_global_compiler_flags LANGUAGE)
 endmacro()
 
 macro(yggdrasil_rapidjson_global_config LANGUAGE PREFIX)
-  yggdrasil_rapidjson_config_show(${PREFIX} STATUS)
+  yggdrasil_rapidjson_config_show(${PREFIX} DEBUG)
   set(global_compiler ${CMAKE_${LANGUAGE}_COMPILER_ID})
   set(global_linker ${global_compiler})
   list(
