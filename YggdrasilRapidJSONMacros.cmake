@@ -378,7 +378,7 @@ endmacro()
 macro(yggdrasil_rapidjson_gitversion OUTPUT_VARIABLE DEFAULT)
   find_package(Git)
   if(NOT Git_FOUND)
-    message(STATUS "Failed to find Git cmake package, falling back to version ${DEFAULT}")
+    message(STATUS "Could not find Git cmake package, falling back to version ${DEFAULT}")
     set(${OUTPUT_VARIABLE} ${DEFAULT})
   else()
     # Generate a git-describe version string from Git repository tags
