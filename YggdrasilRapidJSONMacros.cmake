@@ -390,7 +390,7 @@ macro(yggdrasil_rapidjson_gitversion OUTPUT_VARIABLE DEFAULT)
       OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     if(GIT_DESCRIBE_ERROR_CODE)
-      message(STATUS "Error getting git tag, falling back to version ${DEFAULT}")
+      message(STATUS "Could not locate a git tag, falling back to version ${DEFAULT}")
       set(${OUTPUT_VARIABLE} ${DEFAULT})
     else()
       string(SUBSTRING "${GIT_DESCRIBE_VERSION}" 1 -1 GIT_DESCRIBE_VERSION)
