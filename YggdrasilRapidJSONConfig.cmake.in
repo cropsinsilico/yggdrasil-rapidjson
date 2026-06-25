@@ -35,9 +35,10 @@ endif()
 
 yggdrasil_rapidjson_config_init(@PROJECT_NAME@_INTERFACE)
 yggdrasil_rapidjson_options_config(@PROJECT_NAME@_INTERFACE)
-yggdrasil_rapidjson_target_config(
-  @PROJECT_NAME@ INTERFACE @PROJECT_NAME@_INTERFACE
+yggdrasil_rapidjson_target_config_import(
+  @PROJECT_NAME@ @PROJECT_NAME@_INTERFACE
 )
+yggdrasil_rapidjson_config_cleanup(@PROJECT_NAME@_INTERFACE)
 
 set_and_check(
   @PROJECT_NAME@_INCLUDE_DIRS "${@PROJECT_NAME@_INCLUDE_DIR}"

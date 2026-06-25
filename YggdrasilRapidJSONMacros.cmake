@@ -27,11 +27,15 @@ macro(yggdrasil_rapidjson_options_create)
   option(YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT "Build yggdrasil_rapidjson with -march or -mcpu options" ON)
 endmacro()
 
-macro(yggdrasil_rapidjson_config_vars PREFIX)
-  list(
-    APPEND ${PREFIX}_CONFIG_VARS
-    ${PREFIX}_ASAN_COMPILE_FLAGS
-  )
+function(yggdrasil_rapidjson_config_vars PREFIX)
+  if(${PREFIX}_CONFIG_VARS)
+    return()
+  endif()
+  set(${PREFIX}_CONFIG_VARS ${PREFIX}_ASAN_COMPILE_FLAGS)
+  # list(
+  #   APPEND ${PREFIX}_CONFIG_VARS
+  #   ${PREFIX}_ASAN_COMPILE_FLAGS
+  # )
   foreach(tool GNU Clang AppleClang MSVC)
     list(
       APPEND ${PREFIX}_CONFIG_VARS
@@ -64,7 +68,15 @@ macro(yggdrasil_rapidjson_config_vars PREFIX)
       )
     endforeach()
   endforeach()
-endmacro()
+  foreach(suffix LIBRARIES INCLUDE_DIRS COMPILE_FLAGS LINK_FLAGS)
+    list(
+      APPEND ${PREFIX}_CONFIG_VARS
+      ${PREFIX}_ALL_PUBLIC_${suffix}
+      ${PREFIX}_ALL_PRIVATE_${suffix}
+    )
+  endforeach()
+  set(${PREFIX}_CONFIG_VARS ${${PREFIX}_CONFIG_VARS} PARENT_SCOPE)
+endfunction()
 
 macro(yggdrasil_rapidjson_config_init PREFIX)
   yggdrasil_rapidjson_config_vars(${PREFIX})
@@ -73,13 +85,22 @@ macro(yggdrasil_rapidjson_config_init PREFIX)
   endforeach()
 endmacro()
 
+macro(yggdrasil_rapidjson_config_cleanup PREFIX)
+  if(${PREFIX}_CONFIG_VARS)
+    foreach(var IN LISTS ${PREFIX}_CONFIG_VARS)
+      unset(${var})
+    endforeach()
+    unset(${PREFIX}_CONFIG_VARS)
+  endif()
+endmacro()
+
 macro(yggdrasil_rapidjson_config_show PREFIX LEVEL)
   foreach(var IN LISTS ${PREFIX}_CONFIG_VARS)
     message(${LEVEL} "${var} = ${${var}}")
   endforeach()
 endmacro()
 
-macro(yggdrasil_rapidjson_config_accum PREFIX)
+function(yggdrasil_rapidjson_config_accum PREFIX)
   foreach(suffix LIBRARIES INCLUDE_DIRS COMPILE_FLAGS LINK_FLAGS)
     set(${PREFIX}_ALL_PUBLIC_${suffix} ${${PREFIX}_PUBLIC_${suffix}}
         ${${PREFIX}_${suffix}})
@@ -128,8 +149,10 @@ macro(yggdrasil_rapidjson_config_accum PREFIX)
     endforeach()
     message(DEBUG "${PREFIX}_ALL_PUBLIC_${suffix} = ${${PREFIX}_ALL_PUBLIC_${suffix}}")
     message(DEBUG "${PREFIX}_ALL_PRIVATE_${suffix} = ${${PREFIX}_ALL_PRIVATE_${suffix}}")
+    set(${PREFIX}_ALL_PUBLIC_${suffix} "${${PREFIX}_ALL_PUBLIC_${suffix}}" PARENT_SCOPE)
+    set(${PREFIX}_ALL_PRIVATE_${suffix} "${${PREFIX}_ALL_PRIVATE_${suffix}}" PARENT_SCOPE)
   endforeach()
-endmacro()
+endfunction()
 
 macro(yggdrasil_rapidjson_global_compiler_flags LANGUAGE)
   # TODO: Some of these should be interface flags
@@ -180,25 +203,25 @@ endmacro()
 
 macro(yggdrasil_rapidjson_global_config LANGUAGE PREFIX)
   yggdrasil_rapidjson_config_show(${PREFIX} DEBUG)
-  set(global_compiler ${CMAKE_${LANGUAGE}_COMPILER_ID})
-  set(global_linker ${global_compiler})
+  set(_yggdrasil_rapidjson_global_compiler ${CMAKE_${LANGUAGE}_COMPILER_ID})
+  set(_yggdrasil_rapidjson_global_linker ${_yggdrasil_rapidjson_global_compiler})
   list(
     APPEND EXTRA_${LANGUAGE}_FLAGS
     ${${PREFIX}_PUBLIC_COMPILE_FLAGS}
     ${${PREFIX}_PUBLIC_${LANGUAGE}_COMPILE_FLAGS}
-    ${${PREFIX}_PUBLIC_${global_compiler}_COMPILE_FLAGS}
+    ${${PREFIX}_PUBLIC_${_yggdrasil_rapidjson_global_compiler}_COMPILE_FLAGS}
   )
   add_compile_options(
     ${${PREFIX}_COMPILE_FLAGS}
     ${${PREFIX}_PUBLIC_COMPILE_FLAGS}
     ${${PREFIX}_PUBLIC_${LANGUAGE}_COMPILE_FLAGS}
-    ${${PREFIX}_PUBLIC_${global_compiler}_COMPILE_FLAGS}
+    ${${PREFIX}_PUBLIC_${_yggdrasil_rapidjson_global_compiler}_COMPILE_FLAGS}
   )
   add_link_options(
     ${${PREFIX}_LINK_FLAGS}
     ${${PREFIX}_PUBLIC_LINK_FLAGS}
     ${${PREFIX}_PUBLIC_${LANGUAGE}_LINK_FLAGS}
-    ${${PREFIX}_PUBLIC_${global_linker}_LINK_FLAGS}
+    ${${PREFIX}_PUBLIC_${_yggdrasil_rapidjson_global_linker}_LINK_FLAGS}
   )
   include_directories(
     ${${PREFIX}_INCLUDE_DIRS}
@@ -209,6 +232,45 @@ macro(yggdrasil_rapidjson_global_config LANGUAGE PREFIX)
     ${${PREFIX}_LIBRARIES}
     ${${PREFIX}_PUBLIC_LIBRARIES}
     ${${PREFIX}_PUBLIC_${LANGUAGE}_LIBRARIES}
+  )
+  unset(_yggdrasil_rapidjson_global_compiler)
+  unset(_yggdrasil_rapidjson_global_linker)
+endmacro()
+
+function(yggdrasil_rapidjson_update_target_interface_property TARGET PREFIX SUFFIX NAME)
+  if(NOT ${PREFIX}_ALL_PUBLIC_${SUFFIX})
+    return()
+  endif()
+  get_target_property(EXISTING ${TARGET} ${NAME})
+  if(EXISTING)
+    set(EXISTING "${EXISTING};${${PREFIX}_ALL_PUBLIC_${SUFFIX}}")
+  else()
+    set(EXISTING "${${PREFIX}_ALL_PUBLIC_${SUFFIX}}")
+  endif()
+  set_target_properties(
+    ${TARGET} PROPERTIES
+    ${NAME} "${EXISTING}"
+  )
+endfunction()
+
+macro(yggdrasil_rapidjson_target_config_import TARGET PREFIX)
+  yggdrasil_rapidjson_config_show(${PREFIX} DEBUG)
+  yggdrasil_rapidjson_config_accum(${PREFIX})
+  yggdrasil_rapidjson_update_target_interface_property(
+    ${TARGET} ${PREFIX}
+    LIBRARIES INTERFACE_LINK_LIBRARIES
+  )
+  yggdrasil_rapidjson_update_target_interface_property(
+    ${TARGET} ${PREFIX}
+    INCLUDE_DIRS INTERFACE_INCLUDE_DIRECTORIES
+  )
+  yggdrasil_rapidjson_update_target_interface_property(
+    ${TARGET} ${PREFIX}
+    COMPILE_FLAGS INTERFACE_COMPILE_OPTIONS
+  )
+  yggdrasil_rapidjson_update_target_interface_property(
+    ${TARGET} ${PREFIX}
+    LINK_FLAGS INTERFACE_LINK_OPTIONS
   )
 endmacro()
 
@@ -314,17 +376,17 @@ macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
     )
   endif()
   if(YGGDRASIL_RAPIDJSON_BUILD_ASAN)
-    foreach(tool GNU Clang AppleClang)
+    foreach(_yggdrasil_rapidjson_asan_tool GNU Clang AppleClang)
       list(
-        APPEND ${OUTPUT_PREFIX}_${tool}_ASAN_COMPILE_FLAGS
+        APPEND ${OUTPUT_PREFIX}_${_yggdrasil_rapidjson_asan_tool}_ASAN_COMPILE_FLAGS
         -fsanitize=address
       )
     endforeach()
   endif()
   if(YGGDRASIL_RAPIDJSON_BUILD_UBSAN)
-    foreach(tool GNU Clang)
+    foreach(_yggdrasil_rapidjson_asan_tool GNU Clang)
       list(
-        APPEND ${OUTPUT_PREFIX}_${tool}_ASAN_COMPILE_FLAGS
+        APPEND ${OUTPUT_PREFIX}_${_yggdrasil_rapidjson_asan_tool}_ASAN_COMPILE_FLAGS
         -fsanitize=undefined
       )
     endforeach()
@@ -347,14 +409,16 @@ macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
     ${OUTPUT_PREFIX}_ASAN_COMPILE_FLAGS
     ${${OUTPUT_PREFIX}_${CMAKE_CXX_COMPILER_ID}_ASAN_COMPILE_FLAGS}
   )
-  foreach(tool GNU Clang AppleClang MSVC)
-    set(k ${OUTPUT_PREFIX}_${tool}_ASAN_COMPILE_FLAGS)
+  foreach(_yggdrasil_rapidjson_asan_tool GNU Clang AppleClang MSVC)
+    set(k ${OUTPUT_PREFIX}_${_yggdrasil_rapidjson_asan_tool}_ASAN_COMPILE_FLAGS)
     if(${k})
-      foreach(suffix COMPILE_FLAGS LINK_FLAGS)
-        list(APPEND ${OUTPUT_PREFIX}_PUBLIC_${tool}_${suffix} ${${k}})
+      foreach(_yggdrasil_rapidjson_asan_suffix COMPILE_FLAGS LINK_FLAGS)
+        list(APPEND ${OUTPUT_PREFIX}_PUBLIC_${_yggdrasil_rapidjson_asan_tool}_${_yggdrasil_rapidjson_asan_suffix} ${${k}})
       endforeach()
     endif()
   endforeach()
+  unset(_yggdrasil_rapidjson_asan_tool)
+  unset(_yggdrasil_rapidjson_asan_suffix)
 
   if(YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT
      AND (NOT CMAKE_CROSSCOMPILING)
@@ -375,7 +439,7 @@ macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
 
 endmacro()
 
-macro(yggdrasil_rapidjson_gitversion OUTPUT_VARIABLE DEFAULT)
+function(yggdrasil_rapidjson_gitversion OUTPUT_VARIABLE DEFAULT)
   find_package(Git)
   if(NOT Git_FOUND)
     message(STATUS "Could not find Git cmake package, falling back to version ${DEFAULT}")
@@ -407,7 +471,8 @@ macro(yggdrasil_rapidjson_gitversion OUTPUT_VARIABLE DEFAULT)
       set(${OUTPUT_VARIABLE} ${GIT_DESCRIBE_VERSION})
     endif()
   endif()
-endmacro()
+  set(${OUTPUT_VARIABLE} "${${OUTPUT_VARIABLE}}" PARENT_SCOPE)
+endfunction()
 
 function(yggdrasil_rapidjson_version_header MACRO_PREFIX VERSION_STRING SRC DST)
   set(rem ${VERSION_STRING})

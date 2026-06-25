@@ -5,7 +5,7 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ## X.X.X.X - XXXX-XX-XX
 
-## 1.1.0.4 - 2026-06-XX
+## 1.1.0.4 - 2026-06-25
 
 ### Bug fixes
 * Fix bug where version could not be set in the conda recipe build since it is created from a tar instead of the git repo
@@ -18,6 +18,7 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 * Check for ASAN library and store it in <PREFIX>_ASAN_LIB when using clang ASAN/UBSAN so it can be used via DYLD_INSERT_LIBRARIES for Python tests
 * Added cmake macros yggdrasil_rapidjson_target_config and yggdrasil_rapidjson_global_config for adding option based flags to a target or the current scope (and subscopes)
 * Remove conda build version of conda recipe build and associated test jobs (only rattler build will be used from now on as that is the version available on conda-forge)
+* Improve macros to avoid polluting the namespace with utility variables during import
 
 ## 1.1.0.3 - 2026-05-29
 
