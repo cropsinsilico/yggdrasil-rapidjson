@@ -451,7 +451,7 @@ public:
 	    nameBufferSkip += t->length;
 
         r.tokenCount_ = nCopy;
-        r.tokens_ = static_cast<Token *>(allocator_->Malloc(r.tokenCount_ * sizeof(Token) + nameBufferSize * sizeof(Ch)));
+        r.tokens_ = static_cast<Token *>(r.allocator_->Malloc(r.tokenCount_ * sizeof(Token) + nameBufferSize * sizeof(Ch)));
         r.nameBuffer_ = reinterpret_cast<Ch *>(r.tokens_ + r.tokenCount_);
         if (nCopy > 0) {
             std::memcpy(r.tokens_, tokens_ + nSkip, nCopy * sizeof(Token));
@@ -749,7 +749,11 @@ public:
     //@}
 
     //! Get the allocator of this pointer.
-    Allocator& GetAllocator() { return *allocator_; }
+    Allocator& GetAllocator() {
+      if (!allocator_)
+          ownAllocator_ = allocator_ = YGGDRASIL_RAPIDJSON_NEW(Allocator)();
+      return *allocator_;
+    }
 
     //!@name Tokens
     //@{

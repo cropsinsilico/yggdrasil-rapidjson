@@ -78,27 +78,27 @@ function(yggdrasil_rapidjson_config_vars PREFIX)
   set(${PREFIX}_CONFIG_VARS ${${PREFIX}_CONFIG_VARS} PARENT_SCOPE)
 endfunction()
 
-macro(yggdrasil_rapidjson_config_init PREFIX)
+function(yggdrasil_rapidjson_config_init PREFIX)
   yggdrasil_rapidjson_config_vars(${PREFIX})
   foreach(var IN LISTS ${PREFIX}_CONFIG_VARS)
-    set(${var})
+    set(${var} "" PARENT_SCOPE)
   endforeach()
-endmacro()
+endfunction()
 
-macro(yggdrasil_rapidjson_config_cleanup PREFIX)
+function(yggdrasil_rapidjson_config_cleanup PREFIX)
   if(${PREFIX}_CONFIG_VARS)
     foreach(var IN LISTS ${PREFIX}_CONFIG_VARS)
-      unset(${var})
+      unset(${var} PARENT_SCOPE)
     endforeach()
-    unset(${PREFIX}_CONFIG_VARS)
+    unset(${PREFIX}_CONFIG_VARS PARENT_SCOPE)
   endif()
-endmacro()
+endfunction()
 
-macro(yggdrasil_rapidjson_config_show PREFIX LEVEL)
+function(yggdrasil_rapidjson_config_show PREFIX LEVEL)
   foreach(var IN LISTS ${PREFIX}_CONFIG_VARS)
     message(${LEVEL} "${var} = ${${var}}")
   endforeach()
-endmacro()
+endfunction()
 
 function(yggdrasil_rapidjson_config_accum PREFIX)
   foreach(suffix LIBRARIES INCLUDE_DIRS COMPILE_FLAGS LINK_FLAGS)
@@ -384,12 +384,13 @@ macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
     endforeach()
   endif()
   if(YGGDRASIL_RAPIDJSON_BUILD_UBSAN)
-    foreach(_yggdrasil_rapidjson_asan_tool GNU Clang)
+    foreach(_yggdrasil_rapidjson_asan_tool GNU Clang AppleClang)
       list(
         APPEND ${OUTPUT_PREFIX}_${_yggdrasil_rapidjson_asan_tool}_ASAN_COMPILE_FLAGS
         -fsanitize=undefined
       )
     endforeach()
+    # Unsure why this is only set for AppleClang and -fsanitize=undefined was not being set
     list(APPEND ${OUTPUT_PREFIX}_AppleClang_ASAN_COMPILE_FLAGS
          -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error)
   endif()
@@ -450,12 +451,14 @@ function(yggdrasil_rapidjson_gitversion OUTPUT_VARIABLE DEFAULT)
       COMMAND ${GIT_EXECUTABLE} describe --tags --dirty --match "v*"
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GIT_DESCRIBE_VERSION
+      ERROR_VARIABLE GIT_DESCRIBE_ERROR
       RESULT_VARIABLE GIT_DESCRIBE_ERROR_CODE
       OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     if(GIT_DESCRIBE_ERROR_CODE)
       message(STATUS "Could not locate a git tag, falling back to version ${DEFAULT}")
       set(${OUTPUT_VARIABLE} ${DEFAULT})
+      message(DEBUG "Git output: ${GIT_DESCRIBE_ERROR}")
     else()
       string(SUBSTRING "${GIT_DESCRIBE_VERSION}" 1 -1 GIT_DESCRIBE_VERSION)
       string(FIND "${GIT_DESCRIBE_VERSION}" "-" idx)

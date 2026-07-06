@@ -5,13 +5,14 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ## X.X.X.X - XXXX-XX-XX
 
-## 1.1.0.4 - 2026-06-25
+## 1.1.0.4 - 2026-07-06
 
 ### Bug fixes
 * Fix bug where version could not be set in the conda recipe build since it is created from a tar instead of the git repo
 * Fix bug where asan flags were added to list that could be used for Fortran, but are only valid for C or CXX
 * Fix bug where string without encoding specified did not validate against a schema specifying ASCII encoding
 * Fix bug in ObjWavefront get_int_array where dec parameter was not passed at the correct position resulting in arrays that were 1 indexed even when dec was true
+* Fix places where undefined behavior was possible with use of pointer allocator
 
 ### Maintenance
 * Update names of flag/library lists set based on options to adhere to pattern of <PREFIX>_PUBLIC/PRIVATE_<SUFFIX>
