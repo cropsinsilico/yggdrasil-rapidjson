@@ -134,11 +134,15 @@ if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
     if(Python3_ROOT_DIR)
         message(STATUS "Python root directory is ${Python3_ROOT_DIR}")
     endif()
-    find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
-
-    # include_directories(
-    #     SYSTEM ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS}
-    # )
+    if(YGGDRASIL_RAPIDJSON_PYTHON_WRAPPER)
+      find_package(
+        Python3 COMPONENTS Interpreter Development.Module NumPy REQUIRED
+      )
+    else()
+      find_package(
+        Python3 COMPONENTS Interpreter Development NumPy REQUIRED
+      )
+    endif()
 
     # Set environment variables required for embedding Python
     set(YGGDRASIL_RAPIDJSON_PYTHON_ENV "DATADIR=${CMAKE_SOURCE_DIR}/test;YGG_PYTHON_EXEC=${Python3_EXECUTABLE}")
