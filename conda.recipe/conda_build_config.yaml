@@ -5,3 +5,11 @@ c_stdlib:
 c_stdlib_version:
   - 2.17                        # [linux]
   - 11                          # [osx]
+c_compiler:
+  - gcc                         # [linux]
+  - clang                       # [osx]
+  - vs2017                      # [win]
+cxx_compiler:
+  - gxx                         # [linux]
+  - clangxx                     # [osx]
+  - vs2017                      # [win]

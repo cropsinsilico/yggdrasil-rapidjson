@@ -1,15 +1,44 @@
 set -e
-INSTALL_DIR="$(pwd)/_install"
-# rm -rf build
-if [ ! -d build ]; then
-    mkdir build
+REBUILD=""
+BUILD_DIR=""
+INSTALL_DIR=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --rebuild )
+            REBUILD="TRUE"
+	    shift
+	    ;;
+        --build-dir )
+            BUILD_DIR="$2"
+	    shift
+	    shift # past argument with value
+	    ;;
+        --install-dir )
+            INSTALL_DIR="$2"
+	    shift
+	    shift # past argument with value
+	    ;;
+    esac
+done
+if [ ! -n "${BUILD_DIR}" ]; then
+    BUILD_DIR="$(pwd)/build"
+fi
+if [ ! -n "${INSTALL_DIR}" ]; then
+    INSTALL_DIR="$(pwd)/_install"
+fi
+if [ -n "$REBUILD" ]; then
+    if [ -d ${BUILD_DIR} ]; then
+        rm -rf ${BUILD_DIR}
+    fi
+fi
+if [ ! -d ${BUILD_DIR} ]; then
+    mkdir ${BUILD_DIR}
 fi
 if [ ! -d ${INSTALL_DIR} ]; then
     mkdir ${INSTALL_DIR}
 fi
-cd build
 
-cmake .. \
+cmake -B ${BUILD_DIR} -S $(pwd) \
       -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
       -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS:BOOL=ON \
       -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL:BOOL=ON \
@@ -23,28 +52,23 @@ cmake .. \
       -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=ON \
       -DYGGDRASIL_RAPIDJSON_BUILD_DOC:BOOL=OFF
 # -DCMAKE_BUILD_TYPE=Debug
-# Install in local directory
 # -DCMAKE_INSTALL_PREFIX:FILEPATH=${INSTALL_DIR}
 
 # Tests
-cmake --build . --target=tests -- -j 8
-cmake --install . --prefix "${INSTALL_DIR}"
+cmake --build ${BUILD_DIR} --target=tests -- -j 8
+cd ${BUILD_DIR}
 ctest -R unittest --stop-on-failure
 # ctest -R perftest --stop-on-failure
 
 # Examples
-# cmake --build . --target=examples -- -j 8
-# ./bin/yggdrasil
-# ./bin/${example_name}
+# cmake --build ${BUILD_DIR} --target=examples -- -j 8
+# ${BUILD_DIR}/bin/yggdrasil
+# ${BUILD_DIR}/bin/${example_name}
 
 # Install
-# cmake --install .
+cmake --install ${BUILD_DIR} --prefix "${INSTALL_DIR}"
 
 
-# # cmake --build . -- -j 8
-# cmake --build . --target=tests -- -j 8
-# # ctest -C Debug --output-on-failure --verbose --stop-on-failure
-# ctest -R unittest --stop-on-failure
 # ctest -R coverage
 # # cmake .. -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS=ON -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
 # # ctest -T Coverage
