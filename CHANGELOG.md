@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJSON version is used with the addition of a EXTEN version after the PATCH version (i.e. MAJOR.MINOR.PATCH.EXTEN) to indicate the YggdrasilRapidJSON version. The EXTEN version will restart at 0 when/if RapidJSON increments their version.
 
-## 1.1.0.5 - XXXX-XX-XX
+## 1.1.0.5 - 2026-07-07
 
 ### Bug fixes
 * Fix Python3 components when CMakeLists.txt is included directly from a Python extension

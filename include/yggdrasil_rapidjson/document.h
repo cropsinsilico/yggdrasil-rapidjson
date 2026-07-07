@@ -5161,7 +5161,9 @@ public:
 	  goto cleanup_array;
 	}
 	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT ||
-            ((PyArray_Descr*)itype)->type_num == NPY_BYTE) {
+            ((PyArray_Descr*)itype)->type_num == NPY_BYTE ||
+            ((PyArray_Descr*)itype)->type_num == NPY_STRING ||
+            ((PyArray_Descr*)itype)->type_num == NPY_UNICODE) {
 	  ival = PyObject_GetItem(x, ikey);
 	  if (ival == NULL) {
 	    error = true;
