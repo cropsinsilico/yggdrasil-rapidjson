@@ -7,6 +7,7 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ### Bug fixes
 * Fix Python3 components when CMakeLists.txt is included directly from a Python extension
+* Fix SetPythonObjectRaw for Pandas 3.0.0 (String now stored as NPY_BYTE instead of NPY_OBJECT)
 
 ## 1.1.0.4 - 2026-07-06
 

@@ -5105,7 +5105,8 @@ public:
 	AddSchemaMember(GetEncodingString(), encoding);
       out = true;
       goto cleanup;
-    } else if (PyObject_IsInstanceString(x, "pandas.core.frame.DataFrame")) {
+    } else if (PyObject_IsInstanceString(x, "pandas.core.frame.DataFrame") ||
+               PyObject_IsInstanceString(x, "pandas.DataFrame")) {
       bool error = false;
       PyObject *column_dtypes = NULL, *columns = NULL,
 	*itype = NULL, *skipTitleObject = NULL, *vtype = NULL, *vv = NULL,
@@ -5159,7 +5160,8 @@ public:
 	  error = true;
 	  goto cleanup_array;
 	}
-	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT) {
+	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT ||
+            ((PyArray_Descr*)itype)->type_num == NPY_BYTE) {
 	  ival = PyObject_GetItem(x, ikey);
 	  if (ival == NULL) {
 	    error = true;
