@@ -1073,12 +1073,14 @@ std::string NPY_TYPE2STRING(int x) {
     CASE_TYPE(NPY_NOTYPE);
     CASE_TYPE(NPY_USERDEF);
     CASE_TYPE(NPY_VSTRING);
+  default: {
+    if (x >= NPY_USERDEF) {
+      return "user-defined";
+    }
+    return std::to_string(x);
+  }
   }
 #undef CASE_TYPE
-  if (x >= NPY_USERDEF) {
-    return "user-defined";
-  }
-  return std::to_string(x);
 }
 #endif // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
 inline
