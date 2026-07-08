@@ -1036,14 +1036,12 @@ std::string NPY_TYPE2STRING(int) {
 #else // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
 inline
 std::string NPY_TYPE2STRING(int x) {
-  std::string out = "";
   YGGDRASIL_RAPIDJSON_ASSERT(isPythonInitialized());
   if (!isPythonInitialized())
-    return out;
+    return "";
 #define CASE_TYPE(name)                         \
   case (name): {                                \
-    out = #name;                                \
-    break;                                      \
+    return #name;                               \
   }
   switch(x) {
     CASE_TYPE(NPY_BOOL);
@@ -1080,8 +1078,7 @@ std::string NPY_TYPE2STRING(int x) {
   if (x >= NPY_USERDEF) {
     return "user-defined";
   }
-  out = std::to_string(x);
-  return out;
+  return std::to_string(x);
 }
 #endif // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
 inline

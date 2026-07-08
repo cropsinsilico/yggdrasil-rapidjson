@@ -5167,8 +5167,7 @@ public:
 	  goto cleanup_array;
 	}
         bool is_in_bytes = false;
-        if ((((PyArray_Descr*)itype)->type_num == NPY_BYTE ||
-             (((PyArray_Descr*)itype)->type_num >= NPY_USERDEF)) &&
+        if ((PyObject_IsInstanceString(itype, "pandas.StringDtype")) &&
             is_string_dtype != NULL) {
           is_in_bytes = true;
         }
