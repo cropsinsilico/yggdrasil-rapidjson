@@ -5167,21 +5167,23 @@ public:
 	  goto cleanup_array;
 	}
         bool is_in_bytes = false;
+        if ((((PyArray_Descr*)itype)->type_num == NPY_BYTE ||
+             (((PyArray_Descr*)itype)->type_num >= NPY_USERDEF)) &&
+            is_string_dtype != NULL) {
+          is_in_bytes = true;
+        }
 	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT ||
-            ((PyArray_Descr*)itype)->type_num == NPY_BYTE) {
+            is_in_bytes) {
 	  ival = PyObject_GetItem(x, ikey);
 	  if (ival == NULL) {
 	    error = true;
 	    goto cleanup_array;
 	  }
-        }
-        if (((PyArray_Descr*)itype)->type_num == NPY_BYTE &&
-            is_string_dtype != NULL) {
-          columnIsString = PyObject_CallFunction(is_string_dtype, "(O)", ival);
-          if (columnIsString == Py_True) {
-            is_in_bytes = true;
+          if (is_in_bytes) {
+            columnIsString = PyObject_CallFunction(is_string_dtype, "(O)", ival);
+            is_in_bytes = (columnIsString == Py_True);
+            Py_CLEAR(columnIsString);
           }
-          Py_CLEAR(columnIsString);
         }
         std::cerr << i << ": " << NPY_TYPE2STRING(((PyArray_Descr*)itype)->type_num) << ", is_in_bytes = " << is_in_bytes << std::endl;
 	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT ||
