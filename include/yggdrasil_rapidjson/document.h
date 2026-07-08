@@ -5184,7 +5184,7 @@ public:
             Py_CLEAR(columnIsString);
           }
         }
-        std::cerr << i << ": " << NPY_TYPE2STRING(((PyArray_Descr*)itype)->type_num) << ", is_in_bytes = " << is_in_bytes << std::endl;
+        // std::cerr << i << ": " << NPY_TYPE2STRING(((PyArray_Descr*)itype)->type_num) << ", is_in_bytes = " << is_in_bytes << std::endl;
 	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT ||
             is_in_bytes) {
 	  Py_ssize_t max_len = 0;
