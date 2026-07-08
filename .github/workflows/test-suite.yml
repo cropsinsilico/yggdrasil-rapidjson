@@ -78,7 +78,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=ON
       - name: (WINDOWS) Configure w/ yggdrasil
         if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
         run: |
@@ -90,7 +90,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DPython3_ROOT_DIR=${pythonLocation} -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DPython3_ROOT_DIR=${pythonLocation} -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
       - name: Build
         run: |
           cd build
@@ -155,19 +155,19 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=ON
       - name: (WINDOWS) Configure w/ yggdrasil
         if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=ON
       - name: (UNIX) Configure w/ yggdrasil
         if: matrix.os != 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=ON
       - name: Build
         run: |
           cd build

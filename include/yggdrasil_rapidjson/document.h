@@ -5047,6 +5047,10 @@ public:
 	    }
 	  } else {
 	    ValueType pyField(field, allocator);
+            if (pyField.IsNull()) {
+              out = false;
+              goto cleanup;
+            }
 	    if (!skipTitle) {
 	      ValueType field_name(kw_keyS,
 				   static_cast<SizeType>(kw_keyS_len),
@@ -5105,12 +5109,14 @@ public:
 	AddSchemaMember(GetEncodingString(), encoding);
       out = true;
       goto cleanup;
-    } else if (PyObject_IsInstanceString(x, "pandas.core.frame.DataFrame")) {
+    } else if (PyObject_IsInstanceString(x, "pandas.core.frame.DataFrame") ||
+               PyObject_IsInstanceString(x, "pandas.DataFrame")) {
       bool error = false;
       PyObject *column_dtypes = NULL, *columns = NULL,
 	*itype = NULL, *skipTitleObject = NULL, *vtype = NULL, *vv = NULL,
 	*method = NULL, *args = NULL, *kwargs = NULL, *arr = NULL,
-	*new_itype = NULL, *pandas_api = NULL, *is_integer_dtype = NULL;
+	*new_itype = NULL, *pandas_api = NULL, *is_integer_dtype = NULL,
+        *is_string_dtype = NULL, *columnIsString = NULL;
       std::string new_itype_str;
       column_dtypes = PyDict_New();
       if (column_dtypes == NULL) {
@@ -5128,6 +5134,7 @@ public:
 	goto cleanup_array;
       }
       is_integer_dtype = PyObject_GetAttrString(pandas_api, "is_integer_dtype");
+      is_string_dtype = PyObject_GetAttrString(pandas_api, "is_string_dtype");
       Py_CLEAR(pandas_api);
       if (is_integer_dtype == NULL) {
 	error = true;
@@ -5159,19 +5166,39 @@ public:
 	  error = true;
 	  goto cleanup_array;
 	}
-	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT) {
+        bool is_in_bytes = false;
+        if ((PyObject_IsInstanceString(itype, "pandas.StringDtype")) &&
+            is_string_dtype != NULL) {
+          is_in_bytes = true;
+        }
+	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT ||
+            is_in_bytes) {
 	  ival = PyObject_GetItem(x, ikey);
 	  if (ival == NULL) {
 	    error = true;
 	    goto cleanup_array;
 	  }
+          if (is_in_bytes) {
+            columnIsString = PyObject_CallFunction(is_string_dtype, "(O)", ival);
+            is_in_bytes = (columnIsString == Py_True);
+            Py_CLEAR(columnIsString);
+          }
+        }
+        // std::cerr << i << ": " << NPY_TYPE2STRING(((PyArray_Descr*)itype)->type_num) << ", is_in_bytes = " << is_in_bytes << std::endl;
+	if (((PyArray_Descr*)itype)->type_num == NPY_OBJECT ||
+            is_in_bytes) {
 	  Py_ssize_t max_len = 0;
 	  if (PyObject_Size(ival) == 0) {
-	    // For an empty field with OBJECT type, information about
-	    // which string type (unicode or bytes) cannot be determined
-	    // so we just assume bytes
-	    vtype = (PyObject*)(&PyBytes_Type);
-	    Py_INCREF(vtype);
+            if (is_in_bytes) {
+              vtype = (PyObject*)(&PyUnicode_Type);
+              Py_INCREF(vtype);
+            } else {
+              // For an empty field with OBJECT type, information about
+              // which string type (unicode or bytes) cannot be determined
+              // so we just assume bytes
+              vtype = (PyObject*)(&PyBytes_Type);
+              Py_INCREF(vtype);
+            }
 	  } else {
 	    for (Py_ssize_t j = 0; j < PyObject_Size(ival); j++) {
 	      vv = PySequence_GetItem(ival, j);
@@ -5179,18 +5206,27 @@ public:
 		error = true;
 		goto cleanup_array;
 	      }
-	      if (vtype == NULL) {
+              if (is_in_bytes) {
+                if (vtype == NULL) {
+                  vtype = (PyObject*)(&PyUnicode_Type);
+                  Py_INCREF(vtype);
+                }
+              } else if (vtype == NULL) {
 		vtype = PyObject_Type(vv);
-		std::string vtype_str;
-		PyObject* vtype_repr = PyObject_Str(vtype);
-		vtype_str.assign(PyUnicode_AsUTF8(vtype_repr));
-		Py_CLEAR(vtype_repr);
+                // This is just for debugging
+		// std::string vtype_str;
+		// PyObject* vtype_repr = PyObject_Str(vtype);
+		// vtype_str.assign(PyUnicode_AsUTF8(vtype_repr));
+		// Py_CLEAR(vtype_repr);
+                // std::cerr << i << ": " << vtype_str << std::endl;
 	      } else if (!PyObject_IsInstance(vv, vtype)) {
 		error = true;
 		goto cleanup_array;
 	      }
 	      Py_ssize_t new_len = 0;
-	      if (vtype == (PyObject*)(&PyUnicode_Type)) {
+              if (is_in_bytes) {
+                new_len = PyObject_Size(vv);
+              } else if (vtype == (PyObject*)(&PyUnicode_Type)) {
 		new_len = PyUnicode_GET_LENGTH(vv);
 	      } else {
 		new_len = PyObject_Size(vv);
@@ -5223,8 +5259,8 @@ public:
 	  }
 	  Py_CLEAR(new_itype);
 	  Py_CLEAR(vtype);
-	  Py_CLEAR(ival);
 	}
+        Py_CLEAR(ival);
 	Py_CLEAR(ikey);
 	Py_CLEAR(itype);
       }
@@ -5272,6 +5308,7 @@ public:
       Py_CLEAR(ival);
       Py_CLEAR(pandas_api);
       Py_CLEAR(is_integer_dtype);
+      Py_CLEAR(is_string_dtype);
       out = (!error);
       goto cleanup;
 #endif // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
@@ -5629,6 +5666,7 @@ public:
     }
     if (!(PyDataType_ISNUMBER(desc))) {
       std::cerr << "NumpyType2SubType: Non-number numpy element (itemsize = " << itemsize << ")" << std::endl;
+      std::cerr << "NumpyType2SubType: " << NPY_TYPE2STRING(desc->type_num) << std::endl;
       return false;
     }
     precision = (SizeType)(PyDataType_ELSIZE(desc));

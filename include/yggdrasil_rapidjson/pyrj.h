@@ -1028,6 +1028,61 @@ bool PyObject_IsInstanceString(PyObject* x, std::string class_name) {
   out = (check == result);
   PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(inst_class, inst_class_str);
 }
+#ifdef YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
+inline
+std::string NPY_TYPE2STRING(int) {
+  return "";
+}
+#else // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
+inline
+std::string NPY_TYPE2STRING(int x) {
+  YGGDRASIL_RAPIDJSON_ASSERT(isPythonInitialized());
+  if (!isPythonInitialized())
+    return "";
+#define CASE_TYPE(name)                         \
+  case (name): {                                \
+    return #name;                               \
+  }
+  switch(x) {
+    CASE_TYPE(NPY_BOOL);
+    CASE_TYPE(NPY_BYTE);
+    CASE_TYPE(NPY_UBYTE);
+    CASE_TYPE(NPY_SHORT);
+    CASE_TYPE(NPY_USHORT);
+    CASE_TYPE(NPY_INT);
+    CASE_TYPE(NPY_UINT);
+    CASE_TYPE(NPY_LONG);
+    CASE_TYPE(NPY_ULONG);
+    CASE_TYPE(NPY_LONGLONG);
+    CASE_TYPE(NPY_ULONGLONG);
+    CASE_TYPE(NPY_FLOAT);
+    CASE_TYPE(NPY_DOUBLE);
+    CASE_TYPE(NPY_LONGDOUBLE);
+    CASE_TYPE(NPY_CFLOAT); // Complex
+    CASE_TYPE(NPY_CDOUBLE);
+    CASE_TYPE(NPY_CLONGDOUBLE);
+    CASE_TYPE(NPY_OBJECT);
+    CASE_TYPE(NPY_STRING);
+    CASE_TYPE(NPY_UNICODE);
+    CASE_TYPE(NPY_VOID);
+    CASE_TYPE(NPY_DATETIME);
+    CASE_TYPE(NPY_TIMEDELTA);
+    CASE_TYPE(NPY_HALF);
+    CASE_TYPE(NPY_CHAR); // Deprecated, but check anyway
+    // CASE_TYPE(NPY_NTYPES_LEGACY);
+    CASE_TYPE(NPY_NOTYPE);
+    CASE_TYPE(NPY_USERDEF);
+    CASE_TYPE(NPY_VSTRING);
+  default: {
+    if (x >= NPY_USERDEF) {
+      return "user-defined";
+    }
+    return std::to_string(x);
+  }
+  }
+#undef CASE_TYPE
+}
+#endif // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
 inline
 bool IsStructuredArray(PyObject* x) {
   YGGDRASIL_RAPIDJSON_ASSERT(isPythonInitialized());
