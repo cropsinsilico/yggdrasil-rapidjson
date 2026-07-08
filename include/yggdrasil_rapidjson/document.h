@@ -5047,6 +5047,10 @@ public:
 	    }
 	  } else {
 	    ValueType pyField(field, allocator);
+            if (pyField.IsNull()) {
+              out = false;
+              goto cleanup;
+            }
 	    if (!skipTitle) {
 	      ValueType field_name(kw_keyS,
 				   static_cast<SizeType>(kw_keyS_len),
@@ -5633,6 +5637,14 @@ public:
     }
     if (!(PyDataType_ISNUMBER(desc))) {
       std::cerr << "NumpyType2SubType: Non-number numpy element (itemsize = " << itemsize << ")" << std::endl;
+#define CHECK_NPY_TYPE(name)                                            \
+      if (desc->type_num == name) {                                     \
+        std::cerr << "NumpyType2SubType: " #name << std::endl;          \
+      }
+      CHECK_NPY_TYPE(NPY_BYTE)
+      else CHECK_NPY_TYPE(NPY_VSTRING)
+      else CHECK_NPY_TYPE(NPY_OBJECT)
+#undef CHECK_NPY_TYPE
       return false;
     }
     precision = (SizeType)(PyDataType_ELSIZE(desc));
