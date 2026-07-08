@@ -1028,6 +1028,69 @@ bool PyObject_IsInstanceString(PyObject* x, std::string class_name) {
   out = (check == result);
   PYTHON_ERROR_CLEANUP_NOTHROW_CLEAR_(inst_class, inst_class_str);
 }
+#ifdef YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
+inline
+std::string NPY_TYPE2STRING(int) {
+  return "";
+}
+#else // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
+inline
+std::string NPY_TYPE2STRING(int x) {
+  std::string out = "";
+  YGGDRASIL_RAPIDJSON_ASSERT(isPythonInitialized());
+  if (!isPythonInitialized())
+    return out;
+#define CASE_TYPE(name)                         \
+  case (name): {                                \
+    out = #name;                                \
+    break;                                      \
+  }
+  switch(x) {
+    CASE_TYPE(NPY_BOOL);
+    // CASE_TYPE(NPY_BYTE);
+    CASE_TYPE(NPY_INT8);
+    // CASE_TYPE(NPY_SHORT);
+    CASE_TYPE(NPY_INT16);
+    // CASE_TYPE(NPY_INT);
+    CASE_TYPE(NPY_INT32);
+    // CASE_TYPE(NPY_LONG);
+    CASE_TYPE(NPY_INT64);
+    // CASE_TYPE(NPY_UBYTE);
+    CASE_TYPE(NPY_UINT8);
+    // CASE_TYPE(NPY_USHORT);
+    CASE_TYPE(NPY_UINT16);
+    // CASE_TYPE(NPY_UINT);
+    CASE_TYPE(NPY_UINT32);
+    // CASE_TYPE(NPY_ULONG);
+    // CASE_TYPE(NPY_ULONGLONG);
+    CASE_TYPE(NPY_UINT64);
+    // CASE_TYPE(NPY_HALF);
+    CASE_TYPE(NPY_FLOAT16);
+    // CASE_TYPE(NPY_FLOAT);
+    CASE_TYPE(NPY_FLOAT32);
+    // CASE_TYPE(NPY_DOUBLE);
+    CASE_TYPE(NPY_FLOAT64);
+    // CASE_TYPE(NPY_LONGDOUBLE);
+    // CASE_TYPE(NPY_CFLOAT);
+    CASE_TYPE(NPY_COMPLEX64);
+    // CASE_TYPE(NPY_CDOUBLE);
+    CASE_TYPE(NPY_COMPLEX128);
+    // CASE_TYPE(NPY_CLONGDOUBLE);
+    CASE_TYPE(NPY_DATETIME);
+    CASE_TYPE(NPY_TIMEDELTA);
+    CASE_TYPE(NPY_UNICODE);
+    CASE_TYPE(NPY_VSTRING);
+    CASE_TYPE(NPY_OBJECT);
+    CASE_TYPE(NPY_VOID);
+    // CASE_TYPE(NPY_INTP);
+    // CASE_TYPE(NPY_UINTP);
+    // CASE_TYPE(NPY_MASK);
+    // CASE_TYPE(NPY_DEFAULT_TYPE);
+  }
+#undef CASE_TYPE
+  return out;
+}
+#endif // YGGDRASIL_RAPIDJSON_DONT_IMPORT_NUMPY
 inline
 bool IsStructuredArray(PyObject* x) {
   YGGDRASIL_RAPIDJSON_ASSERT(isPythonInitialized());
