@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJSON version is used with the addition of a EXTEN version after the PATCH version (i.e. MAJOR.MINOR.PATCH.EXTEN) to indicate the YggdrasilRapidJSON version. The EXTEN version will restart at 0 when/if RapidJSON increments their version.
 
+## 1.1.0.6 - 2026-XX-XX
+
+
 ## 1.1.0.5 - 2026-07-08
 
 ### Bug fixes
@@ -11,6 +14,7 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ### Features
 * NPY_TYPE2STRING utility for getting a numpy type enumerator name during debugging
+* Disable YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT cmake option by default for use by other packages
 
 ## 1.1.0.4 - 2026-07-06
 
