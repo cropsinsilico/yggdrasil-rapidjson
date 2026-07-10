@@ -30,7 +30,11 @@ list(GET @PROJECT_NAME@_INCLUDE_DIR 0 @PROJECT_NAME@_INCLUDE_DIR)
 
 if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
   include(CMakeFindDependencyMacro)
-  find_dependency(Python3 COMPONENTS Interpreter Development NumPy)
+  if(YGGDRASIL_RAPIDJSON_PYTHON_WRAPPER)
+    find_dependency(Python3 COMPONENTS Interpreter Development.Module NumPy)
+  else()
+    find_dependency(Python3 COMPONENTS Interpreter Development NumPy)
+  endif()
 endif()
 
 yggdrasil_rapidjson_config_init(@PROJECT_NAME@_INTERFACE)

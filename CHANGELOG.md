@@ -5,6 +5,7 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ## 1.1.0.6 - 2026-XX-XX
 
+* Fix bug in YggdrasilRapidJSONConfig where Python embedding library was loaded as a dependency for Python extensions resulting in cmake warning about unsupported dynamic linking
 
 ## 1.1.0.5 - 2026-07-08
 
