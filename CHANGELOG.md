@@ -3,6 +3,17 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJSON version is used with the addition of a EXTEN version after the PATCH version (i.e. MAJOR.MINOR.PATCH.EXTEN) to indicate the YggdrasilRapidJSON version. The EXTEN version will restart at 0 when/if RapidJSON increments their version.
 
+## 1.1.0.6 - 2026-07-10
+
+### Bug fixes
+* Fix bug in YggdrasilRapidJSONConfig where Python embedding library was loaded as a dependency for Python extensions resulting in cmake warning about unsupported dynamic linking
+* Change how YGGDRASIL_RAPIDJSON_VERSION is set from git tags so that it is cached
+
+### Features
+* Add YggdrasilRapidJSONTools.cmake to contain utilities for downstream packages, particularly for building/testing against a local YggdrasilRapidJSON passed via -DYGGDRASIL_RAPIDJSON_REPO_DIR:PATH=/path/to/repo or acquiring YggdrasilRapidJSON via git if -DYGGDRASIL_RAPIDJSON_CLONE_IF_MISSING:BOOL=ON is passed and an installation cannot be located.
+* Disable build of tests, examples, documentation etc if the project is being included as a subdirectory
+* Add local build flags based on cmake options to the YggdrasilRapidJSON interface if the project is being included as a subdirectory
+
 ## 1.1.0.5 - 2026-07-08
 
 ### Bug fixes
@@ -11,6 +22,7 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ### Features
 * NPY_TYPE2STRING utility for getting a numpy type enumerator name during debugging
+* Disable YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT cmake option by default for use by other packages
 
 ## 1.1.0.4 - 2026-07-06
 
