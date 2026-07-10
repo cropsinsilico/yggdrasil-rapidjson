@@ -10,6 +10,7 @@ macro(include_yggdrasil_rapidjson_macros)
     cmake_policy(SET CMP0169 OLD)
   endif()
   if(NOT COMMAND yggdrasil_rapidjson_options)
+    option(YGGDRASIL_RAPIDJSON_CLONE_IF_MISSING "Clone the YggdrasilRapidJSON library from GitHub if it cannot be located locally" OFF)
     set(YGGDRASIL_RAPIDJSON_REPO_DIR "" CACHE PATH "Existing directory containing the yggdrasil-rapidjson repository")
     set(YGGDRASIL_RAPIDJSON_REPO_BUILD_DIR "")
     set(YGGDRASIL_RAPIDJSON_MACROS_FILE "")
@@ -78,7 +79,16 @@ macro(include_yggdrasil_rapidjson_macros)
         OUTPUT_VARIABLE YGGDRASIL_RAPIDJSON_REPO_BUILD_DIR
       )
     elseif(NOT YGGDRASIL_RAPIDJSON_MACROS_FILE)
-      message(WARNING "Could not locate the YggdrasilRapidJSON package via find_file (YggdrasilRapidJSON_DIR=${YggdrasilRapidJSON_DIR}), importing it from github as an external project...")
+      if(YGGDRASIL_RAPIDJSON_CLONE_IF_MISSING)
+        set(YGGDRASIL_RAPIDJSON_CLONE_MSG_LEVEL WARNING)
+      else()
+        set(YGGDRASIL_RAPIDJSON_CLONE_MSG_LEVEL FATAL_ERROR)
+      endif()
+      message(
+        ${YGGDRASIL_RAPIDJSON_CLONE_MSG_LEVEL}
+        "Could not locate the YggdrasilRapidJSON package via find_file (YggdrasilRapidJSON_DIR=${YggdrasilRapidJSON_DIR}), importing it from github as an external project..."
+      )
+      unset(YGGDRASIL_RAPIDJSON_CLONE_MSG_LEVEL)
       include(FetchContent)
       FetchContent_Declare(
         YggdrasilRapidJSON
@@ -106,6 +116,8 @@ endmacro()
 macro(find_yggdrasil_rapidjson)
   include_yggdrasil_rapidjson_macros()
   if(YGGDRASIL_RAPIDJSON_REPO_DIR)
+    # TODO: Move this into a generated dummy config file that can be
+    # used by find_package
     foreach(suffix BUILD_EXAMPLES BUILD_TESTS BUILD_DOC)
       if(NOT YGGDRASIL_RAPIDJSON_${suffix})
         set(YGGDRASIL_RAPIDJSON_${suffix} OFF)

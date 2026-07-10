@@ -10,7 +10,7 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 * Change how YGGDRASIL_RAPIDJSON_VERSION is set from git tags so that it is cached
 
 ### Features
-* Add YggdrasilRapidJSONTools.cmake to contain utilities for downstream packages, particularly for building/testing against a local YggdrasilRapidJSON and/or acquiring YggdrasilRapidJSON via git if an installation cannot be located
+* Add YggdrasilRapidJSONTools.cmake to contain utilities for downstream packages, particularly for building/testing against a local YggdrasilRapidJSON passed via -DYGGDRASIL_RAPIDJSON_REPO_DIR:PATH=/path/to/repo or acquiring YggdrasilRapidJSON via git if -DYGGDRASIL_RAPIDJSON_CLONE_IF_MISSING:BOOL=ON is passed and an installation cannot be located.
 * Disable build of tests, examples, documentation etc if the project is being included as a subdirectory
 * Add local build flags based on cmake options to the YggdrasilRapidJSON interface if the project is being included as a subdirectory
 
