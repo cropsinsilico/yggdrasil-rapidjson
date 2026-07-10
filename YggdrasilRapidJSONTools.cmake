@@ -2,6 +2,13 @@
 # yggdrasil-rapidjson as a dependency via find_package
 
 macro(include_yggdrasil_rapidjson_macros)
+  if(POLICY CMP0169)
+    # Allows FetchContent_Populate to be called directly so that the
+    # macros from a YggdrasilRapidJSON repository can be used without
+    # including the subdirectory and initializing the YggdrasilRapidJSON
+    # target with properties based on current option values
+    cmake_policy(set CMP0169 OLD)
+  endif()
   if(NOT COMMAND yggdrasil_rapidjson_options)
     set(YGGDRASIL_RAPIDJSON_REPO_DIR "" CACHE PATH "Existing directory containing the yggdrasil-rapidjson repository")
     set(YGGDRASIL_RAPIDJSON_REPO_BUILD_DIR "")
