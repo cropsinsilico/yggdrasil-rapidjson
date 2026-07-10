@@ -17,11 +17,18 @@ macro(include_yggdrasil_rapidjson_macros)
     if(YggdrasilRapidJSON_FOUND)
       message(FATAL_ERROR "YggdrasilRapidJSON_FOUND, but yggdrasil_rapidjson_options not defined")
     elseif(NOT YGGDRASIL_RAPIDJSON_REPO_DIR)
+      if(WIN32)
+        set(YGGDRASIL_RAPIDJSON_CONFIG_FILE_PATH_SUFFIXES "Library/cmake")
+      else()
+        set(YGGDRASIL_RAPIDJSON_CONFIG_FILE_PATH_SUFFIXES "lib/cmake/YggdrasilRapidJSON")
+      endif()
       find_file(
         YGGDRASIL_RAPIDJSON_CONFIG_FILE
         YggdrasilRapidJSONConfig.cmake
         PATHS "${YggdrasilRapidJSON_DIR}"
+        PATH_SUFFIXES "${YGGDRASIL_RAPIDJSON_CONFIG_FILE_PATH_SUFFIXES}"
       )
+      unset(YGGDRASIL_RAPIDJSON_CONFIG_FILE_PATH_SUFFIXES)
       if(YGGDRASIL_RAPIDJSON_CONFIG_FILE)
         message(DEBUG "Located YggdrasilRapidJSON config file at ${YGGDRASIL_RAPIDJSON_CONFIG_FILE}")
         cmake_path(
@@ -116,6 +123,10 @@ macro(find_yggdrasil_rapidjson)
       PROPERTY EXCLUDE_FROM_ALL ON
     )
     set(YggdrasilRapidJSON_VERSION "${YGGDRASIL_RAPIDJSON_VERSION}")
+    cmake_path(
+      APPEND YGGDRASIL_RAPIDJSON_REPO_DIR "include"
+      OUTPUT_VARIABLE YggdrasilRapidJSON_INCLUDE_DIRS
+    )
     if(YggdrasilRapidJSON_VERSION VERSION_LESS "1.1.0.6")
       yggdrasil_rapidjson_options_config(LOCAL)
       yggdrasil_rapidjson_target_config(YggdrasilRapidJSON INTERFACE LOCAL)
