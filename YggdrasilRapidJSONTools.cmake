@@ -80,15 +80,16 @@ macro(include_yggdrasil_rapidjson_macros)
       )
     elseif(NOT YGGDRASIL_RAPIDJSON_MACROS_FILE)
       if(YGGDRASIL_RAPIDJSON_CLONE_IF_MISSING)
-        set(YGGDRASIL_RAPIDJSON_CLONE_MSG_LEVEL WARNING)
+        message(
+          WARNING
+          "Could not locate the YggdrasilRapidJSON package via find_file (YggdrasilRapidJSON_DIR=${YggdrasilRapidJSON_DIR}), importing it from github as an external project..."
+        )
       else()
-        set(YGGDRASIL_RAPIDJSON_CLONE_MSG_LEVEL FATAL_ERROR)
+        message(
+          FATAL_ERROR
+          "Could not locate the YggdrasilRapidJSON package via find_file (YggdrasilRapidJSON_DIR=${YggdrasilRapidJSON_DIR}) and YGGDRASIL_RAPIDJSON_CLONE_IF_MISSING is not set"
+        )
       endif()
-      message(
-        ${YGGDRASIL_RAPIDJSON_CLONE_MSG_LEVEL}
-        "Could not locate the YggdrasilRapidJSON package via find_file (YggdrasilRapidJSON_DIR=${YggdrasilRapidJSON_DIR}), importing it from github as an external project..."
-      )
-      unset(YGGDRASIL_RAPIDJSON_CLONE_MSG_LEVEL)
       include(FetchContent)
       FetchContent_Declare(
         YggdrasilRapidJSON
