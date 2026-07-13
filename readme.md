@@ -115,12 +115,7 @@ The steps below outline how a release should be produced.
 2. Create a new branch with the name of the version with a "v" prefix (i.e. vMAJOR.MINOR.PATCH.EXTEN) by either incrementing the EXTEN version or restarting it at 0 if the upstream RapidJSON version has been incremented.
 3. Update CHANGELOG.md with release notes and commit them to the version branch.
 4. Update the version in the following files and commit them to the version branch.
-   * CMakeLists.txt
-   * recipe/meta.yaml
    * conda.recipe/recipe.yaml
 5. Merge the version branch via pull request, ensuring that all tests pass.
-6. Create an annotated tag for the merged version changes and push it.
-   * `git tag -a vX.X.X.X -m "Release vX.X.X.X"`
-   * `git push origin --tags`
-7. Create a release on github
+7. Create a release on github with the next tag created on publish
 8. Ensure the conda feedstock is updated
