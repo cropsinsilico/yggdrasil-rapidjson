@@ -66,6 +66,17 @@ function(yggdrasil_rapidjson_config_vars PREFIX)
         ${PREFIX}_PUBLIC_${tool}_${suffix_lang}
         ${PREFIX}_PRIVATE_${tool}_${suffix_lang}
       )
+      set(langlist C CXX)
+      if(tool STREQUAL "GNU")
+        list(APPEND langlist Fortran)
+      endif()
+      foreach(lang IN LISTS langlist)
+        list(
+          APPEND ${PREFIX}_CONFIG_VARS
+          ${PREFIX}_PUBLIC_${tool}_${lang}_${suffix_lang}
+          ${PREFIX}_PRIVATE_${tool}_${lang}_${suffix_lang}
+        )
+      endforeach()
     endforeach()
   endforeach()
   foreach(suffix LIBRARIES INCLUDE_DIRS COMPILE_FLAGS LINK_FLAGS)
@@ -83,6 +94,7 @@ function(yggdrasil_rapidjson_config_init PREFIX)
   foreach(var IN LISTS ${PREFIX}_CONFIG_VARS)
     set(${var} "" PARENT_SCOPE)
   endforeach()
+  set(${PREFIX}_CONFIG_VARS ${${PREFIX}_CONFIG_VARS} PARENT_SCOPE)
 endfunction()
 
 function(yggdrasil_rapidjson_config_cleanup PREFIX)
@@ -132,19 +144,24 @@ function(yggdrasil_rapidjson_config_accum PREFIX)
     endforeach()
     foreach(tool GNU Clang AppleClang MSVC)
       set(k ${PREFIX}_PUBLIC_${tool}_${suffix_lang})
-      if(NOT ${k})
-        continue()
-      endif()
       set(langlist C CXX)
-      set(toollist ${tool})
       if(tool STREQUAL "GNU")
         list(APPEND langlist Fortran)
       endif()
       foreach(lang IN LISTS langlist)
-        list(
-          APPEND ${PREFIX}_ALL_PUBLIC_${suffix}
-          $<$<${gentype}_LANG_AND_ID:${lang},${tool}>:${${k}}>
-        )
+        set(klang ${PREFIX}_PUBLIC_${tool}_${lang}_${suffix_lang})
+        if(${k})
+          list(
+            APPEND ${PREFIX}_ALL_PUBLIC_${suffix}
+            $<$<${gentype}_LANG_AND_ID:${lang},${tool}>:${${k}}>
+          )
+        endif()
+        if(${klang})
+          list(
+            APPEND ${PREFIX}_ALL_PUBLIC_${suffix}
+            $<$<${gentype}_LANG_AND_ID:${lang},${tool}>:${${klang}}>
+          )
+        endif()
       endforeach()
     endforeach()
     message(DEBUG "${PREFIX}_ALL_PUBLIC_${suffix} = ${${PREFIX}_ALL_PUBLIC_${suffix}}")
@@ -414,7 +431,8 @@ macro(yggdrasil_rapidjson_options_config OUTPUT_PREFIX)
     set(k ${OUTPUT_PREFIX}_${_yggdrasil_rapidjson_asan_tool}_ASAN_COMPILE_FLAGS)
     if(${k})
       foreach(_yggdrasil_rapidjson_asan_suffix COMPILE_FLAGS LINK_FLAGS)
-        list(APPEND ${OUTPUT_PREFIX}_PUBLIC_${_yggdrasil_rapidjson_asan_tool}_${_yggdrasil_rapidjson_asan_suffix} ${${k}})
+        list(APPEND ${OUTPUT_PREFIX}_PUBLIC_${_yggdrasil_rapidjson_asan_tool}_C_${_yggdrasil_rapidjson_asan_suffix} ${${k}})
+        list(APPEND ${OUTPUT_PREFIX}_PUBLIC_${_yggdrasil_rapidjson_asan_tool}_CXX_${_yggdrasil_rapidjson_asan_suffix} ${${k}})
       endforeach()
     endif()
   endforeach()
