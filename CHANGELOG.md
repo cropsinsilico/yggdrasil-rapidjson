@@ -5,6 +5,12 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ## 1.1.0.7 - 2026-XX-XX
 
+### Bug fixes
+* Fixed but where GNU Fortran flags for ASAN/UBSAN were added even though they conflict with the clang flags
+
+### Features
+* Added yggdrasil_rapidjson_config_vars_type cmake utility for initializing subsets of config variables
+
 ## 1.1.0.6 - 2026-07-10
 
 ### Bug fixes

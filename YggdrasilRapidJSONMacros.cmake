@@ -27,6 +27,45 @@ macro(yggdrasil_rapidjson_options_create)
   option(YGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT "Build yggdrasil_rapidjson with -march or -mcpu options" OFF)
 endmacro()
 
+function(yggdrasil_rapidjson_config_vars_type PREFIX SUFFIX OUTPUT_VAR)
+  list(
+    APPEND ${OUTPUT_VAR}
+    ${PREFIX}_${SUFFIX}
+    ${PREFIX}_PUBLIC_${SUFFIX}
+    ${PREFIX}_PRIVATE_${SUFFIX}
+  )
+  set(suffix_lang ${SUFFIX})
+  if(suffix STREQUAL "LIBRARIES")
+    set(suffix_lang "LIBS")
+  endif()
+  foreach(lang C CXX Fortran)
+    list(
+      APPEND ${OUTPUT_VAR}
+      ${PREFIX}_PUBLIC_${lang}_${suffix_lang}
+      ${PREFIX}_PRIVATE_${lang}_${suffix_lang}
+    )
+  endforeach()
+  foreach(tool GNU Clang AppleClang MSVC)
+    list(
+      APPEND ${OUTPUT_VAR}
+      ${PREFIX}_PUBLIC_${tool}_${suffix_lang}
+      ${PREFIX}_PRIVATE_${tool}_${suffix_lang}
+    )
+    set(langlist C CXX)
+    if(tool STREQUAL "GNU")
+      list(APPEND langlist Fortran)
+    endif()
+    foreach(lang IN LISTS langlist)
+      list(
+        APPEND ${OUTPUT_VAR}
+        ${PREFIX}_PUBLIC_${tool}_${lang}_${suffix_lang}
+        ${PREFIX}_PRIVATE_${tool}_${lang}_${suffix_lang}
+      )
+    endforeach()
+  endforeach()
+  set(${OUTPUT_VAR} ${${OUTPUT_VAR}} PARENT_SCOPE)
+endfunction()
+
 function(yggdrasil_rapidjson_config_vars PREFIX)
   if(${PREFIX}_CONFIG_VARS)
     return()
@@ -43,41 +82,9 @@ function(yggdrasil_rapidjson_config_vars PREFIX)
     )
   endforeach()
   foreach(suffix LIBRARIES INCLUDE_DIRS COMPILE_FLAGS LINK_FLAGS)
-    list(
-      APPEND ${PREFIX}_CONFIG_VARS
-      ${PREFIX}_${suffix}
-      ${PREFIX}_PUBLIC_${suffix}
-      ${PREFIX}_PRIVATE_${suffix}
+    yggdrasil_rapidjson_config_vars_type(
+      ${PREFIX} ${suffix} ${PREFIX}_CONFIG_VARS
     )
-    set(suffix_lang ${suffix})
-    if(suffix STREQUAL "LIBRARIES")
-      set(suffix_lang "LIBS")
-    endif()
-    foreach(lang C CXX Fortran)
-      list(
-        APPEND ${PREFIX}_CONFIG_VARS
-        ${PREFIX}_PUBLIC_${lang}_${suffix_lang}
-        ${PREFIX}_PRIVATE_${lang}_${suffix_lang}
-      )
-    endforeach()
-    foreach(tool GNU Clang AppleClang MSVC)
-      list(
-        APPEND ${PREFIX}_CONFIG_VARS
-        ${PREFIX}_PUBLIC_${tool}_${suffix_lang}
-        ${PREFIX}_PRIVATE_${tool}_${suffix_lang}
-      )
-      set(langlist C CXX)
-      if(tool STREQUAL "GNU")
-        list(APPEND langlist Fortran)
-      endif()
-      foreach(lang IN LISTS langlist)
-        list(
-          APPEND ${PREFIX}_CONFIG_VARS
-          ${PREFIX}_PUBLIC_${tool}_${lang}_${suffix_lang}
-          ${PREFIX}_PRIVATE_${tool}_${lang}_${suffix_lang}
-        )
-      endforeach()
-    endforeach()
   endforeach()
   foreach(suffix LIBRARIES INCLUDE_DIRS COMPILE_FLAGS LINK_FLAGS)
     list(
