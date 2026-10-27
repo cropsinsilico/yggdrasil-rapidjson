@@ -20,3 +20,5 @@ Dockerfile text
 *.png binary
 *.jpg binary
 *.json binary
+# SCM syntax highlighting & preventing 3-way merges
+pixi.lock merge=binary linguist-language=YAML linguist-generated=true -diff
