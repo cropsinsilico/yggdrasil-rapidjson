@@ -2,12 +2,12 @@ name: Test of package installation & execution
 'on':
   push:
     branches-ignore:
-     - gh-pages
-    tags:
-     - '*'
+      - gh-pages
   schedule:
-  - cron: 0 10 * * 1
-  - cron: 0 10 1 * *
+    - cron: 0 10 * * 1
+    - cron: 0 10 1 * *
+  workflow_dispatch:
+
 jobs:
   build_pip:
     runs-on: ${{ matrix.os }}
@@ -185,10 +185,36 @@ jobs:
           # directory: build/Testing/CoverageInfo
           functionalities: gcov
 
+  test:
+    name: Run tests on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          environments: test
+      - name: Run tests
+        run: pixi run -e test test --output-on-failure --verbose
+
+  docs:
+    name: Build the docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          environments: doc
+      - name: Build docs
+        run: pixi run -e doc doc
+
   all_tests_passed:
     runs-on: ubuntu-latest
     name: All tests passed
-    needs: [build_pip, build_conda]
+    needs: [build_pip, build_conda, test, docs]
     if: always()
     steps:
       - name: All tests ok

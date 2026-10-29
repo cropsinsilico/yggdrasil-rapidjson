@@ -14,56 +14,74 @@ c-compiler = "*"
 cxx-compiler = "*"
 pkg-config = "*"
 
-[feature.test.dependencies]
-cmake = ">=3.18"
-ninja = "*"
-c-compiler = "*"
-cxx-compiler = "*"
-python = "*"
-numpy = "*"
-
-[feature.conda-build.dependencies]
-conda-build = "*"
-boa = "*"
+[feature.build-conda.dependencies]
 rattler-build = "*"
+
+[feature.doc.dependencies]
+doxygen = "*"
 
 [environments]
 build = { features = ["build"], solve-group = "default" }
-test = { features = ["test"], solve-group = "default" }
-conda-env = { features = ["conda-build"], solve-group = "default" }
+build-conda = { features = ["build-conda"], solve-group = "default" }
+test = { features = ["build"], solve-group = "default" }
+doc = { features = ["build", "doc"], solve-group = "default" }
 default = { features = ["build"], solve-group = "default" }
 
 [tasks.configure]
 cmd = "cmake -G Ninja -B build -S . -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UNITTESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_ASAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UBSAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL:BOOL=ON"
 description = "Configure CMake build"
 default-environment = "build"
+inputs = ["CMakeLists.txt"]
+outputs = ["build/CMakeFiles/"]
 
 [tasks.build]
-cmd = "cmake --build build --target=tests -- -j 8"
+cmd = "cmake --build build --target={{ target }} -- -j {{ nproc }}"
+args = [
+    { arg = "target", default = "tests" },
+    { arg = "nproc", default = "8" },
+]
 depends-on = ["configure"]
 description = "Build tests and libraries"
 default-environment = "build"
+inputs = ["CMakeLists.txt", "include/*"]
+outputs = ["build/bin/unittest"]
 
-[tasks.test]
+[tasks.unittest]
 cmd = "cd build && ctest -R unittest --stop-on-failure"
 depends-on = ["build"]
 description = "Run unit tests"
-default-environment = "test"
+default-environment = "build"
+
+[tasks.perftest]
+cmd = "cd build && ctest -R perftest --stop-on-failure"
+depends-on = ["build"]
+description = "Run performance tests"
+default-environment = "build"
+
+[tasks.test]
+cmd = "cd build && ctest"
+depends-on = ["build"]
+description = "Run all tests"
+default-environment = "build"
 
 [tasks.install]
-cmd = "cmake --install build --prefix _install"
+cmd = "cmake --install build --prefix {{ prefix }}"
+args = [
+    { arg = "prefix", default= "_install" }
+]
 depends-on = ["build"]
 description = "Install the package"
 
-[tasks.run-tests]
-cmd = "./run_tests.sh"
-description = "Run full test script"
+[tasks.doc]
+cmd = "cmake -G Ninja -B build-doc -S . -DYGGDRASIL_RAPIDJSON_BUILD_DOC:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_TESTS:BOOL=OFF -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=OFF && cmake --build build-doc --target doc"
+description = "Build documentation with Doxygen"
+default-environment = "doc"
 
-[tasks.conda-build]
-cmd = "rattler-build build --recipe conda.recipe/recipe.yaml"
-description = "Build conda package with rattler-build"
-default-environment = "conda-env"
-
-[tasks.conda-build-legacy]
-cmd = "conda-build conda.recipe"
-description = "Build conda package with conda-build"
+[tasks.build-conda]
+args = [
+    { arg = "output_dir", default = "output" },
+    { arg = "python_version", default = "3.11" },
+]
+cmd = "pixi publish --path conda.recipe/recipe.yaml --target-dir {{ output_dir }} --variant python={{ python_version }}"
+description = "Build conda package with pixi publish into a local directory"
+default-environment = "build-conda"

@@ -2,71 +2,49 @@ name: Test of conda recipe build
 'on':
   push:
     branches-ignore:
-     - gh-pages
+      - gh-pages
     tags:
-     - '*'
+      - '*'
   schedule:
-  - cron: 0 10 * * 1
+    - cron: 0 10 * * 1
+  workflow_dispatch:
+
 jobs:
-  build_conda_recipe:
+  build-conda:
+    name: Build and test conda recipe on ${{ matrix.os }} (Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash -el {0}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.11"]
-        builder: [rattler]
-      fail-fast: false
     steps:
       - name: Check out repository code
         uses: actions/checkout@v6
         with:
           submodules: true
 
-      ###################################
-      # CONDA SETUP
-      ###################################
       - name: Set up MSVC Compiler on windows
         uses: ilammy/msvc-dev-cmd@v1
         if: matrix.os == 'windows-latest'
-      - name: Set up miniconda test environment
-        uses: conda-incubator/setup-miniconda@v3
+
+      - uses: prefix-dev/setup-pixi@v0.10.0
         with:
-          activate-environment: ""
-          auto-activate-base: true
-          auto-update-conda: true
-          channels: conda-forge
-          channel-priority: strict
-          miniforge-version: latest
-      - name: Install rattler-build
-        if: matrix.builder == 'rattler'
-        run: |
-          conda info
-          conda list
-          conda install rattler-build -y
-      - name: Check conda installation
-        run: |
-          conda info
-          conda list
-          mkdir -p $HOME/local_channel
-      - name: Build conda recipe (using rattler-build)
-        if: matrix.builder == 'rattler'
-        run: |
-          rattler-build build --recipe "conda.recipe/recipe.yaml" --output-dir $HOME/local_channel/ --variant python=${{ matrix.python-version }} --no-build-id --no-include-recipe
-      # - name: Build conda recipe (using rattler-build action)
-      #   uses: prefix-dev/rattler-build-action@v0.2.34
+          environments: build-conda
+
+      - name: Build the conda package
+        run: pixi run -e build-conda build-conda output ${{ matrix.python-version }}
+
+      # - name: Build conda recipe (using rattler-build)
       #   if: matrix.builder == 'rattler'
-      #   with:
-      #     upload-artifact: false
-      #     build-args: --output-dir $HOME/local_channel/ --variant python=${{ matrix.python-version }} --no-build-id --no-include-recipe
+      #   run: |
+      #     rattler-build build --recipe "conda.recipe/recipe.yaml" --output-dir $HOME/local_channel/ --variant python=${{ matrix.python-version }} --no-build-id --no-include-recipe
 
 
   all_recipes_built:
     runs-on: ubuntu-latest
-    name: All recipes were successfully built
-    needs: [build_conda_recipe]
+    name: Recipe builds on all operating systems
+    needs: [build-conda]
     if: always()
     steps:
       - name: All tests ok
