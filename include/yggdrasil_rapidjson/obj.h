@@ -2174,9 +2174,8 @@ public:
   //! \return true if successful, false otherwise.
   virtual bool read_values(std::istream& in, const bool& dont_descend=false) {
     (void)dont_descend;
-    size_t i = 0;
     for (ObjPropertiesMap::iterator it = this->properties.begin();
-	 it != this->properties.end(); it++, i++) {
+	 it != this->properties.end(); it++) {
       if (!it->mem) return false;
       if (!this->has_property(it->first, true, false, NULL)) continue;
       if (!it->read(in)) return false;
@@ -2189,10 +2188,9 @@ public:
   //! \param out Output stream.
   //! \return true if successful, false otherwise.
   virtual bool write_values(std::ostream& out) const {
-    size_t i = 0;
     bool first = true;
     for (ObjPropertiesMap::const_iterator it = this->properties.begin();
-	 it != this->properties.end(); it++, i++) {
+	 it != this->properties.end(); it++) {
       if (!this->has_property(it->first, true, false, NULL)) continue;
       if (!it->mem) return false;
       if (!it->write(out, !first)) return false;
