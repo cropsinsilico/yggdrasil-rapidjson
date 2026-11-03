@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.15)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.18)
 if(POLICY CMP0025)
   # detect Apple's Clang
   cmake_policy(SET CMP0025 NEW)
@@ -112,26 +112,26 @@ if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
         set(Python3_ROOT_DIR "${CONDA_PREFIX}")
     endif()
     if(Python3_EXECUTABLE AND NOT Python3_ROOT_DIR)
-      exec_program(
-        ${Python3_EXECUTABLE}
-        ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
+      execute_process(
+        COMMAND ${Python3_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_config_var('base'))"
         OUTPUT_VARIABLE Python3_ROOT_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
       )
       message(STATUE "Evaluated Python3_ROOT_DIR = ${Python3_ROOT_DIR}")
     endif()
     if(Python3_EXECUTABLE AND NOT Python3_INCLUDE_DIR)
-      exec_program(
-        ${Python3_EXECUTABLE}
-        ARGS "-c \"import sysconfig; print(sysconfig.get_path('include'))\""
+      execute_process(
+        COMMAND ${Python3_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_path('include'))"
         OUTPUT_VARIABLE Python3_INCLUDE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
       )
       message(STATUS "Evaluated Python3_INCLUDE_DIR = ${Python3_INCLUDE_DIR}")
     endif()
     if(Python3_EXECUTABLE AND NOT Python3_NumPy_INCLUDE_DIR)
-      exec_program(
-        ${Python3_EXECUTABLE}
-        ARGS "-c \"import numpy; print(numpy.get_include())\""
+      execute_process(
+        COMMAND ${Python3_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
         OUTPUT_VARIABLE Python3_NumPy_INCLUDE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
       )
       message(STATUS "Evaluated Python3_NumPy_INCLUDE_DIR = ${Python3_NumPy_INCLUDE_DIR}")
     endif()
@@ -184,8 +184,12 @@ if(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA)
     if(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL)
         set(YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS "${YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS} --create-full-schema")
     endif()
-    exec_program(${Python3_EXECUTABLE}
-                 ARGS "${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_INCLUDE_DIR}/metaschema.h ${YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS}")
+    execute_process(
+      COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py
+      ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_INCLUDE_DIR}/metaschema.h
+      ${YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS}
+    )
 endif()
 
 yggdrasil_rapidjson_global_compiler_flags(CXX)

@@ -13,6 +13,7 @@ ninja = "*"
 c-compiler = "*"
 cxx-compiler = "*"
 pkg-config = "*"
+requests = "*"  # Required by create_metaschema.py
 
 [feature.build-conda.dependencies]
 rattler-build = "*"
@@ -44,7 +45,7 @@ depends-on = ["configure"]
 description = "Build tests and libraries"
 default-environment = "build"
 inputs = ["CMakeLists.txt", "include/*"]
-outputs = ["build/bin/unittest"]
+outputs = ["build/bin/unittest", "build/bin/perftest"]
 
 [tasks.unittest]
 cmd = "cd build && ctest -R unittest --stop-on-failure"
