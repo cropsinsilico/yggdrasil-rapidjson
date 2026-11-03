@@ -1,5 +1,7 @@
 # include(CTest)
-find_package(GTest)
+if(NOT YGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST)
+  find_package(GTest)
+endif()
 enable_testing()
 
 if(GTEST_FOUND)

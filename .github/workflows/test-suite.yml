@@ -36,11 +36,6 @@ jobs:
         with:
           submodules: true
           fetch-tags: true
-      # - name: Patch gtest
-      #   run: |
-      #     cd thirdparty/gtest
-      #     git apply ../gtest.patch
-      #     cd ../..
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -78,13 +73,13 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=ON -DYGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
       - name: (WINDOWS) Configure w/ yggdrasil
         if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DPython3_ROOT_DIR=$env:pythonLocation -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DPython3_ROOT_DIR=$env:pythonLocation -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
       - name: (UNIX) Configure w/ yggdrasil
         if: matrix.os != 'windows-latest' && matrix.with-yggdrasil
         run: |
@@ -118,11 +113,6 @@ jobs:
         with:
           submodules: true
           fetch-tags: true
-      # - name: Patch gtest
-      #   run: |
-      #     cd thirdparty/gtest
-      #     git apply ../gtest.patch
-      #     cd ../..
       - name: Set up MSVC Compiler on windows
         uses: ilammy/msvc-dev-cmd@v1
         if: matrix.os == 'windows-latest'

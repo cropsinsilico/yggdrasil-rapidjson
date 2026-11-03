@@ -1775,7 +1775,7 @@ public:
   }
   bool is_numeric() OVERRIDE_CXX11 { return true; }
   bool is_exp() { return (op == '^'); }
-  bool matches(const std::vector<char> ops) {
+  bool matches(const std::vector<char>& ops) {
     for (std::vector<char>::const_iterator iop = ops.begin(); iop != ops.end(); iop++)
       if (*iop == op)
 	return true;
@@ -1952,14 +1952,14 @@ public:
     ops.push_back(op2);
     group_operators(ops);
   }
-  void group_operators(const std::vector<char> ops) {
+  void group_operators(const std::vector<char>& ops) {
     if (tokens.size() <= 3)
       return;
     std::vector<size_t> exponents;
     for (size_t i = 1; i < tokens.size(); i++) {
       if (tokens[i]->t == kOperatorToken) {
 	OperatorToken<Encoding> *op = static_cast<OperatorToken<Encoding>*>(tokens[i]);
-	if (op->matches(ops)) {
+	if (op && op->matches(ops)) {
 	  YGGDRASIL_RAPIDJSON_ASSERT((i + 1) < tokens.size());
 	  GroupToken<Encoding>* new_group = new GroupToken<Encoding>(this);
 	  for (size_t ii = i - 1; ii <= (i + 1); ii++) {
