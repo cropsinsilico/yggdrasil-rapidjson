@@ -1,12 +1,14 @@
 # include(CTest)
+if(NOT YGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST)
+    find_package(GTest)
+endif()
 enable_testing()
-find_package(GTestSrc)
-# find_package(GTest)
 
-# if(GTEST_FOUND)
-#     include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
-#     set(TEST_LIBRARIES ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY})
-# endif()
+if(GTEST_FOUND)
+    set(TEST_LIBRARIES GTest::gtest GTest::gtest_main)
+else()
+    find_package(GTestSrc)
+endif()
     
 if(GTESTSRC_FOUND)
 

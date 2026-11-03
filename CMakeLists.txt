@@ -55,7 +55,7 @@ option(YGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST
     "Use gtest installation in `thirdparty/gtest` by default if available" OFF)
 
 option(YGGDRASIL_RAPIDJSON_BUILD_CXXMIN "Build yggdrasil_rapidjson with minimum C++ standard" OFF)
-option(YGGDRASIL_RAPIDJSON_BUILD_CXX11 "Build yggdrasil_rapidjson with C++11" ON)
+option(YGGDRASIL_RAPIDJSON_BUILD_CXX11 "Build yggdrasil_rapidjson with C++11" OFF)
 option(YGGDRASIL_RAPIDJSON_BUILD_CXX17 "Build yggdrasil_rapidjson with C++17" OFF)
 option(YGGDRASIL_RAPIDJSON_BUILD_CXX20 "Build yggdrasil_rapidjson with C++20" OFF)
 if(YGGDRASIL_RAPIDJSON_BUILD_CXX11)

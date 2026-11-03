@@ -21,6 +21,8 @@ pkg-config = "*"
 requests = "*"
 pyyaml = "*"
 libpython = "*"
+# Required for tests
+gtest = "*"
 
 [feature.build-conda.dependencies]
 rattler-build = "*"
