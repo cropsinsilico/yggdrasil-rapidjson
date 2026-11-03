@@ -508,6 +508,9 @@ struct DocumentMove: public ::testing::Test {
 };
 
 typedef ::testing::Types< CrtAllocator, MemoryPoolAllocator<> > MoveAllocatorTypes;
+#ifndef TYPED_TEST_SUITE
+#define TYPED_TEST_SUITE(a, b) TYPED_TEST_CASE(a, b)
+#endif // TYPED_TEST_SUITE
 TYPED_TEST_SUITE(DocumentMove, MoveAllocatorTypes);
 
 TYPED_TEST(DocumentMove, MoveConstructor) {

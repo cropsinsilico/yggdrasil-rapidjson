@@ -1,5 +1,8 @@
 [workspace]
 name = "yggdrasil-rapidjson"
+version = "1.1.0.7"
+description = "Version of rapidjson with extended support for yggdrasil"
+authors = ["Meagan Lang <langmm.astro@gmail.com>"]
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
 preview = ["pixi-build"]
@@ -27,21 +30,21 @@ gtest = "*"
 [feature.build-conda.dependencies]
 rattler-build = "*"
 
-[feature.doc.dependencies]
+[feature.docs.dependencies]
 doxygen = "*"
 
 [environments]
 build = { features = ["build"], solve-group = "default" }
 build-conda = { features = ["build-conda"], solve-group = "default" }
 test = { features = ["build"], solve-group = "default" }
-doc = { features = ["build", "doc"], solve-group = "default" }
+docs = { features = ["build", "docs"], solve-group = "default" }
 default = { features = ["build"], solve-group = "default" }
 
 [tasks.configure]
 cmd = "cmake -G Ninja -B build -S . -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UNITTESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_ASAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UBSAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL:BOOL=ON"
 description = "Configure CMake build"
 default-environment = "build"
-inputs = ["CMakeLists.txt"]
+inputs = ["CMakeLists.txt", "test/CMakeLists.txt"]
 outputs = ["build/CMakeFiles/"]
 
 [tasks.build]
@@ -53,7 +56,11 @@ args = [
 depends-on = ["configure"]
 description = "Build tests and libraries"
 default-environment = "build"
-inputs = ["CMakeLists.txt", "include/*"]
+inputs = [
+    "CMakeLists.txt", "include/*", "test/*",
+    # "test/unittest/*.cpp",
+    # "test/perftest/*.cpp",
+]
 outputs = ["build/bin/unittest", "build/bin/perftest"]
 
 [tasks.unittest]
@@ -63,29 +70,29 @@ description = "Run unit tests"
 default-environment = "build"
 
 [tasks.perftest]
+description = "Run performance tests"
 cmd = "cd build && ctest -R perftest --stop-on-failure"
 depends-on = ["build"]
-description = "Run performance tests"
 default-environment = "build"
 
 [tasks.test]
+description = "Run the test suite"
 cmd = "cd build && ctest"
 depends-on = ["build"]
-description = "Run all tests"
 default-environment = "build"
 
 [tasks.install]
+description = "Install the package"
 cmd = "cmake --install build --prefix {{ prefix }}"
 args = [
     { arg = "prefix", default= "_install" }
 ]
 depends-on = ["build"]
-description = "Install the package"
 
-[tasks.doc]
+[tasks.docs]
+description = "Build the documentation with Doxygen"
 cmd = "cmake -G Ninja -B build-doc -S . -DYGGDRASIL_RAPIDJSON_BUILD_DOC:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_TESTS:BOOL=OFF -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=OFF && cmake --build build-doc --target doc"
-description = "Build documentation with Doxygen"
-default-environment = "doc"
+default-environment = "docs"
 
 [tasks.build-conda]
 args = [

@@ -99,11 +99,18 @@ static void u32toa_naive(uint32_t value, char* buffer) {
         value /= 10;
     } while (value > 0);
 
+#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ >= 7)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
     do {
         *buffer++ = *--p;
     } while (p != temp);
 
     *buffer = '\0';
+#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ >= 7)
+#pragma GCC diagnostic pop
+#endif
 }
 
 static void i32toa_naive(int32_t value, char* buffer) {
