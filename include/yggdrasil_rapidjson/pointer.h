@@ -246,6 +246,9 @@ public:
         GenericPointer r;
         r.allocator_ = allocator;
         Ch *p = r.CopyFromRaw(*this, 1, token.length + 1);
+        // if (token.length == 0)
+        //   p[0] = '\0';
+        // else
         std::memcpy(p, token.name, (token.length + 1) * sizeof(Ch));
         r.tokens_[tokenCount_].name = p;
         r.tokens_[tokenCount_].length = token.length;
@@ -422,14 +425,25 @@ public:
         if (nCopy > 0) {
             std::memcpy(r.tokens_, tokens_, nCopy * sizeof(Token));
         }
-        if (nameBufferSize > 0) {
-            std::memcpy(r.nameBuffer_, nameBuffer_, nameBufferSize * sizeof(Ch));
-        }
+        if (nameBuffer_) {
+            if (nameBufferSize > 0) {
+                std::memcpy(r.nameBuffer_, nameBuffer_, nameBufferSize * sizeof(Ch));
+            }
 
-        // Adjust pointers to name buffer
-        std::ptrdiff_t diff = r.nameBuffer_ - nameBuffer_;
-        for (Token *t = r.tokens_; t != r.tokens_ + nCopy; ++t)
-            t->name += diff;
+            // Adjust pointers to name buffer
+            std::ptrdiff_t diff = r.nameBuffer_ - nameBuffer_;
+            for (Token *t = r.tokens_; t != r.tokens_ + nCopy; ++t)
+                t->name += diff;
+        } else {
+          std::ptrdiff_t name_offset = 0;
+          for (size_t i = 0; i < nCopy; ++i) {
+              std::memcpy(r.nameBuffer_ + name_offset,
+                          tokens_[i].name,
+                          tokens_[i].length + 1);
+              r.tokens_[i].name = r.nameBuffer_ + name_offset;
+              name_offset = name_offset + tokens_[i].length + 1;
+          }
+        }
 
         return r;
     }
@@ -456,14 +470,25 @@ public:
         if (nCopy > 0) {
             std::memcpy(r.tokens_, tokens_ + nSkip, nCopy * sizeof(Token));
         }
-        if (nameBufferSize > 0) {
-            std::memcpy(r.nameBuffer_, nameBuffer_ + nameBufferSkip, nameBufferSize * sizeof(Ch));
-        }
+        if (nameBuffer_) {
+            if (nameBufferSize > 0) {
+                std::memcpy(r.nameBuffer_, nameBuffer_ + nameBufferSkip, nameBufferSize * sizeof(Ch));
+            }
 
-        // Adjust pointers to name buffer
-        std::ptrdiff_t diff = r.nameBuffer_ - (nameBuffer_ + nameBufferSkip);
-        for (Token *t = r.tokens_; t != r.tokens_ + nCopy; ++t)
-            t->name += diff;
+            // Adjust pointers to name buffer
+            std::ptrdiff_t diff = r.nameBuffer_ - (nameBuffer_ + nameBufferSkip);
+            for (Token *t = r.tokens_; t != r.tokens_ + nCopy; ++t)
+                t->name += diff;
+        } else {
+          std::ptrdiff_t name_offset = 0;
+          for (size_t i = nSkip; i < tokenCount_; ++i) {
+              std::memcpy(r.nameBuffer_ + name_offset,
+                          tokens_[i].name,
+                          tokens_[i].length + 1);
+              r.tokens_[i - nSkip].name = r.nameBuffer_ + name_offset;
+              name_offset = name_offset + tokens_[i].length + 1;
+          }
+        }
 
         return r;
     }
@@ -1368,19 +1393,32 @@ private:
         if (rhs.tokenCount_ > 0) {
             std::memcpy(tokens_, rhs.tokens_, rhs.tokenCount_ * sizeof(Token));
         }
-        if (nameBufferSize > 0) {
-            std::memcpy(nameBuffer_, rhs.nameBuffer_, nameBufferSize * sizeof(Ch));
-        }
+        if (rhs.nameBuffer_) {
+        
+            if (nameBufferSize > 0) {
+                std::memcpy(nameBuffer_, rhs.nameBuffer_, nameBufferSize * sizeof(Ch));
+            }
 
-        // The names of each token point to a string in the nameBuffer_. The
-        // previous memcpy copied over string pointers into the rhs.nameBuffer_,
-        // but they should point to the strings in the new nameBuffer_.
-        for (size_t i = 0; i < rhs.tokenCount_; ++i) {
-          // The offset between the string address and the name buffer should
-          // still be constant, so we can just get this offset and set each new
-          // token name according the new buffer start + the known offset.
-          std::ptrdiff_t name_offset = rhs.tokens_[i].name - rhs.nameBuffer_;
-          tokens_[i].name = nameBuffer_ + name_offset;
+            // The names of each token point to a string in the nameBuffer_. The
+            // previous memcpy copied over string pointers into the rhs.nameBuffer_,
+            // but they should point to the strings in the new nameBuffer_.
+            for (size_t i = 0; i < rhs.tokenCount_; ++i) {
+                // The offset between the string address and the name buffer should
+                // still be constant, so we can just get this offset and set each new
+                // token name according the new buffer start + the known offset.
+                std::ptrdiff_t name_offset = rhs.tokens_[i].name - rhs.nameBuffer_;
+                tokens_[i].name = nameBuffer_ + name_offset;
+            }
+            
+        } else {
+            std::ptrdiff_t name_offset = 0;
+            for (size_t i = 0; i < rhs.tokenCount_; ++i) {
+                std::memcpy(nameBuffer_ + name_offset,
+                            rhs.tokens_[i].name,
+                            rhs.tokens_[i].length + 1);
+                tokens_[i].name = nameBuffer_ + name_offset;
+                name_offset = name_offset + rhs.tokens_[i].length + 1;
+            }
         }
 
         return nameBuffer_ + nameBufferSize;

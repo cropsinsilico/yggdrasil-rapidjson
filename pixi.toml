@@ -41,45 +41,59 @@ docs = { features = ["build", "docs"], solve-group = "default" }
 default = { features = ["build"], solve-group = "default" }
 
 [tasks.configure]
-cmd = "cmake -G Ninja -B build -S . -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UNITTESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_ASAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UBSAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL:BOOL=ON"
+cmd = "cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE={{ configuration }} -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UNITTESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_ASAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UBSAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL:BOOL=ON"
+args = [
+    { arg = "configuration", default = "Debug" },
+]
 description = "Configure CMake build"
 default-environment = "build"
 inputs = ["CMakeLists.txt", "test/CMakeLists.txt"]
 outputs = ["build/CMakeFiles/"]
 
 [tasks.build]
-cmd = "cmake --build build --target={{ target }} -- -j {{ nproc }}"
+cmd = "cmake --build build --config {{ configuration }} --target={{ target }} -- -j {{ nproc }}"
 args = [
     { arg = "target", default = "tests" },
+    { arg = "configuration", default = "Debug" },
     { arg = "nproc", default = "8" },
 ]
-depends-on = ["configure"]
+depends-on = [
+    { task = "configure", args = ["{{ configuration }}"] },
+]
 description = "Build tests and libraries"
 default-environment = "build"
 inputs = [
-    "CMakeLists.txt", "include/*", "test/*",
-    # "test/unittest/*.cpp",
-    # "test/perftest/*.cpp",
+    "CMakeLists.txt", "include/yggdrasil_rapidjson/*", "test/*",
+    "test/unittest/*.cpp",
+    "test/perftest/*.cpp",
 ]
 outputs = ["build/bin/unittest", "build/bin/perftest"]
 
-[tasks.unittest]
-cmd = "cd build && ctest -R unittest --stop-on-failure"
-depends-on = ["build"]
+[tasks.test]
+cmd = "ctest -C {{ configuration }} -R {{ suite }} --stop-on-failure"
+cwd = "build"
+args = [
+    { arg = "suite", default = "unittest" },
+    { arg = "configuration", default = "Debug" },
+]
+depends-on = [
+    { task = "build", args = ["tests", "{{ configuration }}"] },
+]
 description = "Run unit tests"
 default-environment = "build"
 
 [tasks.perftest]
 description = "Run performance tests"
-cmd = "cd build && ctest -R perftest --stop-on-failure"
-depends-on = ["build"]
-default-environment = "build"
+depends-on = [
+    { task = "test", args = ["perftest"] },
+]
 
-[tasks.test]
+[tasks.all-tests]
 description = "Run the test suite"
-cmd = "cd build && ctest"
-depends-on = ["build"]
-default-environment = "build"
+depends-on = [
+    { task = "test", args = ["perftest", "Release"] },
+    { task = "test", args = ["unittest", "Release"] },
+]
 
 [tasks.install]
 description = "Install the package"
