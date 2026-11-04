@@ -24,8 +24,9 @@ pkg-config = "*"
 requests = "*"
 pyyaml = "*"
 libpython = "*"
-# Required for tests
+# [feature.test.dependencies]
 gtest = "*"
+gcovr = "*"
 
 [feature.build-conda.dependencies]
 rattler-build = "*"
@@ -41,9 +42,10 @@ docs = { features = ["build", "docs"], solve-group = "default" }
 default = { features = ["build"], solve-group = "default" }
 
 [tasks.configure]
-cmd = "cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE={{ configuration }} -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UNITTESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_ASAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UBSAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL:BOOL=ON"
+cmd = "cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE={{ configuration }} -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UNITTESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_ASAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UBSAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL:BOOL=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT:BOOL=ON {{ extra_flags }}"
 args = [
     { arg = "configuration", default = "Debug" },
+    { arg = "extra_flags", default = "" },
 ]
 description = "Configure CMake build"
 default-environment = "build"
@@ -55,10 +57,17 @@ cmd = "cmake --build build --config {{ configuration }} --target={{ target }} --
 args = [
     { arg = "target", default = "tests" },
     { arg = "configuration", default = "Debug" },
+    { arg = "extra_flags", default = "" },
     { arg = "nproc", default = "8" },
 ]
 depends-on = [
-    { task = "configure", args = ["{{ configuration }}"] },
+    {
+        task = "configure",
+        args = [
+            "{{ configuration }}",
+            "{{ extra_flags }}"
+        ]
+    },
 ]
 description = "Build tests and libraries"
 default-environment = "build"
@@ -75,12 +84,20 @@ cwd = "build"
 args = [
     { arg = "suite", default = "unittest" },
     { arg = "configuration", default = "Debug" },
+    { arg = "extra_flags", default = "" },
 ]
 depends-on = [
-    { task = "build", args = ["tests", "{{ configuration }}"] },
+    {
+        task = "build",
+        args = [
+            "tests",
+            "{{ configuration }}",
+            "{{ extra_flags }}"
+        ],
+    },
 ]
 description = "Run unit tests"
-default-environment = "build"
+default-environment = "test"
 
 [tasks.perftest]
 description = "Run performance tests"
