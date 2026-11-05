@@ -6187,7 +6187,7 @@ public:
   }
   template <typename T>
   T GetScalar(YGGDRASIL_RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
-    T data(0, 0);
+    T data{0, 0};
     GetScalarValue(data);
     return data;
   }
@@ -6201,7 +6201,7 @@ public:
   template <typename T>
   T GetScalar(const UnitsType data_units,
 	      YGGDRASIL_RAPIDJSON_ENABLEIF((YGGDRASIL_IS_COMPLEX_TYPE(T)))) const {
-    T data(0, 0);
+    T data{0, 0};
     GetScalar(data, data_units);
     return data;
   }
