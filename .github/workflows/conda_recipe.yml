@@ -30,10 +30,6 @@ jobs:
       - name: Set up MSVC Compiler on windows
         uses: ilammy/msvc-dev-cmd@v1
         if: matrix.os == 'windows-latest'
-        # with:
-        #   toolset: 14.1  # vs2017
-        #   # toolset: "14.3"  # vs2022 set in conda-forge-pinnings
-        #   # toolset: "14.5"  # vs2026
 
       - uses: prefix-dev/setup-pixi@v0.10.0
         with:
@@ -44,7 +40,8 @@ jobs:
         run: pixi run -e build-conda build-conda output ${{ matrix.python-version }}
       - name: Build the conda package (Windows)
         if: matrix.os == 'windows-latest'
-        run: pixi publish --path conda.recipe/recipe.yaml --target-dir output --variant python=${{ matrix.python-version }} --variant c_compiler=vs2017 --variant cxx_compiler=vs2017
+        run: pixi run -e build-conda build-conda output ${{ matrix.python-version }} -- --variant c_compiler=vs2017 --variant cxx_compiler=vs2017
+        # run: pixi publish --path conda.recipe/recipe.yaml --target-dir output --variant python=${{ matrix.python-version }} --variant c_compiler=vs2017 --variant cxx_compiler=vs2017
 
       # - name: Build conda recipe (using rattler-build)
       #   if: matrix.builder == 'rattler'
