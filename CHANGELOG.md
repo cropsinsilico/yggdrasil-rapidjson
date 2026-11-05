@@ -10,6 +10,7 @@ Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJ
 
 ### Features
 * Added yggdrasil_rapidjson_config_vars_type cmake utility for initializing subsets of config variables
+* Added pixi environments and tasks for managing the package and updated the GHA workflows to use them
 
 ## 1.1.0.6 - 2026-07-10
 

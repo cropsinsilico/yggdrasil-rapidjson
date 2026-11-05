@@ -12,7 +12,7 @@ build-variants-files = [
 
 [dependencies]
 python = ">=3.11"
-numpy = "*"
+numpy = ">=1.13.0"
 
 [feature.py311.dependencies]
 python = "3.11.*"
@@ -31,7 +31,6 @@ python = "3.15.*"
 libpython = "3.15.*"
 
 [feature.build.dependencies]
-numpy = "*"
 cmake = ">=3.18"
 ninja = "*"
 pkg-config = "*"
@@ -51,12 +50,12 @@ cxx-compiler = "*"
 vc = "14.5.*"
 vs2026_win-64 = "19.51.*"
 
-[feature.build-conda.dependencies]
-rattler-build = "*"
-
 [feature.docs.dependencies]
 doxygen = "*"
 Jinja2 = "*"
+
+[feature.build-conda.dependencies]
+rattler-build = "*"
 
 [environments]
 default = { features = ["py315", "build"], solve-group = "default" }
@@ -174,10 +173,9 @@ cmd = "cmake -G Ninja -B build-doc -S . -DYGGDRASIL_RAPIDJSON_BUILD_DOC:BOOL=ON 
 default-environment = "docs"
 
 [tasks.build-conda]
+description = "Build conda package with pixi publish"
 args = [
-    { arg = "output_dir", default = "output" },
-    { arg = "python_version", default = "3.11" },
+    { arg = "output_dir", default = "build_conda" },
 ]
-cmd = "pixi publish --path conda.recipe/recipe.yaml --target-dir {{ output_dir }} --variant python={{ python_version }}"
-description = "Build conda package with pixi publish into a local directory"
+cmd = "pixi publish --path conda.recipe/recipe.yaml --target-dir {{ output_dir }}"
 default-environment = "build-conda"
