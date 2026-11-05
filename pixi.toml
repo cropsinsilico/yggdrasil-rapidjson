@@ -27,12 +27,14 @@ libpython = "*"
 # [feature.test.dependencies]
 gtest = "*"
 gcovr = "*"
+lcov = "*"
 
 [feature.build-conda.dependencies]
 rattler-build = "*"
 
 [feature.docs.dependencies]
 doxygen = "*"
+Jinja2 = "*"
 
 [environments]
 build = { features = ["build"], solve-group = "default" }

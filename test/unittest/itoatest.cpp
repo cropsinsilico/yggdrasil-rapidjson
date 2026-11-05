@@ -91,6 +91,11 @@ static void Verify(void(*f)(T, char*), char* (*g)(T, char*)) {
     }
 }
 
+// False warning due to use of pointer to character array
+#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ >= 7)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 static void u32toa_naive(uint32_t value, char* buffer) {
     char temp[10];
     char *p = temp;
@@ -99,18 +104,11 @@ static void u32toa_naive(uint32_t value, char* buffer) {
         value /= 10;
     } while (value > 0);
 
-#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ >= 7)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
     do {
         *buffer++ = *--p;
     } while (p != temp);
 
     *buffer = '\0';
-#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ >= 7)
-#pragma GCC diagnostic pop
-#endif
 }
 
 static void i32toa_naive(int32_t value, char* buffer) {
@@ -145,6 +143,9 @@ static void i64toa_naive(int64_t value, char* buffer) {
     }
     u64toa_naive(u, buffer);
 }
+#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ >= 7)
+#pragma GCC diagnostic pop
+#endif
 
 TEST(itoa, u32toa) {
     Verify(u32toa_naive, u32toa);
