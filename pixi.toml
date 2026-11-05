@@ -101,6 +101,26 @@ inputs = [
 ]
 outputs = ["build/bin/unittest*", "build/bin/perftest*"]
 
+[tasks.all-tests]
+cmd = "ctest -C {{ configuration }} --stop-on-failure"
+cwd = "build"
+args = [
+    { arg = "configuration", default = "Debug" },
+    { arg = "extra_flags", default = "" },
+]
+depends-on = [
+    {
+        task = "build",
+        args = [
+            "tests",
+            "{{ configuration }}",
+            "{{ extra_flags }}"
+        ],
+    },
+]
+description = "Run unit tests"
+default-environment = "test"
+
 [tasks.test]
 cmd = "ctest -C {{ configuration }} -R {{ suite }} --stop-on-failure"
 cwd = "build"
@@ -128,11 +148,10 @@ depends-on = [
     { task = "test", args = ["perftest"] },
 ]
 
-[tasks.all-tests]
-description = "Run the test suite"
+[tasks.coverage]
+description = "Run coverage tests"
 depends-on = [
-    { task = "test", args = ["perftest", "Release"] },
-    { task = "test", args = ["unittest", "Release"] },
+    { task = "test", args = ["coverage"] },
 ]
 
 [tasks.install]
