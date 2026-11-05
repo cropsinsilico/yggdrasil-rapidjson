@@ -28,7 +28,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         if: matrix.os == 'windows-latest'
         with:
-          toolset: 17.0  # vs2022 set in conda-forge-pinnings
+          toolset: "14.51"  # vs2022 set in conda-forge-pinnings
 
       - uses: prefix-dev/setup-pixi@v0.10.0
         with:

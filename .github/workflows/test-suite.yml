@@ -178,11 +178,11 @@ jobs:
         pixi-environment: [py311]
     steps:
       - uses: actions/checkout@v6
-      # - name: Set up MSVC Compiler on windows
-      #   uses: ilammy/msvc-dev-cmd@v1
-      #   if: matrix.os == 'windows-latest'
-      #   with:
-      #     toolset: 14.0
+      - name: Set up MSVC Compiler on windows
+        uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.os == 'windows-latest'
+        with:
+          toolset: "14.51"  # vs2022 set in conda-forge-pinnings
       - uses: prefix-dev/setup-pixi@v0.10.0
         with:
           environments: test-${{ matrix.pixi-environment }}
