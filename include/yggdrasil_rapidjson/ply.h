@@ -1451,8 +1451,7 @@ public:
   //! \param out Output stream.
   //! \return Output stream.
   std::ostream & write(std::ostream &out) const {
-    int i = 0;
-    for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++, i++)
+    for (std::vector<PlyElement>::const_iterator it = elements.begin(); it != elements.end(); it++)
       it->write(out, property_flags);
     return out;
   }

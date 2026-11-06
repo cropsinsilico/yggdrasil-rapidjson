@@ -2,12 +2,12 @@ name: Test of package installation & execution
 'on':
   push:
     branches-ignore:
-     - gh-pages
-    tags:
-     - '*'
+      - gh-pages
   schedule:
-  - cron: 0 10 * * 1
-  - cron: 0 10 1 * *
+    - cron: 0 10 * * 1
+    - cron: 0 10 1 * *
+  workflow_dispatch:
+
 jobs:
   build_pip:
     runs-on: ${{ matrix.os }}
@@ -16,19 +16,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-install: [pip]
         python-version: ["3.11"]
-        with-yggdrasil: [true]
         configuration: [Debug]
-        include:
-          - os: ubuntu-latest
-            python-install: pip
-            python-version: "3.11"
-            with-yggdrasil: false
-            configuration: Debug
-          - os: ubuntu-latest
-            python-install: pip
-            python-version: "3.11"
-            with-yggdrasil: true
-            configuration: Release
       fail-fast: false
     steps:
       - name: Check out repository code
@@ -36,11 +24,6 @@ jobs:
         with:
           submodules: true
           fetch-tags: true
-      # - name: Patch gtest
-      #   run: |
-      #     cd thirdparty/gtest
-      #     git apply ../gtest.patch
-      #     cd ../..
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -73,20 +56,14 @@ jobs:
         run: |
           python -c "import sys; print(sys.executable)"
           python -c "import numpy; print(numpy.get_include())"
-      - name: Configure w/o yggdrasil extension
-        if: matrix.with-yggdrasil != true
-        run: |
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=ON
       - name: (WINDOWS) Configure w/ yggdrasil
-        if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
+        if: matrix.os == 'windows-latest'
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DPython3_ROOT_DIR=$env:pythonLocation -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DPython3_ROOT_DIR=$env:pythonLocation -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST=ON
       - name: (UNIX) Configure w/ yggdrasil
-        if: matrix.os != 'windows-latest' && matrix.with-yggdrasil
+        if: matrix.os != 'windows-latest'
         run: |
           mkdir build
           cd build
@@ -99,96 +76,101 @@ jobs:
         run: |
           cd build
           ctest -C ${{ matrix.configuration }} --output-on-failure --verbose
-  build_conda:
+
+  test:
+    name: Run tests on ${{ matrix.os }} for Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-install: [conda]
-        python-version: [3.11]
-        with-yggdrasil: [true]
-        configuration: [Debug]
-      fail-fast: false
-    defaults:
-      run:
-        shell: bash -l {0}
+        python-version: ["3.11"]
+        pixi-environment: [py311]
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           submodules: true
           fetch-tags: true
-      # - name: Patch gtest
-      #   run: |
-      #     cd thirdparty/gtest
-      #     git apply ../gtest.patch
-      #     cd ../..
       - name: Set up MSVC Compiler on windows
         uses: ilammy/msvc-dev-cmd@v1
         if: matrix.os == 'windows-latest'
         with:
-          toolset: 14.0
-      - name: Set up miniconda test environment
-        uses: conda-incubator/setup-miniconda@v3
+          # toolset: "14.3"  # vs2022 set in conda-forge-pinnings
+          toolset: "14.5"  # vs2026 set in conda-forge-pinnings
+      - uses: prefix-dev/setup-pixi@v0.10.0
         with:
-          activate-environment: rapidjson
-          environment-file: environment.yml
-          auto-update-conda: true
-          channels: conda-forge
-          channel-priority: strict
-          miniforge-version: latest
-          use-mamba: true
-          python-version: ${{ matrix.python-version }}
-      - name: Install packages not current on conda-forge (gcovr)
-        run: |
-          pip install gcovr
-      - name: Check for numpy
-        run: |
-          python -c "import sys; print(sys.executable)"
-          python -c "import numpy; print(numpy.get_include())"
-      - name: Check conda environment
-        run: |
-          mamba info
-          mamba list
-      - name: Configure w/o yggdrasil extension
-        if: matrix.with-yggdrasil != true
-        run: |
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DDISABLE_YGGDRASIL_RAPIDJSON=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=ON
-      - name: (WINDOWS) Configure w/ yggdrasil
-        if: matrix.os == 'windows-latest' && matrix.with-yggdrasil
-        run: |
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=ON
-      - name: (UNIX) Configure w/ yggdrasil
-        if: matrix.os != 'windows-latest' && matrix.with-yggdrasil
-        run: |
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT=ON
-      - name: Build
-        run: |
-          cd build
-          cmake --build . --config ${{ matrix.configuration }}
-      - name: Test
-        run: |
-          cd build
-          ctest -C ${{ matrix.configuration }} --output-on-failure --verbose
+          environments: test-${{ matrix.pixi-environment }}
+      - name: Run tests
+        run: pixi run -e test-${{ matrix.pixi-environment }} all-tests -- --output-on-failure --verbose
+
+  test-coverage:
+    name: Run tests with coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+          fetch-tags: true
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          environments: test
+      - name: Run tests
+        run: pixi run -e test all-tests Debug -DYGGDRASIL_RAPIDJSON_ENABLE_COVERAGE=ON -- --output-on-failure --verbose
       - name: Upload coverage report
         uses: codecov/codecov-action@v1
         with:
-          name: ${{ matrix.os }}-${{ matrix.python-install }}
+          name: ubuntu-latest-py315  # ${{ matrix.os }}-${{ matrix.pixi-environment }}
           token: ${{ secrets.CODECOV_TOKEN }}
           file: build/coverage/coverage.info
           # directory: build/Testing/CoverageInfo
           functionalities: gcov
 
+  test-release:
+    name: Run tests on Release version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+          fetch-tags: true
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          environments: test
+      - name: Run tests
+        run: pixi run -e test all-tests Release -- --output-on-failure --verbose
+
+  test-pure-rapidjson:
+    name: Run tests with Yggdrasil extensions disabled
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+          fetch-tags: true
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          environments: test
+      - name: Run tests
+        run: pixi run -e test test unittest Debug -DDISABLE_YGGDRASIL_RAPIDJSON=ON -- --output-on-failure --verbose
+
+  docs:
+    name: Build the docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+          fetch-tags: true
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          environments: docs
+      - name: Build docs
+        run: pixi run -e docs docs
+
   all_tests_passed:
     runs-on: ubuntu-latest
     name: All tests passed
-    needs: [build_pip, build_conda]
+    needs: [build_pip, test, test-coverage, test-release, test-pure-rapidjson, docs]
     if: always()
     steps:
       - name: All tests ok

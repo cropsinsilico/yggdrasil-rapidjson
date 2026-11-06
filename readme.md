@@ -60,7 +60,9 @@ your CMakeLists.txt.
 
 ## Contributing
 
-YggdrasilRapidJSON welcomes contributions. When contributing, please follow the code below.
+YggdrasilRapidJSON welcomes contributions. Please see
+[CONTRIBUTING.md](CONTRIBUTING.md) for instructions on setting up a development
+environment, building and testing the project, and submitting changes.
 
 ### Issues
 

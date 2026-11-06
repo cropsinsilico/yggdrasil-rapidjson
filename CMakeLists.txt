@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.15)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.18)
 if(POLICY CMP0025)
   # detect Apple's Clang
   cmake_policy(SET CMP0025 NEW)
@@ -17,7 +17,7 @@ endif()
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 include(${CMAKE_CURRENT_SOURCE_DIR}/YggdrasilRapidJSONMacros.cmake)
 
-yggdrasil_rapidjson_gitversion(DEFAULT_YGGDRASIL_RAPIDJSON_VERSION "1.1.0.2")
+yggdrasil_rapidjson_gitversion(DEFAULT_YGGDRASIL_RAPIDJSON_VERSION "1.1.0.7")
 set(YGGDRASIL_RAPIDJSON_VERSION "${DEFAULT_YGGDRASIL_RAPIDJSON_VERSION}" CACHE STRING "Version to use instead of the git tag version")
 
 message(STATUS "YGGDRASIL_RAPIDJSON_VERSION = ${YGGDRASIL_RAPIDJSON_VERSION}")
@@ -55,9 +55,21 @@ option(YGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST
     "Use gtest installation in `thirdparty/gtest` by default if available" OFF)
 
 option(YGGDRASIL_RAPIDJSON_BUILD_CXXMIN "Build yggdrasil_rapidjson with minimum C++ standard" OFF)
-option(YGGDRASIL_RAPIDJSON_BUILD_CXX11 "Build yggdrasil_rapidjson with C++11" ON)
+option(YGGDRASIL_RAPIDJSON_BUILD_CXX11 "Build yggdrasil_rapidjson with C++11" OFF)
 option(YGGDRASIL_RAPIDJSON_BUILD_CXX17 "Build yggdrasil_rapidjson with C++17" OFF)
 option(YGGDRASIL_RAPIDJSON_BUILD_CXX20 "Build yggdrasil_rapidjson with C++20" OFF)
+if(NOT (YGGDRASIL_RAPIDJSON_BUILD_CXX11 OR
+        YGGDRASIL_RAPIDJSON_BUILD_CXX17 OR
+        YGGDRASIL_RAPIDJSON_BUILD_CXX20 OR
+        YGGDRASIL_RAPIDJSON_BUILD_CXXMIN))
+  if(YGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST)
+    set(YGGDRASIL_RAPIDJSON_BUILD_CXX11 ON)
+  elseif(WIN32)
+    # MSVC defaults to CXX14, but the most recent version of
+    # gtest requires CXX17
+    set(YGGDRASIL_RAPIDJSON_BUILD_CXX17 ON)
+  endif()
+endif()
 if(YGGDRASIL_RAPIDJSON_BUILD_CXX11)
     set(CMAKE_CXX_STANDARD 11)
     set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -87,9 +99,9 @@ if(WIN32)
 endif()
 
 if(DISABLE_YGGDRASIL_RAPIDJSON)
-  set(RAPIDJSON_CREATE_METASCHEMA OFF)
-  set(RAPIDJSON_CREATE_METASCHEMA_FULL OFF)
-  set(RAPIDJSON_YGGDRASIL_TESTS OFF)
+  set(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA OFF)
+  set(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL OFF)
+  set(YGGDRASIL_RAPIDJSON_SCHEMA_TESTS OFF)
 endif()
 
 if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
@@ -112,26 +124,26 @@ if(NOT (YGGDRASIL_DISABLE_PYTHON_C_API OR DISABLE_YGGDRASIL_RAPIDJSON))
         set(Python3_ROOT_DIR "${CONDA_PREFIX}")
     endif()
     if(Python3_EXECUTABLE AND NOT Python3_ROOT_DIR)
-      exec_program(
-        ${Python3_EXECUTABLE}
-        ARGS "-c \"import sysconfig; print(sysconfig.get_config_var('base'))\""
+      execute_process(
+        COMMAND ${Python3_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_config_var('base'))"
         OUTPUT_VARIABLE Python3_ROOT_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
       )
       message(STATUE "Evaluated Python3_ROOT_DIR = ${Python3_ROOT_DIR}")
     endif()
     if(Python3_EXECUTABLE AND NOT Python3_INCLUDE_DIR)
-      exec_program(
-        ${Python3_EXECUTABLE}
-        ARGS "-c \"import sysconfig; print(sysconfig.get_path('include'))\""
+      execute_process(
+        COMMAND ${Python3_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_path('include'))"
         OUTPUT_VARIABLE Python3_INCLUDE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
       )
       message(STATUS "Evaluated Python3_INCLUDE_DIR = ${Python3_INCLUDE_DIR}")
     endif()
     if(Python3_EXECUTABLE AND NOT Python3_NumPy_INCLUDE_DIR)
-      exec_program(
-        ${Python3_EXECUTABLE}
-        ARGS "-c \"import numpy; print(numpy.get_include())\""
+      execute_process(
+        COMMAND ${Python3_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
         OUTPUT_VARIABLE Python3_NumPy_INCLUDE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
       )
       message(STATUS "Evaluated Python3_NumPy_INCLUDE_DIR = ${Python3_NumPy_INCLUDE_DIR}")
     endif()
@@ -177,15 +189,19 @@ if(YGGDRASIL_DISABLE_PYTHON_C_API)
   set(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA OFF)
 endif()
 if(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA)
-    set(YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS "")
+    set(YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS)
     if(YGGDRASIL_RAPIDJSON_SCHEMA_TESTS)
-        set(YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS "--ygg-tests")
+        list(APPEND YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS "--ygg-tests")
     endif()
     if(YGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL)
-        set(YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS "${YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS} --create-full-schema")
+        list(APPEND YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS "--create-full-schema")
     endif()
-    exec_program(${Python3_EXECUTABLE}
-                 ARGS "${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_INCLUDE_DIR}/metaschema.h ${YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS}")
+    execute_process(
+      COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/create_metaschema.py
+      ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_INCLUDE_DIR}/metaschema.h
+      ${YGGDRASIL_RAPIDJSON_METASCHEMA_FLAGS}
+    )
 endif()
 
 yggdrasil_rapidjson_global_compiler_flags(CXX)

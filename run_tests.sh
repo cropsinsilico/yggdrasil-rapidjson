@@ -38,7 +38,7 @@ if [ ! -d ${INSTALL_DIR} ]; then
     mkdir ${INSTALL_DIR}
 fi
 
-cmake -B ${BUILD_DIR} -S $(pwd) \
+cmake -G Ninja -B ${BUILD_DIR} -S $(pwd) \
       -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
       -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS:BOOL=ON \
       -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL:BOOL=ON \

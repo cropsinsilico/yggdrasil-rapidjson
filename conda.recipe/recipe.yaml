@@ -21,15 +21,18 @@ requirements:
       then:
         - cross-python_${{ host_platform }}
         - python
+        - libpython
         - numpy
     - ${{ stdlib('c') }}
     - ${{ compiler('c') }}
     - ${{ compiler('cxx') }}
   host:
     - python
+    - libpython
     - numpy
   run:
     - python
+    - libpython
     - numpy
 
 tests:

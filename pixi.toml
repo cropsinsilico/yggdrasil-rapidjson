@@ -1,0 +1,205 @@
+[workspace]
+name = "yggdrasil-rapidjson"
+version = "1.1.0.7"
+description = "Version of rapidjson with extended support for yggdrasil"
+authors = ["Meagan Lang <langmm.astro@gmail.com>"]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
+preview = ["pixi-build"]
+build-variants-files = [
+  "./conda.recipe/conda_build_config.yaml",
+]
+
+[dependencies]
+python = ">=3.11"
+numpy = ">=1.13.0"
+
+[feature.py311.dependencies]
+python = "3.11.*"
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.py313.dependencies]
+python = "3.13.*"
+
+[feature.py314.dependencies]
+python = "3.14.*"
+
+[feature.py315.dependencies]
+python = "3.15.*"
+libpython = "3.15.*"
+
+[feature.build.dependencies]
+cmake = ">=3.18"
+ninja = "*"
+pkg-config = "*"
+# Required by create_metaschema.py
+requests = "*"
+pyyaml = "*"
+# [feature.test.dependencies]
+# gtest = "*"
+gcovr = "*"
+lcov = "*"
+
+[feature.build.target.unix.dependencies]
+c-compiler = "*"
+cxx-compiler = "*"
+
+[feature.build.target.win-64.dependencies]
+vc = "14.5.*"
+vs2026_win-64 = "19.51.*"
+
+[feature.docs.dependencies]
+doxygen = "*"
+Jinja2 = "*"
+
+[feature.dev.dependencies]
+git = "*"
+git-cliff = "*"
+
+[feature.build-conda.dependencies]
+rattler-build = "*"
+
+[environments]
+default = { features = ["py315", "build"], solve-group = "default" }
+build = { features = ["py315", "build"], solve-group = "default" }
+test = { features = ["py315", "build"], solve-group = "default" }
+docs = { features = ["py315", "build", "docs"], solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+build-conda = { features = ["build-conda"] }
+test-py311 = { features = ["py311", "build"] }
+test-py312 = { features = ["py312", "build"] }
+test-py313 = { features = ["py313", "build"] }
+test-py314 = { features = ["py314", "build"] }
+test-py315 = { features = ["py315", "build"] }
+
+[tasks.configure]
+cmd = "cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE={{ configuration }} -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UNITTESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=ON -DYGGDRASIL_RAPIDJSON_SCHEMA_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_ASAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_UBSAN:BOOL=ON -DYGGDRASIL_RAPIDJSON_SKIP_VALGRIND_TESTS:BOOL=ON -DYGGDRASIL_RAPIDJSON_CREATE_METASCHEMA_FULL:BOOL=ON -DYGGDRASIL_RAPIDJSON_ENABLE_INSTRUMENTATION_OPT:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_THIRDPARTY_GTEST:BOOL=ON {{ extra_flags }}"
+args = [
+    { arg = "configuration", default = "Debug" },
+    { arg = "extra_flags", default = "" },
+]
+description = "Configure CMake build"
+default-environment = "build"
+inputs = ["CMakeLists.txt", "test/CMakeLists.txt"]
+outputs = ["build/CMakeFiles/"]
+
+[tasks.build]
+cmd = "cmake --build build --config {{ configuration }} --target={{ target }} -- -j {{ nproc }}"
+args = [
+    { arg = "target", default = "tests" },
+    { arg = "configuration", default = "Debug" },
+    { arg = "extra_flags", default = "" },
+    { arg = "nproc", default = "8" },
+]
+depends-on = [
+    {
+        task = "configure",
+        args = [
+            "{{ configuration }}",
+            "{{ extra_flags }}"
+        ]
+    },
+]
+description = "Build tests and libraries"
+default-environment = "build"
+inputs = [
+    "CMakeLists.txt", "include/yggdrasil_rapidjson/*", "test/*",
+    "test/unittest/*.cpp",
+    "test/perftest/*.cpp",
+]
+outputs = ["build/bin/unittest*", "build/bin/perftest*"]
+
+[tasks.all-tests]
+cmd = "ctest -C {{ configuration }} --stop-on-failure"
+cwd = "build"
+args = [
+    { arg = "configuration", default = "Debug" },
+    { arg = "extra_flags", default = "" },
+]
+depends-on = [
+    {
+        task = "build",
+        args = [
+            "tests",
+            "{{ configuration }}",
+            "{{ extra_flags }}"
+        ],
+    },
+]
+description = "Run unit tests"
+default-environment = "test"
+
+[tasks.test]
+cmd = "ctest -C {{ configuration }} -R {{ suite }} --stop-on-failure"
+cwd = "build"
+args = [
+    { arg = "suite", default = "unittest" },
+    { arg = "configuration", default = "Debug" },
+    { arg = "extra_flags", default = "" },
+]
+depends-on = [
+    {
+        task = "build",
+        args = [
+            "tests",
+            "{{ configuration }}",
+            "{{ extra_flags }}"
+        ],
+    },
+]
+description = "Run unit tests"
+default-environment = "test"
+
+[tasks.perftest]
+description = "Run performance tests"
+depends-on = [
+    { task = "test", args = ["perftest"] },
+]
+
+[tasks.coverage]
+description = "Run coverage tests"
+depends-on = [
+    { task = "test", args = ["coverage"] },
+]
+
+[tasks.install]
+description = "Install the package"
+cmd = "cmake --install build"
+args = [
+    { arg = "configuration", default = "Release" },
+]
+depends-on = [
+    {
+        task = "build",
+        args = [
+            "tests",  # TODO: Add dummy target to allow selection
+            # "YggdrasilRapidJSON",
+            "{{ configuration }}",
+        ],
+    },
+]
+
+[tasks.docs]
+description = "Build the documentation with Doxygen"
+cmd = "cmake -G Ninja -B build-doc -S . -DYGGDRASIL_RAPIDJSON_BUILD_DOC:BOOL=ON -DYGGDRASIL_RAPIDJSON_BUILD_TESTS:BOOL=OFF -DYGGDRASIL_RAPIDJSON_BUILD_EXAMPLES:BOOL=OFF && cmake --build build-doc --target doc"
+default-environment = "docs"
+
+[tasks.build-conda]
+description = "Build conda package with pixi publish"
+args = [
+    { arg = "output_dir", default = "build_conda" },
+]
+cmd = "pixi publish --path conda.recipe/recipe.yaml --target-dir {{ output_dir }}"
+default-environment = "build-conda"
+
+[tasks.changelog]
+cmd = "git-cliff --unreleased --prepend"
+description = "Update the change log"
+default-environment = "dev"
+
+[tasks.setup-hooks]
+description = "Enable the tracked git hooks in githooks/"
+cmd = "git config core.hooksPath githooks"
+default-environment = "dev"

@@ -5,6 +5,8 @@
 !/bin/types
 !/bin/unittestschema
 /build
+/example/*/build
+/_install
 /doc/html
 /doc/doxygen_*.db
 *.a
@@ -24,7 +26,11 @@ Doxyfile
 Doxyfile.zh-cn
 DartConfiguration.tcl
 *.nupkg
+__pycache__
 
 # Files created by OS
 *.DS_Store
 *~
+# pixi environments
+.pixi/*
+!.pixi/config.toml

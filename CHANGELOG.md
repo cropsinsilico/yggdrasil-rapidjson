@@ -3,7 +3,32 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 Because YggdrasilRapidJSON continues to merge updates from RapidJSON, the RapidJSON version is used with the addition of a EXTEN version after the PATCH version (i.e. MAJOR.MINOR.PATCH.EXTEN) to indicate the YggdrasilRapidJSON version. The EXTEN version will restart at 0 when/if RapidJSON increments their version.
 
-## 1.1.0.7 - 2026-XX-XX
+<!-- git-cliff: end of header -->
+
+## 1.1.0.7 - 2026-11-06
+
+### Features
+
+- Added ppm unit
+
+### Bug fixes
+
+- Fixed bug where GNU Fortran flags for ASAN/UBSAN were added even though they conflict with the clang flags
+
+### Documentation
+
+- Added contributing guide
+
+### Miscellaneous Tasks
+
+- Added yggdrasil_rapidjson_config_vars_type cmake utility for initializing subsets of config variables
+- Set up pixi environments and tasks for managing the package
+- Updated the GHA workflows to use pixi tasks
+- GHA workflow to build & deploy the docs to github pages
+- Rename recipe workflow to match standard used in other projects
+- Set up git-cliff for change log generation from commits
+- Add githook to enfore conventional git messages
+
 
 ## 1.1.0.6 - 2026-07-10
 

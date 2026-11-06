@@ -246,6 +246,9 @@ public:
         GenericPointer r;
         r.allocator_ = allocator;
         Ch *p = r.CopyFromRaw(*this, 1, token.length + 1);
+        // if (token.length == 0)
+        //   p[0] = '\0';
+        // else
         std::memcpy(p, token.name, (token.length + 1) * sizeof(Ch));
         r.tokens_[tokenCount_].name = p;
         r.tokens_[tokenCount_].length = token.length;
@@ -407,64 +410,13 @@ public:
     GenericPointer PartialFront(size_t nCopy, Allocator* allocator = 0) const {
         GenericPointer r;
 	r.allocator_ = allocator;
-        if (nCopy > tokenCount_)
-	    nCopy = tokenCount_;
-        if (!r.allocator_) // allocator is independently owned.
-	    r.ownAllocator_ = r.allocator_ = YGGDRASIL_RAPIDJSON_NEW(Allocator)();
-
-        size_t nameBufferSize = nCopy; // null terminators for tokens
-        for (const Token *t = tokens_; t != tokens_ + nCopy; ++t)
-            nameBufferSize += t->length;
-
-        r.tokenCount_ = nCopy;
-        r.tokens_ = static_cast<Token *>(allocator_->Malloc(r.tokenCount_ * sizeof(Token) + nameBufferSize * sizeof(Ch)));
-        r.nameBuffer_ = reinterpret_cast<Ch *>(r.tokens_ + r.tokenCount_);
-        if (nCopy > 0) {
-            std::memcpy(r.tokens_, tokens_, nCopy * sizeof(Token));
-        }
-        if (nameBufferSize > 0) {
-            std::memcpy(r.nameBuffer_, nameBuffer_, nameBufferSize * sizeof(Ch));
-        }
-
-        // Adjust pointers to name buffer
-        std::ptrdiff_t diff = r.nameBuffer_ - nameBuffer_;
-        for (Token *t = r.tokens_; t != r.tokens_ + nCopy; ++t)
-            t->name += diff;
-
+        r.CopyFromRaw(*this, 0, 0, 0, nCopy);
         return r;
     }
     GenericPointer PartialBack(size_t nSkip, Allocator* allocator = 0) const {
         GenericPointer r;
 	r.allocator_ = allocator;
-        if (nSkip > tokenCount_)
-	    nSkip = tokenCount_;
-        if (!r.allocator_) // allocator is independently owned.
-	    r.ownAllocator_ = r.allocator_ = YGGDRASIL_RAPIDJSON_NEW(Allocator)();
-
-	size_t nCopy = tokenCount_ - nSkip;
-	// size_t nSkip = tokenCount_ - nCopy;
-        size_t nameBufferSize = nCopy; // null terminators for tokens
-        for (const Token *t = tokens_ + nSkip; t != tokens_ + tokenCount_; ++t)
-            nameBufferSize += t->length;
-	size_t nameBufferSkip = nSkip; // null terminators for tokens
-	for (const Token *t = tokens_; t != tokens_ + nSkip; ++t)
-	    nameBufferSkip += t->length;
-
-        r.tokenCount_ = nCopy;
-        r.tokens_ = static_cast<Token *>(r.allocator_->Malloc(r.tokenCount_ * sizeof(Token) + nameBufferSize * sizeof(Ch)));
-        r.nameBuffer_ = reinterpret_cast<Ch *>(r.tokens_ + r.tokenCount_);
-        if (nCopy > 0) {
-            std::memcpy(r.tokens_, tokens_ + nSkip, nCopy * sizeof(Token));
-        }
-        if (nameBufferSize > 0) {
-            std::memcpy(r.nameBuffer_, nameBuffer_ + nameBufferSkip, nameBufferSize * sizeof(Ch));
-        }
-
-        // Adjust pointers to name buffer
-        std::ptrdiff_t diff = r.nameBuffer_ - (nameBuffer_ + nameBufferSkip);
-        for (Token *t = r.tokens_; t != r.tokens_ + nCopy; ++t)
-            t->name += diff;
-
+        r.CopyFromRaw(*this, 0, 0, nSkip);
         return r;
     }
     GenericPointer RelativeTo(const GenericPointer& root, Allocator* allocator = 0) const {
@@ -1354,33 +1306,50 @@ private:
         \param extraNameBufferSize Extra name buffer size (in number of Ch) to be allocated.
         \return Start of non-occupied name buffer, for storing extra names.
     */
-    Ch* CopyFromRaw(const GenericPointer& rhs, size_t extraToken = 0, size_t extraNameBufferSize = 0) {
+    Ch* CopyFromRaw(const GenericPointer& rhs, size_t extraToken = 0, size_t extraNameBufferSize = 0, size_t nSkip = 0, size_t nCopy = SIZE_MAX) {
+        if (nSkip > rhs.tokenCount_)
+            nSkip = rhs.tokenCount_;
+        if (nCopy > (rhs.tokenCount_ - nSkip))
+            nCopy = rhs.tokenCount_ - nSkip;
         if (!allocator_) // allocator is independently owned.
             ownAllocator_ = allocator_ = YGGDRASIL_RAPIDJSON_NEW(Allocator)();
 
-        size_t nameBufferSize = rhs.tokenCount_; // null terminators for tokens
-        for (Token *t = rhs.tokens_; t != rhs.tokens_ + rhs.tokenCount_; ++t)
+        size_t nameBufferSize = nCopy; // null terminators for tokens
+        for (Token *t = rhs.tokens_ + nSkip; t != rhs.tokens_ + nSkip + nCopy; ++t)
             nameBufferSize += t->length;
+	size_t nameBufferSkip = nSkip; // null terminators for tokens
+	for (const Token *t = rhs.tokens_; t != rhs.tokens_ + nSkip; ++t)
+	    nameBufferSkip += t->length;
 
-        tokenCount_ = rhs.tokenCount_ + extraToken;
+        tokenCount_ = nCopy + extraToken;
         tokens_ = static_cast<Token *>(allocator_->Malloc(tokenCount_ * sizeof(Token) + (nameBufferSize + extraNameBufferSize) * sizeof(Ch)));
         nameBuffer_ = reinterpret_cast<Ch *>(tokens_ + tokenCount_);
-        if (rhs.tokenCount_ > 0) {
-            std::memcpy(tokens_, rhs.tokens_, rhs.tokenCount_ * sizeof(Token));
+        if (nCopy > 0) {
+            std::memcpy(tokens_, rhs.tokens_ + nSkip, nCopy * sizeof(Token));
         }
-        if (nameBufferSize > 0) {
-            std::memcpy(nameBuffer_, rhs.nameBuffer_, nameBufferSize * sizeof(Ch));
-        }
+        if (rhs.nameBuffer_) {
+        
+            if (nameBufferSize > 0) {
+                std::memcpy(tokens_ + tokenCount_, rhs.nameBuffer_ + nameBufferSkip, nameBufferSize * sizeof(Ch));
+                // std::memcpy(nameBuffer_, rhs.nameBuffer_ + nameBufferSkip, nameBufferSize * sizeof(Ch));
+            }
 
-        // The names of each token point to a string in the nameBuffer_. The
-        // previous memcpy copied over string pointers into the rhs.nameBuffer_,
-        // but they should point to the strings in the new nameBuffer_.
-        for (size_t i = 0; i < rhs.tokenCount_; ++i) {
-          // The offset between the string address and the name buffer should
-          // still be constant, so we can just get this offset and set each new
-          // token name according the new buffer start + the known offset.
-          std::ptrdiff_t name_offset = rhs.tokens_[i].name - rhs.nameBuffer_;
-          tokens_[i].name = nameBuffer_ + name_offset;
+            // The names of each token point to a string in the nameBuffer_. The
+            // previous memcpy copied over string pointers into the rhs.nameBuffer_,
+            // but they should point to the strings in the new nameBuffer_.
+            std::ptrdiff_t diff = nameBuffer_ - (rhs.nameBuffer_ + nameBufferSkip);
+            for (Token *t = tokens_; t != tokens_ + nCopy; ++t)
+                t->name += diff;
+            
+        } else {
+            std::ptrdiff_t name_offset = 0;
+            for (size_t i = nSkip; i < nSkip + nCopy; ++i) {
+                std::memcpy(nameBuffer_ + name_offset,
+                            rhs.tokens_[i].name,
+                            rhs.tokens_[i].length + 1);
+                tokens_[i - nSkip].name = nameBuffer_ + name_offset;
+                name_offset = name_offset + rhs.tokens_[i - nSkip].length + 1;
+            }
         }
 
         return nameBuffer_ + nameBufferSize;

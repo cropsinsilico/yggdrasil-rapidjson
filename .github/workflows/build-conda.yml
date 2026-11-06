@@ -1,0 +1,64 @@
+name: Test of conda recipe build
+'on':
+  push:
+    branches-ignore:
+      - gh-pages
+    tags:
+      - '*'
+  schedule:
+    - cron: 0 10 * * 1
+  workflow_dispatch:
+
+jobs:
+  build-conda:
+    name: Build and test conda recipe on ${{ matrix.os }} (Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.11"]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+          fetch-tags: true
+
+      - name: Set up MSVC Compiler on windows
+        uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.os == 'windows-latest'
+
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          environments: build-conda
+
+      - name: Build the conda package (Unix)
+        if: matrix.os != 'windows-latest'
+        run: pixi run -e build-conda build-conda -- --variant python=${{ matrix.python-version }}
+      - name: Build the conda package (Windows)
+        if: matrix.os == 'windows-latest'
+        run: pixi run -e build-conda build-conda -- --variant python=${{ matrix.python-version }} --variant c_compiler=vs2017 --variant cxx_compiler=vs2017
+        # run: pixi publish --path conda.recipe/recipe.yaml --target-dir output --variant python=${{ matrix.python-version }} --variant c_compiler=vs2017 --variant cxx_compiler=vs2017
+
+      # - name: Build conda recipe (using rattler-build)
+      #   if: matrix.builder == 'rattler'
+      #   run: |
+      #     rattler-build build --recipe "conda.recipe/recipe.yaml" --output-dir $HOME/local_channel/ --variant python=${{ matrix.python-version }} --no-build-id --no-include-recipe
+
+
+  all_recipes_built:
+    runs-on: ubuntu-latest
+    name: All recipes were successfully built
+    needs: [build-conda]
+    if: always()
+    steps:
+      - name: All tests ok
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+      - name: Some tests failed
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
