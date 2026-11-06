@@ -54,6 +54,10 @@ vs2026_win-64 = "19.51.*"
 doxygen = "*"
 Jinja2 = "*"
 
+[feature.dev.dependencies]
+git = "*"
+git-cliff = "*"
+
 [feature.build-conda.dependencies]
 rattler-build = "*"
 
@@ -62,6 +66,7 @@ default = { features = ["py315", "build"], solve-group = "default" }
 build = { features = ["py315", "build"], solve-group = "default" }
 test = { features = ["py315", "build"], solve-group = "default" }
 docs = { features = ["py315", "build", "docs"], solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
 build-conda = { features = ["build-conda"] }
 test-py311 = { features = ["py311", "build"] }
 test-py312 = { features = ["py312", "build"] }
@@ -161,11 +166,20 @@ depends-on = [
 
 [tasks.install]
 description = "Install the package"
-cmd = "cmake --install build --prefix {{ prefix }}"
+cmd = "cmake --install build"
 args = [
-    { arg = "prefix", default= "_install" }
+    { arg = "configuration", default = "Release" },
 ]
-depends-on = ["build"]
+depends-on = [
+    {
+        task = "build",
+        args = [
+            "tests",  # TODO: Add dummy target to allow selection
+            # "YggdrasilRapidJSON",
+            "{{ configuration }}",
+        ],
+    },
+]
 
 [tasks.docs]
 description = "Build the documentation with Doxygen"
@@ -179,3 +193,13 @@ args = [
 ]
 cmd = "pixi publish --path conda.recipe/recipe.yaml --target-dir {{ output_dir }}"
 default-environment = "build-conda"
+
+[tasks.changelog]
+cmd = "git-cliff --unreleased --prepend"
+description = "Update the change log"
+default-environment = "dev"
+
+[tasks.setup-hooks]
+description = "Enable the tracked git hooks in githooks/"
+cmd = "git config core.hooksPath githooks"
+default-environment = "dev"
