@@ -1165,7 +1165,8 @@ public:
 	//     = (a1*ap)**-b2 * (b1*bp)**b2 * (a1*ap*x)**(a2+b2)
 	if (it2->is_null()) {
 	  factor *= std::pow(it2->factor_, it2->power_);
-	  idx_remove.insert(i);
+        } else if (it2->is_dimensionless()) {
+          factor *= std::pow(it2->factor_, it2->power_);
 	} else {
 	  double new_power = units_[i].power_ + it2->power_;
 	  factor *= std::pow((it2->factor_ * it2->prefix_.factor) /
@@ -1561,7 +1562,7 @@ typedef GenericUnits<UTF8<char> > Units;
     PACK_UNIT("smoot", "smoot", dimensions::length, 1.7018),
     PACK_UNIT("percent", "%", dimensions::dimensionless, 0.01),
     PACK_UNIT("fraction", "100%", dimensions::dimensionless, 1.0),
-    PACK_UNIT("parts_per_million", "ppm", dimensions::dimensionless, 1.0e6),
+    PACK_UNIT("parts_per_million", "ppm", dimensions::dimensionless, 1.0e-6),
     PACK_UNIT("minute", "min", dimensions::time, constants::sec_per_min),
     PACK_UNIT(VSTR("hour"), VSTR("hr", "h", "hrs"), dimensions::time, constants::sec_per_hr),
     PACK_UNIT(VSTR("day"), VSTR("day", "d"), dimensions::time, constants::sec_per_day),

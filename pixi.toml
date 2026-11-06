@@ -57,6 +57,7 @@ Jinja2 = "*"
 [feature.dev.dependencies]
 git = "*"
 git-cliff = "*"
+gh = "*"
 
 [feature.build-conda.dependencies]
 rattler-build = "*"
@@ -195,11 +196,21 @@ cmd = "pixi publish --path conda.recipe/recipe.yaml --target-dir {{ output_dir }
 default-environment = "build-conda"
 
 [tasks.changelog]
-cmd = "git-cliff --unreleased --prepend"
+cmd = "git-cliff --unreleased --bump --prepend"
 description = "Update the change log"
 default-environment = "dev"
 
 [tasks.setup-hooks]
 description = "Enable the tracked git hooks in githooks/"
 cmd = "git config core.hooksPath githooks"
+default-environment = "dev"
+
+[tasks.bump-version]
+description = "Bump the version"
+cmd = "scripts/bump_version.sh"
+default-environment = "dev"
+
+[tasks.make-release]
+description = "Create a release tag, bumping the version in pixi.toml and CMakeLists.txt"
+cmd = "scripts/make_release.sh"
 default-environment = "dev"

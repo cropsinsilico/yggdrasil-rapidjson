@@ -101,15 +101,17 @@ TEST(Unit, Base) {
   units::Units(test_units, strlen(test_units), true);
 };
 
-#define UNIT_OPERATOR_BASE(au, op, bu, cu, factor)			\
+#define UNIT_OPERATOR_STRINGS(au, op, bu, cu, factor)			\
   {									\
-    units::Quantity<double> a(1.0, #au);				\
-    units::Quantity<double> b(1.0, #bu);				\
-    units::Quantity<double> c(factor, #cu);				\
+    units::Quantity<double> a(1.0, au);                                 \
+    units::Quantity<double> b(1.0, bu);                                 \
+    units::Quantity<double> c(factor, cu);				\
     units::Quantity<double> d = a op b;					\
     CHECK_QUANTITY_EQUIVALENCE(c, d, true);				\
     CHECK_QUANTITY_DIRECT_EQUALITY(c, d, true);				\
   }
+#define UNIT_OPERATOR_BASE(au, op, bu, cu, factor)      \
+  UNIT_OPERATOR_STRINGS(#au, op, #bu, #cu, factor)
 #define UNIT_OPERATOR(au, op, bu, cu)					\
   UNIT_OPERATOR_BASE(au, op, bu, cu, 1.0)
 
@@ -121,6 +123,14 @@ TEST(Unit, MultDiv) {
   UNIT_OPERATOR(kg, /, cm**-1, kg*cm);
   UNIT_OPERATOR(cm/s, *, kg, kg*cm/s);
   UNIT_OPERATOR_BASE(hr, /, day, n/a, 0.041666666666666664);
+  UNIT_OPERATOR_BASE(fraction, *, %, fraction, 0.01);
+  UNIT_OPERATOR_BASE(n/a, *, %, n/a, 0.01);
+  UNIT_OPERATOR_BASE(%, *, fraction, %, 1.0);
+  UNIT_OPERATOR_BASE(%, *, n/a, %, 1.0);
+  UNIT_OPERATOR_BASE(fraction, /, %, fraction, 100.0);
+  UNIT_OPERATOR_BASE(n/a, /, %, n/a, 100.0);
+  UNIT_OPERATOR_BASE(%, /, fraction, %, 1.0);
+  UNIT_OPERATOR_BASE(%, /, n/a, %, 1.0);
 };
 
 TEST(Unit, AddSubtract) {
@@ -130,6 +140,10 @@ TEST(Unit, AddSubtract) {
   UNIT_OPERATOR_BASE(ΔdegC, +, K, degC, -271.15);
   UNIT_OPERATOR_BASE(degC, -, K, ΔdegC, 273.15);
   UNIT_OPERATOR_BASE(K, -, degC, ΔK, -273.15);
+  UNIT_OPERATOR_BASE(fraction, +, %, fraction, 1.01);
+  UNIT_OPERATOR_BASE(n/a, +, %, n/a, 1.01);
+  UNIT_OPERATOR_BASE(%, -, fraction, %, -99.0);
+  UNIT_OPERATOR_BASE(%, -, n/a, %, -99.0);
 };
 
 TEST(Unit, Exponent) {
